@@ -1,0 +1,79 @@
+@import 'tailwindcss';
+@import "tw-animate-css";
+@import "shadcn-svelte/tailwind.css";
+@import "@fontsource-variable/dm-sans";
+@plugin '@tailwindcss/forms';
+@plugin '@tailwindcss/typography';
+
+@theme inline {
+	/* Corkboard palette */
+	--color-cork-50: #f5f0e8;
+	--color-cork-100: #ece5d8;
+	--color-cork-200: #ddd4c2;
+	--color-cork-300: #cdc3ae;
+	--color-cork-400: #b0a48e;
+	--color-cork-500: #8a7e6b;
+	--color-cork-600: #6b5e4a;
+	--color-cork-700: #5c4b3a;
+	--color-cork-800: #3d3529;
+	--color-cork-900: #2a231a;
+
+	/* Sticky note colors */
+	--color-sticky-yellow: #f5e9a0;
+	--color-sticky-yellow-light: #fdf6dc;
+	--color-sticky-green: #6dcf8c;
+	--color-sticky-green-light: #9ee4b4;
+	--color-sticky-blue: #aed6f1;
+	--color-sticky-blue-light: #d6eaf8;
+
+	/* Kano colors */
+	--color-kano-must: #e74c3c;
+	--color-kano-perf: #27ae60;
+	--color-kano-delight: #f1c40f;
+
+	/* Pin colors */
+	--color-pin-green: #2e9d5e;
+	--color-pin-blue: #3498db;
+	--color-pin-yellow: #d4b530;
+
+	/* Sidebar */
+	--color-sidebar: var(--sidebar);
+	--color-sidebar-foreground: var(--sidebar-foreground);
+	--color-sidebar-primary: var(--sidebar-primary);
+	--color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+	--color-sidebar-accent: var(--sidebar-accent);
+	--color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+	--color-sidebar-border: var(--sidebar-border);
+	--color-sidebar-ring: var(--sidebar-ring);
+
+	--font-sans: "DM Sans Variable", ui-sans-serif, system-ui, sans-serif;
+	--font-display: "Caveat", cursive;
+
+	@keyframes nudge {
+		0%, 100% { transform: translateX(0); }
+		50% { transform: translateX(4px); }
+	}
+}
+
+@layer base {
+	:root {
+		--sidebar: #2a231a;
+		--sidebar-foreground: #cdc3ae;
+		--sidebar-primary: #f5f0e8;
+		--sidebar-primary-foreground: #2a231a;
+		--sidebar-accent: #b0a48e;
+		--sidebar-accent-foreground: #2a231a;
+		--sidebar-border: #3d3529;
+		--sidebar-ring: #8a7e6b;
+	}
+	* {
+		border-color: var(--border, var(--color-cork-200));
+		outline-color: color-mix(in oklab, var(--ring, var(--color-cork-400)) 50%, transparent);
+	}
+	body {
+		@apply bg-cork-100 text-cork-800;
+	}
+	html {
+		@apply font-sans;
+	}
+}

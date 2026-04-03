@@ -1,0 +1,50 @@
+@import "tw-animate-css";
+@import "shadcn-svelte/tailwind.css";
+@import "@fontsource-variable/inter";
+@import url("https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&display=swap");
+
+@theme inline {
+	/* Corkboard palette */
+	--color-cork-50: #f5f0e8;
+	--color-cork-100: #ece5d8;
+	--color-cork-200: #ddd4c2;
+	--color-cork-300: #cdc3ae;
+	--color-cork-400: #b0a48e;
+	--color-cork-500: #8a7e6b;
+	--color-cork-600: #6b5e4a;
+	--color-cork-700: #5c4b3a;
+	--color-cork-800: #3d3529;
+	--color-cork-900: #2a231a;
+
+	/* Sticky note colors */
+	--color-sticky-yellow: #f5e9a0;
+	--color-sticky-yellow-light: #fdf6dc;
+	--color-sticky-green: #6dcf8c;
+	--color-sticky-green-light: #9ee4b4;
+	--color-sticky-blue: #aed6f1;
+	--color-sticky-blue-light: #d6eaf8;
+
+	/* Kano colors */
+	--color-kano-must: #e74c3c;
+	--color-kano-perf: #27ae60;
+	--color-kano-delight: #f1c40f;
+
+	/* Pin colors */
+	--color-pin-green: #2e9d5e;
+	--color-pin-blue: #3498db;
+	--color-pin-yellow: #d4b530;
+
+	--font-display: "Caveat", cursive;
+}
+
+@layer base {
+	* {
+		@apply border-border outline-ring/50;
+	}
+	body {
+		@apply bg-cork-100 text-cork-800;
+	}
+	html {
+		@apply font-sans;
+	}
+}
