@@ -1,3 +1,13 @@
+<script module lang="ts">
+	let cachedTf: any = null;
+	let cachedModel: any = null;
+	let cachedProcessor: any = null;
+	let pendingCachedData: { result: Blob; meta?: any } | null = null;
+	export function setPendingCached(data: { result: Blob; meta?: any } | null) {
+		pendingCachedData = data;
+	}
+</script>
+
 <script lang="ts">
 	import { Download, Eraser, Paintbrush, LoaderCircle, ImagePlus, X } from '@lucide/svelte';
 	import { saveToCache, loadFromCache, getHistory, createThumb, removeHistoryItem } from '$lib/utils/image-cache.js';
@@ -51,10 +61,6 @@
 	let resultCanvas: HTMLCanvasElement | undefined = $state(undefined);
 	let brushCanvas: HTMLCanvasElement | undefined = $state(undefined);
 	let originalCanvas: HTMLCanvasElement | undefined = $state(undefined);
-
-	let cachedTf: any = null;
-	let cachedModel: any = null;
-	let cachedProcessor: any = null;
 
 	async function loadModel() {
 		if (cachedTf && cachedModel && cachedProcessor) {
@@ -219,14 +225,15 @@
 		undoStack = [];
 		refreshHistory();
 
-		// Try loading from cache first
-		loadFromCache('bg-remove').then((cached) => {
-			if (cached && cached.timestamp > Date.now() - 24 * 60 * 60 * 1000) {
-				restoreFromCache(cached);
-				return;
-			}
-			processNewFile(currentFile);
-		}).catch(() => processNewFile(currentFile));
+		// Check pending cached data from history click first
+		if (pendingCachedData) {
+			const pending = pendingCachedData;
+			pendingCachedData = null;
+			restoreFromCache({ original: currentFile, result: pending.result, width: 0, height: 0, thumb: null, meta: pending.meta, timestamp: Date.now() });
+			return;
+		}
+
+		processNewFile(currentFile);
 	});
 
 	async function restoreFromCache(cached: Awaited<ReturnType<typeof loadFromCache>>) {

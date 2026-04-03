@@ -1,11 +1,10 @@
 <script lang="ts">
 	import ImageUploader from "$lib/components/bg-remove/ImageUploader.svelte";
-	import BgRemoveEditor from "$lib/components/bg-remove/BgRemoveEditor.svelte";
-	import { loadFromCache, getHistory, removeHistoryItem } from '$lib/utils/image-cache.js';
+	import BgRemoveEditor, { setPendingCached } from "$lib/components/bg-remove/BgRemoveEditor.svelte";
+	import { getHistory, removeHistoryItem } from '$lib/utils/image-cache.js';
 	import { Eraser, Paintbrush, Download, ImagePlus, X } from '@lucide/svelte';
 
 	let file = $state<File | null>(null);
-	let checking = $state(true);
 	let historyItems: { thumb: string; index: number }[] = $state([]);
 
 	async function refreshHistory() {
@@ -21,6 +20,7 @@
 		const items = await getHistory('bg-remove');
 		const cached = items[index];
 		if (!cached) return;
+		setPendingCached({ result: cached.result, meta: cached.meta });
 		file = new File([cached.original], 'history.png', { type: 'image/png' });
 	}
 
@@ -31,12 +31,6 @@
 
 	$effect(() => {
 		refreshHistory();
-		loadFromCache('bg-remove').then((cached) => {
-			if (cached && cached.timestamp > Date.now() - 24 * 60 * 60 * 1000) {
-				file = new File([cached.original], 'cached-image.png', { type: 'image/png' });
-			}
-			checking = false;
-		}).catch(() => { checking = false; });
 	});
 
 	function handleUpload(f: File) {
@@ -57,9 +51,7 @@
 		<p class="text-sm text-cork-500 mt-0.5">Upload an image, auto-remove the background, refine with brush, export as PNG</p>
 	</header>
 
-	{#if checking}
-		<!-- waiting -->
-	{:else if file}
+	{#if file}
 		<BgRemoveEditor {file} onreset={handleReset} />
 	{:else}
 		<div class="flex justify-center gap-6" style="height: calc(100vh - 180px);">

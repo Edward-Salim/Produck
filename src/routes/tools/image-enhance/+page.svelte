@@ -1,11 +1,10 @@
 <script lang="ts">
 	import ImageUploader from "$lib/components/bg-remove/ImageUploader.svelte";
-	import UpscaleEditor from "$lib/components/upscale/UpscaleEditor.svelte";
-	import { loadFromCache, getHistory, removeHistoryItem } from '$lib/utils/image-cache.js';
-	import { Download, ImagePlus, Zap, Sparkles, X } from '@lucide/svelte';
+	import UpscaleEditor, { setPendingResult } from "$lib/components/upscale/UpscaleEditor.svelte";
+	import { getHistory, removeHistoryItem } from '$lib/utils/image-cache.js';
+	import { Download, ImagePlus, X } from '@lucide/svelte';
 
 	let file = $state<File | null>(null);
-	let checking = $state(true);
 	let historyItems: { thumb: string; index: number }[] = $state([]);
 
 	async function refreshHistory() {
@@ -21,6 +20,7 @@
 		const items = await getHistory('upscale');
 		const cached = items[index];
 		if (!cached) return;
+		setPendingResult(cached.result);
 		file = new File([cached.original], 'history.png', { type: 'image/png' });
 	}
 
@@ -31,12 +31,6 @@
 
 	$effect(() => {
 		refreshHistory();
-		loadFromCache('upscale').then((cached) => {
-			if (cached && cached.timestamp > Date.now() - 24 * 60 * 60 * 1000) {
-				file = new File([cached.original], 'cached-image.png', { type: 'image/png' });
-			}
-			checking = false;
-		}).catch(() => { checking = false; });
 	});
 
 	function handleUpload(f: File) {
@@ -49,17 +43,15 @@
 	}
 </script>
 
-<svelte:head><title>Image Upscaler - Produck</title></svelte:head>
+<svelte:head><title>Image Enhancer - Produck</title></svelte:head>
 
 <div>
 	<header class="mb-6">
-		<h1 class="font-display text-4xl text-cork-800">Image Upscaler</h1>
-		<p class="text-sm text-cork-500 mt-0.5">Upload an image, upscale 2x or 4x, download the HD version</p>
+		<h1 class="font-display text-4xl text-cork-800">Image Enhancer</h1>
+		<p class="text-sm text-cork-500 mt-0.5">Upload an image and enhance its quality with AI</p>
 	</header>
 
-	{#if checking}
-		<!-- waiting -->
-	{:else if file}
+	{#if file}
 		<UpscaleEditor {file} onreset={handleReset} />
 	{:else}
 		<div class="flex justify-center gap-6" style="height: calc(100vh - 180px);">
@@ -72,17 +64,37 @@
 				style="background: radial-gradient(ellipse at 70% 20%, rgba(255,255,255,.18) 0%, transparent 60%), #cdc3ae; box-shadow: inset 0 1px 4px rgba(255,255,255,.15), inset 0 -2px 6px rgba(0,0,0,.06), 0 6px 24px rgba(0,0,0,.12);"
 			>
 				<div>
-					<p class="mb-2 text-xs font-semibold uppercase tracking-wider text-cork-500">Mode</p>
-					<div class="grid grid-cols-2 gap-2">
-						<div class="flex flex-col items-center gap-1 rounded-lg border-2 border-cork-700 bg-cork-700 px-3 py-2.5 text-xs font-medium text-cork-50"><Zap class="size-4" /> Fast</div>
-						<div class="flex flex-col items-center gap-1 rounded-lg border-2 border-cork-200 bg-white/60 px-3 py-2.5 text-xs font-medium text-cork-600"><Sparkles class="size-4" /> Enhanced</div>
+					<p class="mb-2 text-xs font-semibold uppercase tracking-wider text-cork-500">Dimensions</p>
+					<div class="space-y-1.5 text-sm">
+						<div class="flex justify-between">
+							<span class="text-cork-500">Original</span>
+							<span class="font-medium text-cork-700">—</span>
+						</div>
+						<div class="flex justify-between">
+							<span class="text-cork-500">Enhanced</span>
+							<span class="font-medium text-cork-700">—</span>
+						</div>
 					</div>
 				</div>
 				<div>
-					<p class="mb-2 text-xs font-semibold uppercase tracking-wider text-cork-500">Scale</p>
+					<p class="mb-2 text-xs font-semibold uppercase tracking-wider text-cork-500">File Size</p>
+					<div class="space-y-1.5 text-sm">
+						<div class="flex justify-between">
+							<span class="text-cork-500">Original</span>
+							<span class="font-medium text-cork-700">—</span>
+						</div>
+						<div class="flex justify-between">
+							<span class="text-cork-500">Enhanced</span>
+							<span class="font-medium text-cork-700">—</span>
+						</div>
+					</div>
+				</div>
+				<div>
+					<p class="mb-2 text-xs font-semibold uppercase tracking-wider text-cork-500">Format</p>
 					<div class="flex gap-1.5">
-						<div class="flex-1 rounded-md py-1.5 text-center text-xs font-medium bg-cork-700 text-cork-50">2x</div>
-						<div class="flex-1 rounded-md py-1.5 text-center text-xs font-medium bg-white/60 border border-cork-200 text-cork-600">4x</div>
+						<div class="flex-1 rounded-md py-1.5 text-center text-xs font-medium bg-cork-700 text-cork-50">PNG</div>
+						<div class="flex-1 rounded-md py-1.5 text-center text-xs font-medium bg-white/60 border border-cork-200 text-cork-600">JPG</div>
+						<div class="flex-1 rounded-md py-1.5 text-center text-xs font-medium bg-white/60 border border-cork-200 text-cork-600">WEBP</div>
 					</div>
 				</div>
 				<div class="border-t border-cork-200"></div>

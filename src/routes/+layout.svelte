@@ -1,11 +1,12 @@
 <script lang="ts">
 	import './layout.css';
-	import favicon from '$lib/assets/favicon.svg';
+	import favicon from '$lib/assets/favicon.ico';
+	import logoProduck from '$lib/assets/logo-produck.png';
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
 	import * as Select from '$lib/components/ui/select/index.js';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
-	import { MapPinned, Users, Map, ClipboardList, Egg, Scissors, ArrowUpFromLine } from '@lucide/svelte';
+	import { MapPinned, Users, Map, ClipboardList, Scissors, WandSparkles } from '@lucide/svelte';
 
 	let { children, data } = $props();
 	let sidebarOpen = $state(false);
@@ -35,7 +36,7 @@
 	<Sidebar.Root collapsible="icon">
 		<Sidebar.Header>
 			<div class="flex items-center gap-2 px-2 py-1">
-				<Egg class="size-5 shrink-0" />
+				<img src={logoProduck} alt="Produck" class="size-5 shrink-0 object-contain" />
 				<span class="font-display text-xl group-data-[collapsible=icon]:hidden">Produck</span>
 			</div>
 		</Sidebar.Header>
@@ -112,13 +113,13 @@
 						<Sidebar.MenuItem>
 							<Sidebar.MenuButton
 								size="sm"
-								isActive={page.url.pathname.startsWith('/tools/upscale')}
-								tooltipContent="Upscaler"
+								isActive={page.url.pathname.startsWith('/tools/image-enhance')}
+								tooltipContent="Image Enhancer"
 							>
 								{#snippet child({ props })}
-									<a href="/tools/upscale" {...props}>
-										<ArrowUpFromLine />
-										<span>Upscaler</span>
+									<a href="/tools/image-enhance" {...props}>
+										<WandSparkles />
+										<span>Image Enhancer</span>
 									</a>
 								{/snippet}
 							</Sidebar.MenuButton>
