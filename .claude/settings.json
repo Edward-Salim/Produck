@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "additionalDirectories": [
+      "C:\\Users\\lenovo\\.claude\\plans"
+    ],
+    "allow": [
+      "Bash(pnpm build:*)"
+    ]
+  }
+}

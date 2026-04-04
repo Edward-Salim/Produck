@@ -4,6 +4,32 @@ import { eq, asc } from 'drizzle-orm';
 import type { StoryMapData } from '$lib/types/story-map.js';
 import type { PageServerLoad } from './$types.js';
 
+export interface CheckedAC {
+	index: number;
+	checkedAt: string;
+}
+
+export interface BacklogStory {
+	id: string;
+	title: string;
+	epic: string;
+	task: string | null;
+	taskOrder: number;
+	kano: string;
+	pic: string;
+	picColor: string;
+	done: boolean;
+	acceptanceCriteria: string[];
+	checkedAcs: CheckedAC[];
+}
+
+export interface BacklogEpic {
+	code: string;
+	title: string;
+	actors: string[];
+	stories: BacklogStory[];
+}
+
 export const load: PageServerLoad = async ({ url, parent }) => {
 	const { projects } = await parent();
 	const projectId = Number(url.searchParams.get('project')) || projects[0]?.id;
@@ -72,9 +98,46 @@ export const load: PageServerLoad = async ({ url, parent }) => {
 			soThat: s.soThat ?? undefined,
 			pains: (s.pains as string[]) ?? [],
 			gains: (s.gains as string[]) ?? [],
-			details: (s.details as string[]) ?? []
+			details: (s.details as string[]) ?? [],
+			checkedAcs: (s.checkedAcs as CheckedAC[]) ?? []
 		});
 	}
 
-	return { storyMap };
+	// ── Backlog view data ──
+	const activityTitleMap = new Map(activities.map((a) => [a.code, a.title]));
+	const taskTitleMap = new Map(projectTasks.map((t) => [t.code, t.title]));
+	const taskOrderMap = new Map(projectTasks.map((t) => [t.id, t.sortOrder]));
+
+	const epicMap = new Map<string, BacklogStory[]>();
+
+	for (const s of projectStories) {
+		const epicCode = activityCodeMap.get(s.activityId) ?? '';
+		const taskCode = s.taskId ? taskCodeMap.get(s.taskId) ?? null : null;
+
+		const bs: BacklogStory = {
+			id: s.code,
+			title: s.title,
+			epic: epicCode,
+			task: taskCode ? (taskTitleMap.get(taskCode) ?? taskCode) : null,
+			taskOrder: s.taskId ? (taskOrderMap.get(s.taskId) ?? 0) : 0,
+			kano: s.kano,
+			pic: s.pic,
+			picColor: s.picColor,
+			done: s.done,
+			acceptanceCriteria: (s.details as string[]) ?? [],
+			checkedAcs: (s.checkedAcs as CheckedAC[]) ?? []
+		};
+
+		if (!epicMap.has(epicCode)) epicMap.set(epicCode, []);
+		epicMap.get(epicCode)!.push(bs);
+	}
+
+	const epics: BacklogEpic[] = activities.map((a) => ({
+		code: a.code,
+		title: a.title,
+		actors: (a.actorEmojis as string[]) ?? [],
+		stories: (epicMap.get(a.code) ?? []).sort((x, y) => x.taskOrder - y.taskOrder)
+	}));
+
+	return { storyMap, epics };
 };

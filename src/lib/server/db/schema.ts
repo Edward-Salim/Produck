@@ -45,18 +45,34 @@ export const backlogTypeEnum = pgEnum('backlog_type', [
 	'spike'
 ]);
 
+// ── Workspace ─────────────────────────────────────────
+
+export const workspace = pgTable('workspace', {
+	id: serial('id').primaryKey(),
+	name: text('name').notNull(),
+	createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+	updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
+});
+
+export const workspaceRelations = relations(workspace, ({ many }) => ({
+	projects: many(project)
+}));
+
 // ── Project ────────────────────────────────────────────
 
 export const project = pgTable('project', {
 	id: serial('id').primaryKey(),
+	workspaceId: integer('workspace_id').notNull().references(() => workspace.id, { onDelete: 'cascade' }),
 	name: text('name').notNull(),
+	shortName: text('short_name'),
 	goal: text('goal'),
 	levels: integer('levels').notNull().default(2),
 	createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 	updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
 });
 
-export const projectRelations = relations(project, ({ many }) => ({
+export const projectRelations = relations(project, ({ one, many }) => ({
+	workspace: one(workspace, { fields: [project.workspaceId], references: [workspace.id] }),
 	actors: many(actor),
 	activities: many(activity),
 	personas: many(persona),
@@ -136,6 +152,7 @@ export const story = pgTable('story', {
 	pains: jsonb('pains').$type<string[]>().default([]),
 	gains: jsonb('gains').$type<string[]>().default([]),
 	details: jsonb('details').$type<string[]>().default([]),
+	checkedAcs: jsonb('checked_acs').$type<{ index: number; checkedAt: string }[]>().default([]),
 	sortOrder: integer('sort_order').notNull().default(0)
 });
 

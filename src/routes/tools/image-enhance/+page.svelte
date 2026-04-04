@@ -54,13 +54,13 @@
 	{#if file}
 		<UpscaleEditor {file} onreset={handleReset} />
 	{:else}
-		<div class="flex justify-center gap-6" style="height: calc(100vh - 180px);">
-			<div class="min-w-0 flex items-center justify-center">
+		<div class="flex flex-col items-center gap-4 md:flex-row md:items-stretch md:justify-center md:gap-6" style="height: calc(100vh - 180px);">
+			<div class="w-full md:w-auto md:min-w-0 flex items-center justify-center">
 				<ImageUploader onupload={handleUpload} />
 			</div>
 
 			<div
-				class="w-56 shrink-0 space-y-5 rounded-xl p-5 h-fit opacity-40 pointer-events-none select-none"
+				class="w-full max-w-sm md:w-56 md:shrink-0 space-y-5 rounded-xl p-5 h-fit opacity-40 pointer-events-none select-none"
 				style="background: radial-gradient(ellipse at 70% 20%, rgba(255,255,255,.18) 0%, transparent 60%), #cdc3ae; box-shadow: inset 0 1px 4px rgba(255,255,255,.15), inset 0 -2px 6px rgba(0,0,0,.06), 0 6px 24px rgba(0,0,0,.12);"
 			>
 				<div>
@@ -106,9 +106,9 @@
 
 			<!-- History column -->
 			{#if historyItems.length > 0}
-				<div class="shrink-0">
+				<div class="shrink-0 w-full max-w-sm md:w-auto">
 					<p class="text-[10px] font-semibold uppercase tracking-wider text-cork-400 mb-1.5">History</p>
-					<div class="grid grid-cols-3 gap-1.5">
+					<div class="flex flex-wrap gap-1.5 md:grid md:grid-cols-3">
 						{#each historyItems as item (item.index)}
 							<div class="relative group">
 								<button

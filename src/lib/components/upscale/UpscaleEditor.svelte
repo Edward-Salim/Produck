@@ -335,7 +335,7 @@
 	}
 </script>
 
-<div class="flex justify-center items-start gap-6" style="height: calc(100vh - 180px);">
+<div class="flex flex-col items-center gap-4 md:flex-row md:justify-center md:items-start md:gap-6" style="height: calc(100vh - 180px);">
 	<!-- Left: Canvas -->
 	<div class="min-w-0 flex flex-col items-start justify-start gap-4">
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -362,7 +362,7 @@
 			{/if}
 
 			{#if origWidth > 0 && origHeight > 0}
-				<img src={URL.createObjectURL(file)} alt="" class="invisible block max-w-full" style="max-height: calc(100vh - 260px);" />
+				<img src={URL.createObjectURL(file)} alt="" class="invisible block max-w-full max-h-[50vh] md:max-h-[calc(100vh-260px)]" />
 			{:else}
 				<div class="flex h-60 w-80 items-center justify-center">
 					<LoaderCircle class="size-8 animate-spin text-cork-500" />
@@ -380,7 +380,7 @@
 
 	<!-- Right: Tools -->
 	<div
-		class="w-56 shrink-0 space-y-5 rounded-xl p-5 h-fit"
+		class="w-full max-w-sm md:w-56 md:shrink-0 space-y-5 rounded-xl p-5 h-fit"
 		style="background: radial-gradient(ellipse at 70% 20%, rgba(255,255,255,.18) 0%, transparent 60%), #cdc3ae; box-shadow: inset 0 1px 4px rgba(255,255,255,.15), inset 0 -2px 6px rgba(0,0,0,.06), 0 6px 24px rgba(0,0,0,.12);"
 	>
 		<div>
@@ -443,7 +443,7 @@
 	{#if historyItems.length > 0}
 		<div class="shrink-0">
 			<p class="text-[10px] font-semibold uppercase tracking-wider text-cork-400 mb-1.5">History</p>
-			<div class="grid grid-cols-3 gap-1.5">
+			<div class="flex flex-wrap gap-1.5 md:grid md:grid-cols-3">
 			{#each historyItems as item (item.index)}
 				<div class="relative group">
 					<button

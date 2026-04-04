@@ -129,10 +129,6 @@
 
 <!-- Board wrap (scroll hint container) -->
 <div class="relative">
-<!-- Narrative flow label -->
-<div class="absolute top-2 left-14 z-10">
-	<span class="text-[10px] text-cork-500 italic tracking-wide bg-cork-300/80 px-2 py-0.5 rounded">narrative flow &rarr;</span>
-</div>
 <!-- Board container -->
 <div
 	bind:this={boardEl}
@@ -164,10 +160,14 @@
 					<div class="flex items-center justify-center gap-1 w-35">
 						{#each act.actors as actorEmoji (actorEmoji)}
 							{@const actor = data.actors.find((a) => a.emoji === actorEmoji)}
-							<span
-								class="text-2xl cursor-default drop-shadow-sm"
-								title={actor?.label ?? ''}
-							>{actorEmoji}</span>
+							<span class="relative text-2xl cursor-default drop-shadow-sm group">
+								{actorEmoji}
+								{#if actor?.label}
+									<span class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-0.5 rounded text-[10px] font-medium text-cork-50 bg-cork-800 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-100 pointer-events-none z-10">
+										{actor.label}
+									</span>
+								{/if}
+							</span>
 						{/each}
 					</div>
 				{/if}

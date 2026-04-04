@@ -50,16 +50,16 @@
 
 <div>
 	<header class="mb-6">
-		<h1 class="font-display text-4xl text-cork-800">{parsedName().primary} Personas</h1>
+		<h1 class="font-display text-2xl md:text-4xl text-cork-800">{parsedName().primary} Personas</h1>
 		{#if parsedName().subtitle || personas.length > 0}
-			<div class="flex items-center justify-between gap-4 mt-0.5">
+			<div class="flex flex-wrap items-center justify-between gap-2 md:gap-4 mt-0.5">
 				{#if parsedName().subtitle}
 					<p class="text-sm text-cork-500">{parsedName().subtitle}</p>
 				{:else}
 					<div></div>
 				{/if}
 				{#if personas.length > 0}
-					<div class="flex items-center gap-1 shrink-0">
+					<div class="flex flex-wrap items-center gap-1">
 						{#each personas as p, i (p.id)}
 							<button
 								type="button"
@@ -86,10 +86,10 @@
 	{:else if persona}
 		<!-- Corkboard wrapper -->
 		<div
-			class="rounded-xl p-6 shadow-[inset_0_1px_4px_rgba(255,255,255,.15),inset_0_-2px_6px_rgba(0,0,0,.06),0_6px_24px_rgba(0,0,0,.12)] border-l-4 {accentBorders[currentIndex % accentBorders.length]}"
+			class="rounded-xl p-4 md:p-6 shadow-[inset_0_1px_4px_rgba(255,255,255,.15),inset_0_-2px_6px_rgba(0,0,0,.06),0_6px_24px_rgba(0,0,0,.12)] border-l-4 {accentBorders[currentIndex % accentBorders.length]}"
 			style="background: radial-gradient(ellipse at 30% 20%, rgba(255,255,255,.18) 0%, transparent 60%), #cdc3ae;"
 		>
-			<div class="grid grid-cols-[180px_1fr] gap-6">
+			<div class="grid grid-cols-1 md:grid-cols-[180px_1fr] gap-4 md:gap-6">
 				<!-- Left: Identity column -->
 				<div class="flex flex-col items-center text-center gap-3">
 					{#if avatarSrc}

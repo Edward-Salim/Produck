@@ -15,6 +15,11 @@ export interface Activity {
 	tasks?: Task[];
 }
 
+export interface StoryCheckedAC {
+	index: number;
+	checkedAt: string;
+}
+
 export interface Story {
 	id: string;
 	title: string;
@@ -29,6 +34,7 @@ export interface Story {
 	pains?: string[];
 	gains?: string[];
 	details?: string[];
+	checkedAcs?: StoryCheckedAC[];
 }
 
 export interface StoryMapData {

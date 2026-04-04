@@ -91,7 +91,7 @@
 		<!-- Activity / Task layout -->
 		<div class="flex flex-col items-center justify-center h-full px-2 font-display text-cork-800">
 			<span class="text-[9px] font-sans font-medium tracking-wide opacity-50">{id}</span>
-			<p class="text-lg font-bold leading-tight mt-0.5 text-center line-clamp-2">{title}</p>
+			<p class="text-lg font-bold leading-none mt-0.5 text-center break-words">{title}</p>
 		</div>
 	{/if}
 
