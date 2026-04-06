@@ -6,9 +6,14 @@ export const handle: Handle = async ({ event, resolve }) => {
   event.locals.supabase = supabase;
 
   const {
-    data: { session }
-  } = await supabase.auth.getSession();
-  event.locals.session = session;
+    data: { user }
+  } = await supabase.auth.getUser();
+
+  // Build a lightweight session object from the authenticated user
+  const session = user
+    ? { user, access_token: '', refresh_token: '', expires_in: 0, expires_at: 0, token_type: '' }
+    : null;
+  event.locals.session = session as any;
 
   // Public routes that don't require auth
   const publicPaths = ['/login', '/api/auth'];

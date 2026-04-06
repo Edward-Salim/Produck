@@ -26,7 +26,9 @@ export const load: LayoutServerLoad = async ({ cookies, locals }) => {
 
     // Workspace: use cookie, fall back to first
     const cookieWorkspace = cookies.get('active_workspace') ?? '';
+    console.log('[layout] active_workspace cookie:', cookieWorkspace);
     const activeWorkspaceId = Number(cookieWorkspace) || workspaces[0]?.id;
+    console.log('[layout] resolved workspace:', activeWorkspaceId);
 
     // Projects: scoped to active workspace, filtered by access for members
     let allProjects = activeWorkspaceId

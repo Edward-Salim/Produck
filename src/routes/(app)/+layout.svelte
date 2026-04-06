@@ -9,7 +9,6 @@
     Lightbulb,
     Route,
     Target,
-    Map,
     Scissors,
     WandSparkles,
     BookOpen,
@@ -99,19 +98,14 @@
     data.workspaces.find((w) => String(w.id) === selectedWorkspaceId)?.name ?? 'Workspace'
   );
 
-  $effect(() => {
-    if (selectedWorkspaceId) {
-      document.cookie = `active_workspace=${selectedWorkspaceId};path=/;max-age=${60 * 60 * 24 * 365};samesite=lax`;
-    }
-  });
-
-  function switchWorkspace(id: string | undefined) {
+  async function switchWorkspace(id: string | undefined) {
     if (!id || id === selectedWorkspaceId) return;
-    document.cookie = `active_workspace=${id};path=/;max-age=${60 * 60 * 24 * 365};samesite=lax`;
-    // Clear project context and reload
-    const url = new URL(page.url);
-    url.searchParams.delete('project');
-    goto(url.toString(), { invalidateAll: true });
+    await fetch('/api/workspace', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ workspaceId: id })
+    });
+    window.location.reload();
   }
 
   // ── Project ──
@@ -209,6 +203,7 @@
 
     <Sidebar.Content>
       <Sidebar.Group>
+        <Sidebar.GroupLabel>Work</Sidebar.GroupLabel>
         <Sidebar.GroupContent>
           <Sidebar.Menu>
             <Sidebar.MenuItem>
@@ -218,14 +213,10 @@
                 tooltipContent="Outcomes"
               >
                 {#snippet child({ props })}
-                  <a href="/outcomes" {...props}>
-                    <Target />
-                    <span>Outcomes</span>
-                  </a>
+                  <a href="/outcomes" {...props}><Target /><span>Outcomes</span></a>
                 {/snippet}
               </Sidebar.MenuButton>
             </Sidebar.MenuItem>
-
             <Sidebar.MenuItem>
               <Sidebar.MenuButton
                 size="sm"
@@ -233,14 +224,12 @@
                 tooltipContent="Interviews"
               >
                 {#snippet child({ props })}
-                  <a href="/interview-snapshots" {...props}>
-                    <NotebookPen />
-                    <span>Interviews</span>
-                  </a>
+                  <a href="/interview-snapshots" {...props}
+                    ><NotebookPen /><span>Interviews</span></a
+                  >
                 {/snippet}
               </Sidebar.MenuButton>
             </Sidebar.MenuItem>
-
             <Sidebar.MenuItem>
               <Sidebar.MenuButton
                 size="sm"
@@ -248,14 +237,12 @@
                 tooltipContent="Experience Map"
               >
                 {#snippet child({ props })}
-                  <a href="/experience-map?project={selectedProjectId}" {...props}>
-                    <Route />
-                    <span>Experience Map</span>
-                  </a>
+                  <a href="/experience-map?project={selectedProjectId}" {...props}
+                    ><Route /><span>Experience Map</span></a
+                  >
                 {/snippet}
               </Sidebar.MenuButton>
             </Sidebar.MenuItem>
-
             <Sidebar.MenuItem>
               <Sidebar.MenuButton
                 size="sm"
@@ -264,22 +251,53 @@
                 tooltipContent="Idea Bank"
               >
                 {#snippet child({ props })}
-                  <a href="/ideas?project={selectedProjectId}" {...props}>
-                    <Lightbulb />
-                    <span>Idea Bank</span>
-                  </a>
+                  <a href="/ideas?project={selectedProjectId}" {...props}
+                    ><Lightbulb /><span>Idea Bank</span></a
+                  >
                 {/snippet}
               </Sidebar.MenuButton>
             </Sidebar.MenuItem>
+          </Sidebar.Menu>
+        </Sidebar.GroupContent>
+      </Sidebar.Group>
 
+      <Sidebar.Separator />
+
+      <Sidebar.Group>
+        <Sidebar.GroupLabel>Research</Sidebar.GroupLabel>
+        <Sidebar.GroupContent>
+          <Sidebar.Menu>
             <Sidebar.MenuItem>
               <Sidebar.MenuButton
                 size="sm"
-                aria-disabled="true"
-                class="pointer-events-none opacity-40"
-                tooltipContent="Roadmap"
+                isActive={page.url.pathname.startsWith('/artifacts')}
+                tooltipContent="PM Artifacts"
               >
-                <Map /><span>Roadmap</span>
+                {#snippet child({ props })}
+                  <a href="/artifacts" {...props}><BookOpen /><span>PM Artifacts</span></a>
+                {/snippet}
+              </Sidebar.MenuButton>
+            </Sidebar.MenuItem>
+            <Sidebar.MenuItem>
+              <Sidebar.MenuButton
+                size="sm"
+                isActive={page.url.pathname.startsWith('/landscape')}
+                tooltipContent="Fintech Map"
+              >
+                {#snippet child({ props })}
+                  <a href="/landscape" {...props}><Landmark /><span>Fintech Map</span></a>
+                {/snippet}
+              </Sidebar.MenuButton>
+            </Sidebar.MenuItem>
+            <Sidebar.MenuItem>
+              <Sidebar.MenuButton
+                size="sm"
+                isActive={page.url.pathname.startsWith('/trends')}
+                tooltipContent="Trends"
+              >
+                {#snippet child({ props })}
+                  <a href="/trends" {...props}><Rss /><span>Trends</span></a>
+                {/snippet}
               </Sidebar.MenuButton>
             </Sidebar.MenuItem>
           </Sidebar.Menu>
@@ -295,42 +313,11 @@
             <Sidebar.MenuItem>
               <Sidebar.MenuButton
                 size="sm"
-                isActive={page.url.pathname.startsWith('/artifacts')}
-                tooltipContent="PM Artifacts"
-              >
-                {#snippet child({ props })}
-                  <a href="/artifacts" {...props}>
-                    <BookOpen />
-                    <span>PM Artifacts</span>
-                  </a>
-                {/snippet}
-              </Sidebar.MenuButton>
-            </Sidebar.MenuItem>
-            <Sidebar.MenuItem>
-              <Sidebar.MenuButton
-                size="sm"
-                isActive={page.url.pathname.startsWith('/landscape')}
-                tooltipContent="Fintech Map"
-              >
-                {#snippet child({ props })}
-                  <a href="/landscape" {...props}>
-                    <Landmark />
-                    <span>Fintech Map</span>
-                  </a>
-                {/snippet}
-              </Sidebar.MenuButton>
-            </Sidebar.MenuItem>
-            <Sidebar.MenuItem>
-              <Sidebar.MenuButton
-                size="sm"
                 isActive={page.url.pathname.startsWith('/tools/bg-remove')}
                 tooltipContent="BG Remover"
               >
                 {#snippet child({ props })}
-                  <a href="/tools/bg-remove" {...props}>
-                    <Scissors />
-                    <span>BG Remover</span>
-                  </a>
+                  <a href="/tools/bg-remove" {...props}><Scissors /><span>BG Remover</span></a>
                 {/snippet}
               </Sidebar.MenuButton>
             </Sidebar.MenuItem>
@@ -341,10 +328,9 @@
                 tooltipContent="Image Enhancer"
               >
                 {#snippet child({ props })}
-                  <a href="/tools/image-enhance" {...props}>
-                    <WandSparkles />
-                    <span>Image Enhancer</span>
-                  </a>
+                  <a href="/tools/image-enhance" {...props}
+                    ><WandSparkles /><span>Image Enhancer</span></a
+                  >
                 {/snippet}
               </Sidebar.MenuButton>
             </Sidebar.MenuItem>
@@ -355,24 +341,7 @@
                 tooltipContent="MD to PDF"
               >
                 {#snippet child({ props })}
-                  <a href="/tools/md-to-pdf" {...props}>
-                    <FileText />
-                    <span>MD to PDF</span>
-                  </a>
-                {/snippet}
-              </Sidebar.MenuButton>
-            </Sidebar.MenuItem>
-            <Sidebar.MenuItem>
-              <Sidebar.MenuButton
-                size="sm"
-                isActive={page.url.pathname.startsWith('/trends')}
-                tooltipContent="Trends"
-              >
-                {#snippet child({ props })}
-                  <a href="/trends" {...props}>
-                    <Rss />
-                    <span>Trends</span>
-                  </a>
+                  <a href="/tools/md-to-pdf" {...props}><FileText /><span>MD to PDF</span></a>
                 {/snippet}
               </Sidebar.MenuButton>
             </Sidebar.MenuItem>
@@ -381,31 +350,51 @@
       </Sidebar.Group>
     </Sidebar.Content>
 
-    <Sidebar.Footer>
+    <Sidebar.Footer class="border-t border-cork-300/40 pt-2">
+      <div class="px-2 pb-1 group-data-[collapsible=icon]:hidden">
+        <p class="truncate text-xs font-medium text-cork-700">
+          {data.currentUser?.displayName ?? 'User'}
+        </p>
+        <p class="truncate text-[10px] text-cork-400">{data.currentUser?.email ?? ''}</p>
+      </div>
       {#if data.isAdmin}
-        <button
-          type="button"
-          class="flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-xs text-cork-500 transition-colors hover:bg-cork-200/50 hover:text-cork-700"
-          onclick={() => {
-            loadAccess();
-            accessDialogOpen = true;
-          }}
-        >
-          <Shield class="size-3.5" />
-          <span class="group-data-[collapsible=icon]:hidden">Manage Access</span>
-        </button>
+        <Sidebar.Menu>
+          <Sidebar.MenuItem>
+            <Sidebar.MenuButton size="sm" tooltipContent="Manage Access">
+              {#snippet child({ props })}
+                <button
+                  {...props}
+                  onclick={() => {
+                    loadAccess();
+                    accessDialogOpen = true;
+                  }}
+                >
+                  <Shield />
+                  <span>Manage Access</span>
+                </button>
+              {/snippet}
+            </Sidebar.MenuButton>
+          </Sidebar.MenuItem>
+        </Sidebar.Menu>
       {/if}
-      <button
-        type="button"
-        class="flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-xs text-cork-500 transition-colors hover:bg-cork-200/50 hover:text-cork-700"
-        onclick={async () => {
-          await fetch('/api/auth', { method: 'DELETE' });
-          goto('/login');
-        }}
-      >
-        <LogOut class="size-3.5" />
-        <span class="group-data-[collapsible=icon]:hidden">Sign Out</span>
-      </button>
+      <Sidebar.Menu>
+        <Sidebar.MenuItem>
+          <Sidebar.MenuButton size="sm" tooltipContent="Sign Out">
+            {#snippet child({ props })}
+              <button
+                {...props}
+                onclick={async () => {
+                  await fetch('/api/auth', { method: 'DELETE' });
+                  goto('/login');
+                }}
+              >
+                <LogOut />
+                <span>Sign Out</span>
+              </button>
+            {/snippet}
+          </Sidebar.MenuButton>
+        </Sidebar.MenuItem>
+      </Sidebar.Menu>
     </Sidebar.Footer>
   </Sidebar.Root>
 
