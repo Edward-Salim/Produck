@@ -1,10 +1,6 @@
 {
   "permissions": {
-    "additionalDirectories": [
-      "C:\\Users\\lenovo\\.claude\\plans"
-    ],
-    "allow": [
-      "Bash(pnpm build:*)"
-    ]
+    "allow": ["Bash(pnpm build:*)", "Bash(npx drizzle-kit:*)"],
+    "additionalDirectories": ["C:\\Users\\lenovo\\.claude\\plans"]
   }
 }
