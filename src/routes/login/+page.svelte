@@ -10,8 +10,18 @@
 
   async function handleLogin(e: Event) {
     e.preventDefault();
-    loading = true;
     error = '';
+
+    if (!email.trim()) {
+      error = 'Please enter your email';
+      return;
+    }
+    if (!password) {
+      error = 'Please enter your password';
+      return;
+    }
+
+    loading = true;
 
     const res = await fetch('/api/auth', {
       method: 'POST',
@@ -58,9 +68,9 @@
             >
             <input
               id="email"
-              type="email"
+              type="text"
               bind:value={email}
-              required
+              autocomplete="email"
               class="h-10 w-full rounded-lg border border-cork-300 bg-white/80 px-3 text-sm text-cork-800 placeholder:text-cork-400 focus:ring-2 focus:ring-cork-400/50 focus:outline-none"
               placeholder="you@example.com"
             />
@@ -75,7 +85,7 @@
               id="password"
               type="password"
               bind:value={password}
-              required
+              autocomplete="current-password"
               class="h-10 w-full rounded-lg border border-cork-300 bg-white/80 px-3 text-sm text-cork-800 placeholder:text-cork-400 focus:ring-2 focus:ring-cork-400/50 focus:outline-none"
               placeholder="••••••••"
             />

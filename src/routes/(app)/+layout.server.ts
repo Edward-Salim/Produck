@@ -1,10 +1,24 @@
 import { db } from '$lib/server/db/index.js';
-import { workspace, project, productObjective, keyResult } from '$lib/server/db/schema.js';
-import { asc, eq, and } from 'drizzle-orm';
+import {
+  workspace,
+  project,
+  productObjective,
+  keyResult,
+  appUser,
+  projectAccess
+} from '$lib/server/db/schema.js';
+import { asc, eq, and, inArray } from 'drizzle-orm';
 import type { LayoutServerLoad } from './$types.js';
 
-export const load: LayoutServerLoad = async ({ cookies }) => {
+export const load: LayoutServerLoad = async ({ cookies, locals }) => {
   try {
+    // Look up current user
+    const authId = locals.session?.user?.id;
+    const [currentUser] = authId
+      ? await db.select().from(appUser).where(eq(appUser.authId, authId))
+      : [];
+    const isAdmin = currentUser?.role === 'admin';
+
     const workspaces = await db
       .select({ id: workspace.id, name: workspace.name })
       .from(workspace)
@@ -14,14 +28,26 @@ export const load: LayoutServerLoad = async ({ cookies }) => {
     const cookieWorkspace = cookies.get('active_workspace') ?? '';
     const activeWorkspaceId = Number(cookieWorkspace) || workspaces[0]?.id;
 
-    // Projects: scoped to active workspace
-    const projects = activeWorkspaceId
+    // Projects: scoped to active workspace, filtered by access for members
+    let allProjects = activeWorkspaceId
       ? await db
           .select({ id: project.id, name: project.name, shortName: project.shortName })
           .from(project)
           .where(eq(project.workspaceId, activeWorkspaceId))
           .orderBy(asc(project.id))
       : [];
+
+    // Members only see projects they have access to
+    if (!isAdmin && currentUser) {
+      const access = await db
+        .select({ projectId: projectAccess.projectId })
+        .from(projectAccess)
+        .where(eq(projectAccess.userId, currentUser.id));
+      const allowedIds = new Set(access.map((a) => a.projectId));
+      allProjects = allProjects.filter((p) => allowedIds.has(p.id));
+    }
+
+    const projects = allProjects;
 
     // Project: use cookie only if it belongs to this workspace, otherwise first
     const cookieProject = cookies.get('active_project') ?? '';
@@ -93,10 +119,26 @@ export const load: LayoutServerLoad = async ({ cookies }) => {
       lastProject,
       gaugeKRs,
       gaugeYear,
-      gaugeQuarter
+      gaugeQuarter,
+      currentUser: currentUser
+        ? {
+            id: currentUser.id,
+            email: currentUser.email,
+            displayName: currentUser.displayName,
+            role: currentUser.role
+          }
+        : null,
+      isAdmin
     };
   } catch (err) {
     console.error('DB query failed:', err);
-    return { workspaces: [], activeWorkspaceId: '', projects: [], lastProject: '' };
+    return {
+      workspaces: [],
+      activeWorkspaceId: '',
+      projects: [],
+      lastProject: '',
+      currentUser: null,
+      isAdmin: false
+    };
   }
 };

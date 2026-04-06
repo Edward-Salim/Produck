@@ -32,6 +32,39 @@ export const backlogStatusEnum = pgEnum('backlog_status', [
 
 export const backlogTypeEnum = pgEnum('backlog_type', ['feature', 'bug', 'task', 'spike']);
 
+export const appRoleEnum = pgEnum('app_role', ['admin', 'member']);
+
+// ── App User & Access ────────────────────────────────
+
+export const appUser = pgTable('app_user', {
+  id: serial('id').primaryKey(),
+  authId: text('auth_id').notNull().unique(),
+  email: text('email').notNull(),
+  displayName: text('display_name').notNull(),
+  role: appRoleEnum('role').notNull().default('member'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
+});
+
+export const appUserRelations = relations(appUser, ({ many }) => ({
+  projectAccess: many(projectAccess)
+}));
+
+export const projectAccess = pgTable('project_access', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id')
+    .notNull()
+    .references(() => appUser.id, { onDelete: 'cascade' }),
+  projectId: integer('project_id')
+    .notNull()
+    .references(() => project.id, { onDelete: 'cascade' }),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
+});
+
+export const projectAccessRelations = relations(projectAccess, ({ one }) => ({
+  user: one(appUser, { fields: [projectAccess.userId], references: [appUser.id] }),
+  project: one(project, { fields: [projectAccess.projectId], references: [project.id] })
+}));
+
 // ── Workspace ─────────────────────────────────────────
 
 export const workspace = pgTable('workspace', {
