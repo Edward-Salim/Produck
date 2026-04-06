@@ -59,8 +59,20 @@
   let loadedFromHistory = false;
   let cachedResultBlob: Blob | null = null;
 
-  const MAX_SIDE = 512;
+  const isMobile =
+    typeof navigator !== 'undefined' && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  const MAX_SIDE = isMobile ? 256 : 512;
   const MODEL_ID = 'Xenova/swin2SR-realworld-sr-x4-64-bsrgan-psnr';
+
+  async function detectDevice(): Promise<'webgpu' | 'wasm'> {
+    try {
+      if (typeof navigator !== 'undefined' && 'gpu' in navigator) {
+        const adapter = await (navigator as any).gpu.requestAdapter();
+        if (adapter) return 'webgpu';
+      }
+    } catch {}
+    return 'wasm';
+  }
 
   async function loadModel() {
     if (cachedModel) return cachedModel;
@@ -69,10 +81,12 @@
     const tf = await import('@huggingface/transformers');
     tf.env.allowLocalModels = false;
 
-    progress = 'Downloading AI model...';
+    const device = await detectDevice();
+    progress = device === 'webgpu' ? 'Loading AI model (GPU)...' : 'Loading AI model (CPU)...';
+
     const model = await tf.AutoModel.from_pretrained(MODEL_ID, {
-      dtype: 'fp32',
-      device: 'wasm',
+      dtype: device === 'webgpu' ? 'fp32' : 'fp32',
+      device,
       progress_callback: (p: { status: string; progress?: number }) => {
         if (p.progress !== undefined) {
           progress = `Downloading model: ${Math.round(p.progress)}%`;
@@ -277,7 +291,15 @@
           const { pixel_values } = await processor(rawImage);
 
           progress = 'Running AI enhancement...';
-          const output = await model({ pixel_values });
+          const output = await Promise.race([
+            model({ pixel_values }),
+            new Promise((_, reject) =>
+              setTimeout(
+                () => reject(new Error('AI processing timed out — try a smaller image')),
+                60000
+              )
+            )
+          ]);
 
           srCanvas = tensorToCanvas(output.reconstruction);
         }
