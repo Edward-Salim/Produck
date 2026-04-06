@@ -18,9 +18,11 @@
     NotebookPen,
     GaugeCircle,
     FileText,
-    Rss
+    Rss,
+    LogOut
   } from '@lucide/svelte';
   import { progressColor } from '$lib/constants/colors.js';
+  import { invalidateAll } from '$app/navigation';
 
   let { children, data } = $props();
   let sidebarOpen = $state(false);
@@ -347,6 +349,20 @@
         </Sidebar.GroupContent>
       </Sidebar.Group>
     </Sidebar.Content>
+
+    <Sidebar.Footer>
+      <button
+        type="button"
+        class="flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-xs text-cork-500 transition-colors hover:bg-cork-200/50 hover:text-cork-700"
+        onclick={async () => {
+          await fetch('/api/auth', { method: 'DELETE' });
+          goto('/login');
+        }}
+      >
+        <LogOut class="size-3.5" />
+        <span class="group-data-[collapsible=icon]:hidden">Sign Out</span>
+      </button>
+    </Sidebar.Footer>
   </Sidebar.Root>
 
   <Sidebar.Inset class="h-svh overflow-y-auto bg-cork-100">
