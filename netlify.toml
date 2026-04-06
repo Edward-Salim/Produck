@@ -1,5 +1,5 @@
 [build]
-  command = "pnpm build"
+  command = "pnpm drizzle-kit push --force && pnpm build"
   publish = "build"
 
 [build.environment]
