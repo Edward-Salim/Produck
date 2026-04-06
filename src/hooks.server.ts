@@ -1,5 +1,5 @@
 import { createSupabaseServerClient } from '$lib/server/supabase';
-import { redirect, type Handle } from '@sveltejs/kit';
+import { json, redirect, type Handle } from '@sveltejs/kit';
 
 export const handle: Handle = async ({ event, resolve }) => {
   const supabase = createSupabaseServerClient(event.cookies);
@@ -14,8 +14,11 @@ export const handle: Handle = async ({ event, resolve }) => {
   const publicPaths = ['/login', '/api/auth'];
   const isPublic = publicPaths.some((p) => event.url.pathname.startsWith(p));
 
-  // Redirect to login if not authenticated
   if (!session && !isPublic) {
+    // API routes get 401 JSON, pages get redirected
+    if (event.url.pathname.startsWith('/api/')) {
+      return json({ error: 'Unauthorized' }, { status: 401 });
+    }
     throw redirect(303, '/login');
   }
 
