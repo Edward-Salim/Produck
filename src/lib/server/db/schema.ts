@@ -193,7 +193,6 @@ export const project = pgTable('project', {
     .references(() => workspace.id, { onDelete: 'cascade' }),
   name: text('name').notNull(),
   shortName: text('short_name'),
-  goal: text('goal'),
   levels: integer('levels').notNull().default(2),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
@@ -430,6 +429,63 @@ export const backlogItem = pgTable('backlog_item', {
 export const backlogItemRelations = relations(backlogItem, ({ one }) => ({
   project: one(project, { fields: [backlogItem.projectId], references: [project.id] }),
   story: one(story, { fields: [backlogItem.storyId], references: [story.id] })
+}));
+
+// ── Experience Map (decoupled from Story Map) ────────
+
+export const experiencePhase = pgTable('experience_phase', {
+  id: serial('id').primaryKey(),
+  projectId: integer('project_id')
+    .notNull()
+    .references(() => project.id, { onDelete: 'cascade' }),
+  title: text('title').notNull(),
+  actorEmojis: jsonb('actor_emojis').$type<string[]>().default([]),
+  sortOrder: integer('sort_order').notNull().default(0)
+});
+
+export const experiencePhaseRelations = relations(experiencePhase, ({ one, many }) => ({
+  project: one(project, { fields: [experiencePhase.projectId], references: [project.id] }),
+  steps: many(experienceStep)
+}));
+
+export const experienceStep = pgTable('experience_step', {
+  id: serial('id').primaryKey(),
+  phaseId: integer('phase_id')
+    .notNull()
+    .references(() => experiencePhase.id, { onDelete: 'cascade' }),
+  title: text('title').notNull(),
+  sortOrder: integer('sort_order').notNull().default(0)
+});
+
+export const experienceStepRelations = relations(experienceStep, ({ one, many }) => ({
+  phase: one(experiencePhase, {
+    fields: [experienceStep.phaseId],
+    references: [experiencePhase.id]
+  }),
+  touchpoints: many(experienceTouchpoint)
+}));
+
+export const experienceTouchpoint = pgTable('experience_touchpoint', {
+  id: serial('id').primaryKey(),
+  stepId: integer('step_id')
+    .notNull()
+    .references(() => experienceStep.id, { onDelete: 'cascade' }),
+  title: text('title').notNull(),
+  asA: text('as_a'),
+  wantTo: text('want_to'),
+  soThat: text('so_that'),
+  pains: jsonb('pains').$type<string[]>().default([]),
+  gains: jsonb('gains').$type<string[]>().default([]),
+  pic: text('pic').notNull().default(''),
+  picColor: text('pic_color').notNull().default(''),
+  sortOrder: integer('sort_order').notNull().default(0)
+});
+
+export const experienceTouchpointRelations = relations(experienceTouchpoint, ({ one }) => ({
+  step: one(experienceStep, {
+    fields: [experienceTouchpoint.stepId],
+    references: [experienceStep.id]
+  })
 }));
 
 // ── RSS / Trend Analysis ─────────────────────────────

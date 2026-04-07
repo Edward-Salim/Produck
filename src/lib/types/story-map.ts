@@ -52,7 +52,6 @@ export interface Story {
 
 export interface StoryMapData {
   product: string;
-  goal?: string;
   actors: Actor[];
   levels?: number;
   activities: Activity[];

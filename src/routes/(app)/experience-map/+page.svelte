@@ -1,48 +1,52 @@
 <script lang="ts">
   import { Route } from '@lucide/svelte';
   import EmptyState from '$lib/components/ui/empty-state.svelte';
-  import type { ExperienceActivity, ExperienceTask, ExperienceStory } from './+page.server.js';
+  import type {
+    ExperiencePhaseData,
+    ExperienceStepData,
+    ExperienceTouchpointData
+  } from './+page.server.js';
   import { PHASE_COLORS, GAIN_COLOR, PAIN_COLOR } from '$lib/constants/colors.js';
 
   let { data } = $props();
 
-  const acts = $derived(data.activities as ExperienceActivity[]);
+  const phases = $derived(data.phases as ExperiencePhaseData[]);
 
-  let allStories = $derived.by(() => {
-    const result: { story: ExperienceStory; taskTitle: string; actIndex: number }[] = [];
-    for (let ai = 0; ai < acts.length; ai++) {
-      for (const task of acts[ai].tasks) {
-        for (const story of task.stories) {
-          result.push({ story, taskTitle: task.title, actIndex: ai });
+  let allTouchpoints = $derived.by(() => {
+    const result: { tp: ExperienceTouchpointData; stepTitle: string; phaseIndex: number }[] = [];
+    for (let pi = 0; pi < phases.length; pi++) {
+      for (const step of phases[pi].steps) {
+        for (const tp of step.touchpoints) {
+          result.push({ tp, stepTitle: step.title, phaseIndex: pi });
         }
       }
     }
     return result;
   });
 
-  let actSpans = $derived.by(() => {
+  let phaseSpans = $derived.by(() => {
     const spans: { title: string; span: number; actors: string[] }[] = [];
-    for (const act of acts) {
+    for (const phase of phases) {
       let count = 0;
-      for (const task of act.tasks) count += task.stories.length;
-      if (count > 0) spans.push({ title: act.title, span: count, actors: act.actors });
+      for (const step of phase.steps) count += step.touchpoints.length;
+      if (count > 0) spans.push({ title: phase.title, span: count, actors: phase.actors });
     }
     return spans;
   });
 
-  let taskSpans = $derived.by(() => {
-    const spans: { title: string; span: number; actIndex: number }[] = [];
-    for (let ai = 0; ai < acts.length; ai++) {
-      for (const task of acts[ai].tasks) {
-        if (task.stories.length > 0) {
-          spans.push({ title: task.title, span: task.stories.length, actIndex: ai });
+  let stepSpans = $derived.by(() => {
+    const spans: { title: string; span: number; phaseIndex: number }[] = [];
+    for (let pi = 0; pi < phases.length; pi++) {
+      for (const step of phases[pi].steps) {
+        if (step.touchpoints.length > 0) {
+          spans.push({ title: step.title, span: step.touchpoints.length, phaseIndex: pi });
         }
       }
     }
     return spans;
   });
 
-  let totalCols = $derived(allStories.length);
+  let totalTouchpoints = $derived(allTouchpoints.length);
 
   const HAPPY_FACES = ['\u{1F60A}', '\u{1F929}', '\u{1F60D}', '\u{1F973}', '\u{1F642}', '\u{263A}'];
   const MIXED_FACES = [
@@ -55,7 +59,7 @@
   ];
   const SAD_FACES = ['\u{1F615}', '\u{1F61F}', '\u{1F623}', '\u{1F629}', '\u{1F62B}', '\u{1F630}'];
 
-  function storyEmoji(s: ExperienceStory, index: number): string {
+  function storyEmoji(s: ExperienceTouchpointData, index: number): string {
     const p = s.pains.length;
     const g = s.gains.length;
     if (p === 0 && g === 0) return '\u{1F610}';
@@ -94,14 +98,14 @@
 <div>
   <header class="mb-4">
     <h1 class="font-display text-2xl text-cork-800 md:text-4xl">Experience Map</h1>
-    <p class="mt-0.5 text-sm text-cork-500">Customer journey across all activities</p>
+    <p class="mt-0.5 text-sm text-cork-500">Customer journey across all phases</p>
   </header>
 
-  {#if totalCols === 0}
+  {#if totalTouchpoints === 0}
     <EmptyState
       icon={Route}
-      title="No stories yet"
-      description="Add stories to the story map to see the experience map"
+      title="No touchpoints yet"
+      description="Add phases, steps, and touchpoints to build the experience map"
     />
   {:else}
     <div
@@ -112,19 +116,22 @@
     >
       <div
         class="flex flex-col"
-        style="min-width: {Math.max(700, totalCols * 155)}px; min-height: calc(100vh - 180px);"
+        style="min-width: {Math.max(
+          700,
+          totalTouchpoints * 155
+        )}px; min-height: calc(100vh - 180px);"
       >
-        <!-- Activity -->
+        <!-- Phase -->
         <div
           class="grid flex-1 border-b border-cork-600/30"
-          style="grid-template-columns: 100px repeat({totalCols}, 1fr);"
+          style="grid-template-columns: 140px repeat({totalTouchpoints}, 1fr);"
         >
           <div
             class="flex items-center px-3 text-xs font-bold tracking-wider text-cork-500 uppercase"
           >
-            Activity
+            Phase
           </div>
-          {#each actSpans as act, i}
+          {#each phaseSpans as act, i}
             <div
               class="flex items-center justify-center border-l border-cork-600/30 px-3 py-2 text-center"
               style="grid-column: span {act.span}; background: {phase(i).bg};"
@@ -139,14 +146,14 @@
         <!-- Actors -->
         <div
           class="grid flex-1 border-b border-cork-600/30"
-          style="grid-template-columns: 100px repeat({totalCols}, 1fr);"
+          style="grid-template-columns: 140px repeat({totalTouchpoints}, 1fr);"
         >
           <div
             class="flex items-center px-3 text-xs font-bold tracking-wider text-cork-500 uppercase"
           >
             Actors
           </div>
-          {#each actSpans as act}
+          {#each phaseSpans as act}
             <div
               class="flex items-center justify-center border-l border-cork-600/30 px-3 py-1.5 text-center"
               style="grid-column: span {act.span};"
@@ -156,17 +163,17 @@
           {/each}
         </div>
 
-        <!-- Tasks -->
+        <!-- Steps -->
         <div
           class="grid flex-1 border-b border-cork-600/30"
-          style="grid-template-columns: 100px repeat({totalCols}, 1fr);"
+          style="grid-template-columns: 140px repeat({totalTouchpoints}, 1fr);"
         >
           <div
             class="flex items-center px-3 text-xs font-bold tracking-wider text-cork-500 uppercase"
           >
-            Tasks
+            Steps
           </div>
-          {#each taskSpans as task}
+          {#each stepSpans as task}
             <div
               class="flex items-center justify-center border-l border-cork-600/30 px-3 py-1.5 text-center"
               style="grid-column: span {task.span};"
@@ -176,19 +183,19 @@
           {/each}
         </div>
 
-        <!-- Stories -->
+        <!-- Touchpoints -->
         <div
           class="grid flex-1 border-b border-cork-600/30"
-          style="grid-template-columns: 100px repeat({totalCols}, 1fr);"
+          style="grid-template-columns: 140px repeat({totalTouchpoints}, 1fr);"
         >
           <div
             class="flex items-center px-3 text-xs font-bold tracking-wider text-cork-500 uppercase"
           >
-            Stories
+            Touchpoints
           </div>
-          {#each allStories as s}
+          {#each allTouchpoints as s}
             <div class="flex items-center justify-center border-l border-cork-600/30 px-3 py-2">
-              <p class="text-center text-sm text-cork-800">{s.story.title}</p>
+              <p class="text-center text-sm text-cork-800">{s.tp.title}</p>
             </div>
           {/each}
         </div>
@@ -196,20 +203,20 @@
         <!-- Needs & Pains -->
         <div
           class="grid flex-1 border-b border-cork-600/30"
-          style="grid-template-columns: 100px repeat({totalCols}, 1fr);"
+          style="grid-template-columns: 140px repeat({totalTouchpoints}, 1fr);"
         >
           <div
             class="flex items-center px-3 text-xs font-bold tracking-wider text-cork-500 uppercase"
           >
             Needs &amp; Pains
           </div>
-          {#each allStories as s}
+          {#each allTouchpoints as s}
             <div class="border-l border-cork-600/30 px-3 py-2">
               <div class="space-y-1.5">
-                {#each s.story.gains as gain, i (i)}
+                {#each s.tp.gains as gain, i (i)}
                   <p class="text-xs italic" style="color: {GAIN_COLOR};">"{gain}"</p>
                 {/each}
-                {#each s.story.pains as pain, i (i)}
+                {#each s.tp.pains as pain, i (i)}
                   <p class="text-xs italic" style="color: {PAIN_COLOR};">"{pain}"</p>
                 {/each}
               </div>
@@ -217,19 +224,19 @@
           {/each}
         </div>
 
-        <!-- Touchpoint -->
+        <!-- Channel -->
         <div
           class="grid flex-1 border-b border-cork-600/30"
-          style="grid-template-columns: 100px repeat({totalCols}, 1fr);"
+          style="grid-template-columns: 140px repeat({totalTouchpoints}, 1fr);"
         >
           <div
             class="flex items-center px-3 text-xs font-bold tracking-wider text-cork-500 uppercase"
           >
-            Touchpoint
+            Channel
           </div>
-          {#each allStories as s}
+          {#each allTouchpoints as s}
             <div class="flex items-center justify-center border-l border-cork-600/30 px-3 py-2">
-              <span class="text-xs font-medium text-cork-700">{touchpointLabel(s.taskTitle)}</span>
+              <span class="text-xs font-medium text-cork-700">{touchpointLabel(s.stepTitle)}</span>
             </div>
           {/each}
         </div>
@@ -237,31 +244,34 @@
         <!-- Feeling -->
         <div
           class="grid flex-1 border-b border-cork-600/30"
-          style="grid-template-columns: 100px repeat({totalCols}, 1fr);"
+          style="grid-template-columns: 140px repeat({totalTouchpoints}, 1fr);"
         >
           <div
             class="flex items-center px-3 text-xs font-bold tracking-wider text-cork-500 uppercase"
           >
             Feeling
           </div>
-          {#each allStories as s, i}
+          {#each allTouchpoints as s, i}
             <div class="flex items-center justify-center border-l border-cork-600/30 px-3 py-2">
-              <span class="text-2xl">{storyEmoji(s.story, i)}</span>
+              <span class="text-2xl">{storyEmoji(s.tp, i)}</span>
             </div>
           {/each}
         </div>
 
         <!-- Ownership -->
-        <div class="grid flex-1" style="grid-template-columns: 100px repeat({totalCols}, 1fr);">
+        <div
+          class="grid flex-1"
+          style="grid-template-columns: 140px repeat({totalTouchpoints}, 1fr);"
+        >
           <div
             class="flex items-center px-3 text-xs font-bold tracking-wider text-cork-500 uppercase"
           >
             Ownership
           </div>
-          {#each allStories as s}
+          {#each allTouchpoints as s}
             <div class="flex items-center justify-center border-l border-cork-600/30 px-3 py-2">
-              {#if s.story.pic}
-                <p class="text-sm font-medium text-cork-700">{s.story.pic}</p>
+              {#if s.tp.pic}
+                <p class="text-sm font-medium text-cork-700">{s.tp.pic}</p>
               {/if}
             </div>
           {/each}

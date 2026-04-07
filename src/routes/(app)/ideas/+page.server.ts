@@ -39,14 +39,7 @@ export const load: PageServerLoad = async ({ parent, cookies, url }) => {
     })
     .from(idea)
     .leftJoin(project, eq(idea.projectId, project.id))
-    .where(
-      and(
-        eq(idea.workspaceId, wsId),
-        projectId
-          ? or(eq(idea.projectId, projectId), isNull(idea.projectId))
-          : isNull(idea.projectId)
-      )
-    )
+    .where(and(eq(idea.workspaceId, wsId), projectId ? eq(idea.projectId, projectId) : undefined))
     .orderBy(asc(idea.createdAt));
 
   const ideas: IdeaItem[] = dbIdeas.map((i) => ({

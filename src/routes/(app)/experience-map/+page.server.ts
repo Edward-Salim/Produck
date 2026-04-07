@@ -1,10 +1,10 @@
 import { db } from '$lib/server/db/index.js';
-import { project, activity, storyMapTask, story } from '$lib/server/db/schema.js';
+import { experiencePhase, experienceStep, experienceTouchpoint } from '$lib/server/db/schema.js';
 import { eq, asc } from 'drizzle-orm';
 import type { PageServerLoad } from './$types.js';
 
-export interface ExperienceStory {
-  id: string;
+export interface ExperienceTouchpointData {
+  id: number;
   title: string;
   actor: string;
   action: string;
@@ -17,18 +17,18 @@ export interface ExperienceStory {
   picColor: string;
 }
 
-export interface ExperienceTask {
-  code: string;
+export interface ExperienceStepData {
+  id: number;
   title: string;
-  stories: ExperienceStory[];
+  touchpoints: ExperienceTouchpointData[];
   avgEmotion: number;
 }
 
-export interface ExperienceActivity {
-  code: string;
+export interface ExperiencePhaseData {
+  id: number;
   title: string;
   actors: string[];
-  tasks: ExperienceTask[];
+  steps: ExperienceStepData[];
   avgEmotion: number;
 }
 
@@ -38,10 +38,8 @@ function deriveEmotion(
 ): { label: 'positive' | 'neutral' | 'negative'; score: number } {
   const total = pains.length + gains.length;
   if (total === 0) return { label: 'neutral', score: 0 };
-  // More granular: use raw difference, clamped to -1..1
   const diff = gains.length - pains.length;
   const score = Math.max(-1, Math.min(1, diff / Math.max(total, 1)));
-  // Even 1 gain vs 1 pain should show slight positive if gains text is longer
   const label = diff > 0 ? 'positive' : diff < 0 ? 'negative' : 'neutral';
   return { label, score };
 }
@@ -52,98 +50,78 @@ export const load: PageServerLoad = async ({ url, parent }) => {
 
   if (!projectId) return { activities: [] };
 
-  const [proj] = await db.select().from(project).where(eq(project.id, projectId));
-  if (!proj) return { activities: [] };
-
-  const dbActivities = await db
+  const phases = await db
     .select()
-    .from(activity)
-    .where(eq(activity.projectId, projectId))
-    .orderBy(asc(activity.sortOrder));
+    .from(experiencePhase)
+    .where(eq(experiencePhase.projectId, projectId))
+    .orderBy(asc(experiencePhase.sortOrder));
 
-  const activityIds = dbActivities.map((a) => a.id);
+  const phaseIds = phases.map((p) => p.id);
 
-  const allTasks =
-    activityIds.length > 0
-      ? await db.select().from(storyMapTask).orderBy(asc(storyMapTask.sortOrder))
+  const allSteps =
+    phaseIds.length > 0
+      ? await db
+          .select()
+          .from(experienceStep)
+          .orderBy(asc(experienceStep.sortOrder))
+          .then((rows) => rows.filter((s) => phaseIds.includes(s.phaseId)))
       : [];
-  const projectTasks = allTasks.filter((t) => activityIds.includes(t.activityId));
 
-  const allStories =
-    activityIds.length > 0 ? await db.select().from(story).orderBy(asc(story.sortOrder)) : [];
-  const projectStories = allStories.filter((s) => activityIds.includes(s.activityId));
+  const stepIds = allSteps.map((s) => s.id);
 
-  // Group stories by taskId
-  const storiesByTask = new Map<number, typeof projectStories>();
-  const storiesNoTask = new Map<number, typeof projectStories>(); // stories with no task, grouped by activityId
+  const allTouchpoints =
+    stepIds.length > 0
+      ? await db
+          .select()
+          .from(experienceTouchpoint)
+          .orderBy(asc(experienceTouchpoint.sortOrder))
+          .then((rows) => rows.filter((t) => stepIds.includes(t.stepId)))
+      : [];
 
-  for (const s of projectStories) {
-    if (s.taskId) {
-      if (!storiesByTask.has(s.taskId)) storiesByTask.set(s.taskId, []);
-      storiesByTask.get(s.taskId)!.push(s);
-    } else {
-      if (!storiesNoTask.has(s.activityId)) storiesNoTask.set(s.activityId, []);
-      storiesNoTask.get(s.activityId)!.push(s);
-    }
-  }
-
-  function mapStory(s: (typeof projectStories)[0]): ExperienceStory {
-    const pains = (s.pains as string[]) ?? [];
-    const gains = (s.gains as string[]) ?? [];
+  function mapTouchpoint(t: (typeof allTouchpoints)[0]): ExperienceTouchpointData {
+    const pains = (t.pains as string[]) ?? [];
+    const gains = (t.gains as string[]) ?? [];
     const emo = deriveEmotion(pains, gains);
     return {
-      id: s.code,
-      title: s.title,
-      actor: s.asA ?? s.pic ?? '',
-      action: s.wantTo ?? '',
-      outcome: s.soThat ?? '',
+      id: t.id,
+      title: t.title,
+      actor: t.asA ?? t.pic ?? '',
+      action: t.wantTo ?? '',
+      outcome: t.soThat ?? '',
       emotion: emo.label,
       emotionScore: emo.score,
       pains,
       gains,
-      pic: s.pic,
-      picColor: s.picColor
+      pic: t.pic,
+      picColor: t.picColor
     };
   }
 
-  const result: ExperienceActivity[] = dbActivities.map((a) => {
-    const actTasks = projectTasks.filter((t) => t.activityId === a.id);
+  const result: ExperiencePhaseData[] = phases.map((phase) => {
+    const phaseSteps = allSteps.filter((s) => s.phaseId === phase.id);
 
-    const tasks: ExperienceTask[] = actTasks.map((t) => {
-      const taskStories = (storiesByTask.get(t.id) ?? []).map(mapStory);
-      // Aggregate all pains/gains across stories for this task
-      const totalPains = taskStories.reduce((sum, s) => sum + s.pains.length, 0);
-      const totalGains = taskStories.reduce((sum, s) => sum + s.gains.length, 0);
+    const steps: ExperienceStepData[] = phaseSteps.map((step) => {
+      const stepTouchpoints = allTouchpoints.filter((t) => t.stepId === step.id).map(mapTouchpoint);
+      const totalPains = stepTouchpoints.reduce((sum, s) => sum + s.pains.length, 0);
+      const totalGains = stepTouchpoints.reduce((sum, s) => sum + s.gains.length, 0);
       const total = totalPains + totalGains;
       const avgEmotion =
         total > 0 ? Math.max(-1, Math.min(1, (totalGains - totalPains) / Math.max(total, 1))) : 0;
-      return { code: t.code, title: t.title, stories: taskStories, avgEmotion };
+      return { id: step.id, title: step.title, touchpoints: stepTouchpoints, avgEmotion };
     });
 
-    // If no tasks, put stories in a single "General" task
-    if (tasks.length === 0) {
-      const noTaskStories = (storiesNoTask.get(a.id) ?? []).map(mapStory);
-      if (noTaskStories.length > 0) {
-        const avg =
-          noTaskStories.reduce((sum, s) => sum + s.emotionScore, 0) / noTaskStories.length;
-        tasks.push({ code: '', title: a.title, stories: noTaskStories, avgEmotion: avg });
-      }
-    }
-
-    const allTaskStories = tasks.flatMap((t) => t.stories);
+    const allTps = steps.flatMap((s) => s.touchpoints);
     const avgEmotion =
-      allTaskStories.length > 0
-        ? allTaskStories.reduce((sum, s) => sum + s.emotionScore, 0) / allTaskStories.length
-        : 0;
+      allTps.length > 0 ? allTps.reduce((sum, tp) => sum + tp.emotionScore, 0) / allTps.length : 0;
 
     return {
-      code: a.code,
-      title: a.title,
-      actors: (a.actorEmojis as string[]) ?? [],
-      tasks,
+      id: phase.id,
+      title: phase.title,
+      actors: (phase.actorEmojis as string[]) ?? [],
+      steps,
       avgEmotion
     };
   });
 
-  return { activities: result };
+  return { phases: result };
 };

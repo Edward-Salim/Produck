@@ -100,7 +100,6 @@ export const load: PageServerLoad = async ({ url, parent }) => {
 
   const storyMap: StoryMapData = {
     product: displayName,
-    goal: proj.goal ?? undefined,
     actors: actors.map((a) => ({ emoji: a.emoji, label: a.label })),
     levels: proj.levels,
     activities: activities.map((a) => ({

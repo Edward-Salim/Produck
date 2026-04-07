@@ -41,7 +41,6 @@ export const GET: RequestHandler = async ({ params }) => {
 
   const data: StoryMapData = {
     product: proj.name,
-    goal: proj.goal ?? undefined,
     actors: actors.map((a) => ({ emoji: a.emoji, label: a.label })),
     levels: proj.levels,
     activities: activities.map((a) => ({

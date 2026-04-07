@@ -20,7 +20,8 @@
     LogOut,
     Shield,
     Check,
-    X
+    X,
+    Database
   } from '@lucide/svelte';
   import * as Dialog from '$lib/components/ui/dialog/index.js';
   import { progressColor } from '$lib/constants/colors.js';
@@ -359,6 +360,20 @@
       </div>
       {#if data.isAdmin}
         <Sidebar.Menu>
+          <Sidebar.MenuItem>
+            <Sidebar.MenuButton
+              size="sm"
+              isActive={page.url.pathname.startsWith('/admin')}
+              tooltipContent="Admin Data"
+            >
+              {#snippet child({ props })}
+                <a href="/admin" {...props}>
+                  <Database />
+                  <span>Admin Data</span>
+                </a>
+              {/snippet}
+            </Sidebar.MenuButton>
+          </Sidebar.MenuItem>
           <Sidebar.MenuItem>
             <Sidebar.MenuButton size="sm" tooltipContent="Manage Access">
               {#snippet child({ props })}
