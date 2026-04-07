@@ -97,7 +97,9 @@
   }
 
   function getACTime(story: BacklogStory, index: number): string {
-    const ac = story.checkedAcs.find((a: { index: number; checkedAt: string }) => a.index === index);
+    const ac = story.checkedAcs.find(
+      (a: { index: number; checkedAt: string }) => a.index === index
+    );
     if (!ac) return '';
     return new Date(ac.checkedAt).toLocaleString('en-GB', {
       day: 'numeric',
