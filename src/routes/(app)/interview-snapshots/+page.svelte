@@ -249,9 +249,9 @@
           style="box-shadow: inset 0 1px 4px rgba(255,255,255,.15), inset 0 -2px 6px rgba(0,0,0,.06), 0 4px 16px rgba(0,0,0,.08);"
         >
           <!-- Top section -->
-          <div class="p-5">
+          <div class="p-4 md:p-5">
             <div class="mb-3 flex items-start justify-between">
-              <h2 class="font-display text-lg text-cork-800">{snapshot.personName}</h2>
+              <h2 class="font-display text-base text-cork-800 md:text-lg">{snapshot.personName}</h2>
               <button
                 type="button"
                 class="flex shrink-0 cursor-pointer items-center gap-1 text-xs text-cork-400 transition-colors hover:text-cork-700"
@@ -261,11 +261,11 @@
               </button>
             </div>
 
-            <div class="flex gap-4">
+            <div class="flex gap-3 md:gap-4">
               <img
                 src={snapshot.personPhoto || getAvatar(snapshot.personName)}
                 alt={snapshot.personName}
-                class="h-16 w-16 shrink-0 rounded-lg object-cover"
+                class="size-12 shrink-0 rounded-lg object-cover md:size-16"
               />
 
               <div class="min-w-0 flex-1">
@@ -281,9 +281,9 @@
             </div>
           </div>
 
-          <!-- Bottom section: three columns -->
-          <div class="grid grid-cols-3 gap-0 border-t border-cork-300/30">
-            <div class="border-r border-cork-300/30 p-4">
+          <!-- Bottom section: three columns (stacked on mobile) -->
+          <div class="grid grid-cols-1 gap-0 border-t border-cork-300/30 md:grid-cols-3">
+            <div class="border-b border-cork-300/30 p-3 md:border-r md:border-b-0 md:p-4">
               <h3 class="text-[10px] font-bold tracking-widest text-cork-500 uppercase">
                 Quick Facts
               </h3>
@@ -311,7 +311,7 @@
               {/if}
             </div>
 
-            <div class="border-r border-cork-300/30 p-4">
+            <div class="border-b border-cork-300/30 p-3 md:border-r md:border-b-0 md:p-4">
               <h3 class="text-[10px] font-bold tracking-widest text-cork-500 uppercase">
                 Insights
               </h3>
@@ -339,7 +339,7 @@
               {/if}
             </div>
 
-            <div class="p-4">
+            <div class="p-3 md:p-4">
               <h3 class="text-[10px] font-bold tracking-widest text-cork-500 uppercase">
                 Opportunities
               </h3>

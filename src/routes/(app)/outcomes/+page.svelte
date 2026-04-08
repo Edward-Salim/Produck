@@ -107,7 +107,7 @@
   </header>
 
   <!-- Timeframe selector -->
-  <div class="mb-5 flex flex-wrap items-center gap-4">
+  <div class="mb-5 flex items-center gap-2 md:gap-4">
     <Select.Root
       type="single"
       value={String(selectedYear)}
@@ -116,7 +116,7 @@
       }}
     >
       <Select.Trigger
-        class="h-8 w-28 border-cork-300 bg-cork-200/50 text-sm font-medium text-cork-700"
+        class="h-7 w-20 border-cork-300 bg-cork-200/50 text-xs font-medium text-cork-700 md:h-8 md:w-28 md:text-sm"
       >
         <span>FY{selectedYear}</span>
       </Select.Trigger>
@@ -132,11 +132,11 @@
 
     <div class="h-5 w-px bg-cork-400/30"></div>
 
-    <div class="flex items-center gap-1">
+    <div class="flex items-center gap-0.5 md:gap-1">
       {#each [1, 2, 3, 4] as q}
         <button
           type="button"
-          class="relative h-8 rounded-md px-3 text-sm font-medium transition-colors {selectedQuarter ===
+          class="relative h-7 rounded-md px-2 text-xs font-medium transition-colors md:h-8 md:px-3 md:text-sm {selectedQuarter ===
           q
             ? 'bg-cork-700 text-cork-50'
             : 'bg-cork-200/50 text-cork-600 hover:bg-cork-300/50'}"
@@ -152,7 +152,7 @@
       {/each}
       <button
         type="button"
-        class="h-8 rounded-md px-3 text-sm font-medium transition-colors {selectedQuarter === null
+        class="h-7 rounded-md px-2 text-xs font-medium transition-colors md:h-8 md:px-3 md:text-sm {selectedQuarter === null
           ? 'bg-cork-700 text-cork-50'
           : 'bg-cork-200/50 text-cork-600 hover:bg-cork-300/50'}"
         onclick={() => (selectedQuarter = null)}
@@ -169,18 +169,16 @@
         Business Outcome — FY{selectedYear}
       </h2>
       <div
-        class="rounded-xl p-5"
-        style="background: radial-gradient(ellipse at 30% 20%, rgba(255,255,255,.25) 0%, transparent 60%), #ddd4c2;
-					box-shadow: inset 0 1px 4px rgba(255,255,255,.2), inset 0 -2px 6px rgba(0,0,0,.04), 0 4px 16px rgba(0,0,0,.08);"
+        class="rounded-xl border border-cork-300/40 bg-cork-100 p-4 md:p-5"
       >
-        <div class="flex items-start gap-3">
+        <div class="flex items-start gap-2 md:gap-3">
           <span
             class="mt-0.5 shrink-0 rounded bg-cork-600 px-1.5 py-0.5 text-[10px] font-bold text-cork-50"
             >{bo.code}</span
           >
           <div>
-            <h3 class="mb-1 font-display text-xl text-cork-800">{bo.title}</h3>
-            <p class="mb-3 text-sm text-cork-600">{bo.description}</p>
+            <h3 class="mb-1 font-display text-base text-cork-800 md:text-xl">{bo.title}</h3>
+            <p class="mb-3 text-xs text-cork-600 md:text-sm">{bo.description}</p>
             <div class="flex flex-wrap gap-1.5">
               {#each bo.metrics as metric, i (i)}
                 <span
@@ -224,14 +222,10 @@
         description="Select a different quarter or year"
       />
     {:else}
-      <div
-        class="overflow-hidden rounded-xl"
-        style="background: radial-gradient(ellipse at 30% 20%, rgba(255,255,255,.25) 0%, transparent 60%), #ddd4c2;
-					box-shadow: inset 0 1px 4px rgba(255,255,255,.2), inset 0 -2px 6px rgba(0,0,0,.04), 0 4px 16px rgba(0,0,0,.08);"
-      >
-        <!-- Header -->
+      <div class="overflow-hidden rounded-xl border border-cork-300/40 bg-cork-100">
+        <!-- Header (desktop only) -->
         <div
-          class="grid grid-cols-[1fr_100px_100px_80px_90px] gap-2 border-b border-cork-600/25 px-4 py-2 text-[10px] font-bold tracking-widest text-cork-500 uppercase"
+          class="hidden grid-cols-[1fr_100px_100px_80px_90px] gap-2 border-b border-cork-300/40 bg-cork-200/30 px-4 py-2 text-[10px] font-bold tracking-widest text-cork-400 uppercase md:grid"
         >
           <span>Key Result</span>
           <span>Target</span>
@@ -247,11 +241,11 @@
           <!-- Objective header -->
           <button
             type="button"
-            class="flex w-full cursor-pointer items-center gap-3 border-b border-cork-600/20 bg-cork-400/10 px-4 py-2.5 transition-colors hover:bg-cork-400/15"
+            class="flex w-full cursor-pointer items-center gap-2 border-b border-cork-400/15 bg-cork-400/10 px-3 py-2 transition-colors hover:bg-cork-400/15 md:gap-3 md:px-4 md:py-2.5"
             onclick={() => toggleObjective(obj.id)}
           >
             <ChevronRight
-              class="size-4 shrink-0 text-cork-500 transition-transform {isExpanded
+              class="size-3.5 shrink-0 text-cork-500 transition-transform md:size-4 {isExpanded
                 ? 'rotate-90'
                 : ''}"
             />
@@ -259,7 +253,7 @@
               class="shrink-0 rounded bg-cork-600 px-1.5 py-0.5 text-[10px] font-bold text-cork-50"
               >{obj.code}</span
             >
-            <span class="flex-1 text-left font-display text-base font-bold text-cork-800"
+            <span class="flex-1 text-left font-display text-sm font-bold text-cork-800 md:text-base"
               >{obj.title}</span
             >
             {#if carriedFrom}
@@ -274,21 +268,17 @@
           {#if isExpanded}
             {#each obj.keyResults as kr (kr.id)}
               {@const pct = Math.round(krProgress(kr))}
+              <!-- Desktop: grid row -->
               <div
-                class="grid grid-cols-[1fr_100px_100px_80px_90px] items-center gap-2 border-b border-cork-600/10 px-4 py-2"
+                class="hidden grid-cols-[1fr_100px_100px_80px_90px] items-center gap-2 border-b border-cork-400/10 px-4 py-2 md:grid"
               >
-                <!-- Description -->
                 <div class="flex items-center gap-2 pl-8">
                   <span class="shrink-0 font-mono text-xs text-cork-400">{kr.code}</span>
                   <span class="text-sm text-cork-700">{kr.description}</span>
                 </div>
-
-                <!-- Target -->
                 <div>
                   <span class="text-xs text-cork-500">{kr.target}</span>
                 </div>
-
-                <!-- Current (editable) -->
                 <div>
                   {#if editingKR === kr.id}
                     <input
@@ -312,8 +302,6 @@
                     </button>
                   {/if}
                 </div>
-
-                <!-- Progress bar -->
                 <div class="flex items-center gap-1.5">
                   <div class="h-1.5 flex-1 overflow-hidden rounded-full bg-cork-300/50">
                     <div
@@ -323,10 +311,48 @@
                   </div>
                   <span class="w-7 text-right text-[10px] font-medium text-cork-500">{pct}%</span>
                 </div>
-
-                <!-- Last updated -->
                 <div class="text-right">
                   <span class="text-[10px] text-cork-400">{formatDate(kr.lastUpdated)}</span>
+                </div>
+              </div>
+
+              <!-- Mobile: card row -->
+              <div class="border-b border-cork-400/10 px-3 py-2.5 pl-9 md:hidden">
+                <div class="flex items-center gap-1.5">
+                  <span class="font-mono text-[10px] text-cork-400">{kr.code}</span>
+                  <span class="flex-1 text-xs font-medium text-cork-700">{kr.description}</span>
+                </div>
+                <div class="mt-1.5 flex items-center gap-3">
+                  <div class="flex h-1.5 flex-1 overflow-hidden rounded-full bg-cork-300/50">
+                    <div
+                      class="h-full rounded-full transition-all"
+                      style="width: {pct}%; background: {progressColor(pct)};"
+                    ></div>
+                  </div>
+                  <span class="w-8 text-right text-[10px] font-medium text-cork-500">{pct}%</span>
+                </div>
+                <div class="mt-1 flex items-center gap-3 text-[10px] text-cork-400">
+                  <span>Target: {kr.target}</span>
+                  <span>·</span>
+                  <button
+                    type="button"
+                    class="cursor-pointer font-medium text-cork-600"
+                    onclick={() => (editingKR = kr.id)}
+                  >
+                    {#if editingKR === kr.id}
+                      <input
+                        type="text"
+                        inputmode="decimal"
+                        value={kr.currentValue}
+                        class="w-14 appearance-none rounded border border-cork-400 bg-cork-50 px-1.5 py-0.5 text-[10px] text-cork-800 outline-none"
+                        onkeydown={(e) => handleValueKeydown(e, kr.id)}
+                        onblur={(e) => saveValue(e, kr.id)}
+                        onfocus={(e) => (e.target as HTMLInputElement).select()}
+                      />
+                    {:else}
+                      Now: {kr.currentValue} {kr.unit}
+                    {/if}
+                  </button>
                 </div>
               </div>
             {/each}

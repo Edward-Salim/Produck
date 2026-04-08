@@ -148,44 +148,44 @@
   />
 {:else}
   <div
-    class="overflow-hidden rounded-xl"
-    style="background: radial-gradient(ellipse at 30% 20%, rgba(255,255,255,.25) 0%, transparent 60%), #ece5d8;
-			box-shadow: inset 0 1px 4px rgba(255,255,255,.2), inset 0 -2px 6px rgba(0,0,0,.04), 0 4px 16px rgba(0,0,0,.08);"
+    class="overflow-hidden rounded-xl border border-cork-300/40 bg-cork-100"
   >
     <div
-      class="grid grid-cols-[40px_1fr_100px_100px_70px] gap-2 border-b border-cork-400/20 px-4 py-2 text-[10px] font-bold tracking-widest text-cork-500 uppercase md:grid-cols-[40px_1fr_140px_120px_80px]"
+      class="grid grid-cols-[1fr_40px] gap-1.5 border-b border-cork-300/40 bg-cork-200/30 px-3 py-2 text-[10px] font-bold tracking-widest text-cork-400 uppercase md:grid-cols-[1fr_140px_120px_80px] md:gap-2 md:px-4"
     >
+      <div class="flex items-center gap-2">
+        <button
+          type="button"
+          class="flex cursor-pointer items-center justify-center transition-colors hover:text-cork-700"
+          onclick={() => (allExpanded ? collapseAll() : expandAll())}
+          title={allExpanded ? 'Collapse all' : 'Expand all'}
+        >
+          {#if allExpanded}
+            <ChevronsDownUp class="size-3.5" />
+          {:else}
+            <ChevronsUpDown class="size-3.5" />
+          {/if}
+        </button>
+        <span>Story</span>
+      </div>
       <button
         type="button"
-        class="flex cursor-pointer items-center justify-center transition-colors hover:text-cork-700"
-        onclick={() => (allExpanded ? collapseAll() : expandAll())}
-        title={allExpanded ? 'Collapse all' : 'Expand all'}
-      >
-        {#if allExpanded}
-          <ChevronsDownUp class="size-3.5" />
-        {:else}
-          <ChevronsUpDown class="size-3.5" />
-        {/if}
-      </button>
-      <span>Story</span>
-      <button
-        type="button"
-        class="flex cursor-pointer items-center gap-1 text-left transition-colors hover:text-cork-700"
+        class="hidden cursor-pointer items-center gap-1 text-left transition-colors hover:text-cork-700 md:flex"
         onclick={togglePrioritySort}
       >
         Priority
         <span class="text-[8px]">{prioritySortDir === 'asc' ? '▼' : '▲'}</span>
       </button>
-      <span>PIC</span>
+      <span class="hidden md:block">PIC</span>
       <span class="text-center">Status</span>
     </div>
 
     {#each localEpics as epic (epic.code)}
       {#if epic.stories.length > 0}
         <div
-          class="grid grid-cols-[40px_1fr] items-center gap-2 border-b border-cork-400/15 bg-cork-400/10 px-4 py-2"
+          class="flex items-center gap-2 border-b border-cork-400/15 bg-cork-400/10 px-3 py-2 md:px-4"
         >
-          <div class="flex items-center justify-center gap-0.5">
+          <div class="flex items-center gap-0.5">
             {#each epic.actors as actorEmoji (actorEmoji)}
               {@const actor = storyMap?.actors.find((a) => a.emoji === actorEmoji)}
               <span class="group relative cursor-default text-sm">
@@ -200,7 +200,7 @@
               </span>
             {/each}
           </div>
-          <span class="font-display text-base font-bold text-cork-700"
+          <span class="font-display text-sm font-bold text-cork-700 md:text-base"
             >{epic.code} — {epic.title}</span
           >
         </div>
@@ -214,7 +214,7 @@
 
           <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
           <div
-            class="grid grid-cols-[40px_1fr_100px_100px_70px] gap-2 border-b border-cork-400/10 px-4 py-2.5 transition-colors md:grid-cols-[40px_1fr_140px_120px_80px] {hasAC
+            class="grid grid-cols-[1fr_40px] gap-1.5 border-b border-cork-400/10 px-3 py-2 transition-colors md:grid-cols-[1fr_140px_120px_80px] md:gap-2 md:px-4 md:py-2.5 {hasAC
               ? 'cursor-pointer hover:bg-cork-200/40'
               : ''}"
             role={hasAC ? 'button' : undefined}
@@ -227,8 +227,7 @@
               }
             }}
           >
-            <div></div>
-            <div class="flex min-w-0 items-center gap-2">
+            <div class="flex min-w-0 items-center gap-1.5 md:gap-2">
               {#if hasAC}
                 <ChevronRight
                   class="size-3.5 shrink-0 text-cork-400 transition-transform {isExpanded
@@ -249,7 +248,7 @@
               {/if}
             </div>
 
-            <div class="flex items-center gap-1.5">
+            <div class="hidden items-center gap-1.5 md:flex">
               <span
                 class="size-2 shrink-0 rounded-full"
                 style="background: {kano?.color ?? '#8a7e6b'};"
@@ -260,7 +259,7 @@
             </div>
 
             <!-- svelte-ignore a11y_no_static_element_interactions a11y_click_events_have_key_events -->
-            <div class="relative flex items-center" onclick={(e) => e.stopPropagation()}>
+            <div class="relative hidden items-center md:flex" onclick={(e) => e.stopPropagation()}>
               <button
                 type="button"
                 class="cursor-pointer rounded-md border border-cork-300/50 bg-cork-200/40 px-2 py-1 text-xs font-medium text-cork-700 transition-colors hover:border-cork-400"
@@ -297,14 +296,50 @@
             </div>
           </div>
 
+          {#if isExpanded}
+            <!-- Mobile-only: show priority + PIC inline -->
+            <!-- svelte-ignore a11y_no_static_element_interactions a11y_click_events_have_key_events -->
+            <div class="flex items-center gap-3 border-b border-cork-400/8 bg-cork-100/30 px-3 py-1.5 pl-8 md:hidden" onclick={(e) => e.stopPropagation()}>
+              <span
+                class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium"
+                style="color: {kano?.color ?? '#8a7e6b'}; background: {(kano?.color ?? '#8a7e6b') + '15'};"
+              >
+                <span class="size-1.5 rounded-full" style="background: {kano?.color ?? '#8a7e6b'};"></span>
+                {kano?.label ?? story.kano}
+              </span>
+              <div class="relative">
+                <button
+                  type="button"
+                  class="cursor-pointer rounded-md border border-cork-300/50 bg-cork-200/40 px-2 py-0.5 text-[10px] font-medium text-cork-700 transition-colors hover:border-cork-400"
+                  onclick={() => (picDropdownOpen = picDropdownOpen === story.id ? null : story.id)}
+                >
+                  {story.pic || '— PIC'}
+                </button>
+                {#if picDropdownOpen === story.id}
+                  <div
+                    class="absolute top-full left-0 z-20 mt-1 min-w-24 overflow-hidden rounded-lg border border-cork-300 bg-cork-50 shadow-lg"
+                  >
+                    {#each allPics as p (p)}
+                      <button
+                        type="button"
+                        class="w-full cursor-pointer px-3 py-1.5 text-left text-xs text-cork-700 transition-colors hover:bg-cork-200/50 {p === story.pic ? 'bg-cork-200/60 font-medium' : ''}"
+                        onclick={() => updatePic(story, p)}
+                      >
+                        {p}
+                      </button>
+                    {/each}
+                  </div>
+                {/if}
+              </div>
+            </div>
+          {/if}
           {#if isExpanded && hasAC}
             {#each story.acceptanceCriteria as ac, i (i)}
               {@const checked = isACChecked(story, i)}
               <div
-                class="grid grid-cols-[40px_1fr_100px_100px_70px] gap-2 border-b border-cork-400/8 bg-cork-100/30 px-4 py-1.5 md:grid-cols-[40px_1fr_140px_120px_80px]"
+                class="grid grid-cols-[1fr_40px] gap-1.5 border-b border-cork-400/8 bg-cork-100/30 px-3 py-1.5 md:grid-cols-[1fr_140px_120px_80px] md:gap-2 md:px-4"
               >
-                <div></div>
-                <div class="flex min-w-0 items-center gap-2 pl-8">
+                <div class="flex min-w-0 items-center gap-2 pl-5 md:pl-8">
                   <button
                     type="button"
                     class="shrink-0 cursor-pointer"
@@ -323,8 +358,8 @@
                     >{ac}</span
                   >
                 </div>
-                <div></div>
-                <div></div>
+                <div class="hidden md:block"></div>
+                <div class="hidden md:block"></div>
                 <div class="flex items-center justify-end">
                   {#if checked && getACTime(story, i)}
                     <span class="text-[9px] text-cork-400">{getACTime(story, i)}</span>

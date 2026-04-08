@@ -10,7 +10,9 @@
     Rocket,
     ChartBar,
     Settings,
-    BrainCircuit
+    BrainCircuit,
+    ChevronLeft,
+    ChevronRight
   } from '@lucide/svelte';
   import type { Component } from 'svelte';
   import * as Dialog from '$lib/components/ui/dialog/index.js';
@@ -117,6 +119,57 @@
     selectedArtifactKey = selectedArtifactKey === key ? null : key;
   }
 
+  function closeDrawer() {
+    if (selectedArtifactKey && drawerInHistory) {
+      history.back();
+    } else {
+      selectedArtifactKey = null;
+    }
+  }
+
+  let drawerInHistory = false;
+
+  // Push history state when drawer opens, pop when it closes
+  $effect(() => {
+    if (selectedArtifactDetail && !drawerInHistory && typeof window !== 'undefined' && window.innerWidth < 768) {
+      history.pushState({ drawer: true }, '');
+      drawerInHistory = true;
+    }
+    if (!selectedArtifactDetail && drawerInHistory) {
+      drawerInHistory = false;
+    }
+  });
+
+  let dialogInHistory = false;
+
+  function openBook(book: BookData) {
+    modalSort = { col: 'category', dir: 'asc' };
+    selectedBook = book;
+    selectedArtifactKey = null;
+    if (!dialogInHistory && typeof window !== 'undefined' && window.innerWidth < 768) {
+      history.pushState({ dialog: true }, '');
+      dialogInHistory = true;
+    }
+  }
+
+  function closeBook() {
+    if (dialogInHistory) {
+      history.back();
+    } else {
+      selectedBook = null;
+    }
+  }
+
+  function handlePopState(e: PopStateEvent) {
+    if (dialogInHistory && selectedBook) {
+      selectedBook = null;
+      dialogInHistory = false;
+    } else if (drawerInHistory) {
+      selectedArtifactKey = null;
+      drawerInHistory = false;
+    }
+  }
+
   // Find the full artifact data for the selected key
   let selectedArtifactDetail = $derived.by(() => {
     if (!selectedArtifactKey) return null;
@@ -127,7 +180,7 @@
     );
   });
 
-  // Auto-scroll left pane to selected artifact
+  // Auto-scroll left pane to selected artifact (book dialog only)
   $effect(() => {
     if (selectedArtifactKey && selectedBook) {
       setTimeout(() => {
@@ -266,6 +319,8 @@
   let totalPicked = $derived(pickedGroups.reduce((sum, g) => sum + g.artifacts.length, 0));
 </script>
 
+<svelte:window onpopstate={handlePopState} />
+
 <svelte:head>
   <title>PM Artifacts | Produck</title>
 </svelte:head>
@@ -371,11 +426,7 @@
               class="w-full cursor-pointer rounded-xl p-4 text-left transition-all hover:scale-[1.01]"
               style="background: radial-gradient(ellipse at 30% 20%, rgba(255,255,255,.18) 0%, transparent 60%), #cdc3ae;
 								box-shadow: inset 0 1px 4px rgba(255,255,255,.15), inset 0 -2px 6px rgba(0,0,0,.06), 0 6px 24px rgba(0,0,0,.12);"
-              onclick={() => {
-                modalSort = { col: 'category', dir: 'asc' };
-                selectedBook = book;
-                selectedArtifactKey = null;
-              }}
+              onclick={() => openBook(book)}
             >
               <div class="flex gap-4">
                 <!-- Book cover -->
@@ -560,26 +611,48 @@
             <div class="flex items-center justify-between border-t border-cork-300 px-4 py-2">
               <button
                 type="button"
-                class="cursor-pointer text-xs font-medium text-cork-600 hover:text-cork-800 disabled:cursor-default disabled:text-cork-300"
+                class="flex cursor-pointer items-center justify-center size-7 rounded text-cork-600 hover:bg-cork-200/50 hover:text-cork-800 disabled:cursor-default disabled:text-cork-300 disabled:hover:bg-transparent"
                 disabled={currentPage === 1}
-                onclick={() => currentPage--}>&larr; Prev</button
+                onclick={() => currentPage--}
               >
+                <ChevronLeft class="size-4" />
+              </button>
               <span class="text-xs text-cork-500">{currentPage} / {totalPages}</span>
               <button
                 type="button"
-                class="cursor-pointer text-xs font-medium text-cork-600 hover:text-cork-800 disabled:cursor-default disabled:text-cork-300"
+                class="flex cursor-pointer items-center justify-center size-7 rounded text-cork-600 hover:bg-cork-200/50 hover:text-cork-800 disabled:cursor-default disabled:text-cork-300 disabled:hover:bg-transparent"
                 disabled={currentPage === totalPages}
-                onclick={() => currentPage++}>Next &rarr;</button
+                onclick={() => currentPage++}
               >
+                <ChevronRight class="size-4" />
+              </button>
             </div>
           {/if}
         </div>
 
-        <!-- Right: detail pane -->
+        <!-- Mobile backdrop -->
+        {#if selectedArtifactDetail}
+          <!-- svelte-ignore a11y_no_static_element_interactions a11y_click_events_have_key_events -->
+          <div
+            class="fixed inset-0 z-9 bg-black/20 md:hidden"
+            onclick={closeDrawer}
+          ></div>
+        {/if}
+
+        <!-- Right: detail pane / mobile drawer -->
         <div
-          class="w-full shrink-0 overflow-y-auto rounded-xl p-4 [scrollbar-color:theme(--color-cork-300)_transparent] [scrollbar-width:thin] md:sticky md:top-14 md:max-h-[calc(100vh-80px)] md:w-72 md:self-start"
+          class="fixed inset-x-0 bottom-0 z-10 max-h-[60vh] overflow-y-auto overflow-x-hidden rounded-t-2xl p-4 pt-0 shadow-[0_-4px_24px_rgba(0,0,0,.15)] transition-transform duration-300 [scrollbar-width:none] md:static md:z-auto md:max-h-[calc(100vh-80px)] md:w-72 md:shrink-0 md:translate-y-0 md:self-start md:rounded-xl md:pt-4 md:shadow-none md:[scrollbar-color:theme(--color-cork-300)_transparent] md:[scrollbar-width:thin] {selectedArtifactDetail ? 'translate-y-0' : 'max-md:translate-y-full'} md:sticky md:top-14"
           style="background: radial-gradient(ellipse at 30% 20%, rgba(255,255,255,.18) 0%, transparent 60%), #ddd4c2;"
         >
+          <!-- Mobile drag handle + close -->
+          <div class="sticky top-0 z-10 flex justify-center pb-2 pt-2 md:hidden" style="background: inherit;">
+            <button
+              type="button"
+              class="h-1 w-10 cursor-pointer rounded-full bg-cork-400/40"
+              onclick={closeDrawer}
+            ></button>
+          </div>
+
           {#if selectedArtifactDetail}
             <h3 class="mb-1 font-display text-lg text-cork-800">{selectedArtifactDetail.name}</h3>
             <p class="mb-2 text-[10px] text-cork-400">Source: {selectedArtifactDetail.bookTitle}</p>
@@ -667,7 +740,7 @@
                     onclick={() => {
                       const book = BOOKS.find((b) => b.slug === artifact.bookSlug);
                       if (book) {
-                        selectedBook = book;
+                        openBook(book);
                         selectedArtifactKey = artifact.bookSlug + '-' + artifact.name;
                       }
                     }}
@@ -676,7 +749,7 @@
                         e.preventDefault();
                         const book = BOOKS.find((b) => b.slug === artifact.bookSlug);
                         if (book) {
-                          selectedBook = book;
+                          openBook(book);
                           selectedArtifactKey = artifact.bookSlug + '-' + artifact.name;
                         }
                       }
@@ -758,10 +831,10 @@
   <Dialog.Root
     open={!!selectedBook}
     onOpenChange={(o) => {
-      if (!o) selectedBook = null;
+      if (!o) closeBook();
     }}
   >
-    <Dialog.Content class="flex max-h-[85vh] max-w-[95vw] flex-col border-cork-300 bg-cork-50 text-cork-800 sm:max-w-5xl">
+    <Dialog.Content class="flex max-h-[75vh] max-w-[calc(100%-3rem)] flex-col border-cork-300 bg-cork-50 text-cork-800 sm:max-h-[85vh] sm:max-w-5xl">
       {#if selectedBook}
         <Dialog.Header class="flex-row items-start gap-4">
           {#if selectedBook.coverPath}
@@ -837,7 +910,7 @@
 
           <!-- Right: detail pane -->
           <div
-            class="min-h-0 flex-1 overflow-y-auto p-3 [scrollbar-color:theme(--color-cork-300)_transparent] [scrollbar-width:thin]"
+            class="min-h-0 flex-1 overflow-y-auto overflow-x-hidden p-3 [scrollbar-color:theme(--color-cork-300)_transparent] [scrollbar-width:thin]"
           >
             {#if selectedArtifactDetail}
               <h3 class="mb-1 font-display text-lg text-cork-800">{selectedArtifactDetail.name}</h3>
@@ -848,14 +921,14 @@
                   <img
                     src={fig}
                     alt="{selectedArtifactDetail.name} ({fi + 1})"
-                    class="mb-2 max-h-64 max-w-xs rounded-lg border border-cork-300/50 object-contain shadow-sm"
+                    class="mb-2 max-h-64 w-full max-w-xs rounded-lg border border-cork-300/50 object-contain shadow-sm"
                   />
                 {/each}
               {:else if selectedArtifactDetail.figure}
                 <img
                   src={selectedArtifactDetail.figure}
                   alt={selectedArtifactDetail.name}
-                  class="mb-3 max-h-64 max-w-xs rounded-lg border border-cork-300/50 object-contain shadow-sm"
+                  class="mb-3 max-h-64 w-full max-w-xs rounded-lg border border-cork-300/50 object-contain shadow-sm"
                 />
               {/if}
 

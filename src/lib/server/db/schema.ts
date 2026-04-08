@@ -545,6 +545,7 @@ export const experienceTouchpoint = pgTable('experience_touchpoint', {
   gains: jsonb('gains').$type<string[]>().default([]),
   pic: text('pic').notNull().default(''),
   picColor: text('pic_color').notNull().default(''),
+  kpi: text('kpi').notNull().default(''),
   sortOrder: integer('sort_order').notNull().default(0)
 });
 

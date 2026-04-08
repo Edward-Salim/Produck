@@ -225,7 +225,8 @@ export const FORM_FIELDS: Record<string, FormFieldDef[]> = {
     { key: 'wantTo', label: 'I want to...', type: 'text' },
     { key: 'soThat', label: 'So that...', type: 'text' },
     { key: 'pains', label: 'Pains', type: 'array' },
-    { key: 'gains', label: 'Gains', type: 'array' }
+    { key: 'gains', label: 'Gains', type: 'array' },
+    { key: 'kpi', label: 'KPI (Outcome Code)', type: 'text' }
   ],
   outcomes: [
     { key: 'year', label: 'Year', type: 'number' },

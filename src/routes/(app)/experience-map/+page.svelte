@@ -4,13 +4,15 @@
   import type {
     ExperiencePhaseData,
     ExperienceStepData,
-    ExperienceTouchpointData
+    ExperienceTouchpointData,
+    OutcomeOption
   } from './+page.server.js';
   import { PHASE_COLORS, GAIN_COLOR, PAIN_COLOR } from '$lib/constants/colors.js';
 
   let { data } = $props();
 
   const phases = $derived(data.phases as ExperiencePhaseData[]);
+  const outcomes = $derived((data.outcomes ?? []) as OutcomeOption[]);
 
   let allTouchpoints = $derived.by(() => {
     const result: { tp: ExperienceTouchpointData; stepTitle: string; phaseIndex: number }[] = [];
@@ -110,24 +112,24 @@
   {:else}
     <div
       class="xmap-scroll overflow-x-auto rounded-xl"
-      style="background: radial-gradient(ellipse at 30% 20%, rgba(255,255,255,.25) 0%, transparent 60%), #ddd4c2;
+      style="--label-w: 90px; background: radial-gradient(ellipse at 30% 20%, rgba(255,255,255,.25) 0%, transparent 60%), #ddd4c2;
 				box-shadow: inset 0 1px 4px rgba(255,255,255,.2), inset 0 -2px 6px rgba(0,0,0,.04), 0 4px 16px rgba(0,0,0,.08);
 				min-height: calc(100vh - 180px);"
     >
       <div
-        class="flex flex-col"
+        class="flex flex-col md:[--label-w:140px]"
         style="min-width: {Math.max(
-          700,
-          totalTouchpoints * 155
+          500,
+          totalTouchpoints * 130
         )}px; min-height: calc(100vh - 180px);"
       >
         <!-- Phase -->
         <div
           class="grid flex-1 border-b border-cork-600/30"
-          style="grid-template-columns: 140px repeat({totalTouchpoints}, 1fr);"
+          style="grid-template-columns: var(--label-w) repeat({totalTouchpoints}, 1fr);"
         >
           <div
-            class="flex items-center px-3 text-xs font-bold tracking-wider text-cork-500 uppercase"
+            class="flex items-center truncate px-2 text-[10px] font-bold tracking-wide text-cork-500 uppercase md:px-3 md:text-xs md:tracking-wider"
           >
             Phase
           </div>
@@ -146,10 +148,10 @@
         <!-- Actors -->
         <div
           class="grid flex-1 border-b border-cork-600/30"
-          style="grid-template-columns: 140px repeat({totalTouchpoints}, 1fr);"
+          style="grid-template-columns: var(--label-w) repeat({totalTouchpoints}, 1fr);"
         >
           <div
-            class="flex items-center px-3 text-xs font-bold tracking-wider text-cork-500 uppercase"
+            class="flex items-center truncate px-2 text-[10px] font-bold tracking-wide text-cork-500 uppercase md:px-3 md:text-xs md:tracking-wider"
           >
             Actors
           </div>
@@ -166,10 +168,10 @@
         <!-- Steps -->
         <div
           class="grid flex-1 border-b border-cork-600/30"
-          style="grid-template-columns: 140px repeat({totalTouchpoints}, 1fr);"
+          style="grid-template-columns: var(--label-w) repeat({totalTouchpoints}, 1fr);"
         >
           <div
-            class="flex items-center px-3 text-xs font-bold tracking-wider text-cork-500 uppercase"
+            class="flex items-center truncate px-2 text-[10px] font-bold tracking-wide text-cork-500 uppercase md:px-3 md:text-xs md:tracking-wider"
           >
             Steps
           </div>
@@ -186,10 +188,10 @@
         <!-- Touchpoints -->
         <div
           class="grid flex-1 border-b border-cork-600/30"
-          style="grid-template-columns: 140px repeat({totalTouchpoints}, 1fr);"
+          style="grid-template-columns: var(--label-w) repeat({totalTouchpoints}, 1fr);"
         >
           <div
-            class="flex items-center px-3 text-xs font-bold tracking-wider text-cork-500 uppercase"
+            class="flex items-center truncate px-2 text-[10px] font-bold tracking-wide text-cork-500 uppercase md:px-3 md:text-xs md:tracking-wider"
           >
             Touchpoints
           </div>
@@ -203,10 +205,10 @@
         <!-- Needs & Pains -->
         <div
           class="grid flex-1 border-b border-cork-600/30"
-          style="grid-template-columns: 140px repeat({totalTouchpoints}, 1fr);"
+          style="grid-template-columns: var(--label-w) repeat({totalTouchpoints}, 1fr);"
         >
           <div
-            class="flex items-center px-3 text-xs font-bold tracking-wider text-cork-500 uppercase"
+            class="flex items-center truncate px-2 text-[10px] font-bold tracking-wide text-cork-500 uppercase md:px-3 md:text-xs md:tracking-wider"
           >
             Needs &amp; Pains
           </div>
@@ -227,10 +229,10 @@
         <!-- Channel -->
         <div
           class="grid flex-1 border-b border-cork-600/30"
-          style="grid-template-columns: 140px repeat({totalTouchpoints}, 1fr);"
+          style="grid-template-columns: var(--label-w) repeat({totalTouchpoints}, 1fr);"
         >
           <div
-            class="flex items-center px-3 text-xs font-bold tracking-wider text-cork-500 uppercase"
+            class="flex items-center truncate px-2 text-[10px] font-bold tracking-wide text-cork-500 uppercase md:px-3 md:text-xs md:tracking-wider"
           >
             Channel
           </div>
@@ -244,10 +246,10 @@
         <!-- Feeling -->
         <div
           class="grid flex-1 border-b border-cork-600/30"
-          style="grid-template-columns: 140px repeat({totalTouchpoints}, 1fr);"
+          style="grid-template-columns: var(--label-w) repeat({totalTouchpoints}, 1fr);"
         >
           <div
-            class="flex items-center px-3 text-xs font-bold tracking-wider text-cork-500 uppercase"
+            class="flex items-center truncate px-2 text-[10px] font-bold tracking-wide text-cork-500 uppercase md:px-3 md:text-xs md:tracking-wider"
           >
             Feeling
           </div>
@@ -258,20 +260,25 @@
           {/each}
         </div>
 
-        <!-- Ownership -->
+        <!-- KPI -->
         <div
           class="grid flex-1"
-          style="grid-template-columns: 140px repeat({totalTouchpoints}, 1fr);"
+          style="grid-template-columns: var(--label-w) repeat({totalTouchpoints}, 1fr);"
         >
           <div
-            class="flex items-center px-3 text-xs font-bold tracking-wider text-cork-500 uppercase"
+            class="flex items-center truncate px-2 text-[10px] font-bold tracking-wide text-cork-500 uppercase md:px-3 md:text-xs md:tracking-wider"
           >
-            Ownership
+            KPI
           </div>
           {#each allTouchpoints as s}
-            <div class="flex items-center justify-center border-l border-cork-600/30 px-3 py-2">
-              {#if s.tp.pic}
-                <p class="text-sm font-medium text-cork-700">{s.tp.pic}</p>
+            <div class="flex items-center justify-center border-l border-cork-600/30 px-2 py-2">
+              {#if s.tp.kpi}
+                <span
+                  class="rounded-full bg-cork-200/60 px-2 py-0.5 text-[10px] font-medium text-cork-700"
+                  title={outcomes.find((o) => o.code === s.tp.kpi)?.title ?? s.tp.kpi}
+                >
+                  {s.tp.kpi}
+                </span>
               {/if}
             </div>
           {/each}
@@ -282,21 +289,11 @@
 </div>
 
 <style>
-  .xmap-scroll::-webkit-scrollbar {
-    height: 6px;
-  }
-  .xmap-scroll::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  .xmap-scroll::-webkit-scrollbar-thumb {
-    background: rgba(92, 75, 58, 0.25);
-    border-radius: 3px;
-  }
-  .xmap-scroll::-webkit-scrollbar-thumb:hover {
-    background: rgba(92, 75, 58, 0.4);
-  }
   .xmap-scroll {
-    scrollbar-width: thin;
-    scrollbar-color: rgba(92, 75, 58, 0.25) transparent;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  .xmap-scroll::-webkit-scrollbar {
+    display: none;
   }
 </style>

@@ -3,7 +3,6 @@
   import BacklogView from '$lib/components/story-map/BacklogView.svelte';
   import AssumptionsView from '$lib/components/story-map/AssumptionsView.svelte';
   import {
-    ChevronLeft,
     MapPinned,
     ClipboardList,
     FlaskConical,
@@ -11,6 +10,7 @@
     User,
     Target
   } from '@lucide/svelte';
+  import ArrowLeft from '@lucide/svelte/icons/arrow-left';
   import { invalidateAll } from '$app/navigation';
   import { page } from '$app/state';
   import EmptyState from '$lib/components/ui/empty-state.svelte';
@@ -46,53 +46,22 @@
 
 {#if storyMap}
   <div class="flex flex-col" style="min-height: calc(100vh - 140px);">
-    <header class="mb-6">
+    <header class="mb-4 md:mb-6">
       {#if page.url.searchParams.has('idea')}
         <a
           href="/ideas"
-          class="mb-1 inline-flex items-center gap-1 text-xs text-cork-500 transition-colors hover:text-cork-700"
+          class="mb-2 inline-flex items-center gap-1 text-xs text-cork-400 transition-colors hover:text-cork-600"
         >
-          <ChevronLeft class="size-3" /> Back to Idea Bank
+          <ArrowLeft class="size-3" />Idea Bank
         </a>
       {/if}
-      <div class="flex items-center gap-3">
-        <h1 class="font-display text-4xl text-cork-800">{mainName().primary}</h1>
-        {#if data.ideaMeta}
-          {#if data.ideaMeta.status}
-            <span
-              class="inline-flex items-center gap-1 rounded-full bg-cork-200/60 px-2 py-0.5 text-[10px] font-medium text-cork-500"
-            >
-              <CircleDot class="size-2.5" />
-              {data.ideaMeta.status
-                .split('-')
-                .map((/** @type {string} */ w: string) => w[0].toUpperCase() + w.slice(1))
-                .join(' ')}
-            </span>
-          {/if}
-          {#if data.ideaMeta.proposer}
-            <span
-              class="inline-flex items-center gap-1 rounded-full bg-cork-200/60 px-2 py-0.5 text-[10px] font-medium text-cork-500"
-            >
-              <User class="size-2.5" />
-              {data.ideaMeta.proposer.replace(/^@/, '')}
-            </span>
-          {/if}
-          {#if data.ideaMeta.okrCode}
-            <span
-              class="inline-flex items-center gap-1 rounded-full bg-cork-200/60 px-2 py-0.5 text-[10px] font-medium text-cork-500"
-            >
-              <Target class="size-2.5" />
-              {data.ideaMeta.okrCode}
-            </span>
-          {/if}
-        {/if}
-      </div>
-      <div class="mt-0.5 flex items-center justify-between gap-4">
+      <div class="flex items-start justify-between gap-2">
         <div class="min-w-0">
+          <h1 class="font-display text-2xl text-cork-800 md:text-4xl">{mainName().primary}</h1>
           {#if mainName().subtitle}
-            <p class="text-sm text-cork-500">{mainName().subtitle}</p>
+            <p class="mt-0.5 text-sm text-cork-500">{mainName().subtitle}</p>
           {:else if data.ideaMeta?.description}
-            <p class="text-sm text-cork-400">{data.ideaMeta.description}</p>
+            <p class="mt-0.5 text-xs text-cork-400 md:text-sm">{data.ideaMeta.description}</p>
           {/if}
         </div>
 
@@ -130,6 +99,37 @@
           </button>
         </div>
       </div>
+      {#if data.ideaMeta}
+        <div class="mt-2 flex flex-wrap items-center gap-1.5">
+          {#if data.ideaMeta.status}
+            <span
+              class="inline-flex items-center gap-1 rounded-full bg-cork-200/60 px-2 py-0.5 text-[10px] font-medium text-cork-500"
+            >
+              <CircleDot class="size-2.5" />
+              {data.ideaMeta.status
+                .split('-')
+                .map((/** @type {string} */ w: string) => w[0].toUpperCase() + w.slice(1))
+                .join(' ')}
+            </span>
+          {/if}
+          {#if data.ideaMeta.proposer}
+            <span
+              class="inline-flex items-center gap-1 rounded-full bg-cork-200/60 px-2 py-0.5 text-[10px] font-medium text-cork-500"
+            >
+              <User class="size-2.5" />
+              {data.ideaMeta.proposer.replace(/^@/, '')}
+            </span>
+          {/if}
+          {#if data.ideaMeta.okrCode}
+            <span
+              class="inline-flex items-center gap-1 rounded-full bg-cork-200/60 px-2 py-0.5 text-[10px] font-medium text-cork-500"
+            >
+              <Target class="size-2.5" />
+              {data.ideaMeta.okrCode}
+            </span>
+          {/if}
+        </div>
+      {/if}
     </header>
 
     {#if view === 'map'}

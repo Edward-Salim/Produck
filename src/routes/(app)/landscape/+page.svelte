@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { LayoutGrid, Columns3, Bookmark } from '@lucide/svelte';
+  import { LayoutGrid, Columns3, Swords } from '@lucide/svelte';
+  import * as Select from '$lib/components/ui/select/index.js';
   import EmptyState from '$lib/components/ui/empty-state.svelte';
   import { invalidateAll } from '$app/navigation';
   import {
@@ -56,6 +57,17 @@
   });
 
   let pickedCompanies = $derived(COMPANIES.filter((c) => isPicked(c.id)));
+
+  async function clearAllPicks() {
+    for (const c of pickedCompanies) {
+      await fetch('/api/fintech-pick', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ companyId: c.id })
+      });
+    }
+    invalidateAll();
+  }
 </script>
 
 <svelte:head>
@@ -66,32 +78,44 @@
   <!-- Header -->
   <header class="mb-4">
     <h1 class="font-display text-2xl text-cork-800 md:text-4xl">Fintech Landscape</h1>
-    <p class="mt-0.5 text-sm text-cork-500">
-      {filteredCompanies.length} companies{selectedRegion !== 'all'
-        ? ` in ${selectedRegion}`
-        : ''}{selectedCategory !== 'all' ? ` · ${selectedCategory}` : ''}
-    </p>
+    <div class="mt-0.5 flex items-center gap-2">
+      <p class="text-sm text-cork-500">
+        {filteredCompanies.length} companies{selectedRegion !== 'all'
+          ? ` in ${selectedRegion}`
+          : ''}{selectedCategory !== 'all' ? ` · ${selectedCategory}` : ''}
+      </p>
+      {#if pickedCompanies.length > 0}
+        <span class="text-[10px] text-cork-400">·</span>
+        <button
+          type="button"
+          class="cursor-pointer text-[10px] text-cork-400 transition-colors hover:text-cork-600"
+          onclick={clearAllPicks}
+        >
+          Clear {pickedCompanies.length} selected
+        </button>
+      {/if}
+    </div>
   </header>
 
   <!-- Controls bar -->
-  <div class="mb-5 flex items-center gap-3">
-    <!-- Region pills -->
-    <div class="flex-1 overflow-x-auto [scrollbar-width:none]">
-      <div class="flex items-center gap-1.5">
+  <div class="mb-5 space-y-2 md:space-y-0 md:flex md:items-center md:gap-3">
+    <!-- Top row: region pills -->
+    <div class="flex-1 overflow-x-auto [-webkit-overflow-scrolling:touch] [scrollbar-width:none]">
+      <div class="flex items-center gap-1">
         <button
           type="button"
-          class="shrink-0 rounded-full px-2.5 py-1 text-xs whitespace-nowrap transition-colors {selectedRegion ===
+          class="shrink-0 rounded-full px-2 py-1 text-[11px] whitespace-nowrap transition-colors md:px-2.5 md:text-xs {selectedRegion ===
           'all'
             ? 'bg-cork-700 text-cork-50'
             : 'bg-cork-200/50 text-cork-500 hover:bg-cork-300/50'}"
           onclick={() => (selectedRegion = 'all')}
         >
-          All Regions
+          All
         </button>
         {#each ALL_REGIONS as region (region)}
           <button
             type="button"
-            class="shrink-0 rounded-full px-2.5 py-1 text-xs whitespace-nowrap transition-colors {selectedRegion ===
+            class="shrink-0 rounded-full px-2 py-1 text-[11px] whitespace-nowrap transition-colors md:px-2.5 md:text-xs {selectedRegion ===
             region
               ? 'bg-cork-700 text-cork-50'
               : 'bg-cork-200/50 text-cork-500 hover:bg-cork-300/50'}"
@@ -103,41 +127,46 @@
       </div>
     </div>
 
-    <!-- Category dropdown -->
-    <select
-      class="h-7 shrink-0 cursor-pointer rounded border border-cork-300 bg-cork-200/50 px-2 text-xs text-cork-700 outline-none"
-      value={selectedCategory}
-      onchange={(e) =>
-        (selectedCategory = (e.target as HTMLSelectElement).value as FintechCategory | 'all')}
-    >
-      <option value="all">All Categories</option>
-      {#each ALL_FINTECH_CATEGORIES as cat (cat)}
-        <option value={cat}>{cat}</option>
-      {/each}
-    </select>
+    <!-- Bottom row on mobile: category + view toggle -->
+    <div class="flex items-center gap-2">
+      <Select.Root
+        type="single"
+        value={selectedCategory}
+        onValueChange={(v) => { if (v) selectedCategory = v as FintechCategory | 'all'; }}
+      >
+        <Select.Trigger class="h-8 flex-1 border-cork-300 bg-cork-200/50 text-xs text-cork-700 md:flex-none md:w-40">
+          <span class="truncate">{selectedCategory === 'all' ? 'All Categories' : selectedCategory}</span>
+        </Select.Trigger>
+        <Select.Content class="border-cork-300 bg-cork-50" preventScroll={false}>
+          <Select.Item value="all" class="text-xs text-cork-700 focus:bg-cork-200/50">All Categories</Select.Item>
+          {#each ALL_FINTECH_CATEGORIES as cat (cat)}
+            <Select.Item value={cat} class="text-xs text-cork-700 focus:bg-cork-200/50">{cat}</Select.Item>
+          {/each}
+        </Select.Content>
+      </Select.Root>
 
-    <!-- View toggle -->
-    <div class="flex shrink-0 overflow-hidden rounded border border-cork-300">
-      <button
-        type="button"
-        class="px-2 py-1 transition-colors {view === 'landscape'
-          ? 'bg-cork-700 text-cork-50'
-          : 'bg-cork-200/50 text-cork-600 hover:bg-cork-300/50'}"
-        onclick={() => (view = 'landscape')}
-        title="Landscape view"
-      >
-        <LayoutGrid class="size-3.5" />
-      </button>
-      <button
-        type="button"
-        class="px-2 py-1 transition-colors {view === 'compare'
-          ? 'bg-cork-700 text-cork-50'
-          : 'bg-cork-200/50 text-cork-600 hover:bg-cork-300/50'}"
-        onclick={() => (view = 'compare')}
-        title="Compare view"
-      >
-        <Columns3 class="size-3.5" />
-      </button>
+      <div class="flex h-8 shrink-0 overflow-hidden rounded-lg border border-cork-300">
+        <button
+          type="button"
+          class="flex items-center px-2.5 transition-colors {view === 'landscape'
+            ? 'bg-cork-700 text-cork-50'
+            : 'bg-cork-200/50 text-cork-600 hover:bg-cork-300/50'}"
+          onclick={() => (view = 'landscape')}
+          title="Landscape view"
+        >
+          <LayoutGrid class="size-3.5" />
+        </button>
+        <button
+          type="button"
+          class="flex items-center px-2.5 transition-colors {view === 'compare'
+            ? 'bg-cork-700 text-cork-50'
+            : 'bg-cork-200/50 text-cork-600 hover:bg-cork-300/50'}"
+          onclick={() => (view = 'compare')}
+          title="Compare view"
+        >
+          <Columns3 class="size-3.5" />
+        </button>
+      </div>
     </div>
   </div>
 
@@ -160,22 +189,20 @@
             </div>
 
             <!-- Company grid -->
-            <div class="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6">
+            <div class="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5 md:gap-3 lg:grid-cols-6">
               {#each group.companies as company (company.id)}
                 {@const picked = isPicked(company.id)}
                 <button
                   type="button"
-                  class="relative cursor-pointer rounded-xl p-3 text-left transition-all hover:scale-[1.02]"
+                  class="relative cursor-pointer rounded-xl p-2 text-left transition-all hover:scale-[1.02] md:p-3"
                   style="background: radial-gradient(ellipse at 30% 20%, rgba(255,255,255,.18) 0%, transparent 60%), #cdc3ae; box-shadow: inset 0 1px 4px rgba(255,255,255,.15), inset 0 -2px 6px rgba(0,0,0,.06), 0 4px 16px rgba(0,0,0,.1);"
                   onclick={() => togglePick(company.id)}
                 >
-                  <!-- Bookmark icon -->
-                  <span class="absolute top-2 right-2">
-                    <Bookmark
-                      class="size-4 {picked
+                  <span class="absolute top-1.5 right-1.5 md:top-2 md:right-2">
+                    <Swords
+                      class="size-3.5 md:size-4 {picked
                         ? 'text-cork-700'
-                        : 'text-cork-300 hover:text-cork-500'}"
-                      fill={picked ? 'currentColor' : 'none'}
+                        : 'text-cork-400/50'}"
                     />
                   </span>
 
@@ -208,16 +235,8 @@
     <EmptyState
       icon={Columns3}
       title="No companies to compare"
-      description="Bookmark companies from the landscape view to start comparing"
-    >
-      <button
-        type="button"
-        class="cursor-pointer rounded bg-cork-700 px-3 py-1.5 text-xs font-medium text-cork-50 transition-colors hover:bg-cork-800"
-        onclick={() => (view = 'landscape')}
-      >
-        Browse Landscape
-      </button>
-    </EmptyState>
+      description="Select companies from the landscape view using the sword icon"
+    />
   {:else}
     {@const allCols = [MY_PROJECT, ...pickedCompanies]}
     {@const ROWS = [
@@ -234,16 +253,14 @@
     ]}
 
     <div
-      class="overflow-x-auto rounded-xl [scrollbar-color:rgba(92,75,58,0.2)_transparent] [scrollbar-width:thin]"
-      style="background: radial-gradient(ellipse at 30% 20%, rgba(255,255,255,.25) 0%, transparent 60%), #ddd4c2;
-					box-shadow: inset 0 1px 4px rgba(255,255,255,.2), inset 0 -2px 6px rgba(0,0,0,.04), 0 4px 16px rgba(0,0,0,.08);
-					min-height: calc(100vh - 200px);"
+      class="overflow-x-auto rounded-xl border border-cork-300/40 bg-cork-100 [-webkit-overflow-scrolling:touch] [scrollbar-width:none]"
+      style="min-height: calc(100vh - 240px);"
     >
-      <div>
+      <div style="min-width: {Math.max(400, allCols.length * 140 + 100)}px;">
         <!-- Header row: company names + logos -->
         <div
-          class="grid border-b border-cork-600/20"
-          style="grid-template-columns: 150px repeat({allCols.length}, 1fr);"
+          class="grid border-b border-cork-300/40 bg-cork-200/30"
+          style="grid-template-columns: 100px repeat({allCols.length}, 1fr);"
         >
           <div></div>
           {#each allCols as company, i (company.id)}
@@ -285,7 +302,7 @@
         {#each ROWS as row, ri (row.key)}
           <div
             class="grid border-b border-cork-600/10 {ri % 2 === 0 ? '' : 'bg-cork-400/5'}"
-            style="grid-template-columns: 150px repeat({allCols.length}, 1fr);"
+            style="grid-template-columns: 100px repeat({allCols.length}, 1fr);"
           >
             <div class="flex items-center px-4 py-3">
               <span class="text-xs font-bold text-cork-700">{row.label}</span>

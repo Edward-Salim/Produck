@@ -113,16 +113,16 @@
   <title>Trends - Produck</title>
 </svelte:head>
 
-<header class="mb-6">
-  <h1 class="font-display text-4xl text-cork-800">Trends</h1>
+<header class="mb-4 md:mb-6">
+  <h1 class="font-display text-2xl text-cork-800 md:text-4xl">Trends</h1>
   <p class="mt-0.5 text-sm text-cork-500">RSS feed digest — product news grouped by day</p>
 </header>
 
 <!-- Toolbar -->
-<div class="mb-6 flex items-center justify-between">
+<div class="mb-4 flex items-center justify-between gap-2 md:mb-6">
   <button
     type="button"
-    class="flex cursor-pointer items-center gap-2 rounded-lg bg-cork-700 px-3 py-2 text-sm font-medium text-cork-50 transition-colors hover:bg-cork-800"
+    class="flex cursor-pointer items-center gap-1.5 rounded-lg bg-cork-700 px-2.5 py-1.5 text-xs font-medium text-cork-50 transition-colors hover:bg-cork-800 md:gap-2 md:px-3 md:py-2 md:text-sm"
     onclick={fetchFeeds}
     disabled={fetching}
   >
@@ -131,18 +131,18 @@
     {:else}
       <RefreshCw class="size-4" />
     {/if}
-    Fetch Now
+    <span class="hidden sm:inline">Fetch Now</span>
   </button>
 
   <button
     type="button"
-    class="flex cursor-pointer items-center gap-2 rounded-lg border border-cork-300 px-3 py-2 text-sm font-medium text-cork-600 transition-colors hover:bg-cork-200/50"
+    class="flex cursor-pointer items-center gap-1.5 rounded-lg border border-cork-300 px-2.5 py-1.5 text-xs font-medium text-cork-600 transition-colors hover:bg-cork-200/50 md:gap-2 md:px-3 md:py-2 md:text-sm"
     onclick={() => (sourcesDialogOpen = true)}
   >
     <Settings class="size-4" />
-    Manage Sources
-    <span class="rounded-full bg-cork-200 px-2 py-0.5 text-[10px] font-semibold text-cork-600"
-      >{data.sources.length} sources</span
+    <span class="hidden sm:inline">Manage Sources</span>
+    <span class="rounded-full bg-cork-200 px-1.5 py-0.5 text-[9px] font-semibold text-cork-600 md:text-[10px]"
+      >{data.sources.length}</span
     >
   </button>
 </div>
@@ -175,19 +175,19 @@
       <div class="overflow-hidden rounded-xl border border-cork-200 bg-white/80">
         <!-- Day header -->
         <div
-          class="flex items-center justify-between border-b border-cork-200 bg-cork-50 px-5 py-3"
+          class="flex items-center justify-between border-b border-cork-200 bg-cork-50 px-3 py-2 md:px-5 md:py-3"
         >
-          <div class="flex items-center gap-2">
-            <Calendar class="size-4 text-cork-400" />
-            <span class="text-sm font-semibold text-cork-700">{group.label}</span>
+          <div class="flex items-center gap-1.5 md:gap-2">
+            <Calendar class="size-3.5 text-cork-400 md:size-4" />
+            <span class="text-xs font-semibold text-cork-700 md:text-sm">{group.label}</span>
           </div>
-          <span class="text-xs text-cork-400">{group.articles.length} articles</span>
+          <span class="text-[10px] text-cork-400 md:text-xs">{group.articles.length}</span>
         </div>
 
         <!-- Summary (if exists for this day) -->
         {#if group.summary}
-          <div class="border-b border-cork-100 bg-cork-50/50 px-5 py-3 text-sm text-cork-700">
-            <p class="mb-1 text-xs font-medium tracking-wider text-cork-600 uppercase">
+          <div class="border-b border-cork-100 bg-cork-50/50 px-3 py-2.5 text-xs text-cork-700 md:px-5 md:py-3 md:text-sm">
+            <p class="mb-1 text-[10px] font-medium tracking-wider text-cork-600 uppercase md:text-xs">
               AI Summary
             </p>
             <p>{group.summary}</p>
@@ -201,7 +201,7 @@
               href={article.url}
               target="_blank"
               rel="noopener"
-              class="block px-5 py-3 transition-colors hover:bg-cork-50/50"
+              class="block px-3 py-2.5 transition-colors hover:bg-cork-50/50 md:px-5 md:py-3"
             >
               <div class="flex items-start gap-3">
                 <div class="min-w-0 flex-1">
@@ -241,7 +241,7 @@
 
 <!-- Manage Sources Dialog -->
 <Dialog.Root bind:open={sourcesDialogOpen}>
-  <Dialog.Content class="max-w-lg border-cork-300 bg-cork-50">
+  <Dialog.Content class="max-w-[calc(100%-3rem)] border-cork-300 bg-cork-50 sm:max-w-lg">
     <Dialog.Header>
       <Dialog.Title class="text-cork-800">Manage RSS Sources</Dialog.Title>
       <Dialog.Description class="text-cork-500"

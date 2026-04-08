@@ -1,5 +1,10 @@
 import { db } from '$lib/server/db/index.js';
-import { experiencePhase, experienceStep, experienceTouchpoint } from '$lib/server/db/schema.js';
+import {
+  experiencePhase,
+  experienceStep,
+  experienceTouchpoint,
+  businessOutcome
+} from '$lib/server/db/schema.js';
 import { eq, asc } from 'drizzle-orm';
 import type { PageServerLoad } from './$types.js';
 
@@ -15,6 +20,12 @@ export interface ExperienceTouchpointData {
   gains: string[];
   pic: string;
   picColor: string;
+  kpi: string;
+}
+
+export interface OutcomeOption {
+  code: string;
+  title: string;
 }
 
 export interface ExperienceStepData {
@@ -93,7 +104,8 @@ export const load: PageServerLoad = async ({ url, parent }) => {
       pains,
       gains,
       pic: t.pic,
-      picColor: t.picColor
+      picColor: t.picColor,
+      kpi: t.kpi
     };
   }
 
@@ -123,5 +135,10 @@ export const load: PageServerLoad = async ({ url, parent }) => {
     };
   });
 
-  return { phases: result };
+  const outcomes = await db
+    .select({ code: businessOutcome.code, title: businessOutcome.title })
+    .from(businessOutcome)
+    .where(eq(businessOutcome.projectId, projectId));
+
+  return { phases: result, outcomes };
 };

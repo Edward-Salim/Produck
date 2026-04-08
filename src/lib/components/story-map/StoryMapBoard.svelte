@@ -45,7 +45,7 @@
 
   let totalCols = $derived(columns.length);
 
-  let gridCols = $derived(`44px repeat(${totalCols}, minmax(145px, 1fr))`);
+  let gridCols = $derived(`32px repeat(${totalCols}, minmax(125px, 1fr))`);
 
   /* ---- Kano section config ---- */
 
@@ -136,11 +136,11 @@
   <!-- Board container -->
   <div
     bind:this={boardEl}
-    class="overflow-x-auto rounded-xl p-8 shadow-[inset_0_1px_4px_rgba(255,255,255,.15),inset_0_-2px_6px_rgba(0,0,0,.06),0_6px_24px_rgba(0,0,0,.12)] [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+    class="overflow-x-auto rounded-xl p-4 shadow-[inset_0_1px_4px_rgba(255,255,255,.15),inset_0_-2px_6px_rgba(0,0,0,.06),0_6px_24px_rgba(0,0,0,.12)] [-ms-overflow-style:none] [scrollbar-width:none] md:p-8 [&::-webkit-scrollbar]:hidden"
     style="background: radial-gradient(ellipse at 30% 20%, rgba(255,255,255,.18) 0%, transparent 60%), #cdc3ae;"
   >
     <!-- CSS Grid -->
-    <div class="grid min-w-max items-start gap-3" style="grid-template-columns: {gridCols};">
+    <div class="grid min-w-max items-start gap-2 md:gap-3" style="grid-template-columns: {gridCols};">
       <!-- ====== ROW 1: Actor row ====== -->
       <!-- Gutter cell for actors -->
       <div class="flex h-full items-center justify-center" style="grid-column: 1; grid-row: 1;">
