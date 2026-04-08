@@ -243,7 +243,7 @@
         result: pending.result,
         width: 0,
         height: 0,
-        thumb: null,
+        thumb: undefined,
         meta: pending.meta,
         timestamp: Date.now()
       });

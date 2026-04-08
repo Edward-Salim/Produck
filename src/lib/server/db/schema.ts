@@ -162,6 +162,53 @@ export const fintechPickRelations = relations(fintechPick, ({ one }) => ({
   project: one(project, { fields: [fintechPick.projectId], references: [project.id] })
 }));
 
+// ── PM Book ───────────────────────────────────────────
+
+export const pmBook = pgTable('pm_book', {
+  id: serial('id').primaryKey(),
+  slug: text('slug').notNull().unique(),
+  title: text('title').notNull(),
+  subtitle: text('subtitle').default(''),
+  author: text('author').default(''),
+  year: integer('year').default(0),
+  coverPath: text('cover_path').default('')
+});
+
+export const pmBookRelations = relations(pmBook, ({ many }) => ({
+  artifacts: many(pmArtifact)
+}));
+
+// ── PM Artifact ───────────────────────────────────────
+
+export const pmArtifact = pgTable('pm_artifact', {
+  id: serial('id').primaryKey(),
+  bookId: integer('book_id')
+    .notNull()
+    .references(() => pmBook.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  category: text('category').notNull(),
+  description: text('description').notNull().default(''),
+  howTo: jsonb('how_to').$type<string[]>().default([]),
+  figure: text('figure'),
+  figures: jsonb('figures').$type<string[]>().default([])
+});
+
+export const pmArtifactRelations = relations(pmArtifact, ({ one }) => ({
+  book: one(pmBook, { fields: [pmArtifact.bookId], references: [pmBook.id] })
+}));
+
+// ── PM Methodology ────────────────────────────────────
+
+export const pmMethodology = pgTable('pm_methodology', {
+  id: serial('id').primaryKey(),
+  name: text('name').notNull(),
+  phase: text('phase').notNull(),
+  origin: text('origin').notNull().default(''),
+  description: text('description').notNull().default(''),
+  relatedArtifacts: jsonb('related_artifacts').$type<string[]>().default([]),
+  figure: text('figure')
+});
+
 // ── Idea ──────────────────────────────────────────────
 
 export const idea = pgTable('idea', {

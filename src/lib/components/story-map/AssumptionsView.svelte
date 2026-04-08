@@ -113,7 +113,7 @@
     <!-- Left: assumption list -->
     <div
       class="flex w-48 shrink-0 flex-col rounded-xl"
-      style="background: radial-gradient(ellipse at 30% 20%, rgba(255,255,255,.25) 0%, transparent 60%), #ece5d8;
+      style="background: radial-gradient(ellipse at 30% 20%, rgba(255,255,255,.25) 0%, transparent 60%), #f5f0e8;
 				box-shadow: inset 0 1px 4px rgba(255,255,255,.2), inset 0 -2px 6px rgba(0,0,0,.04), 0 4px 16px rgba(0,0,0,.08);"
     >
       <!-- Search -->
@@ -178,7 +178,7 @@
 
         <div
           class="rounded-xl p-5"
-          style="background: radial-gradient(ellipse at 30% 20%, rgba(255,255,255,.25) 0%, transparent 60%), #ece5d8;
+          style="background: radial-gradient(ellipse at 30% 20%, rgba(255,255,255,.25) 0%, transparent 60%), #f5f0e8;
 						box-shadow: inset 0 1px 4px rgba(255,255,255,.2), inset 0 -2px 6px rgba(0,0,0,.04), 0 4px 16px rgba(0,0,0,.08);"
         >
           <!-- Header -->
@@ -261,7 +261,7 @@
         <!-- Prioritization Quadrant -->
         <div
           class="flex flex-col rounded-xl p-4"
-          style="background: radial-gradient(ellipse at 30% 20%, rgba(255,255,255,.25) 0%, transparent 60%), #ece5d8;
+          style="background: radial-gradient(ellipse at 30% 20%, rgba(255,255,255,.25) 0%, transparent 60%), #f5f0e8;
 						box-shadow: inset 0 1px 4px rgba(255,255,255,.2), inset 0 -2px 6px rgba(0,0,0,.04), 0 4px 16px rgba(0,0,0,.08);"
         >
           <div class="mb-2 flex items-center justify-between">

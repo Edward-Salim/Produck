@@ -272,10 +272,10 @@
               <Sidebar.MenuButton
                 size="sm"
                 isActive={page.url.pathname.startsWith('/artifacts')}
-                tooltipContent="PM Artifacts"
+                tooltipContent="PM Toolkit"
               >
                 {#snippet child({ props })}
-                  <a href="/artifacts" {...props}><BookOpen /><span>PM Artifacts</span></a>
+                  <a href="/artifacts" {...props}><BookOpen /><span>PM Toolkit</span></a>
                 {/snippet}
               </Sidebar.MenuButton>
             </Sidebar.MenuItem>
