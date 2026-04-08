@@ -6,14 +6,20 @@
     LoaderCircle,
     Save,
     Sparkles,
-    SendHorizontal,
     ChevronUp,
     ChevronDown,
     Code,
-    FormInput,
-    Plus,
-    Trash2
+    FormInput
   } from '@lucide/svelte';
+  import { type DiffLine, computeDiff } from './admin-diff.js';
+  import {
+    KEY_LABELS,
+    SECTIONS,
+    FORM_FIELDS,
+    getNewRecordTemplate
+  } from './admin-config.js';
+  import AdminFormView from './AdminFormView.svelte';
+  import AdminAiBar from './AdminAiBar.svelte';
 
   let { data } = $props();
 
@@ -45,50 +51,6 @@
       }
     })()
   );
-
-  interface DiffLine {
-    type: 'same' | 'add' | 'remove';
-    text: string;
-    lineNo?: number;
-  }
-
-  function computeDiff(oldStr: string, newStr: string): DiffLine[] {
-    const oldLines = oldStr.split('\n');
-    const newLines = newStr.split('\n');
-    const result: DiffLine[] = [];
-
-    // Simple LCS-based diff
-    const m = oldLines.length;
-    const n = newLines.length;
-    const dp: number[][] = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
-
-    for (let i = 1; i <= m; i++) {
-      for (let j = 1; j <= n; j++) {
-        if (oldLines[i - 1] === newLines[j - 1]) dp[i][j] = dp[i - 1][j - 1] + 1;
-        else dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
-      }
-    }
-
-    // Backtrack
-    const ops: DiffLine[] = [];
-    let i = m,
-      j = n;
-    while (i > 0 || j > 0) {
-      if (i > 0 && j > 0 && oldLines[i - 1] === newLines[j - 1]) {
-        ops.push({ type: 'same', text: oldLines[i - 1] });
-        i--;
-        j--;
-      } else if (j > 0 && (i === 0 || dp[i][j - 1] >= dp[i - 1][j])) {
-        ops.push({ type: 'add', text: newLines[j - 1], lineNo: j });
-        j--;
-      } else {
-        ops.push({ type: 'remove', text: oldLines[i - 1], lineNo: i });
-        i--;
-      }
-    }
-
-    return ops.reverse();
-  }
 
   // Group consecutive changed lines into chunks
   let diffChunks = $derived.by(() => {
@@ -163,42 +125,6 @@
   function hasDiffFor(key: string): boolean {
     return key in diffsBySection;
   }
-
-  // Sections with sub-items for accordion
-  const KEY_LABELS: Record<string, string> = {
-    project: 'Project',
-    outcomes: 'Outcomes',
-    objectives: 'Objectives',
-    keyResults: 'Key Results',
-    interviews: 'Interviews',
-    experiencePhases: 'Phases',
-    experienceSteps: 'Steps',
-    experienceTouchpoints: 'Touchpoints',
-    ideas: 'Ideas',
-    actors: 'Actors',
-    activities: 'Activities',
-    tasks: 'Tasks',
-    stories: 'Stories',
-    personas: 'Personas'
-  };
-
-  const SECTIONS = [
-    { key: 'all', label: 'All Data', subs: [] as string[] },
-    { key: 'project', label: 'Project Info', subs: ['project'] },
-    { key: 'outcomes', label: 'Outcomes', subs: ['outcomes', 'objectives', 'keyResults'] },
-    { key: 'interviews', label: 'Interviews', subs: ['interviews'] },
-    {
-      key: 'experience',
-      label: 'Experience Map',
-      subs: ['experiencePhases', 'experienceSteps', 'experienceTouchpoints']
-    },
-    {
-      key: 'ideas-storymap',
-      label: 'Idea Bank & Story Map',
-      subs: ['ideas', 'actors', 'activities', 'tasks', 'stories']
-    },
-    { key: 'personas', label: 'Personas', subs: ['personas'] }
-  ] as const;
 
   let activeSection = $state<string>(
     (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('admin_section')) || 'all'
@@ -436,7 +362,7 @@
     const existing = fullData[key];
     const maxId = existing.reduce((max: number, r: any) => Math.max(max, r.id ?? 0), 0);
     // Create minimal record based on key type
-    const template = getNewRecordTemplate(key, maxId + 1);
+    const template = getNewRecordTemplate(key, maxId + 1, fullData?.project?.id);
     existing.push(template);
     syncFormToFullData();
   }
@@ -448,253 +374,6 @@
     syncFormToFullData();
   }
 
-  function getNewRecordTemplate(key: string, id: number): Record<string, any> {
-    const base: Record<string, any> = { id };
-    switch (key) {
-      case 'ideas':
-        return { ...base, title: '', description: '', status: 'triage', proposer: '', okrCode: '' };
-      case 'actors':
-        return { ...base, projectId: fullData?.project?.id, emoji: '', label: '', sortOrder: 0 };
-      case 'activities':
-        return {
-          ...base,
-          projectId: fullData?.project?.id,
-          code: '',
-          title: '',
-          actorEmojis: [],
-          sortOrder: 0
-        };
-      case 'tasks':
-        return { ...base, activityId: 0, code: '', title: '', sortOrder: 0 };
-      case 'stories':
-        return {
-          ...base,
-          activityId: 0,
-          taskId: null,
-          code: '',
-          title: '',
-          pic: '',
-          picColor: '',
-          done: false,
-          kano: 'performance',
-          asA: '',
-          wantTo: '',
-          soThat: '',
-          pains: [],
-          gains: [],
-          details: [],
-          checkedAcs: [],
-          assumptions: [],
-          sortOrder: 0
-        };
-      case 'experiencePhases':
-        return {
-          ...base,
-          projectId: fullData?.project?.id,
-          title: '',
-          actorEmojis: [],
-          sortOrder: 0
-        };
-      case 'experienceSteps':
-        return { ...base, phaseId: 0, title: '', sortOrder: 0 };
-      case 'experienceTouchpoints':
-        return {
-          ...base,
-          stepId: 0,
-          title: '',
-          asA: '',
-          wantTo: '',
-          soThat: '',
-          pains: [],
-          gains: [],
-          pic: '',
-          picColor: '',
-          sortOrder: 0
-        };
-      case 'outcomes':
-        return {
-          ...base,
-          projectId: fullData?.project?.id,
-          year: new Date().getFullYear(),
-          code: '',
-          title: '',
-          description: '',
-          metrics: []
-        };
-      case 'objectives':
-        return {
-          ...base,
-          projectId: fullData?.project?.id,
-          year: new Date().getFullYear(),
-          quarter: Math.ceil((new Date().getMonth() + 1) / 3),
-          code: '',
-          title: '',
-          sortOrder: 0
-        };
-      case 'keyResults':
-        return {
-          ...base,
-          objectiveId: 0,
-          code: '',
-          description: '',
-          target: '',
-          targetValue: 0,
-          currentValue: 0,
-          unit: '',
-          lastUpdated: new Date().toISOString().slice(0, 10)
-        };
-      case 'interviews':
-        return {
-          ...base,
-          projectId: fullData?.project?.id,
-          personName: '',
-          personRole: '',
-          interviewDate: new Date().toISOString().slice(0, 10),
-          quote: '',
-          quickFacts: [],
-          insights: [],
-          opportunities: [],
-          transcript: ''
-        };
-      case 'personas':
-        return {
-          ...base,
-          projectId: fullData?.project?.id,
-          name: '',
-          role: '',
-          goals: [],
-          challenges: [],
-          motivators: [],
-          sortOrder: 0
-        };
-      default:
-        return base;
-    }
-  }
-
-  // Fields to show per data key (skip internal fields like id, projectId, timestamps)
-  const FORM_FIELDS: Record<
-    string,
-    {
-      key: string;
-      label: string;
-      type: 'text' | 'textarea' | 'number' | 'boolean' | 'select' | 'array';
-      options?: string[];
-    }[]
-  > = {
-    project: [
-      { key: 'name', label: 'Name', type: 'text' },
-      { key: 'shortName', label: 'Short Name', type: 'text' },
-      { key: 'levels', label: 'Levels', type: 'number' }
-    ],
-    ideas: [
-      { key: 'title', label: 'Title', type: 'text' },
-      { key: 'description', label: 'Description', type: 'textarea' },
-      {
-        key: 'status',
-        label: 'Status',
-        type: 'select',
-        options: ['triage', 'candidate', 'working-set', 'released', 'parked']
-      },
-      { key: 'proposer', label: 'Proposer', type: 'text' },
-      { key: 'okrCode', label: 'OKR Code', type: 'text' }
-    ],
-    actors: [
-      { key: 'emoji', label: 'Emoji', type: 'text' },
-      { key: 'label', label: 'Label', type: 'text' },
-      { key: 'sortOrder', label: 'Order', type: 'number' }
-    ],
-    activities: [
-      { key: 'code', label: 'Code', type: 'text' },
-      { key: 'title', label: 'Title', type: 'text' },
-      { key: 'sortOrder', label: 'Order', type: 'number' }
-    ],
-    tasks: [
-      { key: 'activityId', label: 'Activity ID', type: 'number' },
-      { key: 'code', label: 'Code', type: 'text' },
-      { key: 'title', label: 'Title', type: 'text' },
-      { key: 'sortOrder', label: 'Order', type: 'number' }
-    ],
-    stories: [
-      { key: 'code', label: 'Code', type: 'text' },
-      { key: 'title', label: 'Title', type: 'text' },
-      {
-        key: 'kano',
-        label: 'Kano',
-        type: 'select',
-        options: ['must-have', 'performance', 'delighter']
-      },
-      { key: 'pic', label: 'PIC', type: 'text' },
-      { key: 'done', label: 'Done', type: 'boolean' },
-      { key: 'asA', label: 'As a...', type: 'text' },
-      { key: 'wantTo', label: 'I want to...', type: 'text' },
-      { key: 'soThat', label: 'So that...', type: 'text' },
-      { key: 'pains', label: 'Pains', type: 'array' },
-      { key: 'gains', label: 'Gains', type: 'array' },
-      { key: 'details', label: 'Acceptance Criteria', type: 'array' }
-    ],
-    experiencePhases: [
-      { key: 'title', label: 'Title', type: 'text' },
-      { key: 'sortOrder', label: 'Order', type: 'number' }
-    ],
-    experienceSteps: [
-      { key: 'phaseId', label: 'Phase ID', type: 'number' },
-      { key: 'title', label: 'Title', type: 'text' },
-      { key: 'sortOrder', label: 'Order', type: 'number' }
-    ],
-    experienceTouchpoints: [
-      { key: 'stepId', label: 'Step ID', type: 'number' },
-      { key: 'title', label: 'Title', type: 'text' },
-      { key: 'asA', label: 'As a...', type: 'text' },
-      { key: 'wantTo', label: 'I want to...', type: 'text' },
-      { key: 'soThat', label: 'So that...', type: 'text' },
-      { key: 'pains', label: 'Pains', type: 'array' },
-      { key: 'gains', label: 'Gains', type: 'array' }
-    ],
-    outcomes: [
-      { key: 'year', label: 'Year', type: 'number' },
-      { key: 'code', label: 'Code', type: 'text' },
-      { key: 'title', label: 'Title', type: 'text' },
-      { key: 'description', label: 'Description', type: 'textarea' },
-      { key: 'metrics', label: 'Metrics', type: 'array' }
-    ],
-    objectives: [
-      { key: 'year', label: 'Year', type: 'number' },
-      { key: 'quarter', label: 'Quarter', type: 'number' },
-      { key: 'code', label: 'Code', type: 'text' },
-      { key: 'title', label: 'Title', type: 'text' },
-      { key: 'sortOrder', label: 'Order', type: 'number' }
-    ],
-    keyResults: [
-      { key: 'objectiveId', label: 'Objective ID', type: 'number' },
-      { key: 'code', label: 'Code', type: 'text' },
-      { key: 'description', label: 'Description', type: 'text' },
-      { key: 'target', label: 'Target', type: 'text' },
-      { key: 'targetValue', label: 'Target Value', type: 'number' },
-      { key: 'currentValue', label: 'Current Value', type: 'number' },
-      { key: 'unit', label: 'Unit', type: 'text' }
-    ],
-    interviews: [
-      { key: 'personName', label: 'Name', type: 'text' },
-      { key: 'personRole', label: 'Role', type: 'text' },
-      { key: 'interviewDate', label: 'Date', type: 'text' },
-      { key: 'quote', label: 'Quote', type: 'textarea' },
-      { key: 'quickFacts', label: 'Quick Facts', type: 'array' },
-      { key: 'insights', label: 'Insights', type: 'array' },
-      { key: 'opportunities', label: 'Opportunities', type: 'array' },
-      { key: 'transcript', label: 'Transcript', type: 'textarea' }
-    ],
-    personas: [
-      { key: 'name', label: 'Name', type: 'text' },
-      { key: 'role', label: 'Role', type: 'text' },
-      { key: 'quote', label: 'Quote', type: 'textarea' },
-      { key: 'biography', label: 'Biography', type: 'textarea' },
-      { key: 'goals', label: 'Goals', type: 'array' },
-      { key: 'challenges', label: 'Challenges', type: 'array' },
-      { key: 'motivators', label: 'Motivators', type: 'array' }
-    ]
-  };
-
   function syncFormToFullData() {
     // Update jsonText to reflect form changes (for save detection)
     jsonText = getFilteredJson();
@@ -703,6 +382,10 @@
   let formItems = $derived(getFormData());
   let formKey = $derived(getFormKey());
   let formFields = $derived(formKey ? (FORM_FIELDS[formKey] ?? []) : []);
+  let activeSectionSubs = $derived.by(() => {
+    const sec = SECTIONS.find((s) => s.key === activeSection);
+    return sec && sec.subs.length > 1 ? sec.subs : [];
+  });
 
   $effect(() => {
     data.lastProject;
@@ -714,18 +397,18 @@
 
 <svelte:head><title>Admin - Produck</title></svelte:head>
 
-<header class="mb-6">
-  <h1 class="font-display text-4xl text-cork-800">Admin</h1>
+<header class="mb-4 md:mb-6">
+  <h1 class="font-display text-2xl text-cork-800 md:text-4xl">Admin</h1>
   <p class="mt-0.5 text-sm text-cork-500">View and edit project data</p>
 </header>
 
 <!-- Toolbar -->
-<div class="mb-4 flex items-center gap-3">
+<div class="mb-4 flex flex-wrap items-center gap-2 md:gap-3">
   <!-- View toggle -->
   <div class="flex overflow-hidden rounded-lg border border-cork-300">
     <button
       type="button"
-      class="flex cursor-pointer items-center px-3 py-2 text-sm font-medium transition-colors {viewMode ===
+      class="flex cursor-pointer items-center px-2.5 py-1.5 text-sm font-medium transition-colors md:px-3 md:py-2 {viewMode ===
       'form'
         ? 'bg-cork-700 text-cork-50'
         : 'text-cork-600 hover:bg-cork-200/50'}"
@@ -740,7 +423,7 @@
     </button>
     <button
       type="button"
-      class="flex cursor-pointer items-center px-3 py-2 text-sm font-medium transition-colors {viewMode ===
+      class="flex cursor-pointer items-center px-2.5 py-1.5 text-sm font-medium transition-colors md:px-3 md:py-2 {viewMode ===
       'json'
         ? 'bg-cork-700 text-cork-50'
         : 'text-cork-600 hover:bg-cork-200/50'}"
@@ -756,33 +439,33 @@
   <button
     onclick={downloadJson}
     title="Export JSON"
-    class="flex cursor-pointer items-center gap-2 rounded-lg border border-cork-300 px-3 py-2 text-sm font-medium text-cork-600 transition-colors hover:bg-cork-200/50"
+    class="flex cursor-pointer items-center gap-1.5 rounded-lg border border-cork-300 px-2.5 py-1.5 text-sm font-medium text-cork-600 transition-colors hover:bg-cork-200/50 md:gap-2 md:px-3 md:py-2"
   >
-    <Download class="size-4" />Export
+    <Download class="size-4" /><span class="hidden sm:inline">Export</span>
   </button>
   <label
     title="Import JSON"
-    class="flex cursor-pointer items-center gap-2 rounded-lg border border-cork-300 px-3 py-2 text-sm font-medium text-cork-600 transition-colors hover:bg-cork-200/50"
+    class="flex cursor-pointer items-center gap-1.5 rounded-lg border border-cork-300 px-2.5 py-1.5 text-sm font-medium text-cork-600 transition-colors hover:bg-cork-200/50 md:gap-2 md:px-3 md:py-2"
   >
-    <Upload class="size-4" />Import
+    <Upload class="size-4" /><span class="hidden sm:inline">Import</span>
     <input type="file" accept=".json" class="hidden" onchange={handleFileUpload} />
   </label>
   <div class="flex-1"></div>
   {#if error}
-    <span class="text-sm text-red-600">{error}</span>
+    <span class="text-xs text-red-600 md:text-sm">{error}</span>
   {/if}
   {#if success}
-    <span class="text-sm text-green-700">{success}</span>
+    <span class="text-xs text-green-700 md:text-sm">{success}</span>
   {/if}
   <button
     onclick={saveData}
     disabled={saving || !hasChanges}
-    class="flex cursor-pointer items-center gap-2 rounded-lg bg-cork-700 px-4 py-2 text-sm font-medium text-cork-50 transition-colors hover:bg-cork-800 disabled:opacity-40"
+    class="flex cursor-pointer items-center gap-1.5 rounded-lg bg-cork-700 px-3 py-1.5 text-sm font-medium text-cork-50 transition-colors hover:bg-cork-800 disabled:opacity-40 md:gap-2 md:px-4 md:py-2"
   >
     {#if saving}
-      <LoaderCircle class="size-4 animate-spin" />Saving...
+      <LoaderCircle class="size-4 animate-spin" /><span class="hidden sm:inline">Saving...</span>
     {:else}
-      <Save class="size-4" />Save Changes
+      <Save class="size-4" /><span class="hidden sm:inline">Save Changes</span>
     {/if}
   </button>
 </div>
@@ -793,70 +476,104 @@
     <LoaderCircle class="size-6 animate-spin text-cork-400" />
   </div>
 {:else}
-  <div class="flex gap-3" style="height: calc(100vh - 240px)">
-    <!-- Left: section filter (accordion) -->
-    <div class="left-pane w-44 shrink-0 space-y-0.5 overflow-y-auto">
-      {#each SECTIONS as section (section.key)}
-        {@const isActive = activeSection === section.key}
-        {@const isExpanded = expandedSections.has(section.key)}
-        {@const hasSubs = section.subs.length > 1}
-        {@const sectionHasDiff = hasSubs
-          ? section.subs.some((s) => hasDiffFor(s))
-          : hasDiffFor(section.key)}
-        <!-- Section header -->
-        <button
-          type="button"
-          class="flex w-full cursor-pointer items-center justify-between rounded-lg px-3 py-2 text-left text-xs font-medium transition-colors {isActive &&
-          activeFilter === section.key
-            ? 'bg-cork-700 text-cork-50'
-            : isActive
-              ? 'bg-cork-200 text-cork-800'
-              : 'text-cork-600 hover:bg-cork-200/50'}"
-          onclick={() => selectSection(section.key)}
-        >
-          <span class="flex items-center gap-1.5">
-            {section.label}
-            {#if sectionHasDiff}
-              <span class="size-1.5 rounded-full bg-amber-500"></span>
-            {/if}
-          </span>
-        </button>
-        <!-- Sub-items (accordion) -->
-        {#if hasSubs && (isExpanded || isActive)}
-          <div class="ml-3 space-y-0.5 border-l border-cork-300/40 pl-2">
-            {#each section.subs as subKey (subKey)}
-              {@const count = getCount(subKey)}
-              {@const subHasDiff = hasDiffFor(subKey)}
-              <button
-                type="button"
-                class="flex w-full cursor-pointer items-center justify-between rounded-md px-2 py-1 text-left text-[11px] transition-colors {activeFilter ===
-                subKey
-                  ? 'bg-cork-600 text-cork-50'
-                  : 'text-cork-500 hover:bg-cork-200/40 hover:text-cork-700'}"
-                onclick={() => selectSubItem(subKey, section.key)}
-              >
-                <span class="flex items-center gap-1.5">
-                  {KEY_LABELS[subKey] ?? subKey}
-                  {#if subHasDiff}
-                    <span class="size-1.5 rounded-full bg-amber-500"></span>
-                  {/if}
-                </span>
-                {#if count !== null}
-                  <span
-                    class="rounded-full px-1.5 py-0.5 text-[9px] {activeFilter === subKey
-                      ? 'bg-cork-500 text-cork-100'
-                      : 'bg-cork-200/60 text-cork-400'}">{count}</span
-                  >
+  <div class="flex flex-col gap-3 md:flex-row" style="height: calc(100vh - 240px)">
+    <!-- Section filter: horizontal scroll on mobile, vertical sidebar on desktop -->
+    <div class="shrink-0 space-y-1.5 md:w-44 md:space-y-0">
+      <div class="left-pane flex gap-1.5 overflow-x-auto pb-1 [-webkit-overflow-scrolling:touch] [scrollbar-width:none] md:flex-col md:space-y-0.5 md:overflow-x-visible md:overflow-y-auto md:[scrollbar-width:thin] md:pb-0">
+        {#each SECTIONS as section (section.key)}
+          {@const isActive = activeSection === section.key}
+          {@const isExpanded = expandedSections.has(section.key)}
+          {@const hasSubs = section.subs.length > 1}
+          {@const sectionHasDiff = hasSubs
+            ? section.subs.some((s) => hasDiffFor(s))
+            : hasDiffFor(section.key)}
+          <div class="shrink-0 md:shrink">
+            <!-- Section header -->
+            <button
+              type="button"
+              class="flex w-full cursor-pointer items-center justify-between rounded-lg px-3 py-1.5 text-left text-xs font-medium whitespace-nowrap transition-colors md:py-2 {isActive &&
+              activeFilter === section.key
+                ? 'bg-cork-700 text-cork-50'
+                : isActive
+                  ? 'bg-cork-200 text-cork-800'
+                  : 'text-cork-600 hover:bg-cork-200/50'}"
+              onclick={() => selectSection(section.key)}
+            >
+              <span class="flex items-center gap-1.5">
+                {section.label}
+                {#if sectionHasDiff}
+                  <span class="size-1.5 rounded-full bg-amber-500"></span>
                 {/if}
-              </button>
-            {/each}
+              </span>
+            </button>
+            <!-- Sub-items (accordion) — desktop only -->
+            {#if hasSubs && (isExpanded || isActive)}
+              <div class="ml-3 hidden space-y-0.5 border-l border-cork-300/40 pl-2 md:block">
+                {#each section.subs as subKey (subKey)}
+                  {@const count = getCount(subKey)}
+                  {@const subHasDiff = hasDiffFor(subKey)}
+                  <button
+                    type="button"
+                    class="flex w-full cursor-pointer items-center justify-between rounded-md px-2 py-1 text-left text-[11px] transition-colors {activeFilter ===
+                    subKey
+                      ? 'bg-cork-600 text-cork-50'
+                      : 'text-cork-500 hover:bg-cork-200/40 hover:text-cork-700'}"
+                    onclick={() => selectSubItem(subKey, section.key)}
+                  >
+                    <span class="flex items-center gap-1.5">
+                      {KEY_LABELS[subKey] ?? subKey}
+                      {#if subHasDiff}
+                        <span class="size-1.5 rounded-full bg-amber-500"></span>
+                      {/if}
+                    </span>
+                    {#if count !== null}
+                      <span
+                        class="rounded-full px-1.5 py-0.5 text-[9px] {activeFilter === subKey
+                          ? 'bg-cork-500 text-cork-100'
+                          : 'bg-cork-200/60 text-cork-400'}">{count}</span
+                      >
+                    {/if}
+                  </button>
+                {/each}
+              </div>
+            {/if}
           </div>
-        {/if}
-      {/each}
+        {/each}
+      </div>
+
+      <!-- Mobile sub-items row -->
+      {#if activeSectionSubs.length > 0}
+        <div class="flex gap-1.5 overflow-x-auto [-webkit-overflow-scrolling:touch] [scrollbar-width:none] md:hidden">
+          {#each activeSectionSubs as subKey (subKey)}
+            {@const count = getCount(subKey)}
+            {@const subHasDiff = hasDiffFor(subKey)}
+            <button
+              type="button"
+              class="flex shrink-0 cursor-pointer items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium whitespace-nowrap transition-colors {activeFilter ===
+              subKey
+                ? 'bg-cork-600 text-cork-50'
+                : 'bg-cork-200/50 text-cork-500 hover:bg-cork-300/50'}"
+              onclick={() => selectSubItem(subKey, activeSection)}
+            >
+              {KEY_LABELS[subKey] ?? subKey}
+              {#if subHasDiff}
+                <span class="size-1.5 rounded-full bg-amber-500"></span>
+              {/if}
+              {#if count !== null}
+                <span
+                  class="rounded-full px-1 text-[9px] {activeFilter === subKey
+                    ? 'bg-cork-500 text-cork-100'
+                    : 'bg-cork-300/50 text-cork-400'}">{count}</span
+                >
+              {/if}
+            </button>
+          {/each}
+        </div>
+      {/if}
     </div>
 
-    <!-- Right: editor + AI prompt -->
-    <div class="flex min-w-0 flex-1 flex-col gap-2">
+    <!-- Editor + AI prompt -->
+    <div class="flex min-h-0 min-w-0 flex-1 flex-col gap-2">
       {#if aiDiff}
         <!-- Diff view -->
         <div class="flex flex-1 flex-col overflow-hidden rounded-xl border border-cork-300">
@@ -945,222 +662,35 @@
           spellcheck="false"
         ></textarea>
       {:else}
-        <!-- Form view -->
-        <div
-          class="form-scroll flex-1 space-y-3 overflow-y-auto rounded-xl border border-cork-300 bg-cork-50/50 p-4"
-        >
-          {#if formKey && formFields.length > 0}
-            {#each formItems as item, idx (item.id ?? idx)}
-              <div class="rounded-lg border border-cork-200 bg-white p-4">
-                <div class="mb-3 flex items-center justify-between">
-                  <span class="text-xs font-semibold text-cork-500">
-                    {#if item.code}{item.code} —
-                    {/if}{item.title || item.name || item.personName || `#${item.id}`}
-                  </span>
-                  <button
-                    type="button"
-                    class="cursor-pointer text-cork-300 transition-colors hover:text-red-500"
-                    onclick={() => removeRecord(idx)}
-                  >
-                    <Trash2 class="size-3.5" />
-                  </button>
-                </div>
-                <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
-                  {#each formFields as field (field.key)}
-                    <div
-                      class={field.type === 'textarea' || field.type === 'array'
-                        ? 'md:col-span-2'
-                        : ''}
-                    >
-                      <label
-                        class="mb-1 block text-[10px] font-semibold tracking-wider text-cork-400 uppercase"
-                        >{field.label}</label
-                      >
-                      {#if field.type === 'text'}
-                        <input
-                          type="text"
-                          value={item[field.key] ?? ''}
-                          oninput={(e) => {
-                            item[field.key] = (e.target as HTMLInputElement).value;
-                            syncFormToFullData();
-                          }}
-                          class="h-8 w-full rounded-md border border-cork-200 bg-cork-50/50 px-2 text-sm text-cork-800 shadow-none ring-0 focus:border-cork-400 focus:ring-0 focus:outline-none"
-                        />
-                      {:else if field.type === 'number'}
-                        <input
-                          type="number"
-                          value={item[field.key] ?? 0}
-                          oninput={(e) => {
-                            item[field.key] = Number((e.target as HTMLInputElement).value);
-                            syncFormToFullData();
-                          }}
-                          class="h-8 w-full rounded-md border border-cork-200 bg-cork-50/50 px-2 text-sm text-cork-800 shadow-none ring-0 focus:border-cork-400 focus:ring-0 focus:outline-none"
-                        />
-                      {:else if field.type === 'boolean'}
-                        <button
-                          type="button"
-                          class="flex h-8 cursor-pointer items-center gap-2 rounded-md border border-cork-200 bg-cork-50/50 px-2 text-sm text-cork-800"
-                          onclick={() => {
-                            item[field.key] = !item[field.key];
-                            syncFormToFullData();
-                          }}
-                        >
-                          <span
-                            class="size-3 rounded {item[field.key]
-                              ? 'bg-green-500'
-                              : 'bg-cork-300'}"
-                          ></span>
-                          {item[field.key] ? 'Yes' : 'No'}
-                        </button>
-                      {:else if field.type === 'select'}
-                        <select
-                          value={item[field.key] ?? ''}
-                          onchange={(e) => {
-                            item[field.key] = (e.target as HTMLSelectElement).value;
-                            syncFormToFullData();
-                          }}
-                          class="h-8 w-full rounded-md border border-cork-200 bg-cork-50/50 px-2 text-sm text-cork-800 shadow-none ring-0 focus:border-cork-400 focus:ring-0 focus:outline-none"
-                        >
-                          {#each field.options ?? [] as opt (opt)}
-                            <option value={opt}>{opt}</option>
-                          {/each}
-                        </select>
-                      {:else if field.type === 'textarea'}
-                        <textarea
-                          value={item[field.key] ?? ''}
-                          oninput={(e) => {
-                            item[field.key] = (e.target as HTMLTextAreaElement).value;
-                            syncFormToFullData();
-                          }}
-                          rows="3"
-                          class="w-full resize-none rounded-md border border-cork-200 bg-cork-50/50 px-2 py-1.5 text-sm text-cork-800 shadow-none ring-0 focus:border-cork-400 focus:ring-0 focus:outline-none"
-                        ></textarea>
-                      {:else if field.type === 'array'}
-                        <div class="space-y-1">
-                          {#each item[field.key] ?? [] as arrItem, ai (ai)}
-                            <div class="flex items-center gap-1">
-                              <input
-                                type="text"
-                                value={arrItem}
-                                oninput={(e) => {
-                                  item[field.key][ai] = (e.target as HTMLInputElement).value;
-                                  syncFormToFullData();
-                                }}
-                                class="h-7 flex-1 rounded-md border border-cork-200 bg-cork-50/50 px-2 text-xs text-cork-800 shadow-none ring-0 focus:border-cork-400 focus:ring-0 focus:outline-none"
-                              />
-                              <button
-                                type="button"
-                                class="shrink-0 cursor-pointer text-cork-300 hover:text-red-500"
-                                onclick={() => {
-                                  item[field.key].splice(ai, 1);
-                                  syncFormToFullData();
-                                }}
-                              >
-                                <Trash2 class="size-3" />
-                              </button>
-                            </div>
-                          {/each}
-                          <button
-                            type="button"
-                            class="flex cursor-pointer items-center gap-1 text-[10px] text-cork-400 hover:text-cork-600"
-                            onclick={() => {
-                              if (!item[field.key]) item[field.key] = [];
-                              item[field.key].push('');
-                              syncFormToFullData();
-                            }}
-                          >
-                            <Plus class="size-3" />Add
-                          </button>
-                        </div>
-                      {/if}
-                    </div>
-                  {/each}
-                </div>
-              </div>
-            {/each}
-
-            <!-- Add new record (not for single-record types like project) -->
-            {#if formKey !== 'project'}
-              <button
-                type="button"
-                class="flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg border-2 border-dashed border-cork-300/50 py-3 text-xs font-medium text-cork-400 transition-colors hover:border-cork-400 hover:text-cork-600"
-                onclick={addRecord}
-              >
-                <Plus class="size-4" />Add {KEY_LABELS[formKey] ?? 'Record'}
-              </button>
-            {/if}
-          {:else}
-            <div class="flex h-full items-center justify-center text-sm text-cork-400">
-              Select a specific data type from the left pane to edit
-            </div>
-          {/if}
-        </div>
+        <AdminFormView {formKey} {formFields} {formItems} keyLabels={KEY_LABELS} onSyncForm={syncFormToFullData} onAddRecord={addRecord} onRemoveRecord={removeRecord} />
       {/if}
 
-      <!-- AI prompt bar -->
-      <form onsubmit={askAI} class="ai-bar flex items-center gap-3 rounded-xl px-4 py-2.5">
-        <Sparkles class="size-4 shrink-0 text-cork-500 {aiLoading ? 'animate-pulse' : ''}" />
-        <input
-          type="text"
-          bind:value={aiPrompt}
-          placeholder="Ask AI to edit this data... e.g. 'add a new phase called Onboarding'"
-          class="flex-1 rounded-md border border-cork-300 bg-white/50 px-2 py-1 text-sm text-cork-800 shadow-none ring-0 placeholder:text-cork-400 focus:border-cork-500 focus:ring-0 focus:outline-none"
-          disabled={aiLoading}
-        />
-        {#if aiError}
-          <span class="shrink-0 text-xs text-red-500">{aiError}</span>
-        {/if}
-        <button
-          type="submit"
-          disabled={aiLoading || !aiPrompt.trim()}
-          class="flex shrink-0 cursor-pointer items-center gap-1.5 rounded-lg bg-cork-700 px-3 py-1.5 text-xs font-medium text-cork-50 transition-colors hover:bg-cork-800 disabled:opacity-40"
-        >
-          {#if aiLoading}
-            <LoaderCircle class="size-3.5 animate-spin" />
-            <span>Thinking...</span>
-          {:else}
-            <SendHorizontal class="size-3.5" />
-            <span class="text-cork-300">Enter</span>
-          {/if}
-        </button>
-      </form>
+      <AdminAiBar bind:aiPrompt {aiLoading} {aiError} onSubmit={askAI} />
     </div>
   </div>
 {/if}
 
 <style>
   textarea,
-  .diff-scroll,
-  .form-scroll,
-  .left-pane {
+  .diff-scroll {
     scrollbar-width: thin;
     scrollbar-color: rgba(0, 0, 0, 0.1) transparent;
     tab-size: 2;
   }
-  .left-pane::-webkit-scrollbar {
-    width: 3px;
-  }
-  .left-pane::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  .left-pane::-webkit-scrollbar-thumb {
-    background: rgba(0, 0, 0, 0.1);
-    border-radius: 2px;
-  }
-  .ai-bar {
-    background: linear-gradient(90deg, #ece5d8, #cdc3ae, #b0a48e, #cdc3ae, #ece5d8);
-    background-size: 300% 100%;
-    animation: ai-shimmer 6s ease-in-out infinite;
-  }
-  @keyframes ai-shimmer {
-    0% {
-      background-position: 0% 50%;
+  @media (min-width: 768px) {
+    .left-pane {
+      scrollbar-width: thin;
+      scrollbar-color: rgba(0, 0, 0, 0.1) transparent;
     }
-    50% {
-      background-position: 100% 50%;
+    .left-pane::-webkit-scrollbar {
+      width: 3px;
     }
-    100% {
-      background-position: 0% 50%;
+    .left-pane::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .left-pane::-webkit-scrollbar-thumb {
+      background: rgba(0, 0, 0, 0.1);
+      border-radius: 2px;
     }
   }
 </style>

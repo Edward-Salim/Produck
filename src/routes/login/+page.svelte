@@ -1,12 +1,22 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
-  import { LoaderCircle, LogIn } from '@lucide/svelte';
+  import { LoaderCircle, LogIn, Eye, EyeOff } from '@lucide/svelte';
   import logoProduck from '$lib/assets/logo-produck.png';
 
+  let rememberMe = $state(false);
+  let showPassword = $state(false);
   let email = $state('');
   let password = $state('');
   let loading = $state(false);
   let error = $state('');
+
+  if (typeof window !== 'undefined') {
+    const saved = localStorage.getItem('produck_remember_email');
+    if (saved) {
+      email = saved;
+      rememberMe = true;
+    }
+  }
 
   async function handleLogin(e: Event) {
     e.preventDefault();
@@ -30,6 +40,11 @@
     });
 
     if (res.ok) {
+      if (rememberMe) {
+        localStorage.setItem('produck_remember_email', email);
+      } else {
+        localStorage.removeItem('produck_remember_email');
+      }
       goto('/', { invalidateAll: true });
     } else {
       const data = await res.json();
@@ -43,7 +58,7 @@
   <title>Sign In - Produck</title>
 </svelte:head>
 
-<div class="flex min-h-screen items-center justify-center bg-cork-100">
+<div class="flex min-h-dvh items-center justify-center bg-cork-100 px-4">
   <div class="w-full max-w-sm">
     <!-- Logo + Title -->
     <div class="mb-8 text-center">
@@ -81,16 +96,50 @@
               class="mb-1 block text-xs font-semibold tracking-wider text-cork-500 uppercase"
               >Password</label
             >
-            <input
-              id="password"
-              type="password"
-              bind:value={password}
-              autocomplete="current-password"
-              class="h-10 w-full rounded-lg border border-cork-300 bg-white/80 px-3 text-sm text-cork-800 placeholder:text-cork-400 focus:ring-2 focus:ring-cork-400/50 focus:outline-none"
-              placeholder="••••••••"
-            />
+            <div class="relative">
+              <input
+                id="password"
+                type={showPassword ? 'text' : 'password'}
+                bind:value={password}
+                autocomplete="current-password"
+                class="h-10 w-full rounded-lg border border-cork-300 bg-white/80 px-3 pr-10 text-sm text-cork-800 placeholder:text-cork-400 focus:ring-2 focus:ring-cork-400/50 focus:outline-none"
+                placeholder="••••••••"
+              />
+              <button
+                type="button"
+                class="absolute top-1/2 right-3 -translate-y-1/2 cursor-pointer text-cork-400 hover:text-cork-600"
+                onclick={() => (showPassword = !showPassword)}
+                tabindex={-1}
+              >
+                {#if showPassword}
+                  <EyeOff class="size-4" />
+                {:else}
+                  <Eye class="size-4" />
+                {/if}
+              </button>
+            </div>
           </div>
         </div>
+
+        <label class="mt-4 flex cursor-pointer items-center gap-2">
+          <span
+            class="flex size-4 shrink-0 items-center justify-center rounded border transition-colors {rememberMe
+              ? 'border-cork-700 bg-cork-700'
+              : 'border-cork-300 bg-white/80'}"
+          >
+            {#if rememberMe}
+              <svg class="size-3 text-white" viewBox="0 0 12 12" fill="none">
+                <path d="M2.5 6l2.5 2.5 4.5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            {/if}
+          </span>
+          <input
+            type="checkbox"
+            bind:checked={rememberMe}
+            class="sr-only"
+          />
+          <span class="text-xs text-cork-500">Remember me</span>
+        </label>
 
         {#if error}
           <p class="mt-3 text-sm text-red-600">{error}</p>

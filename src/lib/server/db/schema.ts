@@ -65,6 +65,22 @@ export const projectAccessRelations = relations(projectAccess, ({ one }) => ({
   project: one(project, { fields: [projectAccess.projectId], references: [project.id] })
 }));
 
+export const workspaceAccess = pgTable('workspace_access', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id')
+    .notNull()
+    .references(() => appUser.id, { onDelete: 'cascade' }),
+  workspaceId: integer('workspace_id')
+    .notNull()
+    .references(() => workspace.id, { onDelete: 'cascade' }),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
+});
+
+export const workspaceAccessRelations = relations(workspaceAccess, ({ one }) => ({
+  user: one(appUser, { fields: [workspaceAccess.userId], references: [appUser.id] }),
+  workspace: one(workspace, { fields: [workspaceAccess.workspaceId], references: [workspace.id] })
+}));
+
 // ── Workspace ─────────────────────────────────────────
 
 export const workspace = pgTable('workspace', {

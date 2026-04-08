@@ -761,7 +761,7 @@
       if (!o) selectedBook = null;
     }}
   >
-    <Dialog.Content class="max-w-[95vw] border-cork-300 bg-cork-50 text-cork-800 sm:max-w-5xl">
+    <Dialog.Content class="flex max-h-[85vh] max-w-[95vw] flex-col border-cork-300 bg-cork-50 text-cork-800 sm:max-w-5xl">
       {#if selectedBook}
         <Dialog.Header class="flex-row items-start gap-4">
           {#if selectedBook.coverPath}
@@ -784,7 +784,7 @@
         <Dialog.Description class="sr-only">Artifacts list</Dialog.Description>
 
         <!-- Split pane: list left, detail right -->
-        <div class="flex max-h-[65vh] flex-col gap-4 border-t border-cork-300/50 pt-3 sm:flex-row">
+        <div class="flex min-h-0 flex-1 flex-col gap-4 border-t border-cork-300/50 pt-3 sm:flex-row">
           <!-- Left: artifact list -->
           <div
             class="max-h-48 w-full shrink-0 overflow-y-auto border-cork-300/30 [scrollbar-color:theme(--color-cork-300)_transparent] [scrollbar-width:thin] sm:max-h-full sm:w-80 sm:border-r sm:pr-4"
@@ -837,7 +837,7 @@
 
           <!-- Right: detail pane -->
           <div
-            class="flex-1 overflow-y-auto p-3 [scrollbar-color:theme(--color-cork-300)_transparent] [scrollbar-width:thin]"
+            class="min-h-0 flex-1 overflow-y-auto p-3 [scrollbar-color:theme(--color-cork-300)_transparent] [scrollbar-width:thin]"
           >
             {#if selectedArtifactDetail}
               <h3 class="mb-1 font-display text-lg text-cork-800">{selectedArtifactDetail.name}</h3>

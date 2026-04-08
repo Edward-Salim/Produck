@@ -55,14 +55,25 @@
 
   const sidebar = useSidebar();
 
-  const buttonProps = $derived({
-    class: cn(sidebarMenuButtonVariants({ variant, size }), className),
-    'data-slot': 'sidebar-menu-button',
-    'data-sidebar': 'menu-button',
-    'data-size': size,
-    'data-active': isActive,
-    ...restProps
-  });
+  const buttonProps = $derived(
+    mergeProps(
+      {
+        class: cn(sidebarMenuButtonVariants({ variant, size }), className),
+        'data-slot': 'sidebar-menu-button',
+        'data-sidebar': 'menu-button',
+        'data-size': size,
+        'data-active': isActive
+      },
+      restProps,
+      {
+        onclick: () => {
+          if (sidebar.isMobile) {
+            sidebar.setOpenMobile(false);
+          }
+        }
+      }
+    )
+  );
 </script>
 
 {#snippet Button({ props }: { props?: Record<string, unknown> })}

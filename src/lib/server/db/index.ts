@@ -7,7 +7,7 @@ if (!env.DATABASE_URL) throw new Error('DATABASE_URL is not set');
 
 const client = postgres(env.DATABASE_URL, {
   ssl: 'require',
-  max: 1
+  max: 6
 });
 
 export const db = drizzle(client, { schema });

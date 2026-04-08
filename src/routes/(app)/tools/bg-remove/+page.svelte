@@ -5,6 +5,7 @@
   } from '$lib/components/bg-remove/BgRemoveEditor.svelte';
   import { getHistory, removeHistoryItem } from '$lib/utils/image-cache.js';
   import { Eraser, Paintbrush, Download, ImagePlus, X } from '@lucide/svelte';
+  import ArrowLeft from '@lucide/svelte/icons/arrow-left';
 
   let file = $state<File | null>(null);
   let historyItems: { thumb: string; index: number }[] = $state([]);
@@ -49,7 +50,10 @@
 
 <div>
   <header class="mb-6">
-    <h1 class="font-display text-4xl text-cork-800">Background Remover</h1>
+    <a href="/tools" class="mb-2 inline-flex items-center gap-1 text-xs text-cork-400 transition-colors hover:text-cork-600">
+      <ArrowLeft class="size-3" />Tools
+    </a>
+    <h1 class="font-display text-2xl text-cork-800 md:text-4xl">Background Remover</h1>
     <p class="mt-0.5 text-sm text-cork-500">
       Upload an image, auto-remove the background, refine with brush, export as PNG
     </p>

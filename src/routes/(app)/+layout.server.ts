@@ -5,51 +5,67 @@ import {
   productObjective,
   keyResult,
   appUser,
-  projectAccess
+  projectAccess,
+  workspaceAccess
 } from '$lib/server/db/schema.js';
-import { asc, eq, and, inArray } from 'drizzle-orm';
+import { asc, eq, and } from 'drizzle-orm';
 import type { LayoutServerLoad } from './$types.js';
 
 export const load: LayoutServerLoad = async ({ cookies, locals }) => {
   try {
-    // Look up current user
+    // Look up current user + all workspaces in parallel
     const authId = locals.session?.user?.id;
-    const [currentUser] = authId
-      ? await db.select().from(appUser).where(eq(appUser.authId, authId))
-      : [];
+    const [userRows, allWorkspaces] = await Promise.all([
+      authId
+        ? db.select().from(appUser).where(eq(appUser.authId, authId))
+        : Promise.resolve([]),
+      db
+        .select({ id: workspace.id, name: workspace.name })
+        .from(workspace)
+        .orderBy(asc(workspace.id))
+    ]);
+    const currentUser = userRows[0];
     const isAdmin = currentUser?.role === 'admin';
 
-    const workspaces = await db
-      .select({ id: workspace.id, name: workspace.name })
-      .from(workspace)
-      .orderBy(asc(workspace.id));
+    // Filter workspaces by access for members
+    let workspaces = allWorkspaces;
+    if (!isAdmin && currentUser) {
+      const wsAccess = await db
+        .select({ workspaceId: workspaceAccess.workspaceId })
+        .from(workspaceAccess)
+        .where(eq(workspaceAccess.userId, currentUser.id));
+      const allowedWsIds = new Set(wsAccess.map((a) => a.workspaceId));
+      workspaces = allWorkspaces.filter((w) => allowedWsIds.has(w.id));
+    }
 
     // Workspace: use cookie, fall back to first
     const cookieWorkspace = cookies.get('active_workspace') ?? '';
-    console.log('[layout] active_workspace cookie:', cookieWorkspace);
     const activeWorkspaceId = Number(cookieWorkspace) || workspaces[0]?.id;
-    console.log('[layout] resolved workspace:', activeWorkspaceId);
 
-    // Projects: scoped to active workspace, filtered by access for members
-    let allProjects = activeWorkspaceId
-      ? await db
-          .select({ id: project.id, name: project.name, shortName: project.shortName })
-          .from(project)
-          .where(eq(project.workspaceId, activeWorkspaceId))
-          .orderBy(asc(project.id))
-      : [];
+    // Projects + access in parallel
+    const [allProjects, accessRows] = await Promise.all([
+      activeWorkspaceId
+        ? db
+            .select({ id: project.id, name: project.name, shortName: project.shortName })
+            .from(project)
+            .where(eq(project.workspaceId, activeWorkspaceId))
+            .orderBy(asc(project.id))
+        : Promise.resolve([]),
+      !isAdmin && currentUser
+        ? db
+            .select({ projectId: projectAccess.projectId })
+            .from(projectAccess)
+            .where(eq(projectAccess.userId, currentUser.id))
+        : Promise.resolve(null)
+    ]);
 
-    // Members only see projects they have access to
-    if (!isAdmin && currentUser) {
-      const access = await db
-        .select({ projectId: projectAccess.projectId })
-        .from(projectAccess)
-        .where(eq(projectAccess.userId, currentUser.id));
-      const allowedIds = new Set(access.map((a) => a.projectId));
-      allProjects = allProjects.filter((p) => allowedIds.has(p.id));
-    }
-
-    const projects = allProjects;
+    const projects =
+      accessRows !== null
+        ? (() => {
+            const allowedIds = new Set(accessRows.map((a) => a.projectId));
+            return allProjects.filter((p) => allowedIds.has(p.id));
+          })()
+        : allProjects;
 
     // Project: use cookie only if it belongs to this workspace, otherwise first
     const cookieProject = cookies.get('active_project') ?? '';
@@ -78,41 +94,25 @@ export const load: LayoutServerLoad = async ({ cookies, locals }) => {
     const gaugeQuarter = Math.floor(now.getMonth() / 3) + 1;
     const activeProjectId = Number(lastProject);
 
-    let gaugeKRs: {
-      description: string;
-      targetValue: number;
-      currentValue: number;
-      unit: string;
-    }[] = [];
-    if (activeProjectId) {
-      const objs = await db
-        .select({ id: productObjective.id })
-        .from(productObjective)
-        .where(
-          and(
-            eq(productObjective.projectId, activeProjectId),
-            eq(productObjective.year, gaugeYear),
-            eq(productObjective.quarter, gaugeQuarter)
+    const gaugeKRs = activeProjectId
+      ? await db
+          .select({
+            description: keyResult.description,
+            targetValue: keyResult.targetValue,
+            currentValue: keyResult.currentValue,
+            unit: keyResult.unit
+          })
+          .from(keyResult)
+          .innerJoin(productObjective, eq(keyResult.objectiveId, productObjective.id))
+          .where(
+            and(
+              eq(productObjective.projectId, activeProjectId),
+              eq(productObjective.year, gaugeYear),
+              eq(productObjective.quarter, gaugeQuarter)
+            )
           )
-        );
-
-      if (objs.length > 0) {
-        const objIds = objs.map((o) => o.id);
-        for (const objId of objIds) {
-          const krs = await db
-            .select({
-              description: keyResult.description,
-              targetValue: keyResult.targetValue,
-              currentValue: keyResult.currentValue,
-              unit: keyResult.unit
-            })
-            .from(keyResult)
-            .where(eq(keyResult.objectiveId, objId))
-            .orderBy(asc(keyResult.code));
-          gaugeKRs.push(...krs);
-        }
-      }
-    }
+          .orderBy(asc(keyResult.code))
+      : [];
 
     return {
       workspaces,
@@ -139,6 +139,9 @@ export const load: LayoutServerLoad = async ({ cookies, locals }) => {
       activeWorkspaceId: '',
       projects: [],
       lastProject: '',
+      gaugeKRs: [],
+      gaugeYear: new Date().getFullYear(),
+      gaugeQuarter: Math.floor(new Date().getMonth() / 3) + 1,
       currentUser: null,
       isAdmin: false
     };

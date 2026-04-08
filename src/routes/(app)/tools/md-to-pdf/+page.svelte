@@ -1,6 +1,7 @@
 <script lang="ts">
   import { marked } from 'marked';
   import { Download, LoaderCircle } from '@lucide/svelte';
+  import ArrowLeft from '@lucide/svelte/icons/arrow-left';
   import { MD_ALERT_COLORS } from '$lib/constants/colors.js';
 
   marked.setOptions({
@@ -230,7 +231,10 @@ function greet(name) {
 
 <div>
   <header class="mb-6">
-    <h1 class="font-display text-4xl text-cork-800">Markdown to PDF</h1>
+    <a href="/tools" class="mb-2 inline-flex items-center gap-1 text-xs text-cork-400 transition-colors hover:text-cork-600">
+      <ArrowLeft class="size-3" />Tools
+    </a>
+    <h1 class="font-display text-2xl text-cork-800 md:text-4xl">Markdown to PDF</h1>
     <p class="mt-0.5 text-sm text-cork-500">
       Write or paste Markdown, preview it live, and export as PDF
     </p>

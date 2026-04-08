@@ -9,20 +9,21 @@
     Lightbulb,
     Route,
     Target,
-    Scissors,
-    WandSparkles,
+    Wrench,
     BookOpen,
     Landmark,
     NotebookPen,
     GaugeCircle,
-    FileText,
     Rss,
     LogOut,
     Shield,
-    Check,
-    X,
-    Database
+    Database,
+    EllipsisVertical,
+    Eye,
+    EyeOff,
+    Trash2
   } from '@lucide/svelte';
+  import { DropdownMenu } from 'bits-ui';
   import * as Dialog from '$lib/components/ui/dialog/index.js';
   import { progressColor } from '$lib/constants/colors.js';
   import { invalidateAll } from '$app/navigation';
@@ -32,16 +33,27 @@
 
   // ── Access management (admin only) ──
   let accessDialogOpen = $state(false);
+  let accessLoading = $state(false);
   let accessUsers = $state<
-    { id: number; email: string; displayName: string; role: string; projectIds: number[] }[]
+    { id: number; email: string; displayName: string; role: string; projectIds: number[]; workspaceIds: number[] }[]
   >([]);
+  let showPasswords = $state<Record<number, boolean>>({});
+
+  const REDACTED_CREDENTIALS: Record<string, string> = {
+    'alice@dummy.com': 'REDACTED_PASSWORD',
+    'bob@dummy.com': 'REDACTED_PASSWORD',
+    'carol@dummy.com': 'REDACTED_PASSWORD',
+    'acquaintance@produck.app': 'REDACTED_PASSWORD'
+  };
 
   async function loadAccess() {
+    accessLoading = true;
     const res = await fetch('/api/access');
     if (res.ok) {
       const json = await res.json();
       accessUsers = json.users;
     }
+    accessLoading = false;
   }
 
   async function toggleProjectAccess(userId: number, projectId: number, hasAccess: boolean) {
@@ -54,6 +66,26 @@
         body: JSON.stringify({ userId, projectId })
       });
     }
+    await loadAccess();
+    await invalidateAll();
+  }
+
+  async function toggleWorkspaceAccess(userId: number, workspaceId: number, hasAccess: boolean) {
+    if (hasAccess) {
+      await fetch(`/api/access?userId=${userId}&workspaceId=${workspaceId}`, { method: 'DELETE' });
+    } else {
+      await fetch('/api/access', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, workspaceId })
+      });
+    }
+    await loadAccess();
+    await invalidateAll();
+  }
+
+  async function deleteUser(userId: number) {
+    await fetch(`/api/access?userId=${userId}&deleteUser=1`, { method: 'DELETE' });
     await loadAccess();
     await invalidateAll();
   }
@@ -181,6 +213,7 @@
       </div>
       {#if data.workspaces.length > 0}
         <div class="px-2 pb-1 group-data-[collapsible=icon]:hidden">
+          <span class="mb-1 block text-[9px] font-semibold tracking-wider text-sidebar-foreground/40 uppercase">Workspace</span>
           <Select.Root type="single" value={selectedWorkspaceId} onValueChange={switchWorkspace}>
             <Select.Trigger
               class="h-7 w-full border-sidebar-border bg-sidebar-accent/20 text-xs text-sidebar-foreground"
@@ -307,42 +340,19 @@
 
       <Sidebar.Separator />
 
+      <Sidebar.Separator />
+
       <Sidebar.Group>
-        <Sidebar.GroupLabel>Tools</Sidebar.GroupLabel>
         <Sidebar.GroupContent>
           <Sidebar.Menu>
             <Sidebar.MenuItem>
               <Sidebar.MenuButton
                 size="sm"
-                isActive={page.url.pathname.startsWith('/tools/bg-remove')}
-                tooltipContent="BG Remover"
+                isActive={page.url.pathname.startsWith('/tools')}
+                tooltipContent="Tools"
               >
                 {#snippet child({ props })}
-                  <a href="/tools/bg-remove" {...props}><Scissors /><span>BG Remover</span></a>
-                {/snippet}
-              </Sidebar.MenuButton>
-            </Sidebar.MenuItem>
-            <Sidebar.MenuItem>
-              <Sidebar.MenuButton
-                size="sm"
-                isActive={page.url.pathname.startsWith('/tools/image-enhance')}
-                tooltipContent="Image Enhancer"
-              >
-                {#snippet child({ props })}
-                  <a href="/tools/image-enhance" {...props}
-                    ><WandSparkles /><span>Image Enhancer</span></a
-                  >
-                {/snippet}
-              </Sidebar.MenuButton>
-            </Sidebar.MenuItem>
-            <Sidebar.MenuItem>
-              <Sidebar.MenuButton
-                size="sm"
-                isActive={page.url.pathname.startsWith('/tools/md-to-pdf')}
-                tooltipContent="MD to PDF"
-              >
-                {#snippet child({ props })}
-                  <a href="/tools/md-to-pdf" {...props}><FileText /><span>MD to PDF</span></a>
+                  <a href="/tools" {...props}><Wrench /><span>Tools</span></a>
                 {/snippet}
               </Sidebar.MenuButton>
             </Sidebar.MenuItem>
@@ -352,70 +362,64 @@
     </Sidebar.Content>
 
     <Sidebar.Footer class="border-t border-cork-300/40 pt-2">
-      <div class="px-2 pb-1 group-data-[collapsible=icon]:hidden">
-        <p class="truncate text-xs font-medium text-cork-700">
-          {data.currentUser?.displayName ?? 'User'}
-        </p>
-        <p class="truncate text-[10px] text-cork-400">{data.currentUser?.email ?? ''}</p>
-      </div>
-      {#if data.isAdmin}
-        <Sidebar.Menu>
-          <Sidebar.MenuItem>
-            <Sidebar.MenuButton
-              size="sm"
-              isActive={page.url.pathname.startsWith('/admin')}
-              tooltipContent="Admin Data"
+      <div class="flex items-center gap-2 px-2 pb-1 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
+        <div class="min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
+          <p class="truncate text-xs font-medium text-cork-700">
+            {data.currentUser?.displayName ?? 'User'}
+          </p>
+          <p class="truncate text-[10px] text-cork-400">{data.currentUser?.email ?? ''}</p>
+        </div>
+        <DropdownMenu.Root>
+          <DropdownMenu.Trigger class="flex size-6 shrink-0 cursor-pointer items-center justify-center rounded text-cork-400 transition-colors hover:bg-cork-200/50 hover:text-cork-600">
+            <EllipsisVertical class="size-4" />
+          </DropdownMenu.Trigger>
+          <DropdownMenu.Portal>
+            <DropdownMenu.Content
+              side="top"
+              align="end"
+              sideOffset={8}
+              class="z-50 min-w-40 rounded-lg border border-cork-300 bg-cork-50 p-1 shadow-md"
             >
-              {#snippet child({ props })}
-                <a href="/admin" {...props}>
-                  <Database />
-                  <span>Admin Data</span>
-                </a>
-              {/snippet}
-            </Sidebar.MenuButton>
-          </Sidebar.MenuItem>
-          <Sidebar.MenuItem>
-            <Sidebar.MenuButton size="sm" tooltipContent="Manage Access">
-              {#snippet child({ props })}
-                <button
-                  {...props}
-                  onclick={() => {
+              {#if data.isAdmin}
+                <DropdownMenu.Item
+                  class="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm text-cork-700 outline-none hover:bg-cork-200/50 data-highlighted:bg-cork-200/50"
+                  onSelect={() => goto('/admin')}
+                >
+                  <Database class="size-3.5" />
+                  Admin Data
+                </DropdownMenu.Item>
+                <DropdownMenu.Item
+                  class="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm text-cork-700 outline-none hover:bg-cork-200/50 data-highlighted:bg-cork-200/50"
+                  onSelect={() => {
                     loadAccess();
                     accessDialogOpen = true;
                   }}
                 >
-                  <Shield />
-                  <span>Manage Access</span>
-                </button>
-              {/snippet}
-            </Sidebar.MenuButton>
-          </Sidebar.MenuItem>
-        </Sidebar.Menu>
-      {/if}
-      <Sidebar.Menu>
-        <Sidebar.MenuItem>
-          <Sidebar.MenuButton size="sm" tooltipContent="Sign Out">
-            {#snippet child({ props })}
-              <button
-                {...props}
-                onclick={async () => {
+                  <Shield class="size-3.5" />
+                  Manage Access
+                </DropdownMenu.Item>
+                <DropdownMenu.Separator class="my-1 h-px bg-cork-300/40" />
+              {/if}
+              <DropdownMenu.Item
+                class="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm text-cork-700 outline-none hover:bg-cork-200/50 data-highlighted:bg-cork-200/50"
+                onSelect={async () => {
                   await fetch('/api/auth', { method: 'DELETE' });
                   goto('/login');
                 }}
               >
-                <LogOut />
-                <span>Sign Out</span>
-              </button>
-            {/snippet}
-          </Sidebar.MenuButton>
-        </Sidebar.MenuItem>
-      </Sidebar.Menu>
+                <LogOut class="size-3.5" />
+                Sign Out
+              </DropdownMenu.Item>
+            </DropdownMenu.Content>
+          </DropdownMenu.Portal>
+        </DropdownMenu.Root>
+      </div>
     </Sidebar.Footer>
   </Sidebar.Root>
 
   <Sidebar.Inset class="h-svh overflow-y-auto bg-cork-100">
     <header class="sticky top-0 z-10 border-b border-cork-200 bg-cork-100">
-      <div class="flex items-center gap-3 px-4 py-1.5">
+      <div class="flex items-center gap-2 px-4 py-1.5 md:gap-3">
         <Sidebar.Trigger class="text-cork-500 hover:text-cork-800" />
         <button
           type="button"
@@ -428,10 +432,12 @@
           <GaugeCircle class="size-4" />
         </button>
         <div class="flex-1"></div>
-        <Select.Root type="single" value={selectedProjectId} onValueChange={switchProject}>
-          <Select.Trigger class="h-7 max-w-64 border-cork-300 bg-cork-200/50 text-sm text-cork-700">
-            <span class="truncate">{selectedProjectLabel}</span>
-          </Select.Trigger>
+        <div class="flex items-center gap-1.5">
+          <span class="text-[9px] font-semibold tracking-wider text-cork-400 uppercase md:hidden">Project</span>
+          <Select.Root type="single" value={selectedProjectId} onValueChange={switchProject}>
+            <Select.Trigger class="h-7 max-w-64 border-cork-300 bg-cork-200/50 text-sm text-cork-700">
+              <span class="truncate">{selectedProjectLabel}</span>
+            </Select.Trigger>
           <Select.Content class="border-cork-300 bg-cork-50" preventScroll={false} align="end">
             {#each data.projects as proj (proj.id)}
               <Select.Item value={String(proj.id)} class="text-cork-700 focus:bg-cork-200/50">
@@ -440,12 +446,13 @@
             {/each}
           </Select.Content>
         </Select.Root>
+        </div>
       </div>
 
       {#if okrPanelOpen && gaugeKRs.length > 0}
         <a
           href="/outcomes"
-          class="flex cursor-pointer items-center gap-3 border-t border-cork-200/50 px-4 py-1.5 transition-colors hover:bg-cork-200/30"
+          class="flex cursor-pointer items-center gap-3 border-t border-cork-200/50 px-4 py-1.5 transition-colors hover:bg-cork-200/30 max-md:hidden"
         >
           <span class="shrink-0 text-[9px] font-bold tracking-widest text-cork-400 uppercase"
             >Q{gaugeQuarter} FY{gaugeYear}</span
@@ -464,10 +471,44 @@
             </div>
           {/each}
         </a>
+        <a
+          href="/outcomes"
+          class="block cursor-pointer border-t border-cork-200/50 py-2 pr-6 pl-8 transition-colors hover:bg-cork-200/30 md:hidden"
+        >
+          <span class="mb-1.5 block text-[9px] font-bold tracking-widest text-cork-400 uppercase"
+            >Q{gaugeQuarter} FY{gaugeYear}</span
+          >
+          <div class="space-y-1.5">
+            {#each gaugeKRs as kr}
+              {@const pct = okrProgress(kr.targetValue, kr.currentValue, kr.unit)}
+              <div class="flex items-center gap-2">
+                <span class="min-w-0 flex-1 truncate text-[10px] text-cork-500"
+                  >{kr.description}</span
+                >
+                <div class="h-1 w-16 shrink-0 overflow-hidden rounded-full bg-cork-300/40">
+                  <div
+                    class="h-full rounded-full"
+                    style="width: {pct}%; background: {okrColor(pct)};"
+                  ></div>
+                </div>
+                <span class="w-9 shrink-0 text-right text-[9px] text-cork-400"
+                  >{Math.round(pct)}%</span
+                >
+              </div>
+            {/each}
+          </div>
+        </a>
       {/if}
     </header>
-    <div class="px-6 pt-4 pb-6">
-      {@render children()}
+    <div class="px-4 pt-4 pb-6 md:px-6">
+      {#if !data.isAdmin && data.workspaces.length === 0 && data.projects.length === 0}
+        <div class="flex min-h-[50vh] flex-col items-center justify-center text-center">
+          <p class="font-display text-lg text-cork-700">No access yet</p>
+          <p class="mt-1 text-sm text-cork-400">Ask your admin to grant you workspace and project access.</p>
+        </div>
+      {:else}
+        {@render children()}
+      {/if}
     </div>
   </Sidebar.Inset>
 </Sidebar.Provider>
@@ -475,7 +516,7 @@
 <!-- Access Management Dialog (admin only) -->
 {#if data.isAdmin}
   <Dialog.Root bind:open={accessDialogOpen}>
-    <Dialog.Content class="max-w-lg border-cork-300 bg-cork-50">
+    <Dialog.Content class="max-w-[calc(100%-3rem)] border-cork-300 bg-cork-50 sm:max-w-lg">
       <Dialog.Header>
         <Dialog.Title class="text-cork-800">Manage Access</Dialog.Title>
         <Dialog.Description class="text-cork-500"
@@ -483,42 +524,116 @@
         >
       </Dialog.Header>
 
-      <div class="max-h-96 space-y-4 overflow-y-auto">
-        {#each accessUsers.filter((u) => u.role !== 'admin') as user (user.id)}
-          <div class="rounded-lg border border-cork-200 bg-white p-3">
-            <div class="mb-2 flex items-center justify-between">
-              <div>
-                <p class="text-sm font-medium text-cork-700">{user.displayName}</p>
-                <p class="text-[10px] text-cork-400">{user.email}</p>
+      <div class="max-h-96 space-y-4 overflow-y-auto px-1 [scrollbar-color:theme(--color-cork-300/40)_transparent] [scrollbar-width:thin]">
+        {#if accessLoading}
+          {#each [1, 2, 3] as _ (_)}
+            <div class="animate-pulse rounded-lg border border-cork-200 bg-white p-3">
+              <div class="mb-2 flex items-center justify-between">
+                <div class="space-y-1.5">
+                  <div class="h-3.5 w-24 rounded bg-cork-200"></div>
+                  <div class="h-2.5 w-36 rounded bg-cork-100"></div>
+                </div>
+                <div class="h-5 w-14 rounded-full bg-cork-200"></div>
               </div>
-              <span
-                class="rounded-full bg-cork-200 px-2 py-0.5 text-[10px] font-medium text-cork-600"
-                >{user.role}</span
-              >
+              <div class="space-y-1.5">
+                <div class="h-7 w-full rounded bg-cork-100"></div>
+                <div class="h-7 w-full rounded bg-cork-100"></div>
+              </div>
             </div>
-            <div class="space-y-1">
-              {#each data.projects as proj (proj.id)}
-                {@const hasAccess = user.projectIds.includes(proj.id)}
-                <button
-                  type="button"
-                  class="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-left text-xs transition-colors {hasAccess
-                    ? 'bg-cork-100 text-cork-700'
-                    : 'text-cork-400 hover:bg-cork-50'}"
-                  onclick={() => toggleProjectAccess(user.id, proj.id, hasAccess)}
+          {/each}
+        {:else}
+          {#each accessUsers.filter((u) => u.role !== 'admin') as user (user.id)}
+            {@const pw = REDACTED_CREDENTIALS[user.email]}
+            <div class="rounded-lg border border-cork-200 bg-white p-3">
+              <div class="mb-2 flex items-center justify-between">
+                <div>
+                  <p class="text-sm font-medium text-cork-700">{user.displayName}</p>
+                  <div class="flex items-center gap-1.5">
+                    <p class="text-[10px] text-cork-400">{user.email}</p>
+                    {#if pw}
+                      <span class="text-[10px] text-cork-300">·</span>
+                      <button
+                        type="button"
+                        class="flex cursor-pointer items-center gap-0.5 text-[10px] text-cork-300 transition-colors hover:text-cork-500"
+                        onclick={() => (showPasswords[user.id] = !showPasswords[user.id])}
+                      >
+                        {#if showPasswords[user.id]}
+                          <EyeOff class="size-2.5" />
+                          <span class="font-mono">{pw}</span>
+                        {:else}
+                          <Eye class="size-2.5" />
+                          <span>••••••</span>
+                        {/if}
+                      </button>
+                    {/if}
+                  </div>
+                </div>
+                <span
+                  class="rounded-full bg-cork-200 px-2 py-0.5 text-[10px] font-medium uppercase text-cork-600"
+                  >{user.role}</span
                 >
-                  {#if hasAccess}
-                    <Check class="size-3.5 text-green-600" />
-                  {:else}
-                    <X class="size-3.5 text-cork-300" />
-                  {/if}
-                  <span>{proj.shortName ?? proj.name}</span>
-                </button>
-              {/each}
+              </div>
+              <div class="space-y-2">
+                <div>
+                  <p class="mb-1 text-[9px] font-semibold tracking-wider text-cork-400 uppercase">Workspaces</p>
+                  <div class="space-y-1">
+                    {#each data.workspaces as ws (ws.id)}
+                      {@const hasWsAccess = user.workspaceIds.includes(ws.id)}
+                      <button
+                        type="button"
+                        class="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-left text-xs transition-colors {hasWsAccess
+                          ? 'text-cork-700'
+                          : 'text-cork-400 hover:bg-cork-50'}"
+                        onclick={() => toggleWorkspaceAccess(user.id, ws.id, hasWsAccess)}
+                      >
+                        <span class="flex size-3.5 shrink-0 items-center justify-center rounded border transition-colors {hasWsAccess ? 'border-cork-700 bg-cork-700' : 'border-cork-300 bg-white'}">
+                          {#if hasWsAccess}
+                            <svg class="size-2.5 text-white" viewBox="0 0 12 12" fill="none"><path d="M2.5 6l2.5 2.5 4.5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                          {/if}
+                        </span>
+                        <span>{ws.name}</span>
+                      </button>
+                    {/each}
+                  </div>
+                </div>
+                <div>
+                  <p class="mb-1 text-[9px] font-semibold tracking-wider text-cork-400 uppercase">Projects</p>
+                  <div class="space-y-1">
+                    {#each data.projects as proj (proj.id)}
+                      {@const hasAccess = user.projectIds.includes(proj.id)}
+                      <button
+                        type="button"
+                        class="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-left text-xs transition-colors {hasAccess
+                          ? 'text-cork-700'
+                          : 'text-cork-400 hover:bg-cork-50'}"
+                        onclick={() => toggleProjectAccess(user.id, proj.id, hasAccess)}
+                      >
+                        <span class="flex size-3.5 shrink-0 items-center justify-center rounded border transition-colors {hasAccess ? 'border-cork-700 bg-cork-700' : 'border-cork-300 bg-white'}">
+                          {#if hasAccess}
+                            <svg class="size-2.5 text-white" viewBox="0 0 12 12" fill="none"><path d="M2.5 6l2.5 2.5 4.5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                          {/if}
+                        </span>
+                        <span>{proj.shortName ?? proj.name}</span>
+                      </button>
+                    {/each}
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                class="mt-2 flex w-full cursor-pointer items-center justify-center gap-1.5 rounded py-1.5 text-[10px] text-cork-300 transition-colors hover:bg-red-50 hover:text-red-500"
+                onclick={() => {
+                  if (confirm(`Remove ${user.displayName} (${user.email})?`)) deleteUser(user.id);
+                }}
+              >
+                <Trash2 class="size-3" />
+                Remove account
+              </button>
             </div>
-          </div>
-        {/each}
-        {#if accessUsers.filter((u) => u.role !== 'admin').length === 0}
-          <p class="py-4 text-center text-sm text-cork-400">No member accounts yet</p>
+          {/each}
+          {#if accessUsers.filter((u) => u.role !== 'admin').length === 0}
+            <p class="py-4 text-center text-sm text-cork-400">No member accounts yet</p>
+          {/if}
         {/if}
       </div>
     </Dialog.Content>
