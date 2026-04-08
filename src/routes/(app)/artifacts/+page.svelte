@@ -99,7 +99,14 @@
   }
 
   // ── Views & filters ──
-  let view = $state<'books' | 'catalog' | 'picks'>('books');
+  let view = $state<'books' | 'catalog' | 'picks'>(
+    (typeof window !== 'undefined' &&
+      (localStorage.getItem('produck_artifacts_view') as 'books' | 'catalog' | 'picks')) ||
+      'books'
+  );
+  $effect(() => {
+    localStorage.setItem('produck_artifacts_view', view);
+  });
   let selectedCategory = $state<Category | 'all'>('all');
   let searchQuery = $state('');
   let selectedArtifactKey = $state<string | null>(null);
