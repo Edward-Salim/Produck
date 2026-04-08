@@ -52,9 +52,9 @@ export function getNewRecordTemplate(
     case 'ideas':
       return { ...base, title: '', description: '', status: 'triage', proposer: '', okrCode: '' };
     case 'actors':
-      return { ...base, projectId, emoji: '', label: '', sortOrder: 0 };
+      return { ...base, ideaId: 0, emoji: '', label: '', sortOrder: 0 };
     case 'activities':
-      return { ...base, projectId, code: '', title: '', actorEmojis: [], sortOrder: 0 };
+      return { ...base, ideaId: 0, code: '', title: '', actorEmojis: [], sortOrder: 0 };
     case 'tasks':
       return { ...base, activityId: 0, code: '', title: '', sortOrder: 0 };
     case 'stories':

@@ -12,38 +12,44 @@
     <p class="mt-0.5 text-sm text-cork-500">Utility tools for your workflow</p>
   </header>
 
-  <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+  <div class="flex flex-col gap-2 md:grid md:grid-cols-2 md:gap-4 lg:grid-cols-3">
     <a
       href="/tools/bg-remove"
-      class="group rounded-xl border border-cork-300/40 bg-cork-100 p-5 transition-all hover:scale-[1.01] hover:border-cork-400/60 hover:shadow-md"
+      class="group flex items-center gap-3 rounded-xl border border-cork-300/40 bg-cork-100 p-3 transition-all hover:border-cork-400/60 hover:shadow-md md:flex-col md:items-start md:gap-0 md:p-5 md:hover:scale-[1.01]"
     >
-      <div class="mb-3 flex size-10 items-center justify-center rounded-lg bg-cork-200/60 text-cork-600 transition-colors group-hover:bg-cork-300/60">
-        <Scissors class="size-5" />
+      <div class="flex size-9 shrink-0 items-center justify-center rounded-lg bg-cork-200/60 text-cork-600 transition-colors group-hover:bg-cork-300/60 md:mb-3 md:size-10">
+        <Scissors class="size-4 md:size-5" />
       </div>
-      <h2 class="font-display text-lg text-cork-800">BG Remover</h2>
-      <p class="mt-1 text-xs text-cork-500">Remove backgrounds from images instantly</p>
+      <div>
+        <h2 class="text-sm font-medium text-cork-800 md:font-display md:text-lg">BG Remover</h2>
+        <p class="text-[11px] text-cork-500 md:mt-1 md:text-xs">Remove backgrounds from images instantly</p>
+      </div>
     </a>
 
     <a
       href="/tools/image-enhance"
-      class="group rounded-xl border border-cork-300/40 bg-cork-100 p-5 transition-all hover:scale-[1.01] hover:border-cork-400/60 hover:shadow-md"
+      class="group flex items-center gap-3 rounded-xl border border-cork-300/40 bg-cork-100 p-3 transition-all hover:border-cork-400/60 hover:shadow-md md:flex-col md:items-start md:gap-0 md:p-5 md:hover:scale-[1.01]"
     >
-      <div class="mb-3 flex size-10 items-center justify-center rounded-lg bg-cork-200/60 text-cork-600 transition-colors group-hover:bg-cork-300/60">
-        <WandSparkles class="size-5" />
+      <div class="flex size-9 shrink-0 items-center justify-center rounded-lg bg-cork-200/60 text-cork-600 transition-colors group-hover:bg-cork-300/60 md:mb-3 md:size-10">
+        <WandSparkles class="size-4 md:size-5" />
       </div>
-      <h2 class="font-display text-lg text-cork-800">Image Enhancer</h2>
-      <p class="mt-1 text-xs text-cork-500">Upscale and enhance image quality</p>
+      <div>
+        <h2 class="text-sm font-medium text-cork-800 md:font-display md:text-lg">Image Enhancer</h2>
+        <p class="text-[11px] text-cork-500 md:mt-1 md:text-xs">Upscale and enhance image quality</p>
+      </div>
     </a>
 
     <a
       href="/tools/md-to-pdf"
-      class="group rounded-xl border border-cork-300/40 bg-cork-100 p-5 transition-all hover:scale-[1.01] hover:border-cork-400/60 hover:shadow-md"
+      class="group flex items-center gap-3 rounded-xl border border-cork-300/40 bg-cork-100 p-3 transition-all hover:border-cork-400/60 hover:shadow-md md:flex-col md:items-start md:gap-0 md:p-5 md:hover:scale-[1.01]"
     >
-      <div class="mb-3 flex size-10 items-center justify-center rounded-lg bg-cork-200/60 text-cork-600 transition-colors group-hover:bg-cork-300/60">
-        <FileText class="size-5" />
+      <div class="flex size-9 shrink-0 items-center justify-center rounded-lg bg-cork-200/60 text-cork-600 transition-colors group-hover:bg-cork-300/60 md:mb-3 md:size-10">
+        <FileText class="size-4 md:size-5" />
       </div>
-      <h2 class="font-display text-lg text-cork-800">MD to PDF</h2>
-      <p class="mt-1 text-xs text-cork-500">Convert Markdown documents to PDF</p>
+      <div>
+        <h2 class="text-sm font-medium text-cork-800 md:font-display md:text-lg">MD to PDF</h2>
+        <p class="text-[11px] text-cork-500 md:mt-1 md:text-xs">Convert Markdown documents to PDF</p>
+      </div>
     </a>
   </div>
 </div>

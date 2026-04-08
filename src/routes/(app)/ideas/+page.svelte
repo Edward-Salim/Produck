@@ -18,25 +18,8 @@
     return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
   }
 
-  let navigating = $state<number | null>(null);
-
-  async function openIdea(idea: IdeaItem) {
-    if (idea.projectId) {
-      goto(`/story-map?project=${idea.projectId}&idea=${idea.id}`);
-      return;
-    }
-
-    navigating = idea.id;
-    const res = await fetch('/api/idea-project', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ideaId: idea.id })
-    });
-    const { projectId } = await res.json();
-    navigating = null;
-    if (projectId) {
-      goto(`/story-map?project=${projectId}&idea=${idea.id}`);
-    }
+  function openIdea(idea: IdeaItem) {
+    goto(`/story-map?idea=${idea.id}`);
   }
 
   // ── Drag and drop ──
@@ -136,15 +119,11 @@
           {#each sectionIdeas as idea (idea.id)}
             <button
               type="button"
-              class="group w-full cursor-grab rounded-lg bg-white/60 p-3 text-left transition-all duration-200 hover:shadow-md active:cursor-grabbing {navigating ===
-              idea.id
-                ? 'opacity-60'
-                : ''} {draggingId === idea.id
+              class="group w-full cursor-grab rounded-lg bg-white/60 p-3 text-left transition-all duration-200 hover:shadow-md active:cursor-grabbing {draggingId === idea.id
                 ? 'z-10 scale-105 rotate-2 shadow-xl ring-2 ring-cork-500/30'
                 : ''}"
               style="box-shadow: 0 1px 3px rgba(0,0,0,.06);"
               onclick={() => openIdea(idea)}
-              disabled={navigating === idea.id}
               draggable="true"
               ondragstart={(e) => onDragStart(e, idea.id)}
               ondragend={onDragEnd}

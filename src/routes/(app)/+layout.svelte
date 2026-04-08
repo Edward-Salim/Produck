@@ -1,6 +1,7 @@
 <script lang="ts">
   import favicon from '$lib/assets/favicon.ico';
   import logoProduck from '$lib/assets/logo-produck.png';
+  import edwardAvatar from '$lib/assets/edward.jpg';
   import * as Sidebar from '$lib/components/ui/sidebar/index.js';
   import * as Select from '$lib/components/ui/select/index.js';
   import { page } from '$app/state';
@@ -363,11 +364,18 @@
 
     <Sidebar.Footer class="border-t border-cork-300/40 pt-2">
       <div class="flex items-center gap-2 px-2 pb-1 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
+        {#if data.currentUser?.email === 'ewodku@dummy.com'}
+          <img src={edwardAvatar} alt="Avatar" class="size-7 shrink-0 rounded-full object-cover ring-2 ring-cork-400/40 group-data-[collapsible=icon]:hidden" />
+        {:else}
+          <span class="flex size-7 shrink-0 items-center justify-center rounded-full bg-cork-600 text-xs font-semibold text-cork-50 group-data-[collapsible=icon]:hidden">
+            {(data.currentUser?.displayName ?? 'U').charAt(0).toUpperCase()}
+          </span>
+        {/if}
         <div class="min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
-          <p class="truncate text-xs font-medium text-cork-700">
+          <p class="truncate text-xs font-medium text-sidebar-foreground">
             {data.currentUser?.displayName ?? 'User'}
           </p>
-          <p class="truncate text-[10px] text-cork-400">{data.currentUser?.email ?? ''}</p>
+          <p class="truncate text-[10px] text-sidebar-foreground/50">{data.currentUser?.email ?? ''}</p>
         </div>
         <DropdownMenu.Root>
           <DropdownMenu.Trigger class="flex size-6 shrink-0 cursor-pointer items-center justify-center rounded text-cork-400 transition-colors hover:bg-cork-200/50 hover:text-cork-600">
@@ -417,7 +425,7 @@
     </Sidebar.Footer>
   </Sidebar.Root>
 
-  <Sidebar.Inset class="h-svh overflow-y-auto bg-cork-100">
+  <Sidebar.Inset class="flex h-svh flex-col overflow-y-auto bg-cork-100">
     <header class="sticky top-0 z-10 border-b border-cork-200 bg-cork-100">
       <div class="flex items-center gap-2 px-4 py-1.5 md:gap-3">
         <Sidebar.Trigger class="text-cork-500 hover:text-cork-800" />
@@ -432,21 +440,23 @@
           <GaugeCircle class="size-4" />
         </button>
         <div class="flex-1"></div>
-        <div class="flex items-center gap-1.5">
-          <span class="text-[9px] font-semibold tracking-wider text-cork-400 uppercase md:hidden">Project</span>
-          <Select.Root type="single" value={selectedProjectId} onValueChange={switchProject}>
-            <Select.Trigger class="h-7 max-w-64 border-cork-300 bg-cork-200/50 text-sm text-cork-700">
-              <span class="truncate">{selectedProjectLabel}</span>
-            </Select.Trigger>
-          <Select.Content class="border-cork-300 bg-cork-50" preventScroll={false} align="end">
-            {#each data.projects as proj (proj.id)}
-              <Select.Item value={String(proj.id)} class="text-cork-700 focus:bg-cork-200/50">
-                {proj.shortName ?? proj.name}
-              </Select.Item>
-            {/each}
-          </Select.Content>
-        </Select.Root>
-        </div>
+        {#if data.projects.length > 0}
+          <div class="flex items-center gap-1.5">
+            <span class="text-[9px] font-semibold tracking-wider text-cork-400 uppercase md:hidden">Project</span>
+            <Select.Root type="single" value={selectedProjectId} onValueChange={switchProject}>
+              <Select.Trigger class="h-7 max-w-64 border-cork-300 bg-cork-200/50 text-sm text-cork-700">
+                <span class="truncate">{selectedProjectLabel}</span>
+              </Select.Trigger>
+              <Select.Content class="border-cork-300 bg-cork-50" preventScroll={false} align="end">
+                {#each data.projects as proj (proj.id)}
+                  <Select.Item value={String(proj.id)} class="text-cork-700 focus:bg-cork-200/50">
+                    {proj.shortName ?? proj.name}
+                  </Select.Item>
+                {/each}
+              </Select.Content>
+            </Select.Root>
+          </div>
+        {/if}
       </div>
 
       {#if okrPanelOpen && gaugeKRs.length > 0}
@@ -500,16 +510,18 @@
         </a>
       {/if}
     </header>
-    <div class="px-4 pt-4 pb-6 md:px-6">
-      {#if !data.isAdmin && data.workspaces.length === 0 && data.projects.length === 0}
-        <div class="flex min-h-[50vh] flex-col items-center justify-center text-center">
-          <p class="font-display text-lg text-cork-700">No access yet</p>
-          <p class="mt-1 text-sm text-cork-400">Ask your admin to grant you workspace and project access.</p>
-        </div>
-      {:else}
+    {@const noAccess = !data.isAdmin && data.workspaces.length === 0 && data.projects.length === 0}
+    {@const isWorkRoute = page.url.pathname === '/' || ['/outcomes', '/interview-snapshots', '/experience-map', '/ideas', '/story-map', '/admin'].some((p) => page.url.pathname.startsWith(p))}
+    {#if noAccess && isWorkRoute}
+      <div class="flex flex-1 flex-col items-center justify-center text-center">
+        <p class="font-display text-lg text-cork-700">No access yet</p>
+        <p class="mt-1 text-sm text-cork-400">Ask your admin to grant you workspace and project access.</p>
+      </div>
+    {:else}
+      <div class="px-4 pt-4 pb-6 md:px-6">
         {@render children()}
-      {/if}
-    </div>
+      </div>
+    {/if}
   </Sidebar.Inset>
 </Sidebar.Provider>
 

@@ -1,6 +1,6 @@
 <script lang="ts">
   import { marked } from 'marked';
-  import { Download, LoaderCircle } from '@lucide/svelte';
+  import { Download, LoaderCircle, PenLine, Eye } from '@lucide/svelte';
   import ArrowLeft from '@lucide/svelte/icons/arrow-left';
   import { MD_ALERT_COLORS } from '$lib/constants/colors.js';
 
@@ -53,6 +53,7 @@ function greet(name) {
   let pageSize = $state<'a4' | 'letter' | 'legal'>('a4');
   let fontSize = $state<12 | 14 | 16>(14);
   let generating = $state(false);
+  let mobileTab = $state<'edit' | 'preview'>('edit');
 
   const ALERT_TYPES = MD_ALERT_COLORS;
 
@@ -241,17 +242,17 @@ function greet(name) {
   </header>
 
   <!-- Toolbar -->
-  <div class="mb-4 flex flex-wrap items-center gap-4">
+  <div class="mb-4 flex items-center gap-2 md:gap-4">
     <!-- Page Size -->
-    <div class="flex items-center gap-2">
-      <span class="text-xs font-semibold tracking-wider text-cork-500 uppercase">Page</span>
-      <div class="flex gap-1.5">
+    <div class="flex items-center gap-1 md:gap-2">
+      <span class="hidden text-xs font-semibold tracking-wider text-cork-500 uppercase md:block">Page</span>
+      <div class="flex gap-0.5 md:gap-1.5">
         {#each PAGE_SIZES as size (size)}
           <button
             type="button"
             class={pageSize === size
-              ? 'rounded-md bg-cork-700 px-3 py-1.5 text-xs font-medium text-cork-50'
-              : 'cursor-pointer rounded-md border border-cork-200 bg-white/60 px-3 py-1.5 text-xs font-medium text-cork-600'}
+              ? 'rounded-md bg-cork-700 px-2 py-1 text-[11px] font-medium text-cork-50 md:px-3 md:py-1.5 md:text-xs'
+              : 'cursor-pointer rounded-md border border-cork-200 bg-white/60 px-2 py-1 text-[11px] font-medium text-cork-600 md:px-3 md:py-1.5 md:text-xs'}
             onclick={() => (pageSize = size)}
           >
             {pageSizeLabels[size]}
@@ -261,49 +262,65 @@ function greet(name) {
     </div>
 
     <!-- Font Size -->
-    <div class="flex items-center gap-2">
-      <span class="text-xs font-semibold tracking-wider text-cork-500 uppercase">Font</span>
-      <div class="flex gap-1.5">
+    <div class="flex items-center gap-1 md:gap-2">
+      <span class="hidden text-xs font-semibold tracking-wider text-cork-500 uppercase md:block">Font</span>
+      <div class="flex gap-0.5 md:gap-1.5">
         {#each FONT_SIZES as size (size)}
           <button
             type="button"
             class={fontSize === size
-              ? 'rounded-md bg-cork-700 px-3 py-1.5 text-xs font-medium text-cork-50'
-              : 'cursor-pointer rounded-md border border-cork-200 bg-white/60 px-3 py-1.5 text-xs font-medium text-cork-600'}
+              ? 'rounded-md bg-cork-700 px-2 py-1 text-[11px] font-medium text-cork-50 md:px-3 md:py-1.5 md:text-xs'
+              : 'cursor-pointer rounded-md border border-cork-200 bg-white/60 px-2 py-1 text-[11px] font-medium text-cork-600 md:px-3 md:py-1.5 md:text-xs'}
             onclick={() => (fontSize = size)}
           >
-            {size}px
+            {size}
           </button>
         {/each}
       </div>
     </div>
 
-    <!-- Spacer -->
     <div class="flex-1"></div>
 
     <!-- Download PDF Button -->
     <button
       type="button"
-      class="flex cursor-pointer items-center gap-2 rounded-lg bg-cork-700 px-4 py-2 text-sm font-medium text-cork-50 transition-colors hover:bg-cork-800"
+      class="flex shrink-0 cursor-pointer items-center gap-1.5 rounded-lg bg-cork-700 px-2.5 py-1 text-xs font-medium text-cork-50 transition-colors hover:bg-cork-800 md:gap-2 md:px-4 md:py-2 md:text-sm"
       onclick={downloadPdf}
       disabled={generating}
     >
       {#if generating}
         <LoaderCircle class="size-4 animate-spin" />
-        Generating...
       {:else}
         <Download class="size-4" />
-        Download PDF
       {/if}
+      <span class="hidden sm:inline">{generating ? 'Generating...' : 'Download PDF'}</span>
+    </button>
+  </div>
+
+  <!-- Mobile tab toggle -->
+  <div class="mb-3 flex overflow-hidden rounded-lg border border-cork-300 md:hidden">
+    <button
+      type="button"
+      class="flex flex-1 cursor-pointer items-center justify-center gap-1.5 py-1.5 text-xs font-medium transition-colors {mobileTab === 'edit' ? 'bg-cork-700 text-cork-50' : 'text-cork-600 hover:bg-cork-200/50'}"
+      onclick={() => (mobileTab = 'edit')}
+    >
+      <PenLine class="size-3.5" />Edit
+    </button>
+    <button
+      type="button"
+      class="flex flex-1 cursor-pointer items-center justify-center gap-1.5 py-1.5 text-xs font-medium transition-colors {mobileTab === 'preview' ? 'bg-cork-700 text-cork-50' : 'text-cork-600 hover:bg-cork-200/50'}"
+      onclick={() => (mobileTab = 'preview')}
+    >
+      <Eye class="size-3.5" />Preview
     </button>
   </div>
 
   <!-- Editor and Preview Panes -->
-  <div class="flex gap-4" style="height: calc(100vh - 240px)">
+  <div class="flex flex-col gap-4 md:flex-row md:h-[calc(100vh-280px)]">
     <!-- Editor Pane -->
-    <div class="min-w-0 flex-1">
+    <div class="min-w-0 {mobileTab !== 'edit' ? 'hidden md:block' : ''} md:flex-1">
       <textarea
-        class="h-full w-full resize-none rounded-xl border border-cork-300 bg-cork-50 p-4 font-mono text-sm text-cork-800 placeholder:text-cork-400 focus:ring-2 focus:ring-cork-400/50 focus:outline-none"
+        class="h-[calc(100svh-320px)] w-full resize-none rounded-xl border border-cork-300 bg-cork-50 p-3 font-mono text-sm text-cork-800 placeholder:text-cork-400 focus:ring-2 focus:ring-cork-400/50 focus:outline-none md:h-full md:p-4"
         placeholder="# Start writing markdown here..."
         bind:value={markdown}
         onkeydown={handleTextareaKeydown}
@@ -311,9 +328,9 @@ function greet(name) {
     </div>
 
     <!-- Preview Pane -->
-    <div class="min-w-0 flex-1">
+    <div class="mb-6 min-w-0 md:mb-0 md:flex-1 {mobileTab !== 'preview' ? 'hidden md:block' : ''}">
       <div
-        class="preview-scroll h-full overflow-y-auto rounded-xl border border-cork-200 bg-white p-8 shadow-sm"
+        class="preview-scroll h-[calc(100svh-320px)] overflow-y-auto rounded-xl border border-cork-200 bg-white p-4 shadow-sm md:h-full md:p-8"
       >
         <div class="gh-markdown" style="font-size: {fontSize}px">
           {@html htmlContent}

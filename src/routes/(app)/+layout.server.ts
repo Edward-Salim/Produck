@@ -40,7 +40,9 @@ export const load: LayoutServerLoad = async ({ cookies, locals }) => {
 
     // Workspace: use cookie, fall back to first
     const cookieWorkspace = cookies.get('active_workspace') ?? '';
-    const activeWorkspaceId = Number(cookieWorkspace) || workspaces[0]?.id;
+    const cookieWsId = Number(cookieWorkspace) || 0;
+    const activeWorkspaceId =
+      (cookieWsId && workspaces.some((w) => w.id === cookieWsId) ? cookieWsId : workspaces[0]?.id) ?? 0;
 
     // Projects + access in parallel
     const [allProjects, accessRows] = await Promise.all([
@@ -132,8 +134,8 @@ export const load: LayoutServerLoad = async ({ cookies, locals }) => {
         : null,
       isAdmin
     };
-  } catch (err) {
-    console.error('DB query failed:', err);
+  } catch (err: any) {
+    console.error('DB query failed:', err?.message ?? err);
     return {
       workspaces: [],
       activeWorkspaceId: '',

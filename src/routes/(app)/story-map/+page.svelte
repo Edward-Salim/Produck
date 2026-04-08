@@ -152,8 +152,8 @@
   <div class="flex flex-col" style="min-height: calc(100vh - 140px);">
     <EmptyState
       icon={MapPinned}
-      title="No project selected"
-      description="Pick a project from the dropdown above"
+      title="No idea selected"
+      description="Open an idea from the Idea Bank to see its story map"
     />
   </div>
 {/if}

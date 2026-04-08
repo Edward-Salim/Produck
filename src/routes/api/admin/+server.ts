@@ -41,16 +41,26 @@ export const GET: RequestHandler = async ({ url, locals }) => {
   const [proj] = await db.select().from(project).where(eq(project.id, projectId));
   if (!proj) return json({ error: 'Project not found' }, { status: 404 });
 
-  const actors = await db
-    .select()
-    .from(actor)
-    .where(eq(actor.projectId, projectId))
-    .orderBy(asc(actor.sortOrder));
-  const activities = await db
-    .select()
-    .from(activity)
-    .where(eq(activity.projectId, projectId))
-    .orderBy(asc(activity.sortOrder));
+  // Actors/activities/backlog are now idea-scoped — load all for ideas in this project
+  const projectIdeas = await db.select().from(idea).where(eq(idea.projectId, projectId));
+  const ideaIds = projectIdeas.map((i) => i.id);
+
+  const actors =
+    ideaIds.length > 0
+      ? await db
+          .select()
+          .from(actor)
+          .orderBy(asc(actor.sortOrder))
+          .then((rows) => rows.filter((a) => a.ideaId && ideaIds.includes(a.ideaId)))
+      : [];
+  const activities =
+    ideaIds.length > 0
+      ? await db
+          .select()
+          .from(activity)
+          .orderBy(asc(activity.sortOrder))
+          .then((rows) => rows.filter((a) => a.ideaId && ideaIds.includes(a.ideaId)))
+      : [];
 
   const activityIds = activities.map((a) => a.id);
   const tasks =
@@ -117,11 +127,14 @@ export const GET: RequestHandler = async ({ url, locals }) => {
           .then((rows) => rows.filter((r) => milestoneIds.includes(r.milestoneId)))
       : [];
 
-  const blItems = await db
-    .select()
-    .from(backlogItem)
-    .where(eq(backlogItem.projectId, projectId))
-    .orderBy(asc(backlogItem.sortOrder));
+  const blItems =
+    ideaIds.length > 0
+      ? await db
+          .select()
+          .from(backlogItem)
+          .orderBy(asc(backlogItem.sortOrder))
+          .then((rows) => rows.filter((b) => b.ideaId && ideaIds.includes(b.ideaId)))
+      : [];
 
   // Experience map (decoupled)
   const expPhases = await db
@@ -194,7 +207,25 @@ export const PUT: RequestHandler = async ({ request, locals }) => {
     }
 
     // Sync direct project children
-    if (data.actors) await syncTable(actor, data.actors, actor.projectId, projectId);
+    // Actors are now idea-scoped; sync per-idea if ideaId present, else use legacy projectId
+    if (data.actors) {
+      for (const row of data.actors) {
+        if (row.ideaId) {
+          // Already idea-scoped
+        } else if (row.projectId) {
+          // Legacy: skip for now, data migration should have handled this
+        }
+      }
+      // Bulk sync: delete all idea-scoped actors for this project's ideas, re-insert
+      const pIdeas = await db.select({ id: idea.id }).from(idea).where(eq(idea.projectId, projectId));
+      for (const pi of pIdeas) {
+        await db.delete(actor).where(eq(actor.ideaId, pi.id));
+      }
+      for (const row of data.actors) {
+        const { id, createdAt, updatedAt, projectId: _pid, ...rest } = row;
+        await db.insert(actor).values(rest);
+      }
+    }
     if (data.personas) await syncTable(persona, data.personas, persona.projectId, projectId);
     if (data.interviews)
       await syncTable(interviewSnapshot, data.interviews, interviewSnapshot.projectId, projectId);
@@ -203,24 +234,27 @@ export const PUT: RequestHandler = async ({ request, locals }) => {
 
     // Activities + tasks + stories need careful ordering (foreign keys)
     if (data.activities) {
-      // Delete old stories, tasks, activities (cascade should handle but be explicit)
-      const oldActivities = await db
-        .select({ id: activity.id })
-        .from(activity)
-        .where(eq(activity.projectId, projectId));
-      for (const a of oldActivities) {
-        await db.delete(story).where(eq(story.activityId, a.id));
-        await db.delete(storyMapTask).where(eq(storyMapTask.activityId, a.id));
+      // Delete old stories, tasks, activities for all ideas in this project
+      const pIdeas2 = await db.select({ id: idea.id }).from(idea).where(eq(idea.projectId, projectId));
+      for (const pi of pIdeas2) {
+        const oldActivities = await db
+          .select({ id: activity.id })
+          .from(activity)
+          .where(eq(activity.ideaId, pi.id));
+        for (const a of oldActivities) {
+          await db.delete(story).where(eq(story.activityId, a.id));
+          await db.delete(storyMapTask).where(eq(storyMapTask.activityId, a.id));
+        }
+        await db.delete(activity).where(eq(activity.ideaId, pi.id));
       }
-      await db.delete(activity).where(eq(activity.projectId, projectId));
 
-      // Re-insert activities
+      // Re-insert activities (ideaId comes from the data)
       const activityIdMap = new Map<number, number>();
       for (const a of data.activities) {
-        const { id: oldId, ...rest } = a;
+        const { id: oldId, projectId: _pid, ...rest } = a;
         const [inserted] = await db
           .insert(activity)
-          .values({ ...rest, projectId })
+          .values(rest)
           .returning({ id: activity.id });
         activityIdMap.set(oldId, inserted.id);
       }
@@ -310,8 +344,17 @@ export const PUT: RequestHandler = async ({ request, locals }) => {
       }
     }
 
-    if (data.backlogItems)
-      await syncTable(backlogItem, data.backlogItems, backlogItem.projectId, projectId);
+    if (data.backlogItems) {
+      // Delete old idea-scoped backlog items
+      const pIdeas3 = await db.select({ id: idea.id }).from(idea).where(eq(idea.projectId, projectId));
+      for (const pi of pIdeas3) {
+        await db.delete(backlogItem).where(eq(backlogItem.ideaId, pi.id));
+      }
+      for (const row of data.backlogItems) {
+        const { id, createdAt, updatedAt, projectId: _pid, ...rest } = row;
+        await db.insert(backlogItem).values(rest);
+      }
+    }
 
     // Experience map (decoupled)
     if (data.experiencePhases) {

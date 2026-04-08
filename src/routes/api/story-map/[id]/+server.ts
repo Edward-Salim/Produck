@@ -1,27 +1,28 @@
 import { json } from '@sveltejs/kit';
 import { db } from '$lib/server/db/index.js';
-import { project, actor, activity, storyMapTask, story } from '$lib/server/db/schema.js';
+import { idea, actor, activity, storyMapTask, story } from '$lib/server/db/schema.js';
 import { eq, asc } from 'drizzle-orm';
 import type { StoryMapData } from '$lib/types/story-map.js';
 import type { RequestHandler } from './$types.js';
 
+// [id] is now an ideaId
 export const GET: RequestHandler = async ({ params }) => {
-  const projectId = Number(params.id);
-  if (isNaN(projectId)) return json({ error: 'Invalid id' }, { status: 400 });
+  const ideaId = Number(params.id);
+  if (isNaN(ideaId)) return json({ error: 'Invalid id' }, { status: 400 });
 
-  const [proj] = await db.select().from(project).where(eq(project.id, projectId));
-  if (!proj) return json({ error: 'Not found' }, { status: 404 });
+  const [ideaRow] = await db.select().from(idea).where(eq(idea.id, ideaId));
+  if (!ideaRow) return json({ error: 'Not found' }, { status: 404 });
 
   const actors = await db
     .select()
     .from(actor)
-    .where(eq(actor.projectId, projectId))
+    .where(eq(actor.ideaId, ideaId))
     .orderBy(asc(actor.sortOrder));
 
   const activities = await db
     .select()
     .from(activity)
-    .where(eq(activity.projectId, projectId))
+    .where(eq(activity.ideaId, ideaId))
     .orderBy(asc(activity.sortOrder));
 
   const activityIds = activities.map((a) => a.id);
@@ -30,31 +31,31 @@ export const GET: RequestHandler = async ({ params }) => {
     activityIds.length > 0
       ? await db.select().from(storyMapTask).orderBy(asc(storyMapTask.sortOrder))
       : [];
-  const projectTasks = allTasks.filter((t) => activityIds.includes(t.activityId));
+  const ideaTasks = allTasks.filter((t) => activityIds.includes(t.activityId));
 
   const allStories =
     activityIds.length > 0 ? await db.select().from(story).orderBy(asc(story.sortOrder)) : [];
-  const projectStories = allStories.filter((s) => activityIds.includes(s.activityId));
+  const ideaStories = allStories.filter((s) => activityIds.includes(s.activityId));
 
   const activityCodeMap = new Map(activities.map((a) => [a.id, a.code]));
-  const taskCodeMap = new Map(projectTasks.map((t) => [t.id, t.code]));
+  const taskCodeMap = new Map(ideaTasks.map((t) => [t.id, t.code]));
 
   const data: StoryMapData = {
-    product: proj.name,
+    product: ideaRow.title,
     actors: actors.map((a) => ({ emoji: a.emoji, label: a.label })),
-    levels: proj.levels,
+    levels: ideaRow.levels,
     activities: activities.map((a) => ({
       id: a.code,
       title: a.title,
       actors: (a.actorEmojis as string[]) ?? undefined,
-      tasks: projectTasks
+      tasks: ideaTasks
         .filter((t) => t.activityId === a.id)
         .map((t) => ({ id: t.code, title: t.title }))
     })),
     stories: { 'must-have': [], performance: [], delighter: [] }
   };
 
-  for (const s of projectStories) {
+  for (const s of ideaStories) {
     data.stories[s.kano].push({
       id: s.code,
       title: s.title,

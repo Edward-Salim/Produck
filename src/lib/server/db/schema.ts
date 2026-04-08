@@ -238,13 +238,17 @@ export const idea = pgTable('idea', {
   status: text('status').notNull().default('triage'),
   proposer: text('proposer'),
   okrCode: text('okr_code'),
+  levels: integer('levels').notNull().default(2),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
 });
 
-export const ideaRelations = relations(idea, ({ one }) => ({
+export const ideaRelations = relations(idea, ({ one, many }) => ({
   workspace: one(workspace, { fields: [idea.workspaceId], references: [workspace.id] }),
-  project: one(project, { fields: [idea.projectId], references: [project.id] })
+  project: one(project, { fields: [idea.projectId], references: [project.id] }),
+  activities: many(activity),
+  actors: many(actor),
+  backlogItems: many(backlogItem)
 }));
 
 // ── Project ────────────────────────────────────────────
@@ -274,25 +278,24 @@ export const projectRelations = relations(project, ({ one, many }) => ({
 
 export const actor = pgTable('actor', {
   id: serial('id').primaryKey(),
-  projectId: integer('project_id')
-    .notNull()
-    .references(() => project.id, { onDelete: 'cascade' }),
+  projectId: integer('project_id').references(() => project.id, { onDelete: 'cascade' }),
+  ideaId: integer('idea_id').references(() => idea.id, { onDelete: 'cascade' }),
   emoji: text('emoji').notNull(),
   label: text('label').notNull(),
   sortOrder: integer('sort_order').notNull().default(0)
 });
 
 export const actorRelations = relations(actor, ({ one }) => ({
-  project: one(project, { fields: [actor.projectId], references: [project.id] })
+  project: one(project, { fields: [actor.projectId], references: [project.id] }),
+  idea: one(idea, { fields: [actor.ideaId], references: [idea.id] })
 }));
 
 // ── Activity ───────────────────────────────────────────
 
 export const activity = pgTable('activity', {
   id: serial('id').primaryKey(),
-  projectId: integer('project_id')
-    .notNull()
-    .references(() => project.id, { onDelete: 'cascade' }),
+  projectId: integer('project_id').references(() => project.id, { onDelete: 'cascade' }),
+  ideaId: integer('idea_id').references(() => idea.id, { onDelete: 'cascade' }),
   code: text('code').notNull(),
   title: text('title').notNull(),
   actorEmojis: jsonb('actor_emojis').$type<string[]>().default([]),
@@ -301,6 +304,7 @@ export const activity = pgTable('activity', {
 
 export const activityRelations = relations(activity, ({ one, many }) => ({
   project: one(project, { fields: [activity.projectId], references: [project.id] }),
+  idea: one(idea, { fields: [activity.ideaId], references: [idea.id] }),
   tasks: many(storyMapTask),
   stories: many(story)
 }));
@@ -475,9 +479,8 @@ export const roadmapItemRelations = relations(roadmapItem, ({ one }) => ({
 
 export const backlogItem = pgTable('backlog_item', {
   id: serial('id').primaryKey(),
-  projectId: integer('project_id')
-    .notNull()
-    .references(() => project.id, { onDelete: 'cascade' }),
+  projectId: integer('project_id').references(() => project.id, { onDelete: 'cascade' }),
+  ideaId: integer('idea_id').references(() => idea.id, { onDelete: 'cascade' }),
   storyId: integer('story_id').references(() => story.id, { onDelete: 'set null' }),
   title: text('title').notNull(),
   description: text('description'),
@@ -491,6 +494,7 @@ export const backlogItem = pgTable('backlog_item', {
 
 export const backlogItemRelations = relations(backlogItem, ({ one }) => ({
   project: one(project, { fields: [backlogItem.projectId], references: [project.id] }),
+  idea: one(idea, { fields: [backlogItem.ideaId], references: [idea.id] }),
   story: one(story, { fields: [backlogItem.storyId], references: [story.id] })
 }));
 
