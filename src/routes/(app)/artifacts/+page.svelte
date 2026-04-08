@@ -82,7 +82,20 @@
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ preset: methodology.relatedArtifacts })
     });
+    activePreset = methodology.name;
+    localStorage.setItem('produck_active_preset', methodology.name);
     invalidateAll();
+  }
+
+  let activePreset = $state<string | null>(null);
+  let activeMethod = $derived(
+    activePreset ? METHODOLOGIES.find((m) => m.name === activePreset) : null
+  );
+
+  // Load preset from storage on mount
+  if (typeof window !== 'undefined') {
+    const saved = localStorage.getItem('produck_active_preset');
+    if (saved) activePreset = saved;
   }
 
   // ── Views & filters ──
@@ -701,18 +714,28 @@
     <!-- Presets (methodologies) -->
     <div>
       <p class="mb-2 text-[10px] font-bold tracking-wider text-cork-500 uppercase">Presets</p>
-      <p class="mb-3 text-xs text-cork-400">
-        Click a methodology to replace your picks with its recommended artifacts.
-      </p>
+      {#if activeMethod}
+        <p class="mb-1 text-xs text-cork-600">{activeMethod.description}</p>
+        <p class="mb-3 text-[10px] text-cork-400">{activeMethod.origin}</p>
+      {:else}
+        <p class="mb-3 text-xs text-cork-400">
+          Select a methodology to load its recommended artifacts.
+        </p>
+      {/if}
       <div class="flex flex-wrap gap-2">
         {#each PHASES as phase (phase)}
           {#each METHODOLOGIES.filter((m) => m.relatedArtifacts.length >= 3 && m.phase === phase) as m (m.name)}
+            {@const isActive = activePreset === m.name}
             <button
               type="button"
-              class="cursor-pointer rounded-full border px-3 py-1.5 text-xs font-medium transition-colors hover:opacity-80"
-              style="border-color: {PHASE_COLORS[m.phase]}; color: {PHASE_COLORS[
-                m.phase
-              ]}; background: {PHASE_COLORS[m.phase]}10;"
+              class="cursor-pointer rounded-full border px-3 py-1.5 text-xs font-medium transition-colors {isActive
+                ? 'ring-2 ring-offset-1'
+                : 'hover:opacity-80'}"
+              style="border-color: {PHASE_COLORS[m.phase]}; color: {isActive
+                ? 'white'
+                : PHASE_COLORS[m.phase]}; background: {isActive
+                ? PHASE_COLORS[m.phase]
+                : PHASE_COLORS[m.phase] + '10'};"
               onclick={() => applyPreset(m)}
               title="{m.relatedArtifacts.length} artifacts: {m.relatedArtifacts.join(', ')}"
             >
