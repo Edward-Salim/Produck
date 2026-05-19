@@ -45,7 +45,7 @@
       } else {
         localStorage.removeItem('produck_remember_email');
       }
-      goto('/', { invalidateAll: true });
+      goto('/dashboard', { invalidateAll: true });
     } else {
       const data = await res.json();
       error = data.error || 'Invalid credentials';

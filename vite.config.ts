@@ -6,5 +6,8 @@ export default defineConfig({
   plugins: [tailwindcss(), sveltekit()],
   optimizeDeps: {
     exclude: ['@huggingface/transformers']
+  },
+  ssr: {
+    external: ['bun:sqlite']
   }
 });

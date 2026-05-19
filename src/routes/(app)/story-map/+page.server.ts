@@ -88,23 +88,26 @@ export const load: PageServerLoad = async ({ url }) => {
   };
 
   for (const s of ideaStories) {
-    storyMap.stories[s.kano].push({
-      id: s.code,
-      title: s.title,
-      activity: activityCodeMap.get(s.activityId) ?? '',
-      task: s.taskId ? taskCodeMap.get(s.taskId) : undefined,
-      pic: s.pic,
-      picColor: s.picColor,
-      done: s.done,
-      asA: s.asA ?? undefined,
-      wantTo: s.wantTo ?? undefined,
-      soThat: s.soThat ?? undefined,
-      pains: (s.pains as string[]) ?? [],
-      gains: (s.gains as string[]) ?? [],
-      details: (s.details as string[]) ?? [],
-      checkedAcs: (s.checkedAcs as CheckedAC[]) ?? [],
-      assumptions: (s.assumptions as any[]) ?? []
-    });
+    const kanoKey = s.kano as 'must-have' | 'performance' | 'delighter';
+    if (storyMap.stories[kanoKey]) {
+      storyMap.stories[kanoKey].push({
+        id: s.code,
+        title: s.title,
+        activity: activityCodeMap.get(s.activityId) ?? '',
+        task: s.taskId ? taskCodeMap.get(s.taskId) : undefined,
+        pic: s.pic,
+        picColor: s.picColor,
+        done: s.done,
+        asA: s.asA ?? undefined,
+        wantTo: s.wantTo ?? undefined,
+        soThat: s.soThat ?? undefined,
+        pains: (s.pains as string[]) ?? [],
+        gains: (s.gains as string[]) ?? [],
+        details: (s.details as string[]) ?? [],
+        checkedAcs: (s.checkedAcs as CheckedAC[]) ?? [],
+        assumptions: (s.assumptions as any[]) ?? []
+      });
+    }
   }
 
   // ── Backlog view data ──

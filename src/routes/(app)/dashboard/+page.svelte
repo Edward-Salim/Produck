@@ -2,7 +2,7 @@
   import { MapPinned, Users, Map, ClipboardList } from '@lucide/svelte';
 </script>
 
-<svelte:head><title>Produck</title></svelte:head>
+<svelte:head><title>Dashboard - Produck</title></svelte:head>
 
 <div class="flex min-h-[80vh] flex-col items-center justify-center">
   <h1 class="font-display text-6xl text-cork-800">Produck</h1>

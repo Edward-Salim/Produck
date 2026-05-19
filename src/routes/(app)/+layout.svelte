@@ -139,7 +139,7 @@
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ workspaceId: id })
     });
-    window.location.href = '/';
+    window.location.href = '/dashboard';
   }
 
   // ── Project ──
@@ -511,7 +511,7 @@
       {/if}
     </header>
     {@const noAccess = !data.isAdmin && data.workspaces.length === 0 && data.projects.length === 0}
-    {@const isWorkRoute = page.url.pathname === '/' || ['/outcomes', '/interview-snapshots', '/experience-map', '/ideas', '/story-map', '/admin'].some((p) => page.url.pathname.startsWith(p))}
+    {@const isWorkRoute = page.url.pathname === '/dashboard' || ['/outcomes', '/interview-snapshots', '/experience-map', '/ideas', '/story-map', '/admin'].some((p) => page.url.pathname.startsWith(p))}
     {#if noAccess && isWorkRoute}
       <div class="flex flex-1 flex-col items-center justify-center text-center">
         <p class="font-display text-lg text-cork-700">No access yet</p>

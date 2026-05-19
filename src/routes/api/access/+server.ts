@@ -83,9 +83,8 @@ export const DELETE: RequestHandler = async ({ url, locals }) => {
     // Delete from app_user (cascades to access tables)
     await db.delete(appUser).where(eq(appUser.id, userId));
 
-    // Delete from Supabase auth via direct SQL
-    await db.execute(sql`DELETE FROM auth.identities WHERE user_id = ${user.authId}::uuid`);
-    await db.execute(sql`DELETE FROM auth.users WHERE id = ${user.authId}::uuid`);
+    // Note: Since migrating to SQLite, Supabase Auth user accounts must be deleted
+    // manually from the Supabase dashboard (or via Supabase Admin API if configured).
 
     return json({ ok: true });
   }
