@@ -14,7 +14,6 @@
     Sparkles,
     ChevronDown,
     BookOpen,
-    Terminal as TerminalIcon,
     Heart,
     Coins,
     Wallet,
@@ -39,7 +38,7 @@
   import gitSvg from '$lib/assets/tech/git.svg';
   import springSvg from '$lib/assets/tech/spring.svg';
   import reactSvg from '$lib/assets/tech/react_dark.svg';
-  import whatsappSvg from '$lib/assets/tech/whatsapp-icon.svg';
+  import instagramSvg from '$lib/assets/tech/instagram.svg';
   import nextjsSvg from '$lib/assets/tech/nextjs_icon_dark.svg';
   import mysqlSvg from '$lib/assets/tech/mysql-icon-dark.svg';
   import sqliteSvg from '$lib/assets/tech/sqlite.svg';
@@ -100,19 +99,20 @@
 
   // Headline rotating list
   const roles = [
-    "Fintech Automation Developer 金融科技开发",
-    "Data Science Champion 数据科学优胜者",
-    "Information Systems Student @ UI 计算机学子",
-    "Product Discovery & Automation Builder 产品与自动化构建"
+    "Fintech Automation Developer",
+    "Data Science Champion",
+    "Information Systems Student @ UI",
+    "Product Discovery & Automation Builder"
   ];
   
   let currentRoleIndex = $state(0);
   let currentRoleText = $state("");
   let isDeleting = $state(false);
 
-  // Coin and click text states for the interactive widget
-  interface Coin {
+  // Rain overlay items state
+  interface RainItem {
     id: number;
+    type: 'gold' | 'cat';
     x: number;
     y: number;
     size: number;
@@ -122,83 +122,43 @@
     rotSpeed: number;
   }
 
-  interface ClickText {
-    id: number;
-    x: number;
-    y: number;
-    text: string;
-  }
-
-  let coins = $state<Coin[]>([]);
-  let clickTexts = $state<ClickText[]>([]);
-  let nextCoinId = 0;
-  let nextTextId = 0;
+  let rainItems = $state<RainItem[]>([]);
+  let nextItemId = 0;
   let animationFrameId: number;
+  let lastSpawnTime = 0;
+  const SPAWN_INTERVAL = 250; // ms between spawns (lighter rain)
+  const MAX_ITEMS = 40; // limit active count on screen
 
-  function spawnCoins() {
-    const newCoins: Coin[] = [];
-    for (let i = 0; i < 25; i++) {
-      newCoins.push({
-        id: nextCoinId++,
-        x: Math.random() * 100, // viewport width %
-        y: -10 - Math.random() * 20, // above viewport
-        size: 16 + Math.random() * 24, // pixel diameter
+  function animateRain(timestamp: number) {
+    if (!lastSpawnTime) lastSpawnTime = timestamp;
+    const elapsed = timestamp - lastSpawnTime;
+
+    if (elapsed > SPAWN_INTERVAL && rainItems.length < MAX_ITEMS) {
+      const type = Math.random() > 0.45 ? 'gold' : 'cat'; // ~55% gold, 45% cats
+      rainItems = [...rainItems, {
+        id: nextItemId++,
+        type,
+        x: Math.random() * 100,
+        y: -15,
+        size: type === 'gold' ? (16 + Math.random() * 24) : (28 + Math.random() * 22),
         rotation: Math.random() * 360,
-        speedY: 3 + Math.random() * 5,
-        speedX: -1.5 + Math.random() * 3,
-        rotSpeed: -5 + Math.random() * 10
-      });
+        speedY: 0.3 + Math.random() * 0.5, // even slower fall speed
+        speedX: -0.15 + Math.random() * 0.3, // very low drift
+        rotSpeed: -0.5 + Math.random() * 1.0 // very slow rotation
+      }];
+      lastSpawnTime = timestamp;
     }
-    coins = [...coins, ...newCoins];
-    if (coins.length === newCoins.length) {
-      animateCoins();
-    }
-  }
 
-  function animateCoins() {
-    if (coins.length === 0) {
-      if (animationFrameId) cancelAnimationFrame(animationFrameId);
-      return;
-    }
-    coins = coins
-      .map(c => ({
-        ...c,
-        y: c.y + c.speedY,
-        x: c.x + c.speedX,
-        rotation: c.rotation + c.rotSpeed
+    rainItems = rainItems
+      .map(item => ({
+        ...item,
+        y: item.y + item.speedY,
+        x: item.x + item.speedX,
+        rotation: item.rotation + item.rotSpeed
       }))
-      .filter(c => c.y < 110);
-    animationFrameId = requestAnimationFrame(animateCoins);
-  }
+      .filter(item => item.y < 115);
 
-  function triggerFortune(e: MouseEvent) {
-    spawnCoins();
-    const x = e.clientX || window.innerWidth / 2;
-    const y = e.clientY || window.innerHeight / 2;
-    const sayings = [
-      "招财进宝 (Attract Wealth!)",
-      "金玉满堂 (Abundant Wealth!)",
-      "万事如意 (Good Fortune!)",
-      "DANA Automation +888!",
-      "Kitabisa Savings +300M!",
-      "Indodana Growth +168%!",
-      "GPA Luck +8.88!",
-      "Hokkien Power!",
-      "Prosperity +88%",
-      "大吉大利 (Great Fortune!)",
-      "财源广进 (Wealth Flows In!)"
-    ];
-    const text = sayings[Math.floor(Math.random() * sayings.length)];
-    const newText = {
-      id: nextTextId++,
-      x,
-      y,
-      text
-    };
-    clickTexts = [...clickTexts, newText];
-    setTimeout(() => {
-      clickTexts = clickTexts.filter(t => t.id !== newText.id);
-    }, 1500);
+    animationFrameId = requestAnimationFrame(animateRain);
   }
 
   // Typing effect & lightbox keyboard shortcut on mount
@@ -235,6 +195,9 @@
     };
     window.addEventListener('keydown', handleKeyDown);
 
+    // Start raining
+    animationFrameId = requestAnimationFrame(animateRain);
+
     return () => {
       clearTimeout(timer);
       window.removeEventListener('keydown', handleKeyDown);
@@ -253,104 +216,7 @@
     { value: '3x', label: 'National Champion', detail: 'Hackathons & Data', positive: '🏆 Top 1' }
   ];
 
-  // Terminal state
-  let terminalHistory = $state([
-    { type: 'output', text: 'Welcome to Edward\'s Fintech & Tech Ledger v1.6.8.\nType "help" to start, or "fortune" to check your financial horoscope!' }
-  ]);
-  let terminalInput = $state('');
-  let terminalContainer: HTMLDivElement | null = $state(null);
 
-  function handleTerminalSubmit(e: SubmitEvent) {
-    e.preventDefault();
-    const cmd = terminalInput.trim().toLowerCase();
-    if (!cmd) return;
-
-    // Log the input command
-    terminalHistory = [...terminalHistory, { type: 'input', text: `visitor@edward-salim:~$ ${terminalInput}` }];
-    
-    // Command routing
-    switch (cmd) {
-      case 'help':
-        terminalHistory = [...terminalHistory, { 
-          type: 'output', 
-          text: 'Available commands:\n  [about]      - Short biography & focus\n  [skills]     - Primary tech stack and languages\n  [experience] - Professional experience timeline\n  [speaking]   - Speaking engagements & keynotes\n  [projects]   - Featured developer/product builds\n  [books]      - Key product management books I read\n  [fortune]    - Get a random Chinese fintech fortune\n  [clear]      - Clear screen logs\n  [secret]     - Unlock custom hackathon stats' 
-        }];
-        break;
-      case 'fortune':
-      case 'lucky':
-        const sayings = [
-          "🧧 Great Fortune (大吉大利)! Your next Svelte run compiles with 0 warnings.",
-          "💰 Wealth & Flow! Kitabisa savings model optimizes another 300M IDR.",
-          "📈 Bull Run! DANA automated workflows will save you 168 hours of manual testing.",
-          "😺 Lucky Cat Waves! Indodana's CRM user engagement surges by 88%.",
-          "🪙 Double Blessings! Hokkien fluency boosts your cross-border collaboration potential.",
-          "🔮 Prosperity Awaits! An hidden refactoring will clear 88 bugs from production.",
-          "🎋 Golden Bamboo growth! Your technical skills grow by 8.88x this cycle."
-        ];
-        const saying = sayings[Math.floor(Math.random() * sayings.length)];
-        terminalHistory = [...terminalHistory, { type: 'output', text: saying }];
-        break;
-      case 'about':
-        terminalHistory = [...terminalHistory, { 
-          type: 'output', 
-          text: 'Edward Salim is an Information Systems major at Universitas Indonesia (GPA 3.57). He bridges product management with engineering automation, streamlining developer feedback loops, and identifying key business and software optimization paths.' 
-        }];
-        break;
-      case 'skills':
-        terminalHistory = [...terminalHistory, { 
-          type: 'output', 
-          text: 'Languages:   Python, TypeScript, JavaScript, SQL, Hokkien (Native), English\nFrameworks:  SvelteKit, Next.js, Django, SpringBoot\nDatabases:   PostgreSQL, SQLite, MySQL\nData/Prod:   Tableau, MoEngage, PostHog, A/B Testing, Playwright, Docker' 
-        }];
-        break;
-      case 'experience':
-        terminalHistory = [...terminalHistory, { 
-          type: 'output', 
-          text: '💼 Professional timeline:\n  • DANA Indonesia - Automation Product Developer Intern (2025-2026)\n  • Kitabisa - Test Engineer Intern (2025)\n  • Indodana Fintech - Marketing Technology Intern (2024)\n  • Central KMBUI - Head of Finance (2024)' 
-        }];
-        break;
-      case 'speaking':
-        terminalHistory = [...terminalHistory, { 
-          type: 'output', 
-          text: '🎙️ Speaking engagements:\n  • Speaker - Dasar-Dasar Pemrograman 0 (Aug 2025, 540+ freshmen)\n  • Speaker - UKM KMBUI Project Management (May 2026)\n  • Speaker - UKM KMBUI Insight Hunting (Aug 2025)\n  • Mentor  - Dasar-Dasar Pemrograman 0 (Aug 2023)' 
-        }];
-        break;
-      case 'projects':
-        terminalHistory = [...terminalHistory, { 
-          type: 'output', 
-          text: '💻 Code builds:\n  • Produck: This product discovery & productivity tool (SvelteKit, SQLite)\n  • K-Owl: AI Learning Management System (Next.js, Django, LLM APIs)\n  • Churn Forecasting: Telecom subscriber analytics model & Tableau dashboard' 
-        }];
-        break;
-      case 'books':
-        terminalHistory = [...terminalHistory, { 
-          type: 'output', 
-          text: '📚 Key product/discovery literature:\n  • Continuous Discovery Habits (Teresa Torres)\n  • Evidence-Guided (Itamar Gilad)\n  • The Mom Test (Rob Fitzpatrick)\n  • Inspired (Marty Cagan)\n  • Sprint (Jake Knapp)\n  • User Story Mapping (Jeff Patton)' 
-        }];
-        break;
-      case 'clear':
-        terminalHistory = [];
-        break;
-      case 'secret':
-        terminalHistory = [...terminalHistory, { 
-          type: 'output', 
-          text: '🏆 Data & Innovation Awards unlocked:\n  • 1st Place - IDEAS Batch 11 Business Plan (UGM, 2025)\n  • 1st Place - RASIO 7.0 Data Science Competition (UNPAD, 2023)\n  • 1st Place - TECHFEST Big Data Competition (BINUS, 2023)' 
-        }];
-        break;
-      default:
-        terminalHistory = [...terminalHistory, { 
-          type: 'output', 
-          text: `Command "${cmd}" not recognized. Type "help" for lists.` 
-        }];
-    }
-
-    terminalInput = '';
-
-    // Scroll container
-    setTimeout(() => {
-      if (terminalContainer) {
-        terminalContainer.scrollTop = terminalContainer.scrollHeight;
-      }
-    }, 40);
-  }
 
   // Skills with their SVGs downloaded from SVGL
   const marqueeSkills = [
@@ -765,47 +631,128 @@
   <!-- Subtle Chinese Clouds Overlay Pattern -->
   <div class="absolute inset-0 pointer-events-none opacity-[0.03] mix-blend-overlay bg-repeat" style="background-image: url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2260%22 height=%2260%22 viewBox=%220 0 60 60%22><path d=%22M30 15c-3 0-5.5 2.5-5.5 5.5s2.5 5.5 5.5 5.5 5.5-2.5 5.5-5.5-2.5-5.5-5.5-5.5zm-15 20c-3 0-5.5 2.5-5.5 5.5s2.5 5.5 5.5 5.5 5.5-2.5 5.5-5.5-2.5-5.5-5.5-5.5zm30 0c-3 0-5.5 2.5-5.5 5.5s2.5 5.5 5.5 5.5 5.5-2.5 5.5-5.5-2.5-5.5-5.5-5.5z%22 fill=%22%23F59E0B%22 fill-opacity=%220.6%22 fill-rule=%22evenodd%22/></svg>');"></div>
 
-  <!-- Interactive Floating Coins Overlay -->
-  {#each coins as coin (coin.id)}
-    <div 
-      class="fixed pointer-events-none z-50 select-none"
-      style="left: {coin.x}vw; top: {coin.y}vh; width: {coin.size}px; height: {coin.size}px; transform: rotate({coin.rotation}deg); transition: transform 0.05s linear;"
-    >
-      <svg viewBox="0 0 100 100" class="w-full h-full drop-shadow-2xl">
-        <defs>
-          <radialGradient id="gold-grad-{coin.id}" cx="40%" cy="40%" r="60%">
-            <stop offset="0%" stop-color="#FFE082" />
-            <stop offset="35%" stop-color="#FFD54F" />
-            <stop offset="75%" stop-color="#FFB300" />
-            <stop offset="100%" stop-color="#FF6F00" />
-          </radialGradient>
-        </defs>
-        <path d="M 50,5 A 45,45 0 1,0 50,95 A 45,45 0 1,0 50,5 Z M 35,35 H 65 V 65 H 35 Z" 
-              fill="url(#gold-grad-{coin.id})" 
-              fill-rule="evenodd" 
-              stroke="#D97706" 
-              stroke-width="1.5" />
-        <circle cx="50" cy="50" r="37" fill="none" stroke="#FFF59D" stroke-width="0.8" stroke-dasharray="3,3" />
-        <path d="M 35,35 H 65 V 65 H 35 Z" fill="none" stroke="#B45309" stroke-width="1" />
-        
-        <!-- Chinese Characters (Traditional Wealth Characters) -->
-        <text x="50" y="24" font-family="'ZCOOL Xiaowei', serif" font-size="10.5" font-weight="bold" fill="#5D4037" text-anchor="middle">招</text>
-        <text x="76" y="54.5" font-family="'ZCOOL Xiaowei', serif" font-size="10.5" font-weight="bold" fill="#5D4037" text-anchor="middle">財</text>
-        <text x="50" y="84" font-family="'ZCOOL Xiaowei', serif" font-size="10.5" font-weight="bold" fill="#5D4037" text-anchor="middle">進</text>
-        <text x="24" y="54.5" font-family="'ZCOOL Xiaowei', serif" font-size="10.5" font-weight="bold" fill="#5D4037" text-anchor="middle">寶</text>
-      </svg>
-    </div>
-  {/each}
+  <!-- Raining Gold & Cats Overlay (Single composite layer to prevent overlapping items from stacking opacity) -->
+  <div class="fixed inset-0 pointer-events-none z-0 select-none opacity-15 overflow-hidden">
+    {#each rainItems as item (item.id)}
+      <div 
+        class="absolute"
+        style="left: {item.x}vw; top: {item.y}vh; width: {item.size}px; height: {item.size}px; transform: rotate({item.rotation}deg); transition: transform 0.05s linear;"
+      >
+      {#if item.type === 'gold'}
+        <svg viewBox="0 0 100 100" class="w-full h-full drop-shadow-2xl">
+          <defs>
+            <radialGradient id="gold-grad-{item.id}" cx="40%" cy="40%" r="60%">
+              <stop offset="0%" stop-color="#FFE082" />
+              <stop offset="35%" stop-color="#FFD54F" />
+              <stop offset="75%" stop-color="#FFB300" />
+              <stop offset="100%" stop-color="#FF6F00" />
+            </radialGradient>
+          </defs>
+          <path d="M 50,5 A 45,45 0 1,0 50,95 A 45,45 0 1,0 50,5 Z M 35,35 H 65 V 65 H 35 Z" 
+                fill="url(#gold-grad-{item.id})" 
+                fill-rule="evenodd" 
+                stroke="#D97706" 
+                stroke-width="1.5" />
+          <circle cx="50" cy="50" r="37" fill="none" stroke="#FFF59D" stroke-width="0.8" stroke-dasharray="3,3" />
+          <path d="M 35,35 H 65 V 65 H 35 Z" fill="none" stroke="#B45309" stroke-width="1" />
+          
+          <!-- Chinese Characters (Traditional Wealth Characters) -->
+          <text x="50" y="24" font-family="'ZCOOL Xiaowei', serif" font-size="10.5" font-weight="bold" fill="#5D4037" text-anchor="middle">招</text>
+          <text x="76" y="54.5" font-family="'ZCOOL Xiaowei', serif" font-size="10.5" font-weight="bold" fill="#5D4037" text-anchor="middle">財</text>
+          <text x="50" y="84" font-family="'ZCOOL Xiaowei', serif" font-size="10.5" font-weight="bold" fill="#5D4037" text-anchor="middle">進</text>
+          <text x="24" y="54.5" font-family="'ZCOOL Xiaowei', serif" font-size="10.5" font-weight="bold" fill="#5D4037" text-anchor="middle">寶</text>
+        </svg>
+      {:else}
+        <!-- Falling Lucky Cat (Maneki-neko) -->
+        <svg viewBox="0 0 100 110" class="w-full h-full drop-shadow-2xl">
+          <!-- Ears -->
+          <path d="M 24,35 L 14,8 L 40,24 Z" fill="#FFFFFF" stroke="#78716C" stroke-width="1.5" stroke-linejoin="round" />
+          <path d="M 23,31 L 17,12 L 35,23 Z" fill="#E11D48" />
+          
+          <path d="M 76,35 L 86,8 L 60,24 Z" fill="#FFFFFF" stroke="#78716C" stroke-width="1.5" stroke-linejoin="round" />
+          <path d="M 77,31 L 83,12 L 65,23 Z" fill="#E11D48" />
 
-  <!-- Floating Fortune Words Container -->
-  {#each clickTexts as ct (ct.id)}
-    <div 
-      class="fixed pointer-events-none z-50 select-none animate-float-up text-sm font-black text-amber-300 font-chinese px-3 py-1 bg-red-950/80 border border-amber-500/40 rounded-full shadow-lg"
-      style="left: {ct.x}px; top: {ct.y}px; text-shadow: 0 0 8px rgba(245,158,11,0.6);"
-    >
-      {ct.text}
-    </div>
-  {/each}
+          <!-- Raised Right Arm (Waving) -->
+          <path d="M 25,50 C 12,50 8,36 10,24 C 11,14 20,14 22,24 C 23,32 25,42 25,50" fill="#FFFFFF" stroke="#78716C" stroke-width="1.5" />
+          <ellipse cx="16" cy="20" rx="3" ry="4" fill="#FCA5A5" opacity="0.8" />
+          
+          <!-- Left Arm resting -->
+          <path d="M 75,55 C 85,55 92,68 85,80 C 80,88 68,85 64,78" fill="#FFFFFF" stroke="#78716C" stroke-width="1.5" />
+
+          <!-- Body -->
+          <path d="M 22,54 C 18,70 20,95 32,98 C 42,100 58,100 68,98 C 80,95 82,70 78,54 Z" fill="#FFFFFF" stroke="#78716C" stroke-width="1.5" />
+
+          <!-- Head -->
+          <ellipse cx="50" cy="42" rx="30" ry="25" fill="#FFFFFF" stroke="#78716C" stroke-width="1.5" />
+
+          <!-- Green Bib -->
+          <path d="M 32,58 C 32,70 68,70 68,58 Z" fill="#16A34A" stroke="#78716C" stroke-width="1" />
+
+          <!-- Red Collar -->
+          <path d="M 24,53 Q 50,60 76,53" fill="none" stroke="#DC2626" stroke-width="4" stroke-linecap="round" />
+
+          <!-- Bell -->
+          <circle cx="50" cy="60" r="6" fill="#FBBF24" stroke="#B45309" stroke-width="1" />
+          <circle cx="50" cy="61" r="1.5" fill="#78716C" />
+          <line x1="44" y1="58" x2="56" y2="58" stroke="#B45309" stroke-width="0.8" />
+
+          <!-- Eyes -->
+          <circle cx="37" cy="35" r="5" fill="#FBBF24" stroke="#78716C" stroke-width="0.5" />
+          <circle cx="37" cy="35" r="2.5" fill="#000000" />
+          <circle cx="63" cy="35" r="5" fill="#FBBF24" stroke="#78716C" stroke-width="0.5" />
+          <circle cx="63" cy="35" r="2.5" fill="#000000" />
+
+          <!-- Nose -->
+          <polygon points="48,41 52,41 50,43" fill="#FCA5A5" stroke="#78716C" stroke-width="0.5" />
+
+          <!-- Mouth -->
+          <path d="M 50,43 L 50,46 Q 47,48 45,47 M 50,46 Q 53,48 55,47" fill="none" stroke="#DC2626" stroke-width="1.5" stroke-linecap="round" />
+
+          <!-- Whiskers -->
+          <line x1="24" y1="38" x2="14" y2="36" stroke="#78716C" stroke-width="1" />
+          <line x1="23" y1="41" x2="12" y2="41" stroke="#78716C" stroke-width="1" />
+          <line x1="24" y1="44" x2="14" y2="46" stroke="#78716C" stroke-width="1" />
+
+          <line x1="76" y1="38" x2="86" y2="36" stroke="#78716C" stroke-width="1" />
+          <line x1="77" y1="41" x2="88" y2="41" stroke="#78716C" stroke-width="1" />
+          <line x1="76" y1="44" x2="86" y2="46" stroke="#78716C" stroke-width="1" />
+
+          <!-- Whisker dots -->
+          <circle cx="28" cy="40" r="0.6" fill="#78716C" />
+          <circle cx="30" cy="42" r="0.6" fill="#78716C" />
+          <circle cx="32" cy="40" r="0.6" fill="#78716C" />
+          <circle cx="72" cy="40" r="0.6" fill="#78716C" />
+          <circle cx="70" cy="42" r="0.6" fill="#78716C" />
+          <circle cx="68" cy="40" r="0.6" fill="#78716C" />
+
+          <!-- Feet -->
+          <circle cx="34" cy="98" r="6" fill="#FFFFFF" stroke="#78716C" stroke-width="1.2" />
+          <line x1="31" y1="94" x2="31" y2="102" stroke="#78716C" stroke-width="0.8" />
+          <line x1="35" y1="94" x2="35" y2="102" stroke="#78716C" stroke-width="0.8" />
+
+          <circle cx="66" cy="98" r="6" fill="#FFFFFF" stroke="#78716C" stroke-width="1.2" />
+          <line x1="63" y1="94" x2="63" y2="102" stroke="#78716C" stroke-width="0.8" />
+          <line x1="67" y1="94" x2="67" y2="102" stroke="#78716C" stroke-width="0.8" />
+
+          <!-- Koban Gold Coin (千万両) -->
+          <g transform="rotate(-8 52 82)">
+            <rect x="36" y="62" width="28" height="40" rx="14" fill="#FBBF24" stroke="#D97706" stroke-width="1.5" />
+            <rect x="39" y="65" width="22" height="34" rx="11" fill="none" stroke="#F59E0B" stroke-width="0.8" stroke-dasharray="2,2" />
+            <text x="50" y="74" font-family="'ZCOOL Xiaowei', serif" font-weight="900" font-size="8" fill="#1C1917" text-anchor="middle">千</text>
+            <text x="50" y="83" font-family="'ZCOOL Xiaowei', serif" font-weight="900" font-size="8" fill="#1C1917" text-anchor="middle">万</text>
+            <text x="50" y="92" font-family="'ZCOOL Xiaowei', serif" font-weight="900" font-size="8" fill="#1C1917" text-anchor="middle">両</text>
+          </g>
+
+          <!-- Left Paw overlapping coin -->
+          <circle cx="62" cy="80" r="5" fill="#FFFFFF" stroke="#78716C" stroke-width="1.2" />
+        </svg>
+      {/if}
+      </div>
+    {/each}
+  </div>
+
+  <!-- Main Page Content Wrapper (guarantees background rendering of rain items) -->
+  <div class="relative z-10">
 
   <!-- Header / Top Navigation -->
   <header class="sticky top-0 z-40 border-b border-stone-800/80 bg-[#0C0A09]/80 backdrop-blur-md">
@@ -857,11 +804,6 @@
         
         <!-- Intro text (Bio & Contacts) -->
         <div class="md:col-span-7 md:row-span-2 space-y-6 text-center md:text-left order-2 md:order-1">
-          <div class="inline-flex items-center gap-2 rounded-full border border-red-500/30 bg-red-950/40 px-3 py-1.5 text-xs font-semibold text-amber-400">
-            <Sparkles class="size-3 text-amber-400 animate-pulse" />
-            <span>Automation & Fintech Developer &middot; UI IS Student</span>
-          </div>
-          
           <div class="space-y-3">
             <h1 class="font-outfit text-4xl font-extrabold tracking-tight text-white sm:text-5xl md:text-6xl">
               Edward Salim <span class="font-chinese text-amber-500 text-3xl font-medium tracking-normal ml-3">叶艾德</span>
@@ -870,7 +812,7 @@
             <!-- Headline rotater / typing effect in Gold -->
             <div class="min-h-[4.5rem] sm:min-h-[3.5rem] md:min-h-[2.5rem] h-auto font-chinese text-xl font-bold text-amber-400 sm:text-2xl md:text-3xl leading-snug pb-1">
               <span>{currentRoleText}</span>
-              <span class="inline-block w-0.5 h-6 ml-0.5 bg-amber-400 animate-pulse align-middle">|</span>
+              <span class="inline-block w-0.5 h-6 ml-0.5 bg-amber-400 animate-pulse align-middle"></span>
             </div>
           </div>
           
@@ -878,55 +820,17 @@
             Engineering robust financial pipelines, automated backoffice infrastructure, and predictive intelligence models. Ex-Intern at DANA, Indodana & Kitabisa.
           </p>
 
-          <!-- Interactive Chinese Cat Widget embedded in Hero -->
-          <div class="py-2 flex items-center justify-center md:justify-start gap-4">
-            <button 
-              type="button"
-              class="relative flex items-center gap-3 bg-stone-900/80 border border-amber-500/30 hover:border-amber-400 rounded-2xl p-3 pr-5 text-left group transition-all hover:scale-[1.03] cursor-pointer"
-              onclick={triggerFortune}
-            >
-              <div class="shrink-0 -mt-2 -mb-2">
-                <!-- Golden Waving Cat SVG -->
-                <svg viewBox="0 0 100 120" class="size-16 drop-shadow-md select-none">
-                  <ellipse cx="50" cy="70" rx="35" ry="40" fill="#FFFFFF" stroke="#D97706" stroke-width="1.5" />
-                  <circle cx="50" cy="75" r="18" fill="#DC2626" stroke="#F59E0B" stroke-width="1" />
-                  <text x="50" y="80" font-family="'ZCOOL Xiaowei', serif" font-weight="900" font-size="12" fill="#FBBF24" text-anchor="middle">吉</text>
-                  <polygon points="20,40 30,20 40,42" fill="#FFFFFF" stroke="#D97706" stroke-width="1.5" />
-                  <polygon points="17,37 25,23 32,38" fill="#FCA5A5" />
-                  <polygon points="80,40 70,20 60,42" fill="#FFFFFF" stroke="#D97706" stroke-width="1.5" />
-                  <polygon points="83,37 75,23 68,38" fill="#FCA5A5" />
-                  <ellipse cx="38" cy="48" rx="3.5" ry="1.5" fill="#5D4037" />
-                  <ellipse cx="62" cy="48" rx="3.5" ry="1.5" fill="#5D4037" />
-                  <circle cx="32" cy="54" r="2.5" fill="#FCA5A5" opacity="0.6" />
-                  <circle cx="68" cy="54" r="2.5" fill="#FCA5A5" opacity="0.6" />
-                  <path d="M 47,51 Q 50,54 53,51" fill="none" stroke="#5D4037" stroke-width="1.5" />
-                  <circle cx="25" cy="78" r="8" fill="#FFFFFF" stroke="#D97706" stroke-width="1.5" />
-                  <circle cx="24" cy="78" r="5" fill="#FBBF24" stroke="#D97706" stroke-width="0.5" />
-                  <rect x="35" y="58" width="30" height="3" fill="#DC2626" rx="2.5" />
-                  <circle cx="50" cy="61" r="3.5" fill="#F59E0B" stroke="#D97706" stroke-width="0.5" />
-                  <g class="wave-arm">
-                    <path d="M 72,70 C 72,60 84,40 88,44 C 92,48 82,75 80,78 Z" fill="#FFFFFF" stroke="#D97706" stroke-width="1.5" />
-                    <circle cx="84" cy="48" r="5" fill="#FCA5A5" />
-                  </g>
-                </svg>
-              </div>
-              <div class="space-y-0.5">
-                <span class="block text-[10px] font-bold text-amber-500 uppercase tracking-widest">Fortune Clicker</span>
-                <span class="block text-xs font-semibold text-stone-200">Tap Waving Cat</span>
-                <span class="block text-[9px] text-stone-500 group-hover:text-stone-300 transition-colors">Generate gold & check luck!</span>
-              </div>
-              <!-- Floating Coin Indicators inside button -->
-              <div class="absolute -top-1 -right-1 size-5 rounded-full bg-amber-500 border border-amber-600 flex items-center justify-center text-[9px] font-bold text-amber-950 animate-bounce">🪙</div>
-            </button>
-          </div>
+
 
           <!-- Red Envelope (Hongbao) Contact Links -->
           <div class="pt-2">
-            <span class="block text-[10px] font-black text-red-500 uppercase tracking-widest mb-3 text-center md:text-left">Open Red Envelopes (Contact Edward)</span>
+            <span class="block text-[10px] font-black text-red-500 uppercase tracking-widest mb-3 text-center md:text-left">CONTACT</span>
             <div class="grid grid-cols-2 gap-4 sm:grid-cols-4 w-full max-w-xl">
-              <!-- Gmail Red Envelope -->
+              <!-- Resume Red Envelope -->
               <a 
-                href="mailto:edwardsalim29@gmail.com" 
+                href="/assets/Edward_Salim_CV.pdf"
+                target="_blank"
+                download="Edward_Salim_CV.pdf"
                 class="group relative block h-36 rounded-xl bg-gradient-to-b from-red-600 to-red-800 border border-amber-500/30 overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 hover:-translate-y-1.5 [perspective:1000px]"
               >
                 <!-- Flap -->
@@ -935,9 +839,9 @@
                 </div>
                 <!-- Sliding Card -->
                 <div class="absolute inset-x-2 bottom-2 top-6 bg-gradient-to-b from-amber-50 to-amber-100 rounded-lg border border-amber-400/40 p-2 flex flex-col items-center justify-center text-center transition-all duration-300 translate-y-6 group-hover:translate-y-0 z-10">
-                  <img src={gmailSvg} alt="Gmail" class="size-4.5 object-contain" />
-                  <span class="text-[9px] font-black text-amber-950 mt-1 uppercase tracking-wider">Email</span>
-                  <span class="text-[8px] text-amber-800 font-medium truncate w-full">edwardsalim29</span>
+                  <FileText class="size-4.5 text-amber-950" />
+                  <span class="text-[9px] font-black text-amber-950 mt-1 uppercase tracking-wider">Resume</span>
+                  <span class="text-[8px] text-amber-800 font-medium truncate w-full">Download CV</span>
                 </div>
               </a>
 
@@ -977,9 +881,9 @@
                 </div>
               </a>
 
-              <!-- WhatsApp Red Envelope -->
+              <!-- Instagram Red Envelope -->
               <a 
-                href="https://wa.me/6281287784722" 
+                href="https://www.instagram.com/edwardsalimm/" 
                 target="_blank" 
                 class="group relative block h-36 rounded-xl bg-gradient-to-b from-red-600 to-red-800 border border-amber-500/30 overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 hover:-translate-y-1.5 [perspective:1000px]"
               >
@@ -989,24 +893,13 @@
                 </div>
                 <!-- Sliding Card -->
                 <div class="absolute inset-x-2 bottom-2 top-6 bg-gradient-to-b from-amber-50 to-amber-100 rounded-lg border border-amber-400/40 p-2 flex flex-col items-center justify-center text-center transition-all duration-300 translate-y-6 group-hover:translate-y-0 z-10">
-                  <img src={whatsappSvg} alt="WhatsApp" class="size-4.5 object-contain" />
-                  <span class="text-[9px] font-black text-amber-950 mt-1 uppercase tracking-wider">WhatsApp</span>
-                  <span class="text-[8px] text-amber-800 font-medium truncate w-full">+62812877...</span>
+                  <img src={instagramSvg} alt="Instagram" class="size-4.5 object-contain" />
+                  <span class="text-[9px] font-black text-amber-950 mt-1 uppercase tracking-wider">Instagram</span>
+                  <span class="text-[8px] text-amber-800 font-medium truncate w-full">@edwardsalimm</span>
                 </div>
               </a>
             </div>
-            
-            <div class="pt-3 text-center md:text-left">
-              <a 
-                href="https://drive.google.com/drive/folders/1luBgBfofDLsz1ZGwvQV0p1uGGDH_lB4-?usp=sharing" 
-                target="_blank"
-                class="inline-flex items-center gap-2 text-xs font-bold text-amber-500 transition-colors hover:text-amber-400 hover:underline"
-              >
-                <FileText class="size-3.5" />
-                <span>View Google Drive Credentials Folder</span>
-                <ArrowUpRight class="size-3" />
-              </a>
-            </div>
+
           </div>
         </div>
 
@@ -1034,70 +927,7 @@
           </div>
         </div>
 
-        <!-- Interactive Terminal (Fintech Wealth Ledger Edition) -->
-        <div class="md:col-span-5 md:col-start-8 md:row-start-2 order-3 md:order-3 w-full">
-          <div class="rounded-2xl border border-stone-800 bg-[#0A0908] shadow-2xl overflow-hidden font-mono text-stone-300">
-            <!-- Window Titlebar -->
-            <div class="bg-[#141211] border-b border-stone-800/80 px-4 py-2.5 flex items-center justify-between">
-              <div class="flex items-center gap-1">
-                <div class="size-2 rounded-full bg-red-600/80"></div>
-                <div class="size-2 rounded-full bg-amber-500/80"></div>
-                <div class="size-2 rounded-full bg-stone-700"></div>
-              </div>
-              <div class="flex items-center gap-1.5 text-stone-500 text-[10px] font-semibold select-none">
-                <TerminalIcon class="size-3 text-amber-500/60" />
-                <span>visitor@edward-salim: ~/wealth-ledger (zsh)</span>
-              </div>
-              <div class="w-8"></div> 
-            </div>
-            
-            <!-- Terminal Output Terminal Log -->
-            <div 
-              bind:this={terminalContainer}
-              class="h-44 overflow-y-auto p-4 text-[11px] leading-normal space-y-2 select-text"
-            >
-              <!-- Welcome ASCII Coin -->
-              <div class="text-amber-500/80 text-[9px] leading-none mb-2 whitespace-pre select-none font-bold">
-{`      💰 EDWARD SALIM'S FINTECH LEDGER 💰
-          .----------------.
-         /     招 財 進 寶     \\
-        |    '----------'    |
-         \\   FINTECH ENGINE  /
-          '----------------'`}
-              </div>
-              
-              {#each terminalHistory as log, i (i)}
-                {#if log.type === 'input'}
-                  <div class="text-amber-400 font-bold">{log.text}</div>
-                {:else}
-                  <div class="whitespace-pre-wrap text-stone-300">{log.text}</div>
-                {/if}
-              {/each}
-            </div>
 
-            <!-- Input Form -->
-            <form 
-              onsubmit={handleTerminalSubmit}
-              class="bg-[#0e0c0b] border-t border-stone-850 px-4 py-2 flex items-center gap-2"
-            >
-              <span class="text-red-500 font-bold shrink-0 select-none text-[10px]">visitor:~$</span>
-              <input 
-                type="text" 
-                bind:value={terminalInput}
-                placeholder='Type command (e.g. "help", "experience")...'
-                class="flex-1 bg-transparent border-none text-stone-200 outline-none placeholder-stone-700 focus:ring-0 p-0 text-[11px] font-mono"
-                autocomplete="off"
-                spellcheck="false"
-              />
-              <button 
-                type="submit" 
-                class="bg-stone-900 hover:bg-stone-850 hover:text-amber-400 text-stone-400 text-[9px] font-semibold px-2 py-0.5 rounded border border-stone-800 cursor-pointer transition-colors"
-              >
-                Run
-              </button>
-            </form>
-          </div>
-        </div>
 
       </div>
 
@@ -1772,10 +1602,11 @@
   <!-- Footer (Cleaned Layout) -->
   <footer class="border-t border-stone-900 bg-[#070605] py-8 text-center text-xs text-stone-500">
     <div class="mx-auto max-w-5xl px-6 space-y-2 select-none">
-      <p>&copy; {new Date().getFullYear()} Edward Salim. Built with SvelteKit & SQLite.</p>
+      <p>&copy; {new Date().getFullYear()} Edward Salim</p>
     </div>
   </footer>
 
+  </div>
 </div>
 
 {#if lightboxOpen}
