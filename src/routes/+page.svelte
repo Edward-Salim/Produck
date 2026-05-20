@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
+  import { reveal } from '$lib/actions/reveal';
   import { 
     GraduationCap, 
     Briefcase, 
@@ -18,7 +19,6 @@
     Coins,
     Wallet,
     Award,
-    TrendingUp,
     Mic
   } from '@lucide/svelte';
   
@@ -49,7 +49,7 @@
   import sheetsSvg from '$lib/assets/tech/google-sheets.svg';
   import claudeSvg from '$lib/assets/tech/claude-ai-icon.svg';
   import geminiSvg from '$lib/assets/tech/gemini.svg';
-  import openaiSvg from '$lib/assets/tech/openai.svg';
+  import openaiSvg from '$lib/assets/tech/openai_dark.svg';
 
   // Professional Experience Logos
   import danaLogo from '$lib/assets/fintech_logos/indonesia/dana.png';
@@ -59,9 +59,24 @@
   // Lomba/Award & Project Images
   import datathonImg from '$lib/assets/awards/award-datathon.png';
   import finditImg from '$lib/assets/awards/award-findit.png';
+  import ideasCertificateImg from '$lib/assets/awards/award-ideas-certificate.png';
+  import ideasImg from '$lib/assets/awards/award-ideas.png';
   import rasioImg from '$lib/assets/awards/award-rasio.png';
   import techfestImg from '$lib/assets/awards/award-techfest.png';
   import churnImg from '$lib/assets/projects/project-churn.png';
+  import uiCampusImg from '$lib/assets/education/ui-campus.png';
+  import ddp0SpeakerCertImg from '$lib/assets/speaking/ddp0-speaker-certificate.png';
+  import ukmKmbuiSharingCertImg from '$lib/assets/speaking/ukm-kmbui-sharing-certificate.png';
+  import ruangguruUtbkSpeakerCertImg from '$lib/assets/speaking/ruangguru-utbk-speaker-certificate.png';
+  import ddp0MentorImg from '$lib/assets/speaking/ddp0-mentor-session.png';
+  import pricaiLogo from '$lib/assets/organizations/pricai-logo.png';
+  import aiesecUiLogo from '$lib/assets/organizations/aiesec-ui-logo.png';
+  import ukmKmbuiLogo from '$lib/assets/organizations/ukm-kmbui-logo.png';
+  import perakLogo from '$lib/assets/organizations/perak-logo.png';
+  import pemiraFasilkomUiLogo from '$lib/assets/organizations/pemira-fasilkom-ui-logo.png';
+  import gdscUiLogo from '$lib/assets/organizations/gdsc-ui-logo.png';
+  import bemFasilkomUiLogo from '$lib/assets/organizations/bem-fasilkom-ui-logo.png';
+  import ddp0Logo from '$lib/assets/organizations/ddp0-logo.png';
 
   let { data } = $props();
 
@@ -80,6 +95,56 @@
     lightboxOpen = false;
   }
 
+  function parsePeriodStart(period: string) {
+    const monthMap: Record<string, number> = {
+      Jan: 0,
+      Feb: 1,
+      Mar: 2,
+      Apr: 3,
+      May: 4,
+      Jun: 5,
+      Jul: 6,
+      Aug: 7,
+      Sep: 8,
+      Oct: 9,
+      Nov: 10,
+      Dec: 11
+    };
+
+    const rangeStart = period.split('-')[0]?.trim() ?? period.trim();
+    const parts = rangeStart.split(' ').filter(Boolean);
+
+    if (parts.length === 2 && monthMap[parts[0]] !== undefined) {
+      return new Date(Number(parts[1]), monthMap[parts[0]], 1).getTime();
+    }
+
+    if (parts.length === 1 && /^\d{4}$/.test(parts[0])) {
+      return new Date(Number(parts[0]), 0, 1).getTime();
+    }
+
+    return Number.MAX_SAFE_INTEGER;
+  }
+
+  function getOrganizationInitials(name: string) {
+    return name
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 3)
+      .map((word) => word[0]?.toUpperCase() ?? '')
+      .join('');
+  }
+
+  const organizationLogoMap: Record<string, string> = {
+    'The Pacific Rim International Conference on Artificial Intelligence': pricaiLogo,
+    'AIESEC in UI': aiesecUiLogo,
+    'UKM KMBUI': ukmKmbuiLogo,
+    'Pesta Rakyat Komputer': perakLogo,
+    'Pemira IKM Fasilkom UI': pemiraFasilkomUiLogo,
+    'Google Developer Student Club in UI': gdscUiLogo,
+    'BEM Fasilkom UI': bemFasilkomUiLogo,
+    'Dasar-Dasar Pemrograman 0': ddp0Logo
+  };
+
   function handleBackdropClick(e: MouseEvent) {
     if (e.target === e.currentTarget) {
       closeLightbox();
@@ -88,21 +153,21 @@
   
   // Navigation elements
   const sections = [
-    { id: 'education', label: 'Education', icon: GraduationCap },
-    { id: 'experience', label: 'Experience', icon: Briefcase },
-    { id: 'speaking', label: 'Speaking', icon: Mic },
-    { id: 'volunteering', label: 'Volunteering', icon: Heart },
-    { id: 'projects', label: 'Projects', icon: Code },
-    { id: 'awards', label: 'Awards', icon: Trophy },
-    { id: 'bookshelf', label: 'Bookshelf', icon: BookOpen }
+    { id: 'education', label: 'Academic Background', icon: GraduationCap },
+    { id: 'experience', label: 'Work History', icon: Briefcase },
+    { id: 'speaking', label: 'Public Talks', icon: Mic },
+    { id: 'volunteering', label: 'Community Work', icon: Heart },
+    { id: 'projects', label: 'Key Projects', icon: Code },
+    { id: 'awards', label: 'Competition Wins', icon: Trophy },
+    { id: 'bookshelf', label: 'Reading Shelf', icon: BookOpen }
   ];
 
   // Headline rotating list
   const roles = [
-    "Fintech Automation Developer",
+    "Fintech Automation Engineer",
     "Data Science Champion",
-    "Information Systems Student @ UI",
-    "Product Discovery & Automation Builder"
+    "Information Systems at UI",
+    "Product Discovery Builder"
   ];
   
   let currentRoleIndex = $state(0);
@@ -210,10 +275,10 @@
 
   // Quick stats computed from CV details (Fintech & Wealth themes)
   const stats = [
-    { value: '3.57', label: 'GPA at UI', detail: 'Information Systems', positive: '+3.57%' },
-    { value: 'IDR 300M+', label: 'Cost Optimization', detail: 'Identified at Kitabisa', positive: '+88.8%' },
-    { value: '300K+', label: 'CRM Engagement', detail: 'Indodana Active Users', positive: '▲ 1.68x' },
-    { value: '3x', label: 'National Champion', detail: 'Hackathons & Data', positive: '🏆 Top 1' }
+    { value: '3.57', label: 'GPA at UI', detail: 'Information Systems', positive: '+3.57%', icon: GraduationCap },
+    { value: '3x', label: 'Internships', detail: 'DANA, Indodana, Kitabisa', positive: 'Fintech Ops', icon: Briefcase },
+    { value: '5x', label: 'Talks & Mentoring', detail: 'Campus, Community, National TV', positive: 'Community', icon: Mic },
+    { value: '3x', label: 'Competition Wins', detail: 'Business Plan & Data Science', positive: '🏆 Top 1', icon: Trophy }
   ];
 
 
@@ -264,6 +329,30 @@
     'Gemini': geminiSvg,
     'ChatGPT': openaiSvg
   };
+
+  const projectTechIconMap: Record<string, string> = {
+    'SvelteKit': svelteSvg,
+    'SQLite': sqliteSvg,
+    'Next.js': nextjsSvg,
+    'Django': djangoSvg,
+    'PostgreSQL': postgresqlSvg,
+    'Python': pythonSvg
+  };
+
+  function getProjectTechAbbreviation(tech: string) {
+    const abbreviations: Record<string, string> = {
+      'Drizzle ORM': 'DRZ',
+      'Bun': 'BUN',
+      'Tailwind CSS': 'TW',
+      'FastAPI': 'FA',
+      'LLM Agent APIs': 'LLM',
+      'Pandas': 'PD',
+      'Scikit-learn': 'SK',
+      'Tableau': 'TB'
+    };
+
+    return abbreviations[tech] ?? tech.slice(0, 3).toUpperCase();
+  }
 
   // Professional experiences lists
   const experiences = [
@@ -359,25 +448,73 @@
   );
 
   const awards = [
-    { title: 'Scholarship Recipient', competition: 'Full Tuition Scholarship', organizer: 'Indonesian Ministry of Education and Culture', scope: 'National', year: '2022 - Present', image: null },
-    { title: 'Champion (1st)', competition: 'IDEAS Batch 11 Business Plan Competition', organizer: 'Universitas Gadjah Mada', scope: 'National', year: '2025', image: null },
-    { title: 'Champion (1st)', competition: 'RASIO 7.0 Data Science Competition', organizer: 'Universitas Padjadjaran', scope: 'International', year: '2023', image: rasioImg },
-    { title: 'Champion (1st)', competition: 'TECHFEST Big Data Competition', organizer: 'BINUS University', scope: 'National', year: '2023', image: techfestImg },
-    { title: 'Finalist (6th)', competition: 'RISTEK Datathon', organizer: 'Universitas UI', scope: 'National', year: '2023', image: datathonImg },
-    { title: 'Finalist (Top 10)', competition: 'FIND IT! Data Analytics Competition', organizer: 'Universitas Gadjah Mada', scope: 'National', year: '2023', image: finditImg }
+    { title: 'Champion (1st)', competition: 'IDEAS Batch 11 Business Plan Competition', organizer: 'Universitas Gadjah Mada', scope: 'National', year: '2025', image: ideasImg, certificateImage: ideasCertificateImg },
+    { title: 'Champion (1st)', competition: 'RASIO 7.0 Data Science Competition', organizer: 'Universitas Padjadjaran', scope: 'International', year: '2023', image: rasioImg, certificateImage: rasioImg },
+    { title: 'Champion (1st)', competition: 'TECHFEST Big Data Competition', organizer: 'BINUS University', scope: 'National', year: '2023', image: techfestImg, certificateImage: techfestImg },
+    { title: 'Finalist (6th)', competition: 'RISTEK Datathon', organizer: 'Universitas Indonesia', scope: 'National', year: '2023', image: datathonImg, certificateImage: datathonImg },
+    { title: 'Finalist (Top 10)', competition: 'FIND IT! Data Analytics Competition', organizer: 'Universitas Gadjah Mada', scope: 'National', year: '2023', image: finditImg, certificateImage: finditImg }
   ];
 
-  // Bookshelf list
-  const bookshelf = [
-    { title: 'Continuous Discovery Habits', author: 'Teresa Torres', cover: 'continuous_discovery_habits.jpg', takeaway: 'Structured discovery loops to map user problems to business outcomes.' },
-    { title: 'Evidence-Guided', author: 'Itamar Gilad', cover: 'evidence_guided.png', takeaway: 'Driving product roadmaps and features with GIST validation frameworks.' },
-    { title: 'Inspired', author: 'Marty Cagan', cover: 'inspired.jpg', takeaway: 'Understanding why strong product teams create products customers love.' },
-    { title: 'The Mom Test', author: 'Rob Fitzpatrick', cover: 'the_mom_test.jpg', takeaway: 'How to interview customers and get honest feedback when everyone is lying to you.' },
-    { title: 'Sprint', author: 'Jake Knapp', cover: 'sprint.jpg', takeaway: '5-day process to prototype and validate ideas with real users.' },
-    { title: 'User Story Mapping', author: 'Jeff Patton', cover: 'user_story_mapping.jpg', takeaway: 'Building maps to understand user journey steps and slice releases.' },
-    { title: 'Outcomes Over Output', author: 'Josh Seiden', cover: 'outcomes_over_output.png', takeaway: 'Shifting team goals from shipping features to driving actual user behavioral changes.' },
-    { title: 'Problem Solving 101', author: 'Ken Watanabe', cover: 'problem_solving_101.png', takeaway: 'Simple, powerful framework to diagnose root causes and map solutions.' }
+  // Bookshelf lists
+  const bookshelfCollections = [
+    {
+      id: 'product',
+      label: 'Product Shelf',
+      books: [
+        { title: 'Continuous Discovery Habits', cover: 'continuous_discovery_habits.jpg' },
+        { title: 'Evidence-Guided', cover: 'evidence_guided.png' },
+        { title: 'Inspired', cover: 'inspired.jpg' },
+        { title: 'The Mom Test', cover: 'the_mom_test.jpg' },
+        { title: 'Sprint', cover: 'sprint.jpg' },
+        { title: 'User Story Mapping', cover: 'user_story_mapping.jpg' },
+        { title: 'Outcomes Over Output', cover: 'outcomes_over_output.png' },
+        { title: 'Problem Solving 101', cover: 'problem_solving_101.png' },
+        { title: 'The PAYTECH Book', cover: 'the_paytech_book.jpg' },
+        { title: 'The Visual MBA', cover: 'the_visual_mba.jpg' },
+        { title: 'Lean Analytics', cover: 'lean_analytics.jpg' },
+        { title: 'Case Interview Secrets', cover: 'case_interview_secrets.jpg' }
+      ]
+    },
+    {
+      id: 'other',
+      label: 'Other Reads',
+      books: [
+        { title: 'Si Cacing dan Kotoran Kesayangannya', cover: 'si_cacing_dan_kotoran_kesayangannya.jpg' },
+        { title: 'Animal Farm', cover: 'animal_farm.jpg' },
+        { title: 'How to Not Die Alone', cover: 'how_to_not_die_alone.jpg' },
+        { title: 'The Alchemist', cover: 'the_alchemist.jpg' },
+        { title: 'The Little Prince', cover: 'the_little_prince.jpg' },
+        { title: 'The Subtle Art of Not Giving a F*ck', cover: 'the_subtle_art_of_not_giving_a_fuck.jpg' },
+        { title: 'Siddhartha', cover: 'siddhartha.jpg' },
+        { title: 'The Metamorphosis', cover: 'the_metamorphosis.jpg' },
+        { title: 'How to Live on 24 Hours a Day', cover: 'how_to_live_on_24_hours_a_day.jpg' },
+        { title: 'Atomic Habits', cover: 'atomic_habits.jpg' },
+        { title: 'Platonic', cover: 'platonic.jpg' },
+        { title: 'The Richest Man in Babylon', cover: 'the_richest_man_in_babylon.jpg' },
+        { title: 'Make It Stick', cover: 'make_it_stick.jpg' },
+        { title: 'The Stranger', cover: 'the_stranger.jpg' },
+        { title: "Man's Search for Meaning", cover: 'mans_search_for_meaning.jpg' },
+        { title: 'The Psychology of Money', cover: 'the_psychology_of_money.jpg' },
+        { title: 'The Giving Tree', cover: 'the_giving_tree.jpg' },
+        { title: 'The Very Hungry Caterpillar', cover: 'the_very_hungry_caterpillar.jpg' }
+      ]
+    }
   ];
+
+  function getBookshelfCoverClass(title: string) {
+    const customWidths: Record<string, string> = {
+      'The PAYTECH Book': 'w-48',
+      'The Very Hungry Caterpillar': 'w-48'
+    };
+
+    return customWidths[title] ?? 'w-24';
+  }
+
+  let activeBookshelfCollection = $state('product');
+  let activeBookshelfBooks = $derived(
+    [...(bookshelfCollections.find((collection) => collection.id === activeBookshelfCollection)?.books ?? [])]
+      .sort((a, b) => a.title.localeCompare(b.title))
+  );
 
   // Volunteering & Leadership list
   const volunteering = [
@@ -387,10 +524,10 @@
       period: 'Aug 2025',
       duration: '1 mo',
       category: 'Education',
-      description: 'Delivered opening keynote to <strong>540+ CS freshmen</strong> on career path exploration, tech vs. non-tech trajectories, and building continuous learning frameworks.',
+      audience: '540+ participants',
+      description: 'Opening keynote on career path exploration, tech versus non-tech trajectories, and building a continuous learning system.',
       type: 'Speaking',
-      badge: 'Keynote Speech',
-      attachments: [{ name: 'Certificate', type: 'certificate', image: null }]
+      attachments: [{ name: 'Certificate', type: 'certificate', image: ddp0SpeakerCertImg }]
     },
     {
       role: 'Speaker',
@@ -398,9 +535,9 @@
       period: 'May 2026',
       duration: '1 mo',
       category: 'Social Services',
-      description: 'Conducted Project Management workshop for <strong>40+ members</strong> on structured execution, vision alignment, and metric-driven project tracking.',
+      audience: '40+ participants',
+      description: 'Project management workshop on structured execution, vision alignment, and metric-driven progress tracking.',
       type: 'Speaking',
-      badge: 'Workshop Host',
       attachments: []
     },
     {
@@ -409,27 +546,35 @@
       period: 'Aug 2025',
       duration: '1 mo',
       category: 'Education',
-      description: 'Shared competitive strategies with <strong>60+ freshmen</strong>, focusing on teamwork dynamics, learning by doing, and leveraging failures for competitive growth.',
+      audience: '60+ participants',
+      description: 'Sharing session on competition strategy, teamwork dynamics, learning by doing, and turning failures into growth.',
       type: 'Speaking',
-      badge: 'Sharing Session',
-      attachments: [{ name: 'Certificate', type: 'certificate', image: null }]
+      attachments: [{ name: 'Certificate', type: 'certificate', image: ukmKmbuiSharingCertImg }]
+    },
+    {
+      role: 'Guest Speaker',
+      organization: 'Ruangguru',
+      period: '2022',
+      duration: '1 episode',
+      category: 'Education',
+      audience: 'National TV',
+      description: 'Shared my personal UTBK journey, how Ruangguru supported my preparation, and the path that led me to Universitas Indonesia.',
+      type: 'Speaking',
+      attachments: [{ name: 'Certificate', type: 'certificate', image: ruangguruUtbkSpeakerCertImg }]
     },
     {
       role: 'Local Organizing Committee',
-      organization: 'The Pacific Rim International Conference on Artificial Intelligence (PRICAI)',
+      organization: 'The Pacific Rim International Conference on Artificial Intelligence',
       period: 'Nov 2023',
       duration: '1 mo',
       category: 'Science and Technology',
       description: 'Managed logistics and international delegate hospitality for the PRICAI AI conference in Jakarta.',
       type: 'Leadership',
-      attachments: [
-        { name: 'Farewell', type: 'farewell', image: null },
-        { name: 'Certificate', type: 'certificate', image: null }
-      ]
+      attachments: []
     },
     {
       role: 'Engagement with AIESEC',
-      organization: 'AIESEC Universitas UI',
+      organization: 'AIESEC in UI',
       period: 'Nov 2023 - Feb 2024',
       duration: '4 mos',
       category: 'Environment',
@@ -461,11 +606,21 @@
       ]
     },
     {
+      role: 'Project Officer of Desa Binaan 2024',
+      organization: 'UKM KMBUI',
+      period: 'May 2024 - Sep 2024',
+      duration: '5 mos',
+      category: 'Social Services',
+      description: 'Led Desa Binaan 2024 program execution, coordinating planning, team operations, and community delivery.',
+      type: 'Leadership',
+      attachments: []
+    },
+    {
       role: 'Head of Public Relations for Vesak 2024',
       organization: 'UKM KMBUI',
       period: 'Apr 2024 - Jun 2024',
       duration: '3 mos',
-      category: 'Arts and Culture',
+      category: 'Social Services',
       description: 'Led marketing, ticket distributions, and stakeholder relations for the annual cultural event.',
       type: 'Leadership',
       attachments: [{ name: 'Event Day', type: 'photo', image: null }]
@@ -486,9 +641,9 @@
       period: 'Mar 2023 - Sep 2023',
       duration: '7 mos',
       category: 'Arts and Culture',
-      description: 'Managed sales strategies and hosted episode 1 of the NGOPREK! podcast.',
+      description: 'Managed sales strategies and campaign execution for event outreach.',
       type: 'Community',
-      attachments: [{ name: 'NGOPREK! Podcast Eps 1', type: 'media', image: null }]
+      attachments: []
     },
     {
       role: 'Staff of Public Relations, Publication, Documentation, and Creative',
@@ -502,7 +657,7 @@
     },
     {
       role: 'Super Member of Data Science',
-      organization: 'Google Developer Student Club Universitas UI',
+      organization: 'Google Developer Student Club in UI',
       period: 'Jun 2023 - Jul 2023',
       duration: '2 mos',
       category: 'Science and Technology',
@@ -512,7 +667,7 @@
     },
     {
       role: 'Intern Staff at Department of Business and Partnership',
-      organization: 'BEM Fakultas Ilmu Komputer Universitas UI',
+      organization: 'BEM Fasilkom UI',
       period: 'Sep 2022 - Dec 2022',
       duration: '4 mos',
       category: 'Science and Technology',
@@ -526,24 +681,57 @@
       period: 'Aug 2023 - Sep 2023',
       duration: '2 mos',
       category: 'Education',
+      audience: '3 mentees',
       description: 'Coached incoming freshmen on fundamental programming concepts, Git version control, and Linux terminal operations.',
       type: 'Speaking',
       badge: 'Mentorship',
-      attachments: []
+      attachments: [{ name: 'Mentoring Session', type: 'photo', image: ddp0MentorImg }]
     }
   ];
 
   // Dynamic speaking & volunteering split
-  const speakingList = volunteering.filter(v => v.type === 'Speaking');
+  const speakingList = volunteering
+    .filter(v => v.type === 'Speaking')
+    .sort((a, b) => parsePeriodStart(a.period) - parsePeriodStart(b.period));
   const volunteeringList = volunteering.filter(v => v.type !== 'Speaking');
 
-  let activeVolunteerFilter = $state('all');
-  
-  let filteredVolunteering = $derived(
-    activeVolunteerFilter === 'all'
-      ? volunteeringList
-      : volunteeringList.filter(v => v.type === activeVolunteerFilter)
-  );
+  let groupedVolunteering = $derived.by(() => {
+    const groups = new Map<
+      string,
+      {
+        organization: string;
+        items: typeof volunteeringList;
+      }
+    >();
+
+    for (const entry of volunteeringList) {
+      const existing = groups.get(entry.organization);
+
+      if (existing) {
+        existing.items.push(entry);
+        continue;
+      }
+
+      groups.set(entry.organization, {
+        organization: entry.organization,
+        items: [entry]
+      });
+    }
+
+    return Array.from(groups.values()).map((group) => ({
+      ...group,
+      commonCategory:
+        group.items.every((item) => item.category === group.items[0]?.category)
+          ? group.items[0]?.category
+          : null,
+      initials: getOrganizationInitials(group.organization),
+      logo: organizationLogoMap[group.organization] ?? null,
+      items: [...group.items].sort((a, b) => parsePeriodStart(b.period) - parsePeriodStart(a.period))
+    }));
+  });
+
+  let multiRoleVolunteeringGroups = $derived(groupedVolunteering.filter((group) => group.items.length > 1));
+  let singleRoleVolunteeringGroups = $derived(groupedVolunteering.filter((group) => group.items.length === 1));
 
   // Skill categories list
   const skillCategories = [
@@ -623,10 +811,47 @@
     transform-origin: top;
     backface-visibility: hidden;
   }
+
+  :global(.reveal-on-scroll) {
+    opacity: 0;
+    transform: translate3d(0, var(--reveal-distance, 26px), 0) scale(0.985);
+    filter: blur(10px);
+    transition:
+      opacity 720ms cubic-bezier(0.22, 1, 0.36, 1) var(--reveal-delay, 0ms),
+      transform 720ms cubic-bezier(0.22, 1, 0.36, 1) var(--reveal-delay, 0ms),
+      filter 720ms cubic-bezier(0.22, 1, 0.36, 1) var(--reveal-delay, 0ms);
+    will-change: opacity, transform, filter;
+  }
+
+  :global([data-reveal='idle']) {
+    opacity: 0;
+    transform: translate3d(0, var(--reveal-distance, 26px), 0) scale(0.985);
+    filter: blur(10px);
+    transition:
+      opacity 720ms cubic-bezier(0.22, 1, 0.36, 1) var(--reveal-delay, 0ms),
+      transform 720ms cubic-bezier(0.22, 1, 0.36, 1) var(--reveal-delay, 0ms),
+      filter 720ms cubic-bezier(0.22, 1, 0.36, 1) var(--reveal-delay, 0ms);
+    will-change: opacity, transform, filter;
+  }
+
+  :global([data-reveal='visible']) {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+    filter: blur(0);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :global([data-reveal]) {
+      opacity: 1;
+      transform: none;
+      filter: none;
+      transition: none;
+    }
+  }
 </style>
 
 <!-- Global Layout Container (Luxury Fintech Theme: Charcoal & Gold/Crimson) -->
-<div class="min-h-screen bg-[#0C0A09] bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-stone-900 via-[#0A0908] to-[#120909] font-sans text-stone-200 antialiased selection:bg-amber-500/30 selection:text-amber-200 relative overflow-x-hidden pb-12">
+<div class="flex min-h-screen flex-col bg-[#0C0A09] bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-stone-900 via-[#0A0908] to-[#120909] font-sans text-stone-200 antialiased selection:bg-amber-500/30 selection:text-amber-200 relative overflow-x-hidden">
   
   <!-- Subtle Chinese Clouds Overlay Pattern -->
   <div class="absolute inset-0 pointer-events-none opacity-[0.03] mix-blend-overlay bg-repeat" style="background-image: url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2260%22 height=%2260%22 viewBox=%220 0 60 60%22><path d=%22M30 15c-3 0-5.5 2.5-5.5 5.5s2.5 5.5 5.5 5.5 5.5-2.5 5.5-5.5-2.5-5.5-5.5-5.5zm-15 20c-3 0-5.5 2.5-5.5 5.5s2.5 5.5 5.5 5.5 5.5-2.5 5.5-5.5-2.5-5.5-5.5-5.5zm30 0c-3 0-5.5 2.5-5.5 5.5s2.5 5.5 5.5 5.5 5.5-2.5 5.5-5.5-2.5-5.5-5.5-5.5z%22 fill=%22%23F59E0B%22 fill-opacity=%220.6%22 fill-rule=%22evenodd%22/></svg>');"></div>
@@ -760,17 +985,10 @@
       <div class="flex items-center gap-3">
         <a href="/dashboard" class="group flex items-center gap-2">
           <img src={logoProduck} alt="Produck Logo" class="size-6 object-contain transition-transform group-hover:scale-105" />
-          <span class="font-outfit text-lg font-bold tracking-wider text-amber-500 uppercase">produck</span>
+          <span class="font-display text-2xl leading-none text-amber-500">Produck</span>
         </a>
       </div>
       
-      <!-- Nav Menu items -->
-      <nav class="hidden md:flex items-center gap-6 text-xs font-semibold text-stone-400">
-        {#each sections as section (section.id)}
-          <a href="#{section.id}" class="hover:text-amber-400 transition-colors uppercase tracking-wider">{section.label}</a>
-        {/each}
-      </nav>
-
       <!-- Auth Action -->
       <div class="flex items-center gap-4">
         {#if data.currentUser}
@@ -794,7 +1012,10 @@
     </div>
   </header>
   <!-- Hero Section -->
-  <section class="relative overflow-hidden px-6 pt-12 pb-8 md:pt-16 md:pb-12">
+  <section
+    use:reveal={{ distance: 18 }}
+    class="reveal-on-scroll relative overflow-hidden px-6 pt-12 pb-8 md:pt-16 md:pb-12"
+  >
     <!-- Red & Gold Ambient glow circles -->
     <div class="absolute top-10 right-10 -z-10 size-96 rounded-full bg-amber-500/5 blur-[120px]"></div>
     <div class="absolute bottom-10 left-10 -z-10 size-96 rounded-full bg-red-600/5 blur-[120px]"></div>
@@ -806,11 +1027,11 @@
         <div class="md:col-span-7 md:row-span-2 space-y-6 text-center md:text-left order-2 md:order-1">
           <div class="space-y-3">
             <h1 class="font-outfit text-4xl font-extrabold tracking-tight text-white sm:text-5xl md:text-6xl">
-              Edward Salim <span class="font-chinese text-amber-500 text-3xl font-medium tracking-normal ml-3">叶艾德</span>
+              Edward Salim <span class="font-chinese text-amber-500 text-3xl font-medium tracking-normal ml-3">林明星</span>
             </h1>
             
             <!-- Headline rotater / typing effect in Gold -->
-            <div class="min-h-[4.5rem] sm:min-h-[3.5rem] md:min-h-[2.5rem] h-auto font-chinese text-xl font-bold text-amber-400 sm:text-2xl md:text-3xl leading-snug pb-1">
+            <div class="min-h-[4.5rem] sm:min-h-[3.5rem] md:min-h-[2.5rem] h-auto font-chinese text-xl font-bold text-amber-400 sm:text-2xl md:text-3xl leading-snug pb-1 md:whitespace-nowrap">
               <span>{currentRoleText}</span>
               <span class="inline-block w-0.5 h-6 ml-0.5 bg-amber-400 animate-pulse align-middle"></span>
             </div>
@@ -933,18 +1154,18 @@
 
       <!-- Quick Stats Dashboard (Styled as Gold Bullion Boxes) -->
       <div class="mt-12 grid grid-cols-2 gap-4 sm:grid-cols-4">
-        {#each stats as stat (stat.label)}
-          <div class="relative overflow-hidden rounded-xl border border-amber-500/20 bg-gradient-to-br from-amber-500/10 to-amber-700/5 p-5 shadow-lg backdrop-blur-md transition-all hover:scale-[1.02] hover:border-amber-400/50 hover:shadow-amber-500/5 group">
+        {#each stats as stat, idx (stat.label)}
+          <div
+            use:reveal={{ delay: 80 + idx * 90, distance: 24 }}
+            class="reveal-on-scroll group relative overflow-hidden rounded-xl border border-amber-500/20 bg-gradient-to-br from-amber-500/10 to-amber-700/5 p-5 shadow-lg backdrop-blur-md transition-all hover:scale-[1.02] hover:border-amber-400/50 hover:shadow-amber-500/5"
+          >
             
             <!-- Shimmer effect -->
             <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
             
-            <div class="flex items-start justify-between">
+            <div class="flex items-start justify-between gap-3">
               <span class="font-outfit text-2xl font-black text-amber-400 sm:text-3xl tracking-tight">{stat.value}</span>
-              <span class="text-[9px] font-black bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded flex items-center gap-0.5">
-                <TrendingUp class="size-2.5" />
-                {stat.positive}
-              </span>
+              <svelte:component this={stat.icon} class="size-8 text-amber-400/25 shrink-0" />
             </div>
             
             <p class="mt-2 text-[10px] font-black uppercase tracking-widest text-stone-400">{stat.label}</p>
@@ -963,7 +1184,10 @@
   </section>
 
   <!-- Infinite Skill Marquee Ticker -->
-  <section class="w-full overflow-hidden border-y border-stone-850 bg-stone-900/40 backdrop-blur-xs py-4">
+  <section
+    use:reveal={{ distance: 20 }}
+    class="reveal-on-scroll w-full overflow-hidden border-y border-stone-850 bg-stone-900/40 backdrop-blur-xs py-4"
+  >
     <div class="animate-marquee gap-8 items-center">
       <!-- Normal list -->
       {#each marqueeSkills as skill (skill.name)}
@@ -983,40 +1207,39 @@
   </section>
 
   <!-- Main Content Grid -->
-  <main class="mx-auto max-w-5xl px-6 py-12 space-y-16">
+  <main class="mx-auto w-full max-w-5xl flex-1 px-6 py-12 space-y-16">
 
     <!-- Education Section (Styled as Scholarship Decree) -->
-    <section id="education" class="scroll-mt-24 space-y-6">
+    <section use:reveal={{}} class="reveal-on-scroll scroll-mt-24 space-y-6" id="education">
       <div class="flex items-center gap-3 border-b border-stone-800 pb-3">
         <GraduationCap class="size-6 text-amber-500" />
-        <h2 class="font-outfit text-2xl font-bold tracking-tight text-white">
-          Education Credentials <span class="font-chinese text-amber-500/80 font-normal text-lg ml-2">学历</span>
-        </h2>
+          <h2 class="font-outfit text-2xl font-bold tracking-tight text-white">Academic Background</h2>
       </div>
 
       <!-- Scholarly Decree Box -->
       <div class="relative overflow-hidden rounded-2xl border-2 border-amber-600/40 bg-gradient-to-br from-[#181514] to-[#120F0E] p-6 md:p-8 shadow-xl">
+        <div class="absolute inset-0">
+          <img
+            src={uiCampusImg}
+            alt="Universitas Indonesia campus"
+            class="h-full w-full object-cover object-center opacity-38"
+          />
+          <div class="absolute inset-0 bg-gradient-to-r from-[#120F0E]/88 via-[#120F0E]/70 to-[#120F0E]/52"></div>
+          <div class="absolute inset-0 bg-gradient-to-t from-[#120F0E]/78 via-transparent to-[#120F0E]/42"></div>
+        </div>
         <!-- Golden Corner Brackets -->
         <div class="absolute top-2 left-2 size-5 border-t-2 border-l-2 border-amber-500/70"></div>
         <div class="absolute top-2 right-2 size-5 border-t-2 border-r-2 border-amber-500/70"></div>
         <div class="absolute bottom-2 left-2 size-5 border-b-2 border-l-2 border-amber-500/70"></div>
         <div class="absolute bottom-2 right-2 size-5 border-b-2 border-r-2 border-amber-500/70"></div>
 
-        <!-- Large watermark Chinese character "学" (Study) in background -->
-        <div class="absolute right-8 bottom-4 text-amber-500/5 select-none pointer-events-none text-9xl font-chinese font-bold leading-none">学</div>
-
         <div class="flex flex-col justify-between gap-4 md:flex-row md:items-start relative z-10">
-          <div class="space-y-3">
-            <div class="flex items-center gap-2">
-              <span class="rounded bg-red-950/60 border border-red-500/30 text-amber-400 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider">Scholarship Recipient</span>
-              <span class="text-xs text-stone-500">Universitas Indonesia</span>
-            </div>
-            
+          <div class="min-w-0 flex-1 space-y-3">
             <h3 class="font-outfit text-xl font-bold text-white sm:text-2xl">Universitas Indonesia</h3>
-            <p class="text-sm font-semibold text-amber-400">Bachelor of Computer Science &middot; Information Systems Major</p>
+            <p class="text-sm font-semibold text-amber-400">B.Comp.Sc. in Information Systems</p>
             <p class="text-sm text-stone-400">GPA: <span class="font-bold text-stone-200">3.57 / 4.00</span> &middot; 8th Semester (Final Year)</p>
             
-            <ul class="mt-4 list-disc pl-5 space-y-2.5 text-xs text-stone-400 md:max-w-xl">
+            <ul class="mt-4 list-disc pl-5 space-y-2.5 text-xs text-stone-400 md:max-w-none">
               <li>
                 <strong>2nd Place</strong> - Most Outstanding Student of Faculty of Computer Science (Pilmapres Fasilkom UI, 2025).
               </li>
@@ -1028,7 +1251,7 @@
           
           <div class="shrink-0 text-left md:text-right">
             <span class="inline-block rounded-full bg-stone-900 border border-stone-800 px-3 py-1 text-xs font-bold text-stone-400">
-              Jul 2022 - Jul 2026 (expected)
+              Jul 2022 - Jul 2026
             </span>
           </div>
         </div>
@@ -1036,13 +1259,11 @@
     </section>
 
     <!-- Experience Section (Interactive Digital Wallet & Credit Cards) -->
-    <section id="experience" class="scroll-mt-24 space-y-6">
+    <section use:reveal={{}} class="reveal-on-scroll scroll-mt-24 space-y-6" id="experience">
       <div class="flex items-center justify-between border-b border-stone-800 pb-3">
         <div class="flex items-center gap-3">
           <Briefcase class="size-6 text-amber-500" />
-          <h2 class="font-outfit text-2xl font-bold tracking-tight text-white">
-            Digital Wallet & Experience <span class="font-chinese text-amber-500/80 font-normal text-lg ml-2">经历</span>
-          </h2>
+          <h2 class="font-outfit text-2xl font-bold tracking-tight text-white">Work History</h2>
         </div>
         <span class="text-xs text-stone-500 max-md:hidden font-mono">Toggle cards to view credentials</span>
       </div>
@@ -1137,76 +1358,57 @@
     </section>
 
     <!-- Speaking Section (VIP Presenter Passes) -->
-    <section id="speaking" class="scroll-mt-24 space-y-6">
+    <section use:reveal={{}} class="reveal-on-scroll scroll-mt-24 space-y-6" id="speaking">
       <div class="flex items-center gap-3 border-b border-stone-800 pb-3">
         <Mic class="size-6 text-amber-500" />
-        <h2 class="font-outfit text-2xl font-bold tracking-tight text-white">
-          Public Speaking & Keynotes <span class="font-chinese text-amber-500/80 font-normal text-lg ml-2">演讲与分享</span>
-        </h2>
+        <h2 class="font-outfit text-2xl font-bold tracking-tight text-white">Public Talks</h2>
       </div>
 
       <!-- Presenter Pass list -->
-      <div class="space-y-6">
+      <div class="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
         {#each speakingList as item, idx (item.role + item.organization + item.period)}
-          <div class="relative overflow-hidden rounded-xl border border-amber-500/20 bg-gradient-to-r from-stone-900 via-stone-950/90 to-stone-900 p-6 flex flex-col justify-between md:flex-row gap-6 shadow-md hover:border-amber-400/50 hover:shadow-lg transition-all duration-300 group">
+          <div class="relative overflow-hidden rounded-xl border border-amber-500/20 bg-gradient-to-br from-stone-900 via-stone-950/90 to-stone-900 p-3.5 shadow-md hover:border-amber-400/50 hover:shadow-lg transition-all duration-300 group">
             
             <!-- Shimmer effect -->
             <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/2 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
 
-            <!-- Left Side: Ticket Main Info -->
-            <div class="flex-1 space-y-3 relative z-10">
-              <div class="flex items-center gap-2">
-                <span class="rounded bg-red-950 border border-red-800/40 px-2.5 py-0.5 text-[9px] font-black text-amber-400 uppercase tracking-widest">
-                  {item.badge || item.type}
-                </span>
-                <span class="text-xs text-stone-500 font-mono">{item.period}</span>
+            <div class="relative z-10 flex h-full flex-col gap-3 text-center">
+              <div class="min-w-0 space-y-2">
+                <div class="flex flex-wrap items-center justify-center gap-2">
+                  <span class="rounded border border-amber-500/20 bg-amber-500/8 px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.18em] text-amber-400">
+                    Talk #{idx + 1}
+                  </span>
+                  <span class="text-[11px] text-stone-500 font-mono">{item.period}</span>
+                </div>
+                <h3 class="font-outfit text-sm font-bold text-white group-hover:text-amber-400 transition-colors sm:text-base">
+                  {item.role}
+                </h3>
+                <p class="text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-500/80">{item.organization}</p>
+                <p class="text-xs leading-relaxed text-stone-400">{@html item.description}</p>
               </div>
-              <h3 class="font-outfit text-base font-bold text-white group-hover:text-amber-400 transition-colors">
-                {item.role}
-              </h3>
-              <p class="text-xs font-semibold text-amber-500/80">{item.organization}</p>
-              <p class="text-xs leading-relaxed text-stone-400">{@html item.description}</p>
-            </div>
-            
-            <!-- Ticket perforation divider (dashed line) -->
-            <div class="hidden md:flex flex-col items-center justify-between py-2 relative shrink-0">
-              <!-- Top punch circle -->
-              <div class="absolute -top-9 size-6 rounded-full bg-[#0C0A09] border border-amber-500/20 group-hover:border-amber-400/50 z-30"></div>
-              <div class="w-px h-full border-r border-dashed border-stone-800"></div>
-              <!-- Bottom punch circle -->
-              <div class="absolute -bottom-9 size-6 rounded-full bg-[#0C0A09] border border-amber-500/20 group-hover:border-amber-400/50 z-30"></div>
-            </div>
-            
-            <!-- Right Side: Ticket Stub (Metadata & Action) -->
-            <div class="w-full md:w-44 flex flex-col justify-center items-center text-center p-4 bg-stone-900/40 border border-stone-800/40 rounded-lg relative overflow-hidden shrink-0 z-10">
-              <Mic class="size-6 text-amber-500/80 mb-2" />
-              <span class="text-[9px] font-black text-stone-500 uppercase tracking-widest">
-                {item.role === 'Mentor' ? 'Program Mentor' : 'Guest Speaker'}
-              </span>
-              <span class="text-xs font-bold text-stone-300 mt-1">
-                {item.role === 'Mentor' ? '2-Month Term' : 'One-Time Event'}
-              </span>
-              
-              {#if item.attachments && item.attachments.length > 0}
-                {#each item.attachments as att, attIdx (attIdx)}
-                  {#if att.image}
-                    <button 
-                      type="button"
-                      class="mt-3 inline-flex items-center gap-1 rounded bg-amber-500 hover:bg-amber-400 text-stone-950 px-2.5 py-1 text-[10px] font-bold transition-all cursor-pointer"
-                      onclick={() => openLightbox(att.image || '', `${item.role} @ ${item.organization} - ${att.name}`)}
-                    >
-                      <span>View Credentials</span>
-                      <ArrowUpRight class="size-3" />
-                    </button>
-                  {:else}
-                    <span class="mt-3 text-[9px] text-stone-500 uppercase font-bold bg-stone-900 border border-stone-800 px-2 py-0.5 rounded">
-                      {att.name} Verified
-                    </span>
-                  {/if}
-                {/each}
-              {:else}
-                <span class="mt-3 text-[9px] text-stone-600 uppercase font-bold">Verified Speaker</span>
-              {/if}
+
+              <div class="mt-auto rounded-lg border border-amber-500/20 bg-amber-500/6 px-3 py-2.5 text-center">
+                <p class="text-[9px] font-black uppercase tracking-[0.22em] text-stone-500">Audience</p>
+                <p class="mt-1 font-outfit text-lg font-black text-amber-400">{item.audience ?? item.duration}</p>
+
+                {#if item.attachments && item.attachments.length > 0}
+                  {#each item.attachments as att, attIdx (attIdx)}
+                    {#if att.image}
+                      <button
+                        type="button"
+                        class="mt-3 block w-full overflow-hidden rounded-lg border border-amber-500/20 bg-stone-950/60 cursor-pointer"
+                        onclick={() => openLightbox(att.image || '', `${item.role} @ ${item.organization} - ${att.name}`)}
+                      >
+                        <img
+                          src={att.image}
+                          alt={`${item.organization} ${att.name}`}
+                          class="h-28 w-full object-cover object-center transition-transform duration-300 group-hover:scale-[1.02]"
+                        />
+                      </button>
+                    {/if}
+                  {/each}
+                {/if}
+              </div>
             </div>
           </div>
         {/each}
@@ -1214,139 +1416,181 @@
     </section>
 
     <!-- Volunteering Section (Red Lacquer Card Grid) -->
-    <section id="volunteering" class="scroll-mt-24 space-y-6">
-      <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between border-b border-stone-800 pb-3">
+    <section use:reveal={{}} class="reveal-on-scroll scroll-mt-24 space-y-6" id="volunteering">
+      <div class="flex items-center gap-3 border-b border-stone-800 pb-3">
         <div class="flex items-center gap-3">
           <Heart class="size-6 text-red-500 animate-pulse" />
-          <h2 class="font-outfit text-2xl font-bold tracking-tight text-white">
-            Volunteering & Leadership <span class="font-chinese text-amber-500/80 font-normal text-lg ml-2">志愿与领导力</span>
-          </h2>
-        </div>
-        
-        <!-- Filter Pills -->
-        <div class="flex flex-wrap gap-1.5">
-          <button 
-            type="button"
-            class="px-3.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border transition-all cursor-pointer {activeVolunteerFilter === 'all' ? 'bg-red-700 border-red-600 text-white shadow-md shadow-red-950' : 'bg-stone-900 border-stone-800 text-stone-400 hover:border-stone-700 hover:text-stone-200'}"
-            onclick={() => activeVolunteerFilter = 'all'}
-          >
-            All
-          </button>
-
-          <button 
-            type="button"
-            class="px-3.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border transition-all cursor-pointer {activeVolunteerFilter === 'Leadership' ? 'bg-red-700 border-red-600 text-white shadow-md shadow-red-950' : 'bg-stone-900 border-stone-800 text-stone-400 hover:border-stone-700 hover:text-stone-200'}"
-            onclick={() => activeVolunteerFilter = 'Leadership'}
-          >
-            Leadership
-          </button>
-          <button 
-            type="button"
-            class="px-3.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border transition-all cursor-pointer {activeVolunteerFilter === 'Community' ? 'bg-red-700 border-red-600 text-white shadow-md shadow-red-950' : 'bg-stone-900 border-stone-800 text-stone-400 hover:border-stone-700 hover:text-stone-200'}"
-            onclick={() => activeVolunteerFilter = 'Community'}
-          >
-            Community
-          </button>
+          <h2 class="font-outfit text-2xl font-bold tracking-tight text-white">Community Work</h2>
         </div>
       </div>
 
-      <!-- Volunteer Card Grid -->
-      <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {#each filteredVolunteering as item (item.role + item.organization + item.period)}
-          <!-- Crimson Lacquer styled card -->
-          <div class="group flex flex-col justify-between rounded-xl border border-red-950/60 bg-stone-950 p-6 shadow-md hover:-translate-y-1 hover:border-amber-500/40 hover:shadow-red-950/30 transition-all duration-300 relative overflow-hidden">
-            
-            <!-- Small Red Knot indicator/icon overlay -->
-            <div class="absolute top-2.5 right-3 opacity-20 group-hover:opacity-40 transition-opacity">
-              <span class="text-sm">🏮</span>
-            </div>
+      {#if multiRoleVolunteeringGroups.length > 0}
+        <div class="grid grid-cols-1 gap-6">
+          {#each multiRoleVolunteeringGroups as group (group.organization)}
+            <!-- Crimson Lacquer styled card -->
+            <div class="group flex flex-col justify-between rounded-xl border border-red-900/70 bg-gradient-to-br from-[#170808] via-[#120707] to-[#090505] p-4 shadow-md hover:-translate-y-1 hover:border-amber-500/45 hover:shadow-[0_16px_40px_rgba(120,24,24,0.28)] transition-all duration-300 relative overflow-hidden">
+              <div class="space-y-3">
+                <div class="flex items-start gap-2.5">
+                  <div class="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-amber-500/30 bg-gradient-to-br from-red-900 via-red-950 to-stone-950">
+                    {#if group.logo}
+                      <img src={group.logo} alt={`${group.organization} logo`} class="h-full w-full object-cover object-center" />
+                    {:else}
+                      <span class="font-outfit text-xs font-black tracking-widest text-amber-400">
+                        {group.initials}
+                      </span>
+                    {/if}
+                  </div>
+                  <div class="min-w-0 space-y-1">
+                    <h3 class="font-outfit text-sm font-bold text-white group-hover:text-amber-400 transition-colors leading-snug">
+                      {group.organization}
+                    </h3>
+                    {#if group.commonCategory}
+                      <p class="text-[10px] font-semibold uppercase tracking-[0.18em] text-red-300/95">
+                        {group.commonCategory}
+                      </p>
+                    {/if}
+                  </div>
+                </div>
 
-            <div class="space-y-3">
-              <div class="flex items-start justify-between gap-2">
-                <span class="rounded bg-red-950 border border-red-800/40 px-2 py-0.5 text-[8px] font-black text-red-400 uppercase tracking-widest">
-                  {item.category}
-                </span>
-                <span class="text-[9px] text-stone-500 font-mono font-medium">
-                  {item.period}
-                </span>
-              </div>
-              
-              <div class="space-y-1">
-                <h3 class="font-outfit text-sm font-bold text-white group-hover:text-amber-400 transition-colors leading-snug">
-                  {item.role}
-                </h3>
-                <p class="text-xs font-semibold text-stone-400">
-                  {item.organization}
-                </p>
-              </div>
-              
-              {#if item.description}
-                <p class="text-[11px] leading-relaxed text-stone-500">
-                  {@html item.description}
-                </p>
-              {/if}
-            </div>
+                <div class="space-y-2.5">
+                  {#each group.items as item (item.role + item.period)}
+                    <div class="flex h-full flex-col rounded-lg border border-red-950/40 bg-[#1a1111]/88 p-2.5">
+                      <div class="flex items-start justify-between gap-2">
+                        {#if !group.commonCategory}
+                          <span class="rounded bg-red-950/80 border border-red-700/45 px-2 py-0.5 text-[8px] font-black text-red-300 uppercase tracking-widest">
+                            {item.category}
+                          </span>
+                        {:else}
+                          <span></span>
+                        {/if}
+                      </div>
 
-            <!-- Attachments & Metadata -->
-            {#if item.attachments && item.attachments.length > 0}
-              <div class="mt-4 pt-3 border-t border-stone-850 flex flex-wrap gap-1.5">
-                {#each item.attachments as att, idx (idx)}
-                  {#if att.image}
-                    <button 
-                      type="button" 
-                      class="inline-flex items-center gap-1 rounded bg-stone-900 border border-stone-800 px-2 py-0.5 text-[9px] font-bold text-amber-500 hover:text-amber-400 transition-colors cursor-zoom-in"
-                      onclick={() => openLightbox(att.image || '', `${item.role} @ ${item.organization} - ${att.name}`)}
-                    >
-                      <span>📎</span>
-                      <span>{att.name}</span>
-                    </button>
-                  {:else}
-                    <span class="inline-flex items-center gap-1 rounded bg-stone-900 border border-stone-850 px-2 py-0.5 text-[9px] font-medium text-stone-600 select-none">
-                      <span>📎</span>
-                      <span>{att.name}</span>
+                      <div class="mt-1.5 space-y-1">
+                        <div class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+                          <h4 class="font-outfit text-[13px] font-bold text-white leading-snug">
+                            {item.role}
+                          </h4>
+                          <span class="text-[9px] text-stone-500 font-mono font-medium">
+                            {item.period}
+                          </span>
+                        </div>
+
+                        {#if item.description}
+                          <p class="text-[10px] leading-relaxed text-stone-500">
+                            {@html item.description}
+                          </p>
+                        {/if}
+                      </div>
+
+                      {#if item.attachments && item.attachments.length > 0}
+                        <div class="mt-2.5 flex flex-wrap gap-1.5 border-t border-stone-850 pt-2.5">
+                          {#each item.attachments as att, idx (idx)}
+                            {#if att.image}
+                              <button 
+                                type="button" 
+                                class="inline-flex items-center gap-1 rounded bg-stone-900 border border-stone-800 px-2 py-0.5 text-[9px] font-bold text-amber-500 hover:text-amber-400 transition-colors cursor-zoom-in"
+                                onclick={() => openLightbox(att.image || '', `${item.role} @ ${item.organization} - ${att.name}`)}
+                              >
+                                <span>📎</span>
+                                <span>{att.name}</span>
+                              </button>
+                            {:else}
+                              <span class="inline-flex items-center gap-1 rounded bg-stone-900 border border-stone-850 px-2 py-0.5 text-[9px] font-medium text-stone-600 select-none">
+                                <span>📎</span>
+                                <span>{att.name}</span>
+                              </span>
+                            {/if}
+                          {/each}
+                        </div>
+                      {/if}
+                    </div>
+                  {/each}
+                </div>
+              </div>
+            </div>
+          {/each}
+        </div>
+      {/if}
+
+      {#if singleRoleVolunteeringGroups.length > 0}
+        <div class="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+          {#each singleRoleVolunteeringGroups as group (group.organization)}
+            {@const item = group.items[0]}
+            <div class="group flex h-full flex-col rounded-xl border border-red-900/70 bg-gradient-to-br from-[#170808] via-[#120707] to-[#090505] p-3 shadow-md hover:-translate-y-1 hover:border-amber-500/45 hover:shadow-[0_16px_40px_rgba(120,24,24,0.28)] transition-all duration-300 relative overflow-hidden">
+              <div class="flex h-full flex-col gap-2.5">
+                <div class="flex min-h-14 items-start gap-2">
+                  <div class="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-amber-500/30 bg-gradient-to-br from-red-900 via-red-950 to-stone-950">
+                    {#if group.logo}
+                      <img src={group.logo} alt={`${group.organization} logo`} class="h-full w-full object-cover object-center" />
+                    {:else}
+                      <span class="font-outfit text-xs font-black tracking-widest text-amber-400">
+                        {group.initials}
+                      </span>
+                    {/if}
+                  </div>
+                  <div class="min-w-0 flex-1 space-y-1">
+                    <h3 class="font-outfit text-[13px] font-bold text-white group-hover:text-amber-400 transition-colors leading-snug">
+                      {group.organization}
+                    </h3>
+                    {#if group.commonCategory}
+                      <p class="text-[9px] font-semibold uppercase tracking-[0.18em] text-red-300/95">
+                        {group.commonCategory}
+                      </p>
+                    {/if}
+                  </div>
+                </div>
+
+                <div class="flex min-h-24 flex-1 flex-col rounded-lg border border-red-950/40 bg-[#1a1111]/88 p-2">
+                  <div class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+                    <h4 class="font-outfit text-[12px] font-bold text-white leading-snug">
+                      {item.role}
+                    </h4>
+                    <span class="text-[9px] text-stone-500 font-mono font-medium">
+                      {item.period}
                     </span>
+                  </div>
+
+                  {#if item.description}
+                    <p class="mt-1 flex-1 text-[9px] leading-relaxed text-stone-500">
+                      {@html item.description}
+                    </p>
                   {/if}
-                {/each}
+
+                  {#if item.attachments && item.attachments.length > 0}
+                    <div class="mt-2 flex flex-wrap gap-1.5 border-t border-stone-850 pt-2">
+                      {#each item.attachments as att, idx (idx)}
+                        {#if att.image}
+                          <button 
+                            type="button" 
+                            class="inline-flex items-center gap-1 rounded bg-stone-900 border border-stone-800 px-2 py-0.5 text-[9px] font-bold text-amber-500 hover:text-amber-400 transition-colors cursor-zoom-in"
+                            onclick={() => openLightbox(att.image || '', `${item.role} @ ${item.organization} - ${att.name}`)}
+                          >
+                            <span>📎</span>
+                            <span>{att.name}</span>
+                          </button>
+                        {:else}
+                          <span class="inline-flex items-center gap-1 rounded bg-stone-900 border border-stone-850 px-2 py-0.5 text-[9px] font-medium text-stone-600 select-none">
+                            <span>📎</span>
+                            <span>{att.name}</span>
+                          </span>
+                        {/if}
+                      {/each}
+                    </div>
+                  {/if}
+                </div>
               </div>
-            {/if}
-          </div>
-        {/each}
-      </div>
+            </div>
+          {/each}
+        </div>
+      {/if}
     </section>
 
     <!-- Projects Section (Interactive Filters) -->
-    <section id="projects" class="scroll-mt-24 space-y-6">
-      <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between border-b border-stone-800 pb-3">
+    <section use:reveal={{}} class="reveal-on-scroll scroll-mt-24 space-y-6" id="projects">
+      <div class="flex items-center gap-3 border-b border-stone-800 pb-3">
         <div class="flex items-center gap-3">
           <Code class="size-6 text-amber-500" />
-          <h2 class="font-outfit text-2xl font-bold tracking-tight text-white">
-            Featured Projects <span class="font-chinese text-amber-500/80 font-normal text-lg ml-2">项目作品</span>
-          </h2>
-        </div>
-        
-        <!-- Category Filter Pills -->
-        <div class="flex flex-wrap gap-1.5">
-          <button 
-            type="button"
-            class="px-3.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border transition-all cursor-pointer {activeProjectFilter === 'all' ? 'bg-amber-500 border-amber-600 text-stone-950 shadow-md' : 'bg-stone-900 border-stone-800 text-stone-400 hover:border-stone-700 hover:text-stone-200'}"
-            onclick={() => activeProjectFilter = 'all'}
-          >
-            All
-          </button>
-          <button 
-            type="button"
-            class="px-3.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border transition-all cursor-pointer {activeProjectFilter === 'product' ? 'bg-amber-500 border-amber-600 text-stone-950 shadow-md' : 'bg-stone-900 border-stone-800 text-stone-400 hover:border-stone-700 hover:text-stone-200'}"
-            onclick={() => activeProjectFilter = 'product'}
-          >
-            Products & Systems
-          </button>
-          <button 
-            type="button"
-            class="px-3.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border transition-all cursor-pointer {activeProjectFilter === 'data' ? 'bg-amber-500 border-amber-600 text-stone-950 shadow-md' : 'bg-stone-900 border-stone-800 text-stone-400 hover:border-stone-700 hover:text-stone-200'}"
-            onclick={() => activeProjectFilter = 'data'}
-          >
-            Data & Analytics
-          </button>
+          <h2 class="font-outfit text-2xl font-bold tracking-tight text-white">Key Projects</h2>
         </div>
       </div>
 
@@ -1373,9 +1617,25 @@
               </div>
             
               <div class="mt-6 space-y-4">
-                <div class="flex flex-wrap gap-1.5">
+                <div class="flex flex-wrap items-center gap-2">
                   {#each project.tech as tech (tech)}
-                    <span class="rounded bg-stone-900 border border-stone-850 px-2 py-0.5 text-[9px] font-bold text-stone-500">{tech}</span>
+                    {#if projectTechIconMap[tech]}
+                      <div
+                        class="flex size-8 items-center justify-center rounded-lg border border-stone-800 bg-stone-900/80"
+                        title={tech}
+                        aria-label={tech}
+                      >
+                        <img src={projectTechIconMap[tech]} alt={tech} class="size-4.5 object-contain" />
+                      </div>
+                    {:else}
+                      <div
+                        class="flex size-8 items-center justify-center rounded-lg border border-stone-800 bg-stone-900/80 text-[8px] font-black uppercase tracking-wide text-stone-400"
+                        title={tech}
+                        aria-label={tech}
+                      >
+                        {getProjectTechAbbreviation(tech)}
+                      </div>
+                    {/if}
                   {/each}
                 </div>
 
@@ -1406,27 +1666,25 @@
     </section>
 
     <!-- Awards Section (Decorated Trophies & Medallions) -->
-    <section id="awards" class="scroll-mt-24 space-y-6">
+    <section use:reveal={{}} class="reveal-on-scroll scroll-mt-24 space-y-6" id="awards">
       <div class="flex items-center gap-3 border-b border-stone-800 pb-3">
         <Trophy class="size-6 text-amber-500" />
-        <h2 class="font-outfit text-2xl font-bold tracking-tight text-white">
-          Awards & Competition Records <span class="font-chinese text-amber-500/80 font-normal text-lg ml-2">荣誉奖项</span>
-        </h2>
+        <h2 class="font-outfit text-2xl font-bold tracking-tight text-white">Competition Wins</h2>
       </div>
 
       <!-- Awards Card Grid -->
-      <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      <div class="flex flex-wrap justify-center gap-6">
         {#each awards as award (award.competition)}
-          <div class="group flex flex-col justify-between rounded-xl border border-stone-850 bg-stone-950 overflow-hidden shadow-lg hover:-translate-y-1 hover:border-amber-500/40 hover:shadow-amber-500/5 transition-all duration-300">
+          <button
+            type="button"
+            class="group flex w-full md:max-w-[calc(50%-0.75rem)] lg:max-w-[calc(33.333%-1rem)] flex-col justify-between overflow-hidden rounded-xl bg-stone-950 text-left shadow-[0_10px_30px_rgba(0,0,0,0.35)] ring-1 ring-stone-900/60 transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_18px_40px_rgba(245,158,11,0.12)] hover:ring-amber-500/15 cursor-pointer focus:outline-none"
+            onclick={() => openLightbox(award.certificateImage || award.image || '', `${award.competition} - ${award.title}`)}
+            disabled={!award.certificateImage && !award.image}
+          >
             <!-- Card Media (Image or gold medallion vector) -->
-            <button
-              type="button"
-              class="w-full h-44 overflow-hidden bg-[#141211] relative flex items-center justify-center text-left focus:outline-none cursor-zoom-in"
-              onclick={() => openLightbox(award.image || '', `${award.competition} - ${award.title}`)}
-              disabled={!award.image}
-            >
+            <div class="relative flex h-44 w-full items-center justify-center overflow-hidden bg-[#141211]">
               {#if award.image}
-                <img src={award.image} alt={award.competition} class="size-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                <img src={award.image} alt={award.competition} class="size-full object-cover" />
                 <div class="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-300"></div>
               {:else}
                 <!-- Beautiful vector gold coin / medal outline with red ribbon in background -->
@@ -1437,24 +1695,21 @@
                   <div class="size-16 rounded-full bg-gradient-to-tr from-amber-500 via-amber-300 to-amber-600 border border-amber-600 flex items-center justify-center shadow-lg relative z-10 animate-pulse">
                     <Trophy class="size-8 text-amber-950" />
                   </div>
-                  <span class="text-[9px] font-black text-amber-400 uppercase tracking-widest relative z-10 bg-black/40 px-2 py-0.5 rounded border border-amber-500/10">Fintech Distinction</span>
                 </div>
               {/if}
-              
-              <!-- Floating Badges -->
-              <div class="absolute top-3 left-3 flex flex-wrap gap-1.5 pointer-events-none z-10">
-                <span class="rounded bg-red-700 border border-amber-500/35 px-2 py-0.5 text-[8px] font-black text-white uppercase tracking-widest shadow-lg">
-                  {award.title}
-                </span>
-                <span class="rounded bg-stone-900 border border-stone-800 px-2 py-0.5 text-[8px] font-black uppercase tracking-widest text-amber-400 shadow-lg">
-                  {award.scope}
-                </span>
-              </div>
-            </button>
+            </div>
 
             <!-- Card Content -->
             <div class="p-5 flex-1 flex flex-col justify-between space-y-4">
-              <div class="space-y-1.5">
+              <div class="space-y-3">
+                <div class="flex flex-wrap gap-1.5">
+                  <span class="rounded bg-stone-900/80 px-2 py-0.5 text-[8px] font-semibold text-stone-400 uppercase tracking-widest">
+                    {award.title}
+                  </span>
+                  <span class="rounded bg-stone-900/80 px-2 py-0.5 text-[8px] font-semibold uppercase tracking-widest text-stone-500">
+                    {award.scope}
+                  </span>
+                </div>
                 <h3 class="font-outfit text-sm font-bold text-stone-200 line-clamp-2 leading-snug group-hover:text-amber-400 transition-colors">
                   {award.competition}
                 </h3>
@@ -1465,7 +1720,7 @@
 
               <div class="flex items-center justify-between pt-2 border-t border-stone-850 text-xs text-stone-500">
                 <span class="font-mono">{award.year}</span>
-                {#if award.image}
+                {#if award.certificateImage || award.image}
                   <span class="text-amber-500 font-bold group-hover:underline flex items-center gap-1">
                     View Certificate
                     <ArrowUpRight class="size-3" />
@@ -1473,44 +1728,42 @@
                 {/if}
               </div>
             </div>
-          </div>
+          </button>
         {/each}
       </div>
     </section>
 
     <!-- Mahogany Digital Bookshelf -->
-    <section id="bookshelf" class="scroll-mt-24 space-y-6">
-      <div class="flex items-center gap-3 border-b border-stone-800 pb-3">
-        <BookOpen class="size-6 text-amber-500" />
-        <h2 class="font-outfit text-2xl font-bold tracking-tight text-white">
-          Edward's Digital Bookshelf <span class="font-chinese text-amber-500/80 font-normal text-lg ml-2">书架</span>
-        </h2>
+    <section use:reveal={{}} class="reveal-on-scroll scroll-mt-24 space-y-6" id="bookshelf">
+      <div class="flex flex-col gap-4 border-b border-stone-800 pb-3 md:flex-row md:items-center md:justify-between">
+        <div class="flex items-center gap-3">
+          <BookOpen class="size-6 text-amber-500" />
+          <h2 class="font-outfit text-2xl font-bold tracking-tight text-white">Reading Shelf</h2>
+        </div>
+
+        <div class="flex flex-wrap gap-1.5">
+          {#each bookshelfCollections as collection (collection.id)}
+            <button
+              type="button"
+              class="rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer {activeBookshelfCollection === collection.id ? 'border-amber-500 bg-amber-500 text-stone-950 shadow-md' : 'border-stone-800 bg-stone-900 text-stone-400 hover:border-stone-700 hover:text-stone-200'}"
+              onclick={() => activeBookshelfCollection = collection.id}
+            >
+              {collection.label}
+            </button>
+          {/each}
+        </div>
       </div>
       
-      <p class="text-xs text-stone-400 max-w-xl">
-        Curated product management and execution literature. Hover over covers to inspect key takeaways.
-      </p>
-
       <!-- Mahogany Book Rack grid -->
-      <div class="grid grid-cols-2 gap-y-10 gap-x-6 sm:grid-cols-4 pt-6">
-        {#each bookshelf as book (book.title)}
-          <div class="group flex flex-col items-center text-center space-y-3 bg-stone-950/60 p-4 rounded-xl border border-stone-900 hover:bg-stone-900/60 hover:shadow-2xl transition-all relative">
-            
-            <!-- 3D Book Cover Frame -->
-            <div class="relative w-24 h-36 shadow-xl transition-all duration-300 group-hover:scale-105 group-hover:-translate-y-2 [perspective:1000px]">
+      <div class="grid grid-cols-2 gap-y-6 gap-x-4 pt-2 sm:grid-cols-4 lg:flex lg:flex-wrap lg:items-end lg:justify-center lg:gap-3">
+          {#each activeBookshelfBooks as book (book.title)}
+            <div class="group flex items-end justify-center lg:basis-24 lg:shrink-0">
+            <div class={`relative h-36 ${getBookshelfCoverClass(book.title)} shadow-xl transition-all duration-300 group-hover:-translate-y-2 [perspective:1000px]`}>
               <img 
                 src="/covers/{book.cover}" 
                 alt="{book.title} cover"
                 class="w-full h-full object-cover rounded-sm border border-stone-800 shadow-md"
               />
-              <!-- Bookmark Ribbons -->
-              <div class="absolute top-0 right-3 w-1.5 h-10 bg-red-600 rounded-b shadow-xs"></div>
-            </div>
-            
-            <div class="space-y-1 relative z-10">
-              <h4 class="font-outfit text-xs font-bold text-white group-hover:text-amber-400 transition-colors line-clamp-1">{book.title}</h4>
-              <p class="text-[9px] text-stone-500 font-semibold">{book.author}</p>
-              <p class="text-[9px] text-stone-400 italic leading-snug line-clamp-3 pt-1.5 border-t border-stone-900 mt-1.5">"{book.takeaway}"</p>
             </div>
           </div>
         {/each}
@@ -1523,18 +1776,21 @@
     </section>
 
     <!-- Skills & Language Details -->
-    <section class="grid grid-cols-1 gap-8 md:grid-cols-3">
+    <section
+      use:reveal={{ distance: 22 }}
+      class="reveal-on-scroll grid grid-cols-1 gap-8 md:grid-cols-3"
+    >
       
       <!-- Skills -->
       <div class="md:col-span-2 space-y-6">
         <div class="flex items-center gap-3 border-b border-stone-800 pb-3">
           <Wrench class="size-6 text-amber-500" />
-          <h2 class="font-outfit text-2xl font-bold tracking-tight text-white">Skills & Tooling</h2>
+          <h2 class="font-outfit text-2xl font-bold tracking-tight text-white">Core Skills</h2>
         </div>
 
-        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          {#each skillCategories as cat (cat.title)}
-            <div class="rounded-2xl border border-stone-850 bg-stone-950 p-5 space-y-4">
+        <div class="rounded-2xl border border-stone-850 bg-stone-950 p-5 space-y-5">
+          {#each skillCategories as cat, idx (cat.title)}
+            <div class="space-y-4">
               <h3 class="font-outfit text-xs font-black uppercase tracking-wider text-amber-500">{cat.title}</h3>
               <div class="flex flex-wrap gap-1.5">
                 {#each cat.skills as skill (skill)}
@@ -1547,6 +1803,9 @@
                 {/each}
               </div>
             </div>
+            {#if idx < skillCategories.length - 1}
+              <div class="border-t border-stone-850/60"></div>
+            {/if}
           {/each}
         </div>
       </div>
@@ -1555,7 +1814,7 @@
       <div class="space-y-6">
         <div class="flex items-center gap-3 border-b border-stone-800 pb-3">
           <Languages class="size-6 text-amber-500" />
-          <h2 class="font-outfit text-2xl font-bold tracking-tight text-white">Languages</h2>
+          <h2 class="font-outfit text-2xl font-bold tracking-tight text-white">Language Skills</h2>
         </div>
 
         <div class="rounded-2xl border border-stone-850 bg-stone-950 p-6 space-y-5">
@@ -1599,10 +1858,14 @@
 
   </main>
 
-  <!-- Footer (Cleaned Layout) -->
-  <footer class="border-t border-stone-900 bg-[#070605] py-8 text-center text-xs text-stone-500">
-    <div class="mx-auto max-w-5xl px-6 space-y-2 select-none">
-      <p>&copy; {new Date().getFullYear()} Edward Salim</p>
+  <footer class="border-t border-amber-500/10 bg-[#070605] py-8">
+    <div class="mx-auto flex max-w-5xl flex-col gap-4 px-6 text-xs text-stone-500 md:flex-row md:items-center md:justify-between">
+      <div class="space-y-1">
+        <p class="font-outfit text-sm font-bold text-stone-200">Edward Salim</p>
+        <p>Open to collaborating on product, automation, analytics, and AI-driven systems.</p>
+      </div>
+
+      <p class="select-none text-stone-600">&copy; {new Date().getFullYear()}</p>
     </div>
   </footer>
 
