@@ -35,7 +35,12 @@
   }
 </script>
 
-<span bind:this={anchor} onmouseenter={onEnter} onmouseleave={() => (show = false)}>
+<span
+  bind:this={anchor}
+  role="presentation"
+  onmouseenter={onEnter}
+  onmouseleave={() => (show = false)}
+>
   {@render children()}
 </span>
 

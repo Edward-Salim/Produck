@@ -8,10 +8,7 @@ import type { RequestHandler } from './$types.js';
 export const POST: RequestHandler = async ({ request, cookies }) => {
   const { email, password } = await request.json();
 
-  const [user] = await db
-    .select()
-    .from(appUser)
-    .where(eq(appUser.email, email));
+  const [user] = await db.select().from(appUser).where(eq(appUser.email, email));
 
   if (!user || !user.passwordHash) {
     return json({ error: 'Invalid credentials or account not initialized.' }, { status: 401 });

@@ -232,7 +232,10 @@ function greet(name) {
 
 <div>
   <header class="mb-6">
-    <a href="/tools" class="mb-2 inline-flex items-center gap-1 text-xs text-cork-400 transition-colors hover:text-cork-600">
+    <a
+      href="/tools"
+      class="mb-2 inline-flex items-center gap-1 text-xs text-cork-400 transition-colors hover:text-cork-600"
+    >
       <ArrowLeft class="size-3" />Tools
     </a>
     <h1 class="font-display text-2xl text-cork-800 md:text-4xl">Markdown to PDF</h1>
@@ -245,7 +248,9 @@ function greet(name) {
   <div class="mb-4 flex items-center gap-2 md:gap-4">
     <!-- Page Size -->
     <div class="flex items-center gap-1 md:gap-2">
-      <span class="hidden text-xs font-semibold tracking-wider text-cork-500 uppercase md:block">Page</span>
+      <span class="hidden text-xs font-semibold tracking-wider text-cork-500 uppercase md:block"
+        >Page</span
+      >
       <div class="flex gap-0.5 md:gap-1.5">
         {#each PAGE_SIZES as size (size)}
           <button
@@ -263,7 +268,9 @@ function greet(name) {
 
     <!-- Font Size -->
     <div class="flex items-center gap-1 md:gap-2">
-      <span class="hidden text-xs font-semibold tracking-wider text-cork-500 uppercase md:block">Font</span>
+      <span class="hidden text-xs font-semibold tracking-wider text-cork-500 uppercase md:block"
+        >Font</span
+      >
       <div class="flex gap-0.5 md:gap-1.5">
         {#each FONT_SIZES as size (size)}
           <button
@@ -301,14 +308,20 @@ function greet(name) {
   <div class="mb-3 flex overflow-hidden rounded-lg border border-cork-300 md:hidden">
     <button
       type="button"
-      class="flex flex-1 cursor-pointer items-center justify-center gap-1.5 py-1.5 text-xs font-medium transition-colors {mobileTab === 'edit' ? 'bg-cork-700 text-cork-50' : 'text-cork-600 hover:bg-cork-200/50'}"
+      class="flex flex-1 cursor-pointer items-center justify-center gap-1.5 py-1.5 text-xs font-medium transition-colors {mobileTab ===
+      'edit'
+        ? 'bg-cork-700 text-cork-50'
+        : 'text-cork-600 hover:bg-cork-200/50'}"
       onclick={() => (mobileTab = 'edit')}
     >
       <PenLine class="size-3.5" />Edit
     </button>
     <button
       type="button"
-      class="flex flex-1 cursor-pointer items-center justify-center gap-1.5 py-1.5 text-xs font-medium transition-colors {mobileTab === 'preview' ? 'bg-cork-700 text-cork-50' : 'text-cork-600 hover:bg-cork-200/50'}"
+      class="flex flex-1 cursor-pointer items-center justify-center gap-1.5 py-1.5 text-xs font-medium transition-colors {mobileTab ===
+      'preview'
+        ? 'bg-cork-700 text-cork-50'
+        : 'text-cork-600 hover:bg-cork-200/50'}"
       onclick={() => (mobileTab = 'preview')}
     >
       <Eye class="size-3.5" />Preview
@@ -316,7 +329,7 @@ function greet(name) {
   </div>
 
   <!-- Editor and Preview Panes -->
-  <div class="flex flex-col gap-4 md:flex-row md:h-[calc(100vh-280px)]">
+  <div class="flex flex-col gap-4 md:h-[calc(100vh-280px)] md:flex-row">
     <!-- Editor Pane -->
     <div class="min-w-0 {mobileTab !== 'edit' ? 'hidden md:block' : ''} md:flex-1">
       <textarea

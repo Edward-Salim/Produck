@@ -13,8 +13,8 @@ const sqlContent = fs.readFileSync(sqlPath, 'utf-8');
 // Split SQL content into statements
 const statements = sqlContent
   .split('\n')
-  .map(line => line.trim())
-  .filter(line => line.length > 0);
+  .map((line) => line.trim())
+  .filter((line) => line.length > 0);
 
 db.run('PRAGMA foreign_keys = ON;');
 

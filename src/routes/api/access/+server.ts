@@ -1,7 +1,7 @@
 import { json } from '@sveltejs/kit';
 import { db } from '$lib/server/db/index.js';
 import { appUser, projectAccess, workspaceAccess } from '$lib/server/db/schema.js';
-import { eq, and, sql } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import type { RequestHandler } from './$types.js';
 
 async function requireAdmin(locals: App.Locals) {
@@ -83,9 +83,6 @@ export const DELETE: RequestHandler = async ({ url, locals }) => {
     // Delete from app_user (cascades to access tables)
     await db.delete(appUser).where(eq(appUser.id, userId));
 
-    // Note: Since migrating to SQLite, Supabase Auth user accounts must be deleted
-    // manually from the Supabase dashboard (or via Supabase Admin API if configured).
-
     return json({ ok: true });
   }
 
@@ -93,9 +90,7 @@ export const DELETE: RequestHandler = async ({ url, locals }) => {
   if (workspaceId) {
     await db
       .delete(workspaceAccess)
-      .where(
-        and(eq(workspaceAccess.userId, userId), eq(workspaceAccess.workspaceId, workspaceId))
-      );
+      .where(and(eq(workspaceAccess.userId, userId), eq(workspaceAccess.workspaceId, workspaceId)));
     return json({ ok: true });
   }
 

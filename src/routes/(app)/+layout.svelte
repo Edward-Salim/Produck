@@ -13,6 +13,7 @@
     Wrench,
     BookOpen,
     Landmark,
+    WalletCards,
     NotebookPen,
     GaugeCircle,
     Rss,
@@ -36,7 +37,14 @@
   let accessDialogOpen = $state(false);
   let accessLoading = $state(false);
   let accessUsers = $state<
-    { id: number; email: string; displayName: string; role: string; projectIds: number[]; workspaceIds: number[] }[]
+    {
+      id: number;
+      email: string;
+      displayName: string;
+      role: string;
+      projectIds: number[];
+      workspaceIds: number[];
+    }[]
   >([]);
   let showPasswords = $state<Record<number, boolean>>({});
 
@@ -214,7 +222,10 @@
       </div>
       {#if data.workspaces.length > 0}
         <div class="px-2 pb-1 group-data-[collapsible=icon]:hidden">
-          <span class="mb-1 block text-[9px] font-semibold tracking-wider text-sidebar-foreground/40 uppercase">Workspace</span>
+          <span
+            class="mb-1 block text-[9px] font-semibold tracking-wider text-sidebar-foreground/40 uppercase"
+            >Workspace</span
+          >
           <Select.Root type="single" value={selectedWorkspaceId} onValueChange={switchWorkspace}>
             <Select.Trigger
               class="h-7 w-full border-sidebar-border bg-sidebar-accent/20 text-xs text-sidebar-foreground"
@@ -335,6 +346,19 @@
                 {/snippet}
               </Sidebar.MenuButton>
             </Sidebar.MenuItem>
+            <Sidebar.MenuItem>
+              <Sidebar.MenuButton
+                size="sm"
+                isActive={page.url.pathname.startsWith('/financial-tracker')}
+                tooltipContent="Financial Tracker"
+              >
+                {#snippet child({ props })}
+                  <a href="/financial-tracker" {...props}
+                    ><WalletCards /><span>Financial Tracker</span></a
+                  >
+                {/snippet}
+              </Sidebar.MenuButton>
+            </Sidebar.MenuItem>
           </Sidebar.Menu>
         </Sidebar.GroupContent>
       </Sidebar.Group>
@@ -363,11 +387,19 @@
     </Sidebar.Content>
 
     <Sidebar.Footer class="border-t border-cork-300/40 pt-2">
-      <div class="flex items-center gap-2 px-2 pb-1 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
+      <div
+        class="flex items-center gap-2 px-2 pb-1 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0"
+      >
         {#if data.currentUser?.email === 'ewodku@dummy.com'}
-          <img src={edwardAvatar} alt="Avatar" class="size-7 shrink-0 rounded-full object-cover ring-2 ring-cork-400/40 group-data-[collapsible=icon]:hidden" />
+          <img
+            src={edwardAvatar}
+            alt="Avatar"
+            class="size-7 shrink-0 rounded-full object-cover ring-2 ring-cork-400/40 group-data-[collapsible=icon]:hidden"
+          />
         {:else}
-          <span class="flex size-7 shrink-0 items-center justify-center rounded-full bg-cork-600 text-xs font-semibold text-cork-50 group-data-[collapsible=icon]:hidden">
+          <span
+            class="flex size-7 shrink-0 items-center justify-center rounded-full bg-cork-600 text-xs font-semibold text-cork-50 group-data-[collapsible=icon]:hidden"
+          >
             {(data.currentUser?.displayName ?? 'U').charAt(0).toUpperCase()}
           </span>
         {/if}
@@ -375,10 +407,14 @@
           <p class="truncate text-xs font-medium text-sidebar-foreground">
             {data.currentUser?.displayName ?? 'User'}
           </p>
-          <p class="truncate text-[10px] text-sidebar-foreground/50">{data.currentUser?.email ?? ''}</p>
+          <p class="truncate text-[10px] text-sidebar-foreground/50">
+            {data.currentUser?.email ?? ''}
+          </p>
         </div>
         <DropdownMenu.Root>
-          <DropdownMenu.Trigger class="flex size-6 shrink-0 cursor-pointer items-center justify-center rounded text-cork-400 transition-colors hover:bg-cork-200/50 hover:text-cork-600">
+          <DropdownMenu.Trigger
+            class="flex size-6 shrink-0 cursor-pointer items-center justify-center rounded text-cork-400 transition-colors hover:bg-cork-200/50 hover:text-cork-600"
+          >
             <EllipsisVertical class="size-4" />
           </DropdownMenu.Trigger>
           <DropdownMenu.Portal>
@@ -442,9 +478,13 @@
         <div class="flex-1"></div>
         {#if data.projects.length > 0}
           <div class="flex items-center gap-1.5">
-            <span class="text-[9px] font-semibold tracking-wider text-cork-400 uppercase md:hidden">Project</span>
+            <span class="text-[9px] font-semibold tracking-wider text-cork-400 uppercase md:hidden"
+              >Project</span
+            >
             <Select.Root type="single" value={selectedProjectId} onValueChange={switchProject}>
-              <Select.Trigger class="h-7 max-w-64 border-cork-300 bg-cork-200/50 text-sm text-cork-700">
+              <Select.Trigger
+                class="h-7 max-w-64 border-cork-300 bg-cork-200/50 text-sm text-cork-700"
+              >
                 <span class="truncate">{selectedProjectLabel}</span>
               </Select.Trigger>
               <Select.Content class="border-cork-300 bg-cork-50" preventScroll={false} align="end">
@@ -511,11 +551,22 @@
       {/if}
     </header>
     {@const noAccess = !data.isAdmin && data.workspaces.length === 0 && data.projects.length === 0}
-    {@const isWorkRoute = page.url.pathname === '/dashboard' || ['/outcomes', '/interview-snapshots', '/experience-map', '/ideas', '/story-map', '/admin'].some((p) => page.url.pathname.startsWith(p))}
+    {@const isWorkRoute =
+      page.url.pathname === '/dashboard' ||
+      [
+        '/outcomes',
+        '/interview-snapshots',
+        '/experience-map',
+        '/ideas',
+        '/story-map',
+        '/admin'
+      ].some((p) => page.url.pathname.startsWith(p))}
     {#if noAccess && isWorkRoute}
       <div class="flex flex-1 flex-col items-center justify-center text-center">
         <p class="font-display text-lg text-cork-700">No access yet</p>
-        <p class="mt-1 text-sm text-cork-400">Ask your admin to grant you workspace and project access.</p>
+        <p class="mt-1 text-sm text-cork-400">
+          Ask your admin to grant you workspace and project access.
+        </p>
       </div>
     {:else}
       <div class="px-4 pt-4 pb-6 md:px-6">
@@ -536,7 +587,9 @@
         >
       </Dialog.Header>
 
-      <div class="max-h-96 space-y-4 overflow-y-auto px-1 [scrollbar-color:theme(--color-cork-300/40)_transparent] [scrollbar-width:thin]">
+      <div
+        class="max-h-96 space-y-4 overflow-y-auto px-1 [scrollbar-color:theme(--color-cork-300/40)_transparent] [scrollbar-width:thin]"
+      >
         {#if accessLoading}
           {#each [1, 2, 3] as _ (_)}
             <div class="animate-pulse rounded-lg border border-cork-200 bg-white p-3">
@@ -581,13 +634,15 @@
                   </div>
                 </div>
                 <span
-                  class="rounded-full bg-cork-200 px-2 py-0.5 text-[10px] font-medium uppercase text-cork-600"
+                  class="rounded-full bg-cork-200 px-2 py-0.5 text-[10px] font-medium text-cork-600 uppercase"
                   >{user.role}</span
                 >
               </div>
               <div class="space-y-2">
                 <div>
-                  <p class="mb-1 text-[9px] font-semibold tracking-wider text-cork-400 uppercase">Workspaces</p>
+                  <p class="mb-1 text-[9px] font-semibold tracking-wider text-cork-400 uppercase">
+                    Workspaces
+                  </p>
                   <div class="space-y-1">
                     {#each data.workspaces as ws (ws.id)}
                       {@const hasWsAccess = user.workspaceIds.includes(ws.id)}
@@ -598,9 +653,21 @@
                           : 'text-cork-400 hover:bg-cork-50'}"
                         onclick={() => toggleWorkspaceAccess(user.id, ws.id, hasWsAccess)}
                       >
-                        <span class="flex size-3.5 shrink-0 items-center justify-center rounded border transition-colors {hasWsAccess ? 'border-cork-700 bg-cork-700' : 'border-cork-300 bg-white'}">
+                        <span
+                          class="flex size-3.5 shrink-0 items-center justify-center rounded border transition-colors {hasWsAccess
+                            ? 'border-cork-700 bg-cork-700'
+                            : 'border-cork-300 bg-white'}"
+                        >
                           {#if hasWsAccess}
-                            <svg class="size-2.5 text-white" viewBox="0 0 12 12" fill="none"><path d="M2.5 6l2.5 2.5 4.5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                            <svg class="size-2.5 text-white" viewBox="0 0 12 12" fill="none"
+                              ><path
+                                d="M2.5 6l2.5 2.5 4.5-5"
+                                stroke="currentColor"
+                                stroke-width="1.5"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                              /></svg
+                            >
                           {/if}
                         </span>
                         <span>{ws.name}</span>
@@ -609,7 +676,9 @@
                   </div>
                 </div>
                 <div>
-                  <p class="mb-1 text-[9px] font-semibold tracking-wider text-cork-400 uppercase">Projects</p>
+                  <p class="mb-1 text-[9px] font-semibold tracking-wider text-cork-400 uppercase">
+                    Projects
+                  </p>
                   <div class="space-y-1">
                     {#each data.projects as proj (proj.id)}
                       {@const hasAccess = user.projectIds.includes(proj.id)}
@@ -620,9 +689,21 @@
                           : 'text-cork-400 hover:bg-cork-50'}"
                         onclick={() => toggleProjectAccess(user.id, proj.id, hasAccess)}
                       >
-                        <span class="flex size-3.5 shrink-0 items-center justify-center rounded border transition-colors {hasAccess ? 'border-cork-700 bg-cork-700' : 'border-cork-300 bg-white'}">
+                        <span
+                          class="flex size-3.5 shrink-0 items-center justify-center rounded border transition-colors {hasAccess
+                            ? 'border-cork-700 bg-cork-700'
+                            : 'border-cork-300 bg-white'}"
+                        >
                           {#if hasAccess}
-                            <svg class="size-2.5 text-white" viewBox="0 0 12 12" fill="none"><path d="M2.5 6l2.5 2.5 4.5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                            <svg class="size-2.5 text-white" viewBox="0 0 12 12" fill="none"
+                              ><path
+                                d="M2.5 6l2.5 2.5 4.5-5"
+                                stroke="currentColor"
+                                stroke-width="1.5"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                              /></svg
+                            >
                           {/if}
                         </span>
                         <span>{proj.shortName ?? proj.name}</span>

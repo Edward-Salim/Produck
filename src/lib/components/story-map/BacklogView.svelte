@@ -147,9 +147,7 @@
     description="Add stories to the story map to see them here"
   />
 {:else}
-  <div
-    class="overflow-hidden rounded-xl border border-cork-300/40 bg-cork-100"
-  >
+  <div class="overflow-hidden rounded-xl border border-cork-300/40 bg-cork-100">
     <div
       class="grid grid-cols-[1fr_40px] gap-1.5 border-b border-cork-300/40 bg-cork-200/30 px-3 py-2 text-[10px] font-bold tracking-widest text-cork-400 uppercase md:grid-cols-[1fr_140px_120px_80px] md:gap-2 md:px-4"
     >
@@ -258,8 +256,12 @@
               >
             </div>
 
-            <!-- svelte-ignore a11y_no_static_element_interactions a11y_click_events_have_key_events -->
-            <div class="relative hidden items-center md:flex" onclick={(e) => e.stopPropagation()}>
+            <div
+              class="relative hidden items-center md:flex"
+              role="presentation"
+              onclick={(e) => e.stopPropagation()}
+              onkeydown={(e) => e.stopPropagation()}
+            >
               <button
                 type="button"
                 class="cursor-pointer rounded-md border border-cork-300/50 bg-cork-200/40 px-2 py-1 text-xs font-medium text-cork-700 transition-colors hover:border-cork-400"
@@ -298,13 +300,19 @@
 
           {#if isExpanded}
             <!-- Mobile-only: show priority + PIC inline -->
-            <!-- svelte-ignore a11y_no_static_element_interactions a11y_click_events_have_key_events -->
-            <div class="flex items-center gap-3 border-b border-cork-400/8 bg-cork-100/30 px-3 py-1.5 pl-8 md:hidden" onclick={(e) => e.stopPropagation()}>
+            <div
+              class="flex items-center gap-3 border-b border-cork-400/8 bg-cork-100/30 px-3 py-1.5 pl-8 md:hidden"
+              role="presentation"
+              onclick={(e) => e.stopPropagation()}
+              onkeydown={(e) => e.stopPropagation()}
+            >
               <span
                 class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium"
-                style="color: {kano?.color ?? '#8a7e6b'}; background: {(kano?.color ?? '#8a7e6b') + '15'};"
+                style="color: {kano?.color ?? '#8a7e6b'}; background: {(kano?.color ?? '#8a7e6b') +
+                  '15'};"
               >
-                <span class="size-1.5 rounded-full" style="background: {kano?.color ?? '#8a7e6b'};"></span>
+                <span class="size-1.5 rounded-full" style="background: {kano?.color ?? '#8a7e6b'};"
+                ></span>
                 {kano?.label ?? story.kano}
               </span>
               <div class="relative">
@@ -322,7 +330,10 @@
                     {#each allPics as p (p)}
                       <button
                         type="button"
-                        class="w-full cursor-pointer px-3 py-1.5 text-left text-xs text-cork-700 transition-colors hover:bg-cork-200/50 {p === story.pic ? 'bg-cork-200/60 font-medium' : ''}"
+                        class="w-full cursor-pointer px-3 py-1.5 text-left text-xs text-cork-700 transition-colors hover:bg-cork-200/50 {p ===
+                        story.pic
+                          ? 'bg-cork-200/60 font-medium'
+                          : ''}"
                         onclick={() => updatePic(story, p)}
                       >
                         {p}

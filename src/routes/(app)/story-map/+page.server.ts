@@ -111,7 +111,6 @@ export const load: PageServerLoad = async ({ url }) => {
   }
 
   // ── Backlog view data ──
-  const activityTitleMap = new Map(activities.map((a) => [a.code, a.title]));
   const taskTitleMap = new Map(ideaTasks.map((t) => [t.code, t.title]));
   const taskOrderMap = new Map(ideaTasks.map((t) => [t.id, t.sortOrder]));
 

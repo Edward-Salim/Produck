@@ -141,7 +141,8 @@
   >
     <Settings class="size-4" />
     <span class="hidden sm:inline">Manage Sources</span>
-    <span class="rounded-full bg-cork-200 px-1.5 py-0.5 text-[9px] font-semibold text-cork-600 md:text-[10px]"
+    <span
+      class="rounded-full bg-cork-200 px-1.5 py-0.5 text-[9px] font-semibold text-cork-600 md:text-[10px]"
       >{data.sources.length}</span
     >
   </button>
@@ -186,8 +187,12 @@
 
         <!-- Summary (if exists for this day) -->
         {#if group.summary}
-          <div class="border-b border-cork-100 bg-cork-50/50 px-3 py-2.5 text-xs text-cork-700 md:px-5 md:py-3 md:text-sm">
-            <p class="mb-1 text-[10px] font-medium tracking-wider text-cork-600 uppercase md:text-xs">
+          <div
+            class="border-b border-cork-100 bg-cork-50/50 px-3 py-2.5 text-xs text-cork-700 md:px-5 md:py-3 md:text-sm"
+          >
+            <p
+              class="mb-1 text-[10px] font-medium tracking-wider text-cork-600 uppercase md:text-xs"
+            >
               AI Summary
             </p>
             <p>{group.summary}</p>

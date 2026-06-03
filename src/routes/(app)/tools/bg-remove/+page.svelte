@@ -50,7 +50,10 @@
 
 <div>
   <header class="mb-6">
-    <a href="/tools" class="mb-2 inline-flex items-center gap-1 text-xs text-cork-400 transition-colors hover:text-cork-600">
+    <a
+      href="/tools"
+      class="mb-2 inline-flex items-center gap-1 text-xs text-cork-400 transition-colors hover:text-cork-600"
+    >
       <ArrowLeft class="size-3" />Tools
     </a>
     <h1 class="font-display text-2xl text-cork-800 md:text-4xl">Background Remover</h1>

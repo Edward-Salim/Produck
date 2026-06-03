@@ -120,12 +120,15 @@
           class="flex-1 rounded border border-cork-300/50 bg-cork-100 px-2 py-1 text-xs text-cork-800 outline-none placeholder:text-cork-400"
         />
       </div>
-      <div class="flex gap-1.5 overflow-x-auto pb-1 [-webkit-overflow-scrolling:touch] [scrollbar-width:none]">
+      <div
+        class="flex gap-1.5 overflow-x-auto pb-1 [-webkit-overflow-scrolling:touch] [scrollbar-width:none]"
+      >
         {#each filteredAssumptions as a (a.id)}
           {@const sc = STATUS_COLORS[a.status]}
           <button
             type="button"
-            class="flex shrink-0 cursor-pointer items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors {selectedAssumption?.id === a.id
+            class="flex shrink-0 cursor-pointer items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors {selectedAssumption?.id ===
+            a.id
               ? 'border-cork-500 bg-cork-200/60 text-cork-800'
               : 'border-cork-300/40 text-cork-600 hover:bg-cork-200/30'}"
             onclick={() => (selectedAssumption = selectedAssumption?.id === a.id ? null : a)}
@@ -200,9 +203,7 @@
         {@const a = selectedAssumption}
         {@const sc = STATUS_COLORS[a.status]}
 
-        <div
-          class="rounded-xl border border-cork-300/40 bg-cork-100 p-4 md:p-5"
-        >
+        <div class="rounded-xl border border-cork-300/40 bg-cork-100 p-4 md:p-5">
           <!-- Header -->
           <div class="mb-1 flex items-center justify-between">
             <div class="flex items-center gap-2 text-cork-600">
@@ -281,14 +282,14 @@
         </div>
       {:else}
         <!-- Prioritization Quadrant -->
-        <div
-          class="flex flex-col rounded-xl border border-cork-300/40 bg-cork-100 p-3 md:p-4"
-        >
+        <div class="flex flex-col rounded-xl border border-cork-300/40 bg-cork-100 p-3 md:p-4">
           <div class="mb-2 flex flex-col gap-1.5 md:flex-row md:items-center md:justify-between">
             <p class="text-xs font-bold tracking-wider text-cork-500 uppercase">
               Assumption Priority Map
             </p>
-            <div class="flex flex-wrap items-center gap-2 md:gap-3 md:rounded md:border md:border-cork-300/40 md:px-3 md:py-1">
+            <div
+              class="flex flex-wrap items-center gap-2 md:gap-3 md:rounded md:border md:border-cork-300/40 md:px-3 md:py-1"
+            >
               {#each Object.entries(STATUS_COLORS) as [key, sc] (key)}
                 <div class="flex items-center gap-1">
                   <span class="size-2 rounded-full" style="background: {sc.dot};"></span>

@@ -1,6 +1,6 @@
 import { db } from '$lib/server/db/index.js';
 import { businessOutcome, productObjective, keyResult } from '$lib/server/db/schema.js';
-import { eq, and, asc } from 'drizzle-orm';
+import { eq, asc } from 'drizzle-orm';
 import type { PageServerLoad } from './$types.js';
 
 export interface KRRow {

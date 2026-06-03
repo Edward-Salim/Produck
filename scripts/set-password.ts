@@ -23,10 +23,10 @@ try {
     console.error(`User with email "${email}" not found.`);
     process.exit(1);
   }
-  
+
   const passwordHash = hashPassword(password);
   db.query('UPDATE app_user SET password_hash = ? WHERE id = ?').run(passwordHash, user.id);
-  
+
   console.log(`Successfully set password for user "${email}" (ID: ${user.id}).`);
 } catch (e) {
   console.error('Error setting password:', e);

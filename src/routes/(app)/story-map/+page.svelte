@@ -2,14 +2,7 @@
   import StoryMapBoard from '$lib/components/story-map/StoryMapBoard.svelte';
   import BacklogView from '$lib/components/story-map/BacklogView.svelte';
   import AssumptionsView from '$lib/components/story-map/AssumptionsView.svelte';
-  import {
-    MapPinned,
-    ClipboardList,
-    FlaskConical,
-    CircleDot,
-    User,
-    Target
-  } from '@lucide/svelte';
+  import { MapPinned, ClipboardList, FlaskConical, CircleDot, User, Target } from '@lucide/svelte';
   import ArrowLeft from '@lucide/svelte/icons/arrow-left';
   import { invalidateAll } from '$app/navigation';
   import { page } from '$app/state';

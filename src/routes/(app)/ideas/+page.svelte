@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { MapPinned } from '@lucide/svelte';
   import { goto, invalidateAll } from '$app/navigation';
   import type { IdeaItem } from './+page.server.js';
   import { IDEA_SECTIONS } from '$lib/constants/colors.js';
@@ -119,7 +118,8 @@
           {#each sectionIdeas as idea (idea.id)}
             <button
               type="button"
-              class="group w-full cursor-grab rounded-lg bg-white/60 p-3 text-left transition-all duration-200 hover:shadow-md active:cursor-grabbing {draggingId === idea.id
+              class="group w-full cursor-grab rounded-lg bg-white/60 p-3 text-left transition-all duration-200 hover:shadow-md active:cursor-grabbing {draggingId ===
+              idea.id
                 ? 'z-10 scale-105 rotate-2 shadow-xl ring-2 ring-cork-500/30'
                 : ''}"
               style="box-shadow: 0 1px 3px rgba(0,0,0,.06);"
@@ -127,7 +127,6 @@
               draggable="true"
               ondragstart={(e) => onDragStart(e, idea.id)}
               ondragend={onDragEnd}
-              role="listitem"
             >
               <div class="mb-0.5 flex items-center justify-between">
                 <span class="font-mono text-[9px] text-cork-400"

@@ -74,7 +74,7 @@
     return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
   }
 
-  function handleValueKeydown(e: KeyboardEvent, krId: number) {
+  function handleValueKeydown(e: KeyboardEvent, _krId: number) {
     if (e.key === 'Enter') {
       e.preventDefault();
       (e.target as HTMLInputElement).blur();
@@ -152,7 +152,8 @@
       {/each}
       <button
         type="button"
-        class="h-7 rounded-md px-2 text-xs font-medium transition-colors md:h-8 md:px-3 md:text-sm {selectedQuarter === null
+        class="h-7 rounded-md px-2 text-xs font-medium transition-colors md:h-8 md:px-3 md:text-sm {selectedQuarter ===
+        null
           ? 'bg-cork-700 text-cork-50'
           : 'bg-cork-200/50 text-cork-600 hover:bg-cork-300/50'}"
         onclick={() => (selectedQuarter = null)}
@@ -168,9 +169,7 @@
       <h2 class="mb-2 text-xs font-bold tracking-wider text-cork-500 uppercase">
         Business Outcome — FY{selectedYear}
       </h2>
-      <div
-        class="rounded-xl border border-cork-300/40 bg-cork-100 p-4 md:p-5"
-      >
+      <div class="rounded-xl border border-cork-300/40 bg-cork-100 p-4 md:p-5">
         <div class="flex items-start gap-2 md:gap-3">
           <span
             class="mt-0.5 shrink-0 rounded bg-cork-600 px-1.5 py-0.5 text-[10px] font-bold text-cork-50"

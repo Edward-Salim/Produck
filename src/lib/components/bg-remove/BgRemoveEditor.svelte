@@ -30,7 +30,6 @@
   let brushSize = $state(30);
   let isPainting = $state(false);
 
-  let rawMask: Uint8ClampedArray | null = $state(null);
   let maskData: Uint8ClampedArray | null = $state(null);
   let undoStack: Uint8ClampedArray[] = $state([]);
 
@@ -230,7 +229,6 @@
     processing = true;
     progress = 'Loading...';
     maskData = null;
-    rawMask = null;
     undoStack = [];
     refreshHistory();
 
@@ -281,7 +279,6 @@
         // Restore mask from cache meta
         if (cached.meta?.rawMask) {
           const arr = cached.meta.rawMask as number[];
-          rawMask = new Uint8ClampedArray(arr);
           maskData = new Uint8ClampedArray(arr);
         }
 
@@ -366,7 +363,6 @@
           raw[i] = resizedData.data[i * 4]; // R channel = grayscale mask value
         }
 
-        rawMask = raw;
         maskData = new Uint8ClampedArray(raw);
         applyMask();
         processing = false;

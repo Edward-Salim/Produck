@@ -140,7 +140,10 @@
     style="background: radial-gradient(ellipse at 30% 20%, rgba(255,255,255,.18) 0%, transparent 60%), #cdc3ae;"
   >
     <!-- CSS Grid -->
-    <div class="grid min-w-max items-start gap-2 md:gap-3" style="grid-template-columns: {gridCols};">
+    <div
+      class="grid min-w-max items-start gap-2 md:gap-3"
+      style="grid-template-columns: {gridCols};"
+    >
       <!-- ====== ROW 1: Actor row ====== -->
       <!-- Gutter cell for actors -->
       <div class="flex h-full items-center justify-center" style="grid-column: 1; grid-row: 1;">
@@ -150,7 +153,7 @@
         >
       </div>
 
-      {#each activityOrder as { act, startCol, span } (act.id)}
+      {#each activityOrder as { act, startCol, span: _span } (act.id)}
         <!-- Actor emojis: placed in first column only -->
         <div
           class="flex items-end justify-center py-1.5"

@@ -131,7 +131,12 @@
 
   // Push history state when drawer opens, pop when it closes
   $effect(() => {
-    if (selectedArtifactDetail && !drawerInHistory && typeof window !== 'undefined' && window.innerWidth < 768) {
+    if (
+      selectedArtifactDetail &&
+      !drawerInHistory &&
+      typeof window !== 'undefined' &&
+      window.innerWidth < 768
+    ) {
       history.pushState({ drawer: true }, '');
       drawerInHistory = true;
     }
@@ -160,7 +165,7 @@
     }
   }
 
-  function handlePopState(e: PopStateEvent) {
+  function handlePopState() {
     if (dialogInHistory && selectedBook) {
       selectedBook = null;
       dialogInHistory = false;
@@ -254,8 +259,8 @@
 
   // Reset page when filters change
   $effect(() => {
-    selectedCategory;
-    searchQuery;
+    void selectedCategory;
+    void searchQuery;
     currentPage = 1;
   });
 
@@ -611,7 +616,7 @@
             <div class="flex items-center justify-between border-t border-cork-300 px-4 py-2">
               <button
                 type="button"
-                class="flex cursor-pointer items-center justify-center size-7 rounded text-cork-600 hover:bg-cork-200/50 hover:text-cork-800 disabled:cursor-default disabled:text-cork-300 disabled:hover:bg-transparent"
+                class="flex size-7 cursor-pointer items-center justify-center rounded text-cork-600 hover:bg-cork-200/50 hover:text-cork-800 disabled:cursor-default disabled:text-cork-300 disabled:hover:bg-transparent"
                 disabled={currentPage === 1}
                 onclick={() => currentPage--}
               >
@@ -620,7 +625,7 @@
               <span class="text-xs text-cork-500">{currentPage} / {totalPages}</span>
               <button
                 type="button"
-                class="flex cursor-pointer items-center justify-center size-7 rounded text-cork-600 hover:bg-cork-200/50 hover:text-cork-800 disabled:cursor-default disabled:text-cork-300 disabled:hover:bg-transparent"
+                class="flex size-7 cursor-pointer items-center justify-center rounded text-cork-600 hover:bg-cork-200/50 hover:text-cork-800 disabled:cursor-default disabled:text-cork-300 disabled:hover:bg-transparent"
                 disabled={currentPage === totalPages}
                 onclick={() => currentPage++}
               >
@@ -632,22 +637,29 @@
 
         <!-- Mobile backdrop -->
         {#if selectedArtifactDetail}
-          <!-- svelte-ignore a11y_no_static_element_interactions a11y_click_events_have_key_events -->
-          <div
+          <button
+            type="button"
+            aria-label="Close artifact detail"
             class="fixed inset-0 z-9 bg-black/20 md:hidden"
             onclick={closeDrawer}
-          ></div>
+          ></button>
         {/if}
 
         <!-- Right: detail pane / mobile drawer -->
         <div
-          class="fixed inset-x-0 bottom-0 z-10 max-h-[60vh] overflow-y-auto overflow-x-hidden rounded-t-2xl p-4 pt-0 shadow-[0_-4px_24px_rgba(0,0,0,.15)] transition-transform duration-300 [scrollbar-width:none] md:static md:z-auto md:max-h-[calc(100vh-80px)] md:w-72 md:shrink-0 md:translate-y-0 md:self-start md:rounded-xl md:pt-4 md:shadow-none md:[scrollbar-color:theme(--color-cork-300)_transparent] md:[scrollbar-width:thin] {selectedArtifactDetail ? 'translate-y-0' : 'max-md:translate-y-full'} md:sticky md:top-14"
+          class="fixed inset-x-0 bottom-0 z-10 max-h-[60vh] overflow-x-hidden overflow-y-auto rounded-t-2xl p-4 pt-0 shadow-[0_-4px_24px_rgba(0,0,0,.15)] transition-transform duration-300 [scrollbar-width:none] md:static md:z-auto md:max-h-[calc(100vh-80px)] md:w-72 md:shrink-0 md:translate-y-0 md:self-start md:rounded-xl md:pt-4 md:shadow-none md:[scrollbar-color:theme(--color-cork-300)_transparent] md:[scrollbar-width:thin] {selectedArtifactDetail
+            ? 'translate-y-0'
+            : 'max-md:translate-y-full'} md:sticky md:top-14"
           style="background: radial-gradient(ellipse at 30% 20%, rgba(255,255,255,.18) 0%, transparent 60%), #ddd4c2;"
         >
           <!-- Mobile drag handle + close -->
-          <div class="sticky top-0 z-10 flex justify-center pb-2 pt-2 md:hidden" style="background: inherit;">
+          <div
+            class="sticky top-0 z-10 flex justify-center pt-2 pb-2 md:hidden"
+            style="background: inherit;"
+          >
             <button
               type="button"
+              aria-label="Close artifact detail"
               class="h-1 w-10 cursor-pointer rounded-full bg-cork-400/40"
               onclick={closeDrawer}
             ></button>
@@ -834,7 +846,9 @@
       if (!o) closeBook();
     }}
   >
-    <Dialog.Content class="flex max-h-[75vh] max-w-[calc(100%-3rem)] flex-col border-cork-300 bg-cork-50 text-cork-800 sm:max-h-[85vh] sm:max-w-5xl">
+    <Dialog.Content
+      class="flex max-h-[75vh] max-w-[calc(100%-3rem)] flex-col border-cork-300 bg-cork-50 text-cork-800 sm:max-h-[85vh] sm:max-w-5xl"
+    >
       {#if selectedBook}
         <Dialog.Header class="flex-row items-start gap-4">
           {#if selectedBook.coverPath}
@@ -857,7 +871,9 @@
         <Dialog.Description class="sr-only">Artifacts list</Dialog.Description>
 
         <!-- Split pane: list left, detail right -->
-        <div class="flex min-h-0 flex-1 flex-col gap-4 border-t border-cork-300/50 pt-3 sm:flex-row">
+        <div
+          class="flex min-h-0 flex-1 flex-col gap-4 border-t border-cork-300/50 pt-3 sm:flex-row"
+        >
           <!-- Left: artifact list -->
           <div
             class="max-h-48 w-full shrink-0 overflow-y-auto border-cork-300/30 [scrollbar-color:theme(--color-cork-300)_transparent] [scrollbar-width:thin] sm:max-h-full sm:w-80 sm:border-r sm:pr-4"
@@ -910,7 +926,7 @@
 
           <!-- Right: detail pane -->
           <div
-            class="min-h-0 flex-1 overflow-y-auto overflow-x-hidden p-3 [scrollbar-color:theme(--color-cork-300)_transparent] [scrollbar-width:thin]"
+            class="min-h-0 flex-1 overflow-x-hidden overflow-y-auto p-3 [scrollbar-color:theme(--color-cork-300)_transparent] [scrollbar-width:thin]"
           >
             {#if selectedArtifactDetail}
               <h3 class="mb-1 font-display text-lg text-cork-800">{selectedArtifactDetail.name}</h3>

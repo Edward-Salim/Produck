@@ -12,12 +12,7 @@
     FormInput
   } from '@lucide/svelte';
   import { type DiffLine, computeDiff } from './admin-diff.js';
-  import {
-    KEY_LABELS,
-    SECTIONS,
-    FORM_FIELDS,
-    getNewRecordTemplate
-  } from './admin-config.js';
+  import { KEY_LABELS, SECTIONS, FORM_FIELDS, getNewRecordTemplate } from './admin-config.js';
   import AdminFormView from './AdminFormView.svelte';
   import AdminAiBar from './AdminAiBar.svelte';
 
@@ -388,7 +383,7 @@
   });
 
   $effect(() => {
-    data.lastProject;
+    void data.lastProject;
     loadData().then(() => {
       loadDiffForFilter();
     });
@@ -479,7 +474,9 @@
   <div class="flex flex-col gap-3 md:flex-row" style="height: calc(100vh - 240px)">
     <!-- Section filter: horizontal scroll on mobile, vertical sidebar on desktop -->
     <div class="shrink-0 space-y-1.5 md:w-44 md:space-y-0">
-      <div class="left-pane flex gap-1.5 overflow-x-auto pb-1 [-webkit-overflow-scrolling:touch] [scrollbar-width:none] md:flex-col md:space-y-0.5 md:overflow-x-visible md:overflow-y-auto md:[scrollbar-width:thin] md:pb-0">
+      <div
+        class="left-pane flex gap-1.5 overflow-x-auto pb-1 [-webkit-overflow-scrolling:touch] [scrollbar-width:none] md:flex-col md:space-y-0.5 md:overflow-x-visible md:overflow-y-auto md:pb-0 md:[scrollbar-width:thin]"
+      >
         {#each SECTIONS as section (section.key)}
           {@const isActive = activeSection === section.key}
           {@const isExpanded = expandedSections.has(section.key)}
@@ -543,7 +540,9 @@
 
       <!-- Mobile sub-items row -->
       {#if activeSectionSubs.length > 0}
-        <div class="flex gap-1.5 overflow-x-auto [-webkit-overflow-scrolling:touch] [scrollbar-width:none] md:hidden">
+        <div
+          class="flex gap-1.5 overflow-x-auto [-webkit-overflow-scrolling:touch] [scrollbar-width:none] md:hidden"
+        >
           {#each activeSectionSubs as subKey (subKey)}
             {@const count = getCount(subKey)}
             {@const subHasDiff = hasDiffFor(subKey)}
@@ -662,7 +661,15 @@
           spellcheck="false"
         ></textarea>
       {:else}
-        <AdminFormView {formKey} {formFields} {formItems} keyLabels={KEY_LABELS} onSyncForm={syncFormToFullData} onAddRecord={addRecord} onRemoveRecord={removeRecord} />
+        <AdminFormView
+          {formKey}
+          {formFields}
+          {formItems}
+          keyLabels={KEY_LABELS}
+          onSyncForm={syncFormToFullData}
+          onAddRecord={addRecord}
+          onRemoveRecord={removeRecord}
+        />
       {/if}
 
       <AdminAiBar bind:aiPrompt {aiLoading} {aiError} onSubmit={askAI} />

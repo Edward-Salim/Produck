@@ -29,7 +29,10 @@
   }
 </script>
 
-<form onsubmit={onSubmit} class="ai-bar flex items-end gap-2 rounded-xl px-3 py-2 md:gap-3 md:px-4 md:py-2.5">
+<form
+  onsubmit={onSubmit}
+  class="ai-bar flex items-end gap-2 rounded-xl px-3 py-2 md:gap-3 md:px-4 md:py-2.5"
+>
   <Sparkles class="mb-1.5 size-4 shrink-0 text-cork-500 {aiLoading ? 'animate-pulse' : ''}" />
   <textarea
     bind:this={textareaEl}

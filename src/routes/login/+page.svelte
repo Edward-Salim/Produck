@@ -129,15 +129,17 @@
           >
             {#if rememberMe}
               <svg class="size-3 text-white" viewBox="0 0 12 12" fill="none">
-                <path d="M2.5 6l2.5 2.5 4.5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                <path
+                  d="M2.5 6l2.5 2.5 4.5-5"
+                  stroke="currentColor"
+                  stroke-width="1.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
               </svg>
             {/if}
           </span>
-          <input
-            type="checkbox"
-            bind:checked={rememberMe}
-            class="sr-only"
-          />
+          <input type="checkbox" bind:checked={rememberMe} class="sr-only" />
           <span class="text-xs text-cork-500">Remember me</span>
         </label>
 

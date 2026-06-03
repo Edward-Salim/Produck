@@ -98,7 +98,7 @@
   </header>
 
   <!-- Controls bar -->
-  <div class="mb-5 space-y-2 md:space-y-0 md:flex md:items-center md:gap-3">
+  <div class="mb-5 space-y-2 md:flex md:items-center md:gap-3 md:space-y-0">
     <!-- Top row: region pills -->
     <div class="flex-1 overflow-x-auto [-webkit-overflow-scrolling:touch] [scrollbar-width:none]">
       <div class="flex items-center gap-1">
@@ -132,15 +132,25 @@
       <Select.Root
         type="single"
         value={selectedCategory}
-        onValueChange={(v) => { if (v) selectedCategory = v as FintechCategory | 'all'; }}
+        onValueChange={(v) => {
+          if (v) selectedCategory = v as FintechCategory | 'all';
+        }}
       >
-        <Select.Trigger class="h-8 flex-1 border-cork-300 bg-cork-200/50 text-xs text-cork-700 md:flex-none md:w-40">
-          <span class="truncate">{selectedCategory === 'all' ? 'All Categories' : selectedCategory}</span>
+        <Select.Trigger
+          class="h-8 flex-1 border-cork-300 bg-cork-200/50 text-xs text-cork-700 md:w-40 md:flex-none"
+        >
+          <span class="truncate"
+            >{selectedCategory === 'all' ? 'All Categories' : selectedCategory}</span
+          >
         </Select.Trigger>
         <Select.Content class="border-cork-300 bg-cork-50" preventScroll={false}>
-          <Select.Item value="all" class="text-xs text-cork-700 focus:bg-cork-200/50">All Categories</Select.Item>
+          <Select.Item value="all" class="text-xs text-cork-700 focus:bg-cork-200/50"
+            >All Categories</Select.Item
+          >
           {#each ALL_FINTECH_CATEGORIES as cat (cat)}
-            <Select.Item value={cat} class="text-xs text-cork-700 focus:bg-cork-200/50">{cat}</Select.Item>
+            <Select.Item value={cat} class="text-xs text-cork-700 focus:bg-cork-200/50"
+              >{cat}</Select.Item
+            >
           {/each}
         </Select.Content>
       </Select.Root>
@@ -189,7 +199,9 @@
             </div>
 
             <!-- Company grid -->
-            <div class="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5 md:gap-3 lg:grid-cols-6">
+            <div
+              class="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5 md:gap-3 lg:grid-cols-6"
+            >
               {#each group.companies as company (company.id)}
                 {@const picked = isPicked(company.id)}
                 <button
@@ -200,9 +212,7 @@
                 >
                   <span class="absolute top-1.5 right-1.5 md:top-2 md:right-2">
                     <Swords
-                      class="size-3.5 md:size-4 {picked
-                        ? 'text-cork-700'
-                        : 'text-cork-400/50'}"
+                      class="size-3.5 md:size-4 {picked ? 'text-cork-700' : 'text-cork-400/50'}"
                     />
                   </span>
 

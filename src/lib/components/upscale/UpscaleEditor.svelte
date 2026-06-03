@@ -48,8 +48,6 @@
   let beforeCanvas: HTMLCanvasElement | undefined = $state(undefined);
   let afterCanvas: HTMLCanvasElement | undefined = $state(undefined);
 
-  let lastFileRef: File | null = null;
-
   function formatSize(bytes: number): string {
     if (bytes === 0) return '—';
     if (bytes < 1024) return `${bytes} B`;
@@ -328,7 +326,6 @@
         }, 'image/png');
 
         const isNewFile = !loadedFromHistory;
-        lastFileRef = currentFile;
         loadedFromHistory = false;
 
         if (isNewFile) {

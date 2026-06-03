@@ -18,13 +18,20 @@ Thumbs.db
 !.env.example
 !.env.test
 
+# Private local data
+*.private.ts
+*.private.json
+src/routes/(app)/financial-tracker/financial-tracker-data.private.ts
+
 # Vite
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 
 # SQLite
 *.db
-!local.db
 *.db-journal
 *.db-shm
 *.db-wal
+
+# Supabase CLI local state
+supabase/.temp/

@@ -42,17 +42,16 @@
         </div>
         <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
           {#each formFields as field (field.key)}
-            <div
-              class={field.type === 'textarea' || field.type === 'array'
-                ? 'md:col-span-2'
-                : ''}
-            >
+            {@const fieldControlId = `admin-${formKey}-${idx}-${field.key}`}
+            <div class={field.type === 'textarea' || field.type === 'array' ? 'md:col-span-2' : ''}>
               <label
+                for={fieldControlId}
                 class="mb-1 block text-[10px] font-semibold tracking-wider text-cork-400 uppercase"
                 >{field.label}</label
               >
               {#if field.type === 'text'}
                 <input
+                  id={fieldControlId}
                   type="text"
                   value={item[field.key] ?? ''}
                   oninput={(e) => {
@@ -63,6 +62,7 @@
                 />
               {:else if field.type === 'number'}
                 <input
+                  id={fieldControlId}
                   type="number"
                   value={item[field.key] ?? 0}
                   oninput={(e) => {
@@ -73,6 +73,7 @@
                 />
               {:else if field.type === 'boolean'}
                 <button
+                  id={fieldControlId}
                   type="button"
                   class="flex h-8 cursor-pointer items-center gap-2 rounded-md border border-cork-200 bg-cork-50/50 px-2 text-sm text-cork-800"
                   onclick={() => {
@@ -80,15 +81,13 @@
                     onSyncForm();
                   }}
                 >
-                  <span
-                    class="size-3 rounded {item[field.key]
-                      ? 'bg-green-500'
-                      : 'bg-cork-300'}"
+                  <span class="size-3 rounded {item[field.key] ? 'bg-green-500' : 'bg-cork-300'}"
                   ></span>
                   {item[field.key] ? 'Yes' : 'No'}
                 </button>
               {:else if field.type === 'select'}
                 <select
+                  id={fieldControlId}
                   value={item[field.key] ?? ''}
                   onchange={(e) => {
                     item[field.key] = (e.target as HTMLSelectElement).value;
@@ -102,6 +101,7 @@
                 </select>
               {:else if field.type === 'textarea'}
                 <textarea
+                  id={fieldControlId}
                   value={item[field.key] ?? ''}
                   oninput={(e) => {
                     item[field.key] = (e.target as HTMLTextAreaElement).value;
@@ -115,6 +115,7 @@
                   {#each item[field.key] ?? [] as arrItem, ai (ai)}
                     <div class="flex items-center gap-1">
                       <input
+                        id={ai === 0 ? fieldControlId : undefined}
                         type="text"
                         value={arrItem}
                         oninput={(e) => {

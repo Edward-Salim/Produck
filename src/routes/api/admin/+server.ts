@@ -217,7 +217,10 @@ export const PUT: RequestHandler = async ({ request, locals }) => {
         }
       }
       // Bulk sync: delete all idea-scoped actors for this project's ideas, re-insert
-      const pIdeas = await db.select({ id: idea.id }).from(idea).where(eq(idea.projectId, projectId));
+      const pIdeas = await db
+        .select({ id: idea.id })
+        .from(idea)
+        .where(eq(idea.projectId, projectId));
       for (const pi of pIdeas) {
         await db.delete(actor).where(eq(actor.ideaId, pi.id));
       }
@@ -235,7 +238,10 @@ export const PUT: RequestHandler = async ({ request, locals }) => {
     // Activities + tasks + stories need careful ordering (foreign keys)
     if (data.activities) {
       // Delete old stories, tasks, activities for all ideas in this project
-      const pIdeas2 = await db.select({ id: idea.id }).from(idea).where(eq(idea.projectId, projectId));
+      const pIdeas2 = await db
+        .select({ id: idea.id })
+        .from(idea)
+        .where(eq(idea.projectId, projectId));
       for (const pi of pIdeas2) {
         const oldActivities = await db
           .select({ id: activity.id })
@@ -252,10 +258,7 @@ export const PUT: RequestHandler = async ({ request, locals }) => {
       const activityIdMap = new Map<number, number>();
       for (const a of data.activities) {
         const { id: oldId, projectId: _pid, ...rest } = a;
-        const [inserted] = await db
-          .insert(activity)
-          .values(rest)
-          .returning({ id: activity.id });
+        const [inserted] = await db.insert(activity).values(rest).returning({ id: activity.id });
         activityIdMap.set(oldId, inserted.id);
       }
 
@@ -346,7 +349,10 @@ export const PUT: RequestHandler = async ({ request, locals }) => {
 
     if (data.backlogItems) {
       // Delete old idea-scoped backlog items
-      const pIdeas3 = await db.select({ id: idea.id }).from(idea).where(eq(idea.projectId, projectId));
+      const pIdeas3 = await db
+        .select({ id: idea.id })
+        .from(idea)
+        .where(eq(idea.projectId, projectId));
       for (const pi of pIdeas3) {
         await db.delete(backlogItem).where(eq(backlogItem.ideaId, pi.id));
       }

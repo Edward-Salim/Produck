@@ -3,7 +3,7 @@
   import { Badge } from '$lib/components/ui/badge/index.js';
   import { Square, SquareCheck } from '@lucide/svelte';
   import { invalidateAll } from '$app/navigation';
-  import type { Story, StoryCheckedAC } from '$lib/types/story-map.js';
+  import type { Story } from '$lib/types/story-map.js';
   import { PIC_COLORS, PIC_DEFAULT_HEX } from '$lib/constants/colors.js';
 
   let { open = $bindable(false), story }: { open: boolean; story: Story | null } = $props();

@@ -16,9 +16,7 @@ export const load: LayoutServerLoad = async ({ cookies, locals }) => {
     // Look up current user + all workspaces in parallel
     const authId = locals.session?.user?.id;
     const [userRows, allWorkspaces] = await Promise.all([
-      authId
-        ? db.select().from(appUser).where(eq(appUser.authId, authId))
-        : Promise.resolve([]),
+      authId ? db.select().from(appUser).where(eq(appUser.authId, authId)) : Promise.resolve([]),
       db
         .select({ id: workspace.id, name: workspace.name })
         .from(workspace)
@@ -42,7 +40,9 @@ export const load: LayoutServerLoad = async ({ cookies, locals }) => {
     const cookieWorkspace = cookies.get('active_workspace') ?? '';
     const cookieWsId = Number(cookieWorkspace) || 0;
     const activeWorkspaceId =
-      (cookieWsId && workspaces.some((w) => w.id === cookieWsId) ? cookieWsId : workspaces[0]?.id) ?? 0;
+      (cookieWsId && workspaces.some((w) => w.id === cookieWsId)
+        ? cookieWsId
+        : workspaces[0]?.id) ?? 0;
 
     // Projects + access in parallel
     const [allProjects, accessRows] = await Promise.all([

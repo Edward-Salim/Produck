@@ -1,20 +1,25 @@
 import {
-  sqliteTable,
+  pgTable,
+  serial,
   integer,
-  text
-} from 'drizzle-orm/sqlite-core';
+  text,
+  boolean,
+  jsonb,
+  timestamp,
+  bigint
+} from 'drizzle-orm/pg-core';
 import { relations, sql } from 'drizzle-orm';
 
 // ── App User & Access ────────────────────────────────
 
-export const appUser = sqliteTable('app_user', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
+export const appUser = pgTable('app_user', {
+  id: serial('id').primaryKey(),
   authId: text('auth_id').notNull().unique(),
   email: text('email').notNull(),
   displayName: text('display_name').notNull(),
   role: text('role').notNull().default('member'),
   passwordHash: text('password_hash'),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`)
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
 });
 
 export const appUserRelations = relations(appUser, ({ many }) => ({
@@ -22,7 +27,7 @@ export const appUserRelations = relations(appUser, ({ many }) => ({
   sessions: many(authSession)
 }));
 
-export const authSession = sqliteTable('auth_session', {
+export const authSession = pgTable('auth_session', {
   id: text('id').primaryKey(),
   userId: integer('user_id')
     .notNull()
@@ -34,15 +39,15 @@ export const authSessionRelations = relations(authSession, ({ one }) => ({
   user: one(appUser, { fields: [authSession.userId], references: [appUser.id] })
 }));
 
-export const projectAccess = sqliteTable('project_access', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
+export const projectAccess = pgTable('project_access', {
+  id: serial('id').primaryKey(),
   userId: integer('user_id')
     .notNull()
     .references(() => appUser.id, { onDelete: 'cascade' }),
   projectId: integer('project_id')
     .notNull()
     .references(() => project.id, { onDelete: 'cascade' }),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`)
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
 });
 
 export const projectAccessRelations = relations(projectAccess, ({ one }) => ({
@@ -50,15 +55,15 @@ export const projectAccessRelations = relations(projectAccess, ({ one }) => ({
   project: one(project, { fields: [projectAccess.projectId], references: [project.id] })
 }));
 
-export const workspaceAccess = sqliteTable('workspace_access', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
+export const workspaceAccess = pgTable('workspace_access', {
+  id: serial('id').primaryKey(),
   userId: integer('user_id')
     .notNull()
     .references(() => appUser.id, { onDelete: 'cascade' }),
   workspaceId: integer('workspace_id')
     .notNull()
     .references(() => workspace.id, { onDelete: 'cascade' }),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`)
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
 });
 
 export const workspaceAccessRelations = relations(workspaceAccess, ({ one }) => ({
@@ -68,11 +73,11 @@ export const workspaceAccessRelations = relations(workspaceAccess, ({ one }) => 
 
 // ── Workspace ─────────────────────────────────────────
 
-export const workspace = sqliteTable('workspace', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
+export const workspace = pgTable('workspace', {
+  id: serial('id').primaryKey(),
   name: text('name').notNull(),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
-  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`)
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
 });
 
 export const workspaceRelations = relations(workspace, ({ many }) => ({
@@ -82,8 +87,8 @@ export const workspaceRelations = relations(workspace, ({ many }) => ({
 
 // ── Business Outcome ──────────────────────────────────
 
-export const businessOutcome = sqliteTable('business_outcome', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
+export const businessOutcome = pgTable('business_outcome', {
+  id: serial('id').primaryKey(),
   projectId: integer('project_id')
     .notNull()
     .references(() => project.id, { onDelete: 'cascade' }),
@@ -91,13 +96,15 @@ export const businessOutcome = sqliteTable('business_outcome', {
   code: text('code').notNull(),
   title: text('title').notNull(),
   description: text('description'),
-  metrics: text('metrics', { mode: 'json' }).$type<string[]>().default(sql`'[]'`)
+  metrics: jsonb('metrics')
+    .$type<string[]>()
+    .default(sql`'[]'`)
 });
 
 // ── Product Objective ─────────────────────────────────
 
-export const productObjective = sqliteTable('product_objective', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
+export const productObjective = pgTable('product_objective', {
+  id: serial('id').primaryKey(),
   projectId: integer('project_id')
     .notNull()
     .references(() => project.id, { onDelete: 'cascade' }),
@@ -110,8 +117,8 @@ export const productObjective = sqliteTable('product_objective', {
 
 // ── Key Result ────────────────────────────────────────
 
-export const keyResult = sqliteTable('key_result', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
+export const keyResult = pgTable('key_result', {
+  id: serial('id').primaryKey(),
   objectiveId: integer('objective_id')
     .notNull()
     .references(() => productObjective.id, { onDelete: 'cascade' }),
@@ -134,14 +141,14 @@ export const keyResultRelations = relations(keyResult, ({ one }) => ({
 
 // ── Artifact Pick ─────────────────────────────────────
 
-export const artifactPick = sqliteTable('artifact_pick', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
+export const artifactPick = pgTable('artifact_pick', {
+  id: serial('id').primaryKey(),
   projectId: integer('project_id')
     .notNull()
     .references(() => project.id, { onDelete: 'cascade' }),
   bookId: text('book_id').notNull(),
   artifactName: text('artifact_name').notNull(),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`)
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
 });
 
 export const artifactPickRelations = relations(artifactPick, ({ one }) => ({
@@ -150,13 +157,13 @@ export const artifactPickRelations = relations(artifactPick, ({ one }) => ({
 
 // ── Fintech Pick ──────────────────────────────────────
 
-export const fintechPick = sqliteTable('fintech_pick', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
+export const fintechPick = pgTable('fintech_pick', {
+  id: serial('id').primaryKey(),
   projectId: integer('project_id')
     .notNull()
     .references(() => project.id, { onDelete: 'cascade' }),
   companyId: text('company_id').notNull(),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`)
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
 });
 
 export const fintechPickRelations = relations(fintechPick, ({ one }) => ({
@@ -165,8 +172,8 @@ export const fintechPickRelations = relations(fintechPick, ({ one }) => ({
 
 // ── PM Book ───────────────────────────────────────────
 
-export const pmBook = sqliteTable('pm_book', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
+export const pmBook = pgTable('pm_book', {
+  id: serial('id').primaryKey(),
   slug: text('slug').notNull().unique(),
   title: text('title').notNull(),
   subtitle: text('subtitle').default(''),
@@ -181,17 +188,21 @@ export const pmBookRelations = relations(pmBook, ({ many }) => ({
 
 // ── PM Artifact ───────────────────────────────────────
 
-export const pmArtifact = sqliteTable('pm_artifact', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
+export const pmArtifact = pgTable('pm_artifact', {
+  id: serial('id').primaryKey(),
   bookId: integer('book_id')
     .notNull()
     .references(() => pmBook.id, { onDelete: 'cascade' }),
   name: text('name').notNull(),
   category: text('category').notNull(),
   description: text('description').notNull().default(''),
-  howTo: text('how_to', { mode: 'json' }).$type<string[]>().default(sql`'[]'`),
+  howTo: jsonb('how_to')
+    .$type<string[]>()
+    .default(sql`'[]'`),
   figure: text('figure'),
-  figures: text('figures', { mode: 'json' }).$type<string[]>().default(sql`'[]'`)
+  figures: jsonb('figures')
+    .$type<string[]>()
+    .default(sql`'[]'`)
 });
 
 export const pmArtifactRelations = relations(pmArtifact, ({ one }) => ({
@@ -200,20 +211,22 @@ export const pmArtifactRelations = relations(pmArtifact, ({ one }) => ({
 
 // ── PM Methodology ────────────────────────────────────
 
-export const pmMethodology = sqliteTable('pm_methodology', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
+export const pmMethodology = pgTable('pm_methodology', {
+  id: serial('id').primaryKey(),
   name: text('name').notNull(),
   phase: text('phase').notNull(),
   origin: text('origin').notNull().default(''),
   description: text('description').notNull().default(''),
-  relatedArtifacts: text('related_artifacts', { mode: 'json' }).$type<string[]>().default(sql`'[]'`),
+  relatedArtifacts: jsonb('related_artifacts')
+    .$type<string[]>()
+    .default(sql`'[]'`),
   figure: text('figure')
 });
 
 // ── Idea ──────────────────────────────────────────────
 
-export const idea = sqliteTable('idea', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
+export const idea = pgTable('idea', {
+  id: serial('id').primaryKey(),
   workspaceId: integer('workspace_id')
     .notNull()
     .references(() => workspace.id, { onDelete: 'cascade' }),
@@ -224,8 +237,8 @@ export const idea = sqliteTable('idea', {
   proposer: text('proposer'),
   okrCode: text('okr_code'),
   levels: integer('levels').notNull().default(2),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
-  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`)
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
 });
 
 export const ideaRelations = relations(idea, ({ one, many }) => ({
@@ -238,16 +251,16 @@ export const ideaRelations = relations(idea, ({ one, many }) => ({
 
 // ── Project ────────────────────────────────────────────
 
-export const project = sqliteTable('project', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
+export const project = pgTable('project', {
+  id: serial('id').primaryKey(),
   workspaceId: integer('workspace_id')
     .notNull()
     .references(() => workspace.id, { onDelete: 'cascade' }),
   name: text('name').notNull(),
   shortName: text('short_name'),
   levels: integer('levels').notNull().default(2),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
-  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`)
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
 });
 
 export const projectRelations = relations(project, ({ one, many }) => ({
@@ -261,8 +274,8 @@ export const projectRelations = relations(project, ({ one, many }) => ({
 
 // ── Actor ──────────────────────────────────────────────
 
-export const actor = sqliteTable('actor', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
+export const actor = pgTable('actor', {
+  id: serial('id').primaryKey(),
   projectId: integer('project_id').references(() => project.id, { onDelete: 'cascade' }),
   ideaId: integer('idea_id').references(() => idea.id, { onDelete: 'cascade' }),
   emoji: text('emoji').notNull(),
@@ -277,13 +290,15 @@ export const actorRelations = relations(actor, ({ one }) => ({
 
 // ── Activity ───────────────────────────────────────────
 
-export const activity = sqliteTable('activity', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
+export const activity = pgTable('activity', {
+  id: serial('id').primaryKey(),
   projectId: integer('project_id').references(() => project.id, { onDelete: 'cascade' }),
   ideaId: integer('idea_id').references(() => idea.id, { onDelete: 'cascade' }),
   code: text('code').notNull(),
   title: text('title').notNull(),
-  actorEmojis: text('actor_emojis', { mode: 'json' }).$type<string[]>().default(sql`'[]'`),
+  actorEmojis: jsonb('actor_emojis')
+    .$type<string[]>()
+    .default(sql`'[]'`),
   sortOrder: integer('sort_order').notNull().default(0)
 });
 
@@ -296,8 +311,8 @@ export const activityRelations = relations(activity, ({ one, many }) => ({
 
 // ── Story Map Task ─────────────────────────────────────
 
-export const storyMapTask = sqliteTable('story_map_task', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
+export const storyMapTask = pgTable('story_map_task', {
+  id: serial('id').primaryKey(),
   activityId: integer('activity_id')
     .notNull()
     .references(() => activity.id, { onDelete: 'cascade' }),
@@ -313,8 +328,8 @@ export const storyMapTaskRelations = relations(storyMapTask, ({ one, many }) => 
 
 // ── Story ──────────────────────────────────────────────
 
-export const story = sqliteTable('story', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
+export const story = pgTable('story', {
+  id: serial('id').primaryKey(),
   activityId: integer('activity_id')
     .notNull()
     .references(() => activity.id, { onDelete: 'cascade' }),
@@ -323,16 +338,24 @@ export const story = sqliteTable('story', {
   title: text('title').notNull(),
   pic: text('pic').notNull().default(''),
   picColor: text('pic_color').notNull().default(''),
-  done: integer('done', { mode: 'boolean' }).notNull().default(false),
+  done: boolean('done').notNull().default(false),
   kano: text('kano').notNull(),
   asA: text('as_a'),
   wantTo: text('want_to'),
   soThat: text('so_that'),
-  pains: text('pains', { mode: 'json' }).$type<string[]>().default(sql`'[]'`),
-  gains: text('gains', { mode: 'json' }).$type<string[]>().default(sql`'[]'`),
-  details: text('details', { mode: 'json' }).$type<string[]>().default(sql`'[]'`),
-  checkedAcs: text('checked_acs', { mode: 'json' }).$type<{ index: number; checkedAt: string }[]>().default(sql`'[]'`),
-  assumptions: text('assumptions', { mode: 'json' })
+  pains: jsonb('pains')
+    .$type<string[]>()
+    .default(sql`'[]'`),
+  gains: jsonb('gains')
+    .$type<string[]>()
+    .default(sql`'[]'`),
+  details: jsonb('details')
+    .$type<string[]>()
+    .default(sql`'[]'`),
+  checkedAcs: jsonb('checked_acs')
+    .$type<{ index: number; checkedAt: string }[]>()
+    .default(sql`'[]'`),
+  assumptions: jsonb('assumptions')
     .$type<
       {
         id: string;
@@ -360,8 +383,8 @@ export const storyRelations = relations(story, ({ one, many }) => ({
 
 // ── Persona ────────────────────────────────────────────
 
-export const persona = sqliteTable('persona', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
+export const persona = pgTable('persona', {
+  id: serial('id').primaryKey(),
   projectId: integer('project_id')
     .notNull()
     .references(() => project.id, { onDelete: 'cascade' }),
@@ -383,13 +406,21 @@ export const persona = sqliteTable('persona', {
   quote: text('quote'),
   biography: text('biography'),
   // Goals, Challenges, Motivators, Info Sources (arrays)
-  goals: text('goals', { mode: 'json' }).$type<string[]>().default(sql`'[]'`),
-  challenges: text('challenges', { mode: 'json' }).$type<string[]>().default(sql`'[]'`),
-  motivators: text('motivators', { mode: 'json' }).$type<string[]>().default(sql`'[]'`),
-  infoSources: text('info_sources', { mode: 'json' }).$type<string[]>().default(sql`'[]'`),
+  goals: jsonb('goals')
+    .$type<string[]>()
+    .default(sql`'[]'`),
+  challenges: jsonb('challenges')
+    .$type<string[]>()
+    .default(sql`'[]'`),
+  motivators: jsonb('motivators')
+    .$type<string[]>()
+    .default(sql`'[]'`),
+  infoSources: jsonb('info_sources')
+    .$type<string[]>()
+    .default(sql`'[]'`),
   sortOrder: integer('sort_order').notNull().default(0),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
-  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`)
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
 });
 
 export const personaRelations = relations(persona, ({ one }) => ({
@@ -398,8 +429,8 @@ export const personaRelations = relations(persona, ({ one }) => ({
 
 // ── Interview Snapshot ────────────────────────────────
 
-export const interviewSnapshot = sqliteTable('interview_snapshot', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
+export const interviewSnapshot = pgTable('interview_snapshot', {
+  id: serial('id').primaryKey(),
   projectId: integer('project_id')
     .notNull()
     .references(() => project.id, { onDelete: 'cascade' }),
@@ -408,12 +439,18 @@ export const interviewSnapshot = sqliteTable('interview_snapshot', {
   personPhoto: text('person_photo'),
   interviewDate: text('interview_date').notNull(),
   quote: text('quote'),
-  quickFacts: text('quick_facts', { mode: 'json' }).$type<string[]>().default(sql`'[]'`),
-  insights: text('insights', { mode: 'json' }).$type<string[]>().default(sql`'[]'`),
-  opportunities: text('opportunities', { mode: 'json' }).$type<string[]>().default(sql`'[]'`),
+  quickFacts: jsonb('quick_facts')
+    .$type<string[]>()
+    .default(sql`'[]'`),
+  insights: jsonb('insights')
+    .$type<string[]>()
+    .default(sql`'[]'`),
+  opportunities: jsonb('opportunities')
+    .$type<string[]>()
+    .default(sql`'[]'`),
   transcript: text('transcript'),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
-  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`)
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
 });
 
 export const interviewSnapshotRelations = relations(interviewSnapshot, ({ one }) => ({
@@ -422,8 +459,8 @@ export const interviewSnapshotRelations = relations(interviewSnapshot, ({ one })
 
 // ── Milestone ──────────────────────────────────────────
 
-export const milestone = sqliteTable('milestone', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
+export const milestone = pgTable('milestone', {
+  id: serial('id').primaryKey(),
   projectId: integer('project_id')
     .notNull()
     .references(() => project.id, { onDelete: 'cascade' }),
@@ -431,8 +468,8 @@ export const milestone = sqliteTable('milestone', {
   targetDate: text('target_date'),
   status: text('status').notNull().default('planned'),
   sortOrder: integer('sort_order').notNull().default(0),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
-  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`)
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
 });
 
 export const milestoneRelations = relations(milestone, ({ one, many }) => ({
@@ -442,8 +479,8 @@ export const milestoneRelations = relations(milestone, ({ one, many }) => ({
 
 // ── Roadmap Item ───────────────────────────────────────
 
-export const roadmapItem = sqliteTable('roadmap_item', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
+export const roadmapItem = pgTable('roadmap_item', {
+  id: serial('id').primaryKey(),
   milestoneId: integer('milestone_id')
     .notNull()
     .references(() => milestone.id, { onDelete: 'cascade' }),
@@ -452,8 +489,8 @@ export const roadmapItem = sqliteTable('roadmap_item', {
   priority: integer('priority').notNull().default(0),
   status: text('status').notNull().default('planned'),
   sortOrder: integer('sort_order').notNull().default(0),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
-  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`)
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
 });
 
 export const roadmapItemRelations = relations(roadmapItem, ({ one }) => ({
@@ -462,8 +499,8 @@ export const roadmapItemRelations = relations(roadmapItem, ({ one }) => ({
 
 // ── Backlog Item ───────────────────────────────────────
 
-export const backlogItem = sqliteTable('backlog_item', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
+export const backlogItem = pgTable('backlog_item', {
+  id: serial('id').primaryKey(),
   projectId: integer('project_id').references(() => project.id, { onDelete: 'cascade' }),
   ideaId: integer('idea_id').references(() => idea.id, { onDelete: 'cascade' }),
   storyId: integer('story_id').references(() => story.id, { onDelete: 'set null' }),
@@ -473,8 +510,8 @@ export const backlogItem = sqliteTable('backlog_item', {
   status: text('status').notNull().default('todo'),
   type: text('type').notNull().default('feature'),
   sortOrder: integer('sort_order').notNull().default(0),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
-  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`)
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
 });
 
 export const backlogItemRelations = relations(backlogItem, ({ one }) => ({
@@ -485,13 +522,15 @@ export const backlogItemRelations = relations(backlogItem, ({ one }) => ({
 
 // ── Experience Map (decoupled from Story Map) ────────
 
-export const experiencePhase = sqliteTable('experience_phase', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
+export const experiencePhase = pgTable('experience_phase', {
+  id: serial('id').primaryKey(),
   projectId: integer('project_id')
     .notNull()
     .references(() => project.id, { onDelete: 'cascade' }),
   title: text('title').notNull(),
-  actorEmojis: text('actor_emojis', { mode: 'json' }).$type<string[]>().default(sql`'[]'`),
+  actorEmojis: jsonb('actor_emojis')
+    .$type<string[]>()
+    .default(sql`'[]'`),
   sortOrder: integer('sort_order').notNull().default(0)
 });
 
@@ -500,8 +539,8 @@ export const experiencePhaseRelations = relations(experiencePhase, ({ one, many 
   steps: many(experienceStep)
 }));
 
-export const experienceStep = sqliteTable('experience_step', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
+export const experienceStep = pgTable('experience_step', {
+  id: serial('id').primaryKey(),
   phaseId: integer('phase_id')
     .notNull()
     .references(() => experiencePhase.id, { onDelete: 'cascade' }),
@@ -517,8 +556,8 @@ export const experienceStepRelations = relations(experienceStep, ({ one, many })
   touchpoints: many(experienceTouchpoint)
 }));
 
-export const experienceTouchpoint = sqliteTable('experience_touchpoint', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
+export const experienceTouchpoint = pgTable('experience_touchpoint', {
+  id: serial('id').primaryKey(),
   stepId: integer('step_id')
     .notNull()
     .references(() => experienceStep.id, { onDelete: 'cascade' }),
@@ -526,8 +565,12 @@ export const experienceTouchpoint = sqliteTable('experience_touchpoint', {
   asA: text('as_a'),
   wantTo: text('want_to'),
   soThat: text('so_that'),
-  pains: text('pains', { mode: 'json' }).$type<string[]>().default(sql`'[]'`),
-  gains: text('gains', { mode: 'json' }).$type<string[]>().default(sql`'[]'`),
+  pains: jsonb('pains')
+    .$type<string[]>()
+    .default(sql`'[]'`),
+  gains: jsonb('gains')
+    .$type<string[]>()
+    .default(sql`'[]'`),
   pic: text('pic').notNull().default(''),
   picColor: text('pic_color').notNull().default(''),
   kpi: text('kpi').notNull().default(''),
@@ -543,16 +586,16 @@ export const experienceTouchpointRelations = relations(experienceTouchpoint, ({ 
 
 // ── RSS / Trend Analysis ─────────────────────────────
 
-export const rssSource = sqliteTable('rss_source', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
+export const rssSource = pgTable('rss_source', {
+  id: serial('id').primaryKey(),
   workspaceId: integer('workspace_id')
     .notNull()
     .references(() => workspace.id, { onDelete: 'cascade' }),
   name: text('name').notNull(),
   url: text('url').notNull(),
   category: text('category').notNull().default('general'),
-  enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`)
+  enabled: boolean('enabled').notNull().default(true),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
 });
 
 export const rssSourceRelations = relations(rssSource, ({ one, many }) => ({
@@ -560,8 +603,8 @@ export const rssSourceRelations = relations(rssSource, ({ one, many }) => ({
   articles: many(rssArticle)
 }));
 
-export const rssArticle = sqliteTable('rss_article', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
+export const rssArticle = pgTable('rss_article', {
+  id: serial('id').primaryKey(),
   sourceId: integer('source_id')
     .notNull()
     .references(() => rssSource.id, { onDelete: 'cascade' }),
@@ -570,25 +613,172 @@ export const rssArticle = sqliteTable('rss_article', {
   description: text('description'),
   content: text('content'),
   author: text('author'),
-  publishedAt: integer('published_at', { mode: 'timestamp' }),
-  fetchedAt: integer('fetched_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`)
+  publishedAt: timestamp('published_at', { withTimezone: true }),
+  fetchedAt: timestamp('fetched_at', { withTimezone: true }).notNull().defaultNow()
 });
 
 export const rssArticleRelations = relations(rssArticle, ({ one }) => ({
   source: one(rssSource, { fields: [rssArticle.sourceId], references: [rssSource.id] })
 }));
 
-export const trendSummary = sqliteTable('trend_summary', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
+export const trendSummary = pgTable('trend_summary', {
+  id: serial('id').primaryKey(),
   workspaceId: integer('workspace_id')
     .notNull()
     .references(() => workspace.id, { onDelete: 'cascade' }),
   date: text('date').notNull(),
   summary: text('summary'),
   articleCount: integer('article_count').notNull().default(0),
-  generatedAt: integer('generated_at', { mode: 'timestamp' })
+  generatedAt: timestamp('generated_at', { withTimezone: true })
 });
 
 export const trendSummaryRelations = relations(trendSummary, ({ one }) => ({
   workspace: one(workspace, { fields: [trendSummary.workspaceId], references: [workspace.id] })
 }));
+
+// ── Financial Tracker ────────────────────────────────
+
+const money = (name: string) => bigint(name, { mode: 'number' });
+
+export const financialTrackerBudgetCategory = pgTable('financial_tracker_budget_category', {
+  id: serial('id').primaryKey(),
+  ownerEmail: text('owner_email').notNull(),
+  label: text('label').notNull(),
+  allocationShare: integer('allocation_share').notNull().default(0),
+  sortOrder: integer('sort_order').notNull().default(0),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
+});
+
+export const financialTrackerSetting = pgTable('financial_tracker_setting', {
+  id: serial('id').primaryKey(),
+  ownerEmail: text('owner_email').notNull(),
+  monthlyAllocation: money('monthly_allocation').notNull().default(3000000),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
+});
+
+export const financialTrackerMonthlySummary = pgTable('financial_tracker_monthly_summary', {
+  id: serial('id').primaryKey(),
+  ownerEmail: text('owner_email').notNull(),
+  monthKey: text('month_key').notNull(),
+  label: text('label').notNull(),
+  period: text('period').notNull(),
+  updated: text('updated').notNull(),
+  rolloverPlanned: money('rollover_planned').notNull(),
+  rolloverActual: money('rollover_actual').notNull(),
+  incomePlanned: money('income_planned').notNull(),
+  incomeActual: money('income_actual').notNull(),
+  expensesPlanned: money('expenses_planned').notNull(),
+  expensesActual: money('expenses_actual').notNull(),
+  billsPlanned: money('bills_planned').notNull(),
+  billsActual: money('bills_actual').notNull(),
+  savingsPlanned: money('savings_planned').notNull(),
+  savingsActual: money('savings_actual').notNull(),
+  debtPlanned: money('debt_planned').notNull(),
+  debtActual: money('debt_actual').notNull(),
+  leftoverPlanned: money('leftover_planned').notNull(),
+  leftoverActual: money('leftover_actual').notNull(),
+  sortOrder: integer('sort_order').notNull().default(0),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
+});
+
+export const financialTrackerCategoryRow = pgTable('financial_tracker_category_row', {
+  id: serial('id').primaryKey(),
+  ownerEmail: text('owner_email').notNull(),
+  monthKey: text('month_key').notNull(),
+  section: text('section').notNull(),
+  label: text('label').notNull(),
+  planned: money('planned').notNull(),
+  actual: money('actual').notNull(),
+  due: text('due'),
+  sortOrder: integer('sort_order').notNull().default(0),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
+});
+
+export const financialTrackerWallet = pgTable('financial_tracker_wallet', {
+  id: serial('id').primaryKey(),
+  ownerEmail: text('owner_email').notNull(),
+  label: text('label').notNull(),
+  balance: money('balance').notNull(),
+  minimumHold: money('minimum_hold'),
+  accountNumber: text('account_number'),
+  balanceProvided: boolean('balance_provided'),
+  transactionsProvided: boolean('transactions_provided'),
+  note: text('note'),
+  sortOrder: integer('sort_order').notNull().default(0),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
+});
+
+export const financialTrackerInvestment = pgTable('financial_tracker_investment', {
+  id: serial('id').primaryKey(),
+  ownerEmail: text('owner_email').notNull(),
+  label: text('label').notNull(),
+  balance: money('balance').notNull(),
+  change: text('change').notNull(),
+  direction: text('direction').notNull(),
+  sortOrder: integer('sort_order').notNull().default(0),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
+});
+
+export const financialTrackerDebtSchedule = pgTable('financial_tracker_debt_schedule', {
+  id: serial('id').primaryKey(),
+  ownerEmail: text('owner_email').notNull(),
+  provider: text('provider').notNull(),
+  due: text('due').notNull(),
+  amount: money('amount').notNull(),
+  status: text('status').notNull(),
+  sortOrder: integer('sort_order').notNull().default(0),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
+});
+
+export const financialTrackerLedgerMonth = pgTable('financial_tracker_ledger_month', {
+  id: serial('id').primaryKey(),
+  ownerEmail: text('owner_email').notNull(),
+  monthKey: text('month_key').notNull(),
+  sortOrder: integer('sort_order').notNull().default(0),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
+});
+
+export const financialTrackerLedgerEntry = pgTable('financial_tracker_ledger_entry', {
+  id: serial('id').primaryKey(),
+  ownerEmail: text('owner_email').notNull(),
+  entryId: text('entry_id').notNull(),
+  monthKey: text('month_key').notNull(),
+  date: text('date').notNull(),
+  description: text('description').notNull(),
+  kind: text('kind').notNull(),
+  category: text('category').notNull(),
+  amount: money('amount').notNull(),
+  fromAccount: text('from_account'),
+  toAccount: text('to_account'),
+  paymentType: text('payment_type').notNull(),
+  sortOrder: integer('sort_order').notNull().default(0),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
+});
+
+export const financialTrackerExpenseDetail = pgTable('financial_tracker_expense_detail', {
+  id: serial('id').primaryKey(),
+  ownerEmail: text('owner_email').notNull(),
+  monthKey: text('month_key').notNull(),
+  category: text('category').notNull(),
+  item: text('item').notNull(),
+  price: money('price').notNull(),
+  plannedQty: integer('planned_qty').notNull(),
+  actualQty: integer('actual_qty').notNull(),
+  plannedAmount: money('planned_amount').notNull(),
+  actualAmount: money('actual_amount').notNull(),
+  paymentMethod: text('payment_method'),
+  paymentType: text('payment_type'),
+  sortOrder: integer('sort_order').notNull().default(0),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
+});
+
+export const financialTrackerInvestmentForecast = pgTable('financial_tracker_investment_forecast', {
+  id: serial('id').primaryKey(),
+  ownerEmail: text('owner_email').notNull(),
+  year: integer('year').notNull(),
+  optimistic: money('optimistic').notNull(),
+  pessimist: money('pessimist').notNull(),
+  salary: money('salary').notNull(),
+  sortOrder: integer('sort_order').notNull().default(0),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
+});

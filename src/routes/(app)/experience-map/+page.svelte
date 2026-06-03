@@ -3,7 +3,6 @@
   import EmptyState from '$lib/components/ui/empty-state.svelte';
   import type {
     ExperiencePhaseData,
-    ExperienceStepData,
     ExperienceTouchpointData,
     OutcomeOption
   } from './+page.server.js';

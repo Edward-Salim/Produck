@@ -1,16 +1,40 @@
 import postgres from 'postgres';
 
-const sql = postgres('postgresql://postgres:akuakan3digit@db.ttzgvzqmmqtrnamrxecy.supabase.co:5432/postgres');
+const databaseUrl = process.env.REMOTE_DATABASE_URL ?? process.env.DATABASE_URL;
+
+if (!databaseUrl) {
+  throw new Error('Set REMOTE_DATABASE_URL or DATABASE_URL before running this script.');
+}
+
+const sql = postgres(databaseUrl, { ssl: 'require' });
 
 async function run() {
   try {
     const tables = [
-      'app_user', 'workspace', 'project', 'workspace_access', 'project_access',
-      'idea', 'actor', 'activity', 'story_map_task', 'story',
-      'persona', 'interview_snapshot', 'business_outcome', 'product_objective',
-      'key_result', 'milestone', 'roadmap_item', 'backlog_item',
-      'experience_phase', 'experience_step', 'experience_touchpoint',
-      'rss_source', 'rss_article', 'trend_summary'
+      'app_user',
+      'workspace',
+      'project',
+      'workspace_access',
+      'project_access',
+      'idea',
+      'actor',
+      'activity',
+      'story_map_task',
+      'story',
+      'persona',
+      'interview_snapshot',
+      'business_outcome',
+      'product_objective',
+      'key_result',
+      'milestone',
+      'roadmap_item',
+      'backlog_item',
+      'experience_phase',
+      'experience_step',
+      'experience_touchpoint',
+      'rss_source',
+      'rss_article',
+      'trend_summary'
     ];
 
     console.log('Remote row counts:');

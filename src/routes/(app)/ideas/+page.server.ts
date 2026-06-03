@@ -1,6 +1,6 @@
 import { db } from '$lib/server/db/index.js';
 import { idea, project } from '$lib/server/db/schema.js';
-import { eq, and, or, isNull, asc } from 'drizzle-orm';
+import { eq, and, asc } from 'drizzle-orm';
 import type { PageServerLoad } from './$types.js';
 
 export interface IdeaItem {

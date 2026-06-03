@@ -1,6 +1,6 @@
 import { db } from '$lib/server/db/index.js';
 import { rssSource, rssArticle, trendSummary } from '$lib/server/db/schema.js';
-import { eq, desc, sql } from 'drizzle-orm';
+import { eq, desc } from 'drizzle-orm';
 import type { PageServerLoad } from './$types.js';
 import Parser from 'rss-parser';
 
@@ -97,14 +97,11 @@ export const load: PageServerLoad = async ({ cookies }) => {
     .limit(200);
 
   // Get summaries from all workspaces
-  const summaries = await db
-    .select()
-    .from(trendSummary)
-    .orderBy(desc(trendSummary.date))
-    .limit(30);
+  const summaries = await db.select().from(trendSummary).orderBy(desc(trendSummary.date)).limit(30);
 
   // Pass first workspace ID for backward compat with manual fetch
-  const workspaceId = Number(cookies.get('active_workspace') || '0') || sources[0]?.workspaceId || 0;
+  const workspaceId =
+    Number(cookies.get('active_workspace') || '0') || sources[0]?.workspaceId || 0;
 
   return { sources, articles, summaries, workspaceId };
 };
