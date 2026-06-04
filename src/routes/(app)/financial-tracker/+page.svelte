@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, untrack } from 'svelte';
   import { enhance } from '$app/forms';
   import {
     ArrowDown,
@@ -14,10 +14,14 @@
     CircleDollarSign,
     GitCompareArrows,
     PiggyBank,
+    RefreshCw,
     ReceiptText,
     Search,
     WalletCards
   } from '@lucide/svelte';
+  import { Area, Axis, Chart, Grid, Highlight, Spline, Svg, Tooltip } from 'layerchart';
+  import { scaleTime } from 'd3-scale';
+  import { curveMonotoneX } from 'd3-shape';
   import bcaLogo from '$lib/assets/fintech_logos/indonesia/bca.svg';
   import bankJagoLogo from '$lib/assets/fintech_logos/indonesia/bank_jago.png';
   import bniLogo from '$lib/assets/fintech_logos/indonesia/bni.svg';
@@ -33,6 +37,7 @@
   import { emptyTrackerData } from './financial-tracker-data';
   import type {
     CategoryRow,
+    InvestmentRow,
     LedgerEntry,
     MoneyRow,
     MonthlySummary,
@@ -40,6 +45,7 @@
   } from './financial-tracker-data';
 
   let { data } = $props<{ data: { trackerData: TrackerData | null } }>();
+  const initialTrackerData = untrack(() => (data.trackerData ?? emptyTrackerData) as TrackerData);
 
   const currency = new Intl.NumberFormat('id-ID', {
     style: 'currency',
@@ -58,7 +64,11 @@
   const compactCurrency = (value: number) => `Rp ${shortAmount.format(value)}`;
   const forecastAmount = new Intl.NumberFormat('id-ID', {
     minimumFractionDigits: 0,
-    maximumFractionDigits: 2
+    maximumFractionDigits: 1
+  });
+  const forecastGainAmount = new Intl.NumberFormat('id-ID', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 1
   });
   const compactForecastAmount = (value: number) => {
     if (Math.abs(value) >= 1_000_000_000) return `${forecastAmount.format(value / 1_000_000_000)}M`;
@@ -66,6 +76,20 @@
     if (Math.abs(value) >= 1_000) return `${forecastAmount.format(value / 1_000)}rb`;
     return amount.format(value);
   };
+  const compactForecastCurrency = (value: number) => `Rp ${compactForecastAmount(value)}`;
+  const compactForecastGainAmount = (value: number) => {
+    if (Math.abs(value) >= 1_000_000_000)
+      return `${forecastGainAmount.format(value / 1_000_000_000)}M`;
+    if (Math.abs(value) >= 1_000_000) return `${forecastGainAmount.format(value / 1_000_000)}jt`;
+    if (Math.abs(value) >= 1_000) return `${forecastGainAmount.format(value / 1_000)}rb`;
+    return amount.format(value);
+  };
+  const compactUsd = new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    maximumFractionDigits: 2
+  });
+  const investmentQuoteRefreshMs = 12 * 60 * 60 * 1000;
 
   type LedgerSortKey =
     | 'date'
@@ -76,6 +100,9 @@
     | 'paymentType'
     | 'amount';
   type SortDirection = 'asc' | 'desc';
+  type ForecastMode = 'optimistic' | 'pessimistic';
+  type InvestmentCurrencyMode = 'idr' | 'usd';
+  type ReturnProfileKey = 'vti' | 'sp500' | 'gold' | 'conservative';
   type BudgetPerformanceRow = CategoryRow & {
     share: number;
     allocationShare: number;
@@ -90,11 +117,29 @@
   };
   type InvestmentForecastRow = TrackerData['investmentForecast'][number] & {
     monthlyInvestment: number;
+    investmentContributionRate: number;
+    extraMonthlyInvestment: number;
+    realOptimistic: number;
+    realPessimist: number;
+    optimisticMonthlyGain: number;
+    pessimisticMonthlyGain: number;
+    optimisticYearlyGain: number;
+    pessimisticYearlyGain: number;
+    optimisticReturn: number;
+    pessimisticReturn: number;
+    salaryGrowth: number;
   };
   type MonthlyInvestmentForecastRow = InvestmentForecastRow & {
     month: string;
+    monthIndex: number;
     calendarYear: number;
     age: number;
+  };
+  type InvestmentHistoryChartDatum = TrackerData['monthlyInvestmentHistory'][number] & {
+    date: Date;
+    label: string;
+    valueLabel: string;
+    growthLabel: string;
   };
   const selectedMonthStorageKey = 'financial-tracker:selected-month';
   const selectedViewStorageKey = 'financial-tracker:selected-view';
@@ -183,15 +228,49 @@
   let categories: CategoryRow[] = $derived(trackerData.categories);
   let mayCategories: CategoryRow[] = $derived(trackerData.mayCategories);
   let juneCategories: CategoryRow[] = $derived(trackerData.juneCategories);
-  const optimisticAnnualReturn = 0.12;
-  const pessimisticAnnualReturn = 0.05;
-  const investmentContributionRate = 0.5;
-  const salaryGrowthRate = 0.25;
   const forecastBaseYear = 2026;
   const forecastCurrentAge = 22;
   const forecastCurrentMonthIndex = 5;
   const forecastCurrentMonthlySalary = 8_000_000;
-  const forecastRetirementAge = 40;
+  const defaultForecastRetirementAge = 40;
+  const minForecastRetirementAge = 25;
+  const maxForecastRetirementAge = 71;
+  const forecastLifeExpectancyAge = 71;
+  const millionaireTarget = 1_000_000_000;
+  const defaultSalaryGrowthRate = 0.07;
+  const defaultInvestmentContributionRate = 0.3;
+  const defaultInflationRate = 0.03;
+  const returnProfiles: Record<
+    ReturnProfileKey,
+    { label: string; optimistic: number; pessimistic: number }
+  > = {
+    vti: { label: 'VTI', optimistic: 0.09, pessimistic: 0.06 },
+    sp500: { label: 'S&P 500', optimistic: 0.1, pessimistic: 0.06 },
+    gold: { label: 'Gold', optimistic: 0.076, pessimistic: 0.03 },
+    conservative: { label: 'Conservative', optimistic: 0.05, pessimistic: 0.03 }
+  };
+  const returnProfileOptions = Object.entries(returnProfiles) as [
+    ReturnProfileKey,
+    (typeof returnProfiles)[ReturnProfileKey]
+  ][];
+  const salaryGrowthByYear = new Map([
+    [-1, 0],
+    [0, 0.5],
+    [1, 0.35],
+    [2, 0.25],
+    [3, 0.18],
+    [4, 0.14],
+    [5, 0.1],
+    [6, 0.08]
+  ]);
+  const investmentContributionRateByYear = new Map([
+    [-1, 0.5],
+    [0, 0.45],
+    [1, 0.4],
+    [2, 0.35],
+    [3, 0.32],
+    [4, 0.3]
+  ]);
   const monthLabels = [
     'Jan',
     'Feb',
@@ -215,19 +294,413 @@
     return forecastCurrentAge + relativeYear + 1;
   }
 
-  function forecastMonthlySalary(relativeYear: number) {
-    const yearsAfterCurrentYear = Math.max(relativeYear + 1, 0);
-    return Math.round(
-      forecastCurrentMonthlySalary * (1 + salaryGrowthRate) ** yearsAfterCurrentYear
+  function isRetiredForecastYear(relativeYear: number) {
+    return forecastAge(relativeYear) >= forecastRetirementAge;
+  }
+
+  function investmentGrowthForYear() {
+    return returnProfiles[selectedReturnProfile];
+  }
+
+  function defaultSalaryGrowthForYear(relativeYear: number) {
+    return salaryGrowthByYear.get(relativeYear) ?? defaultSalaryGrowthRate;
+  }
+
+  function investmentContributionRateForYear(relativeYear: number) {
+    if (isRetiredForecastYear(relativeYear) || forecastRowMuted(relativeYear)) return 0;
+
+    const override = forecastInvestmentContributionOverrides[relativeYear];
+    return (
+      override ??
+      investmentContributionRateByYear.get(relativeYear) ??
+      defaultInvestmentContributionRate
     );
   }
 
+  function roundProjectedMonthlySalary(value: number) {
+    return Math.round(value / 1_000_000) * 1_000_000;
+  }
+
+  function extraMonthlyInvestmentForYear(relativeYear: number) {
+    return forecastExtraInvestmentOverrides[relativeYear] ?? 0;
+  }
+
+  function projectedForecastMonthlySalary(relativeYear: number): number {
+    if (isRetiredForecastYear(relativeYear)) return 0;
+
+    const override = forecastSalaryOverrides[relativeYear];
+    if (override !== undefined) return Math.round(override);
+
+    if (relativeYear < 0) return forecastCurrentMonthlySalary;
+
+    return roundProjectedMonthlySalary(
+      projectedForecastMonthlySalary(relativeYear - 1) *
+        (1 + defaultSalaryGrowthForYear(relativeYear))
+    );
+  }
+
+  function forecastMonthlySalary(relativeYear: number): number {
+    if (forecastRowMuted(relativeYear)) return 0;
+    return projectedForecastMonthlySalary(relativeYear);
+  }
+
+  function salaryGrowthForForecastYear(relativeYear: number) {
+    if (relativeYear < 0 || isRetiredForecastYear(relativeYear)) return 0;
+
+    if (forecastRowMuted(relativeYear)) return 0;
+
+    const previousSalary = projectedForecastMonthlySalary(relativeYear - 1);
+    return previousSalary > 0
+      ? projectedForecastMonthlySalary(relativeYear) / previousSalary - 1
+      : 0;
+  }
+
   function forecastMonthlyContribution(relativeYear: number) {
-    return Math.round(forecastMonthlySalary(relativeYear) * investmentContributionRate);
+    return Math.round(
+      forecastMonthlySalary(relativeYear) * investmentContributionRateForYear(relativeYear)
+    );
+  }
+
+  function currentYearMonthlyExtraInvestment(monthIndex: number) {
+    return currentYearMonthlyExtraInvestmentOverrides[monthIndex] ?? 0;
+  }
+
+  function currentYearTotalExtraInvestment() {
+    return monthLabels
+      .slice(forecastCurrentMonthIndex)
+      .reduce(
+        (sum, _month, offset) =>
+          sum + currentYearMonthlyExtraInvestment(forecastCurrentMonthIndex + offset),
+        0
+      );
+  }
+
+  function currentYearMonthlyContribution(monthIndex: number) {
+    return Math.round(
+      forecastMonthlySalary(-1) * investmentContributionRateForYear(-1) +
+        currentYearMonthlyExtraInvestment(monthIndex)
+    );
+  }
+
+  function currentYearForecastMonthContribution(monthIndex: number) {
+    return currentYearMonthlyContribution(monthIndex);
   }
 
   function compoundMonth(balance: number, annualReturn: number, monthlyContribution: number) {
-    return balance * (1 + annualReturn) ** (1 / 12) + monthlyContribution;
+    return (balance + monthlyContribution) * (1 + annualReturn) ** (1 / 12);
+  }
+
+  function monthlyInvestmentGain(balance: number, annualReturn: number) {
+    return Math.round(balance * ((1 + annualReturn) ** (1 / 12) - 1));
+  }
+
+  function yearlyInvestmentGain(balance: number, annualReturn: number, months = 12) {
+    return Math.round(balance * ((1 + annualReturn) ** (months / 12) - 1));
+  }
+
+  function percent(value: number) {
+    return `${amount.format(value * 100)}%`;
+  }
+
+  function percentNumber(value: number) {
+    return amount.format(value * 100);
+  }
+
+  function returnProfileLabel(key: ReturnProfileKey) {
+    const profile = returnProfiles[key];
+    return `${profile.label} (${percentNumber(profile.pessimistic)}-${percent(profile.optimistic)})`;
+  }
+
+  function shortDateTime(value?: string) {
+    if (!value) return 'Not synced';
+
+    return new Intl.DateTimeFormat('id-ID', {
+      dateStyle: 'medium',
+      timeStyle: 'short'
+    }).format(new Date(value));
+  }
+
+  function investmentGainAmount(investment: InvestmentRow) {
+    return investment.costBasis === undefined
+      ? undefined
+      : investment.balance - investment.costBasis;
+  }
+
+  function idrToUsd(value: number) {
+    return trackerData.usdIdrRate && trackerData.usdIdrRate > 0
+      ? value / trackerData.usdIdrRate
+      : undefined;
+  }
+
+  function investmentUsdValue(investment: InvestmentRow) {
+    const convertedValue = idrToUsd(investment.balance);
+    if (convertedValue !== undefined) return convertedValue;
+
+    if (!investment.shares || !investment.latestPrice) return undefined;
+    return investment.shares * investment.latestPrice;
+  }
+
+  function investmentUsdCostBasis(investment: InvestmentRow) {
+    if (investment.costBasis === undefined) return undefined;
+
+    const convertedCostBasis = idrToUsd(investment.costBasis);
+    if (convertedCostBasis !== undefined) return convertedCostBasis;
+
+    const usdValue = investmentUsdValue(investment);
+    if (usdValue === undefined || investment.balance === 0) return undefined;
+    return investment.costBasis / (investment.balance / usdValue);
+  }
+
+  function investmentUnitPriceIdr(investment: InvestmentRow) {
+    if (!investment.shares || investment.shares <= 0) return undefined;
+    return investment.balance / investment.shares;
+  }
+
+  function displayedInvestmentUnitPrice(investment: InvestmentRow) {
+    if (investmentCurrencyMode === 'usd') {
+      if (investment.latestPrice !== undefined) return compactUsd.format(investment.latestPrice);
+
+      const unitPriceIdr = investmentUnitPriceIdr(investment);
+      const unitPriceUsd = unitPriceIdr === undefined ? undefined : idrToUsd(unitPriceIdr);
+      return unitPriceUsd === undefined ? undefined : compactUsd.format(unitPriceUsd);
+    }
+
+    const unitPriceIdr = investmentUnitPriceIdr(investment);
+    return unitPriceIdr === undefined ? undefined : currency.format(unitPriceIdr);
+  }
+
+  function displayedInvestmentValue(investment: InvestmentRow) {
+    if (investmentCurrencyMode === 'usd') {
+      const usdValue = investmentUsdValue(investment);
+      return usdValue === undefined ? '-' : compactUsd.format(usdValue);
+    }
+
+    return currency.format(investment.balance);
+  }
+
+  function displayedInvestmentGain(investment: InvestmentRow) {
+    const gain = investmentGainAmount(investment);
+    if (gain === undefined) return undefined;
+
+    if (investmentCurrencyMode === 'usd') {
+      const usdCostBasis = investmentUsdCostBasis(investment);
+      const usdValue = investmentUsdValue(investment);
+      if (usdCostBasis === undefined || usdValue === undefined) return undefined;
+      return compactUsd.format(usdValue - usdCostBasis);
+    }
+
+    return currency.format(gain);
+  }
+
+  function displayedPortfolioValue() {
+    return investmentCurrencyMode === 'usd'
+      ? compactUsd.format(totalInvestmentUsdValue)
+      : currency.format(totalInvestments);
+  }
+
+  function displayedPortfolioGain() {
+    return investmentCurrencyMode === 'usd'
+      ? compactUsd.format(totalInvestmentUsdGain)
+      : currency.format(totalInvestmentGain);
+  }
+
+  function displayedPortfolioCostBasis() {
+    return investmentCurrencyMode === 'usd'
+      ? compactUsd.format(totalInvestmentUsdCostBasis)
+      : currency.format(totalInvestmentCostBasis);
+  }
+
+  function displayedUsdIdrRate() {
+    return trackerData.usdIdrRate === undefined
+      ? 'FX unavailable'
+      : `1 USD = ${currency.format(trackerData.usdIdrRate)}`;
+  }
+
+  function displayedHistoryMoney(value: number) {
+    if (investmentCurrencyMode === 'usd') {
+      const usdValue = idrToUsd(value);
+      return usdValue === undefined ? '-' : compactUsd.format(usdValue);
+    }
+
+    return currency.format(value);
+  }
+
+  function displayedMonthLabel(monthKey: string) {
+    return new Intl.DateTimeFormat('en-US', {
+      month: 'short',
+      year: 'numeric',
+      timeZone: 'UTC'
+    }).format(new Date(`${monthKey}-01T00:00:00.000Z`));
+  }
+
+  function displayedShortMonthLabel(value: Date | number | string) {
+    return new Intl.DateTimeFormat('en-US', {
+      month: 'short',
+      year: '2-digit',
+      timeZone: 'UTC'
+    }).format(new Date(value));
+  }
+
+  function displayedMonthlyGrowth(row: TrackerData['monthlyInvestmentHistory'][number]) {
+    const sign = row.monthlyGrowth >= 0 ? '+' : '';
+    const suffix = row.hasPreviousMonth ? '' : ' vs initial value';
+    return `${sign}${displayedHistoryMoney(row.monthlyGrowth)} (${sign}${row.monthlyGrowthPercent.toFixed(2)}%)${suffix}`;
+  }
+
+  function displayedHistoryChartMoney(value: number) {
+    if (investmentCurrencyMode === 'usd') {
+      const usdValue = idrToUsd(value);
+      return usdValue === undefined ? '-' : compactUsd.format(usdValue);
+    }
+
+    return compactForecastCurrency(value);
+  }
+
+  function investmentQuoteIsStale(investment: InvestmentRow) {
+    if (!investment.latestPriceAt) return true;
+    return Date.now() - new Date(investment.latestPriceAt).getTime() > investmentQuoteRefreshMs;
+  }
+
+  function forecastValue(row: InvestmentForecastRow | MonthlyInvestmentForecastRow) {
+    return forecastMode === 'optimistic' ? row.optimistic : row.pessimist;
+  }
+
+  function forecastMonthlyGain(row: InvestmentForecastRow | MonthlyInvestmentForecastRow) {
+    return forecastMode === 'optimistic' ? row.optimisticMonthlyGain : row.pessimisticMonthlyGain;
+  }
+
+  function forecastYearlyGain(row: InvestmentForecastRow) {
+    return forecastMode === 'optimistic' ? row.optimisticYearlyGain : row.pessimisticYearlyGain;
+  }
+
+  function forecastInvestmentReturn(row: InvestmentForecastRow | MonthlyInvestmentForecastRow) {
+    return forecastMode === 'optimistic' ? row.optimisticReturn : row.pessimisticReturn;
+  }
+
+  function displayedForecastMonthlyInvestment(
+    row: InvestmentForecastRow | MonthlyInvestmentForecastRow
+  ) {
+    return Math.max(0, row.monthlyInvestment);
+  }
+
+  function forecastBudgetAfterInvestment(
+    row: InvestmentForecastRow | MonthlyInvestmentForecastRow
+  ) {
+    return row.salary - displayedForecastMonthlyInvestment(row);
+  }
+
+  function forecastRowMuted(relativeYear: number) {
+    return Boolean(mutedForecastRows[relativeYear]);
+  }
+
+  function toggleForecastRowMuted(relativeYear: number) {
+    mutedForecastRows = {
+      ...mutedForecastRows,
+      [relativeYear]: !mutedForecastRows[relativeYear]
+    };
+  }
+
+  function forecastRealValue(row: InvestmentForecastRow | MonthlyInvestmentForecastRow) {
+    return forecastMode === 'optimistic' ? row.realOptimistic : row.realPessimist;
+  }
+
+  function setForecastInvestmentContributionRate(relativeYear: number, value: string) {
+    const parsedPercent = value.trim() === '' ? 0 : Number(value);
+    const clampedPercent = Math.min(Math.max(parsedPercent, 0), 100);
+    forecastInvestmentContributionOverrides = {
+      ...forecastInvestmentContributionOverrides,
+      [relativeYear]: Number.isFinite(parsedPercent) ? clampedPercent / 100 : undefined
+    };
+  }
+
+  function setForecastMonthlySalary(relativeYear: number, value: string) {
+    if (value.trim() === '') {
+      forecastSalaryOverrides = {
+        ...forecastSalaryOverrides,
+        [relativeYear]: undefined
+      };
+      return;
+    }
+
+    const parsedSalary = Number(value);
+    forecastSalaryOverrides = {
+      ...forecastSalaryOverrides,
+      [relativeYear]: Number.isFinite(parsedSalary) ? Math.max(parsedSalary, 0) : undefined
+    };
+  }
+
+  function setForecastExtraInvestment(relativeYear: number, value: string) {
+    if (value.trim() === '') {
+      forecastExtraInvestmentOverrides = {
+        ...forecastExtraInvestmentOverrides,
+        [relativeYear]: undefined
+      };
+      return;
+    }
+
+    const parsedExtraInvestment = Number(value);
+    forecastExtraInvestmentOverrides = {
+      ...forecastExtraInvestmentOverrides,
+      [relativeYear]: Number.isFinite(parsedExtraInvestment) ? parsedExtraInvestment : undefined
+    };
+  }
+
+  function setCurrentYearMonthlyExtraInvestment(monthIndex: number, value: string) {
+    if (value.trim() === '') {
+      currentYearMonthlyExtraInvestmentOverrides = {
+        ...currentYearMonthlyExtraInvestmentOverrides,
+        [monthIndex]: undefined
+      };
+      return;
+    }
+
+    const parsedExtraInvestment = Number(value);
+    currentYearMonthlyExtraInvestmentOverrides = {
+      ...currentYearMonthlyExtraInvestmentOverrides,
+      [monthIndex]: Number.isFinite(parsedExtraInvestment) ? parsedExtraInvestment : undefined
+    };
+  }
+
+  function handleForecastSalaryInput(relativeYear: number, input: HTMLInputElement) {
+    setForecastMonthlySalary(relativeYear, input.value.replace(/\D/g, ''));
+  }
+
+  function handleForecastExtraInvestmentInput(relativeYear: number, input: HTMLInputElement) {
+    setForecastExtraInvestment(relativeYear, input.value.replace(/[^\d-]/g, '').replace(/(?!^)-/g, ''));
+  }
+
+  function handleCurrentYearMonthlyExtraInvestmentInput(
+    monthIndex: number,
+    input: HTMLInputElement
+  ) {
+    setCurrentYearMonthlyExtraInvestment(
+      monthIndex,
+      input.value.replace(/[^\d-]/g, '').replace(/(?!^)-/g, '')
+    );
+  }
+
+  function formatForecastSalaryInput(input: HTMLInputElement, value: number) {
+    input.value = compactForecastAmount(value);
+  }
+
+  function displayedForecastSalaryInput(row: InvestmentForecastRow) {
+    return focusedForecastSalaryYear === row.year
+      ? String(row.salary)
+      : compactForecastAmount(row.salary);
+  }
+
+  function displayedForecastMoneyInput(relativeYear: number, value: number) {
+    return focusedForecastExtraInvestmentYear === relativeYear ? String(value) : amount.format(value);
+  }
+
+  function displayedCurrentYearMonthlyExtraInput(monthIndex: number, value: number) {
+    return focusedCurrentYearMonthlyExtraInvestmentMonth === monthIndex
+      ? String(value)
+      : amount.format(value);
+  }
+
+  function formatForecastMoneyInput(input: HTMLInputElement, value: number) {
+    input.value = amount.format(value);
   }
 
   let baseInvestmentForecast: TrackerData['investmentForecast'] = $derived(
@@ -256,9 +729,49 @@
   );
   let groupedWallets = $derived(groupWalletRows(wallets));
   let totalInvestments = $derived(investments.reduce((sum, row) => sum + row.balance, 0));
+  let totalInvestmentCostBasis = $derived(
+    investments.reduce((sum, row) => sum + (row.costBasis ?? row.balance), 0)
+  );
+  let totalInvestmentGain = $derived(totalInvestments - totalInvestmentCostBasis);
+  let totalInvestmentGainPercent = $derived(
+    totalInvestmentCostBasis > 0 ? (totalInvestmentGain / totalInvestmentCostBasis) * 100 : 0
+  );
+  let totalInvestmentUsdValue = $derived(
+    investments.reduce((sum, row) => sum + (investmentUsdValue(row) ?? 0), 0)
+  );
+  let totalInvestmentUsdCostBasis = $derived(
+    investments.reduce((sum, row) => sum + (investmentUsdCostBasis(row) ?? 0), 0)
+  );
+  let totalInvestmentUsdGain = $derived(totalInvestmentUsdValue - totalInvestmentUsdCostBasis);
+  let investmentQuotesNeedRefresh = $derived(investments.some(investmentQuoteIsStale));
+  let monthlyInvestmentHistory = $derived(trackerData.monthlyInvestmentHistory);
+  let investmentHistoryChartRows = $derived.by(() => {
+    return [...monthlyInvestmentHistory].slice(-6).map((row): InvestmentHistoryChartDatum => {
+      const date = new Date(`${row.monthKey}-01T00:00:00.000Z`);
+
+      return {
+        ...row,
+        date,
+        label: displayedMonthLabel(row.monthKey),
+        valueLabel: displayedHistoryChartMoney(row.portfolioValue),
+        growthLabel: displayedMonthlyGrowth(row)
+      };
+    });
+  });
+  let investmentHistoryYDomain = $derived.by(() => {
+    if (investmentHistoryChartRows.length === 0) return undefined;
+
+    const values = investmentHistoryChartRows.map((row) => row.portfolioValue);
+    const minValue = Math.min(...values);
+    const maxValue = Math.max(...values);
+    const valueRange = Math.max(maxValue - minValue, 1);
+    const domainPadding = Math.max(valueRange * 1.35, maxValue * 0.035, 1);
+
+    return [Math.max(0, minValue - domainPadding), maxValue + domainPadding] as [number, number];
+  });
   let forecastFinalRelativeYear = $derived(
     Math.max(
-      forecastRetirementAge - forecastCurrentAge - 1,
+      forecastLifeExpectancyAge - forecastCurrentAge - 1,
       ...baseInvestmentForecast.map((row) => row.year)
     )
   );
@@ -268,23 +781,49 @@
         year: -1,
         optimistic: totalInvestments,
         pessimist: totalInvestments,
-        salary: forecastCurrentMonthlySalary,
-        monthlyInvestment: forecastMonthlyContribution(-1)
+        realOptimistic: totalInvestments,
+        realPessimist: totalInvestments,
+        salary: forecastMonthlySalary(-1),
+        monthlyInvestment: forecastMonthlyContribution(-1),
+        investmentContributionRate: investmentContributionRateForYear(-1),
+        extraMonthlyInvestment: currentYearTotalExtraInvestment(),
+        optimisticMonthlyGain: monthlyInvestmentGain(
+          totalInvestments,
+          investmentGrowthForYear().optimistic
+        ),
+        pessimisticMonthlyGain: monthlyInvestmentGain(
+          totalInvestments,
+          investmentGrowthForYear().pessimistic
+        ),
+        optimisticYearlyGain: yearlyInvestmentGain(
+          totalInvestments,
+          investmentGrowthForYear().optimistic,
+          12 - forecastCurrentMonthIndex
+        ),
+        pessimisticYearlyGain: yearlyInvestmentGain(
+          totalInvestments,
+          investmentGrowthForYear().pessimistic,
+          12 - forecastCurrentMonthIndex
+        ),
+        optimisticReturn: investmentGrowthForYear().optimistic,
+        pessimisticReturn: investmentGrowthForYear().pessimistic,
+        salaryGrowth: salaryGrowthForForecastYear(-1)
       }
     ];
     let optimisticBalance = totalInvestments;
     let pessimisticBalance = totalInvestments;
+    const currentYearInvestmentGrowth = investmentGrowthForYear();
 
     for (let monthIndex = forecastCurrentMonthIndex; monthIndex < 12; monthIndex += 1) {
-      const monthlyContribution = forecastMonthlyContribution(-1);
+      const monthlyContribution = currentYearForecastMonthContribution(monthIndex);
       optimisticBalance = compoundMonth(
         optimisticBalance,
-        optimisticAnnualReturn,
+        currentYearInvestmentGrowth.optimistic,
         monthlyContribution
       );
       pessimisticBalance = compoundMonth(
         pessimisticBalance,
-        pessimisticAnnualReturn,
+        currentYearInvestmentGrowth.pessimistic,
         monthlyContribution
       );
     }
@@ -292,17 +831,23 @@
     for (let relativeYear = 0; relativeYear <= forecastFinalRelativeYear; relativeYear += 1) {
       const monthlySalary = forecastMonthlySalary(relativeYear);
       const monthlyContribution = forecastMonthlyContribution(relativeYear);
+      const oneTimeExtraInvestment = extraMonthlyInvestmentForYear(relativeYear);
+      const investmentGrowth = investmentGrowthForYear();
+      const optimisticYearStartBalance = optimisticBalance;
+      const pessimisticYearStartBalance = pessimisticBalance;
 
       for (let monthIndex = 0; monthIndex < 12; monthIndex += 1) {
+        const forecastMonthContribution =
+          monthlyContribution + (monthIndex === 0 ? oneTimeExtraInvestment : 0);
         optimisticBalance = compoundMonth(
           optimisticBalance,
-          optimisticAnnualReturn,
-          monthlyContribution
+          investmentGrowth.optimistic,
+          forecastMonthContribution
         );
         pessimisticBalance = compoundMonth(
           pessimisticBalance,
-          pessimisticAnnualReturn,
-          monthlyContribution
+          investmentGrowth.pessimistic,
+          forecastMonthContribution
         );
       }
 
@@ -310,8 +855,35 @@
         year: relativeYear,
         optimistic: Math.round(optimisticBalance),
         pessimist: Math.round(pessimisticBalance),
+        realOptimistic: Math.round(
+          optimisticBalance / (1 + defaultInflationRate) ** (relativeYear + 1)
+        ),
+        realPessimist: Math.round(
+          pessimisticBalance / (1 + defaultInflationRate) ** (relativeYear + 1)
+        ),
         salary: monthlySalary,
-        monthlyInvestment: monthlyContribution
+        monthlyInvestment: monthlyContribution,
+        investmentContributionRate: investmentContributionRateForYear(relativeYear),
+        extraMonthlyInvestment: extraMonthlyInvestmentForYear(relativeYear),
+        optimisticMonthlyGain: monthlyInvestmentGain(
+          optimisticBalance,
+          investmentGrowth.optimistic
+        ),
+        pessimisticMonthlyGain: monthlyInvestmentGain(
+          pessimisticBalance,
+          investmentGrowth.pessimistic
+        ),
+        optimisticYearlyGain: yearlyInvestmentGain(
+          optimisticYearStartBalance,
+          investmentGrowth.optimistic
+        ),
+        pessimisticYearlyGain: yearlyInvestmentGain(
+          pessimisticYearStartBalance,
+          investmentGrowth.pessimistic
+        ),
+        optimisticReturn: investmentGrowth.optimistic,
+        pessimisticReturn: investmentGrowth.pessimistic,
+        salaryGrowth: salaryGrowthForForecastYear(relativeYear)
       });
     }
 
@@ -322,33 +894,66 @@
     let optimisticBalance = totalInvestments;
     let pessimisticBalance = totalInvestments;
     const monthlySalary = forecastMonthlySalary(-1);
-    const monthlyContribution = forecastMonthlyContribution(-1);
+    const investmentGrowth = investmentGrowthForYear();
 
     for (let monthIndex = forecastCurrentMonthIndex; monthIndex < 12; monthIndex += 1) {
+      const monthlyContribution = currentYearForecastMonthContribution(monthIndex);
+      const optimisticMonthlyGain = monthlyInvestmentGain(
+        optimisticBalance,
+        investmentGrowth.optimistic
+      );
+      const pessimisticMonthlyGain = monthlyInvestmentGain(
+        pessimisticBalance,
+        investmentGrowth.pessimistic
+      );
       optimisticBalance = compoundMonth(
         optimisticBalance,
-        optimisticAnnualReturn,
+        investmentGrowth.optimistic,
         monthlyContribution
       );
       pessimisticBalance = compoundMonth(
         pessimisticBalance,
-        pessimisticAnnualReturn,
+        investmentGrowth.pessimistic,
         monthlyContribution
       );
       rows.push({
         year: -1,
         month: monthLabels[monthIndex],
+        monthIndex,
         calendarYear: forecastBaseYear,
         age: forecastCurrentAge,
         optimistic: Math.round(optimisticBalance),
         pessimist: Math.round(pessimisticBalance),
+        realOptimistic: Math.round(
+          optimisticBalance /
+            (1 + defaultInflationRate) ** ((monthIndex - forecastCurrentMonthIndex) / 12)
+        ),
+        realPessimist: Math.round(
+          pessimisticBalance /
+            (1 + defaultInflationRate) ** ((monthIndex - forecastCurrentMonthIndex) / 12)
+        ),
         salary: monthlySalary,
-        monthlyInvestment: monthlyContribution
+        monthlyInvestment: monthlyContribution,
+        investmentContributionRate: investmentContributionRateForYear(-1),
+        extraMonthlyInvestment: currentYearMonthlyExtraInvestment(monthIndex),
+        optimisticMonthlyGain,
+        pessimisticMonthlyGain,
+        optimisticYearlyGain: yearlyInvestmentGain(optimisticBalance, investmentGrowth.optimistic),
+        pessimisticYearlyGain: yearlyInvestmentGain(
+          pessimisticBalance,
+          investmentGrowth.pessimistic
+        ),
+        optimisticReturn: investmentGrowth.optimistic,
+        pessimisticReturn: investmentGrowth.pessimistic,
+        salaryGrowth: salaryGrowthForForecastYear(-1)
       });
     }
 
     return rows;
   });
+  let millionaireForecastYear = $derived(
+    investmentForecast.find((row) => forecastRealValue(row) >= millionaireTarget)?.year
+  );
   let debtSchedule = $derived(trackerData.mayDebtSchedule);
   let upcomingDebt = $derived(
     debtSchedule
@@ -364,8 +969,55 @@
     '?'
   ]);
 
+  function yearlyForecastOverrideMap<K extends keyof TrackerData['forecastOverrides'][number]>(
+    source: TrackerData,
+    key: K
+  ) {
+    return Object.fromEntries(
+      source.forecastOverrides
+        .filter((row) => row.monthIndex === undefined && row[key] !== undefined)
+        .map((row) => [row.relativeYear, row[key]])
+    ) as Record<number, number | undefined>;
+  }
+
+  function monthlyForecastExtraOverrideMap(source: TrackerData) {
+    return Object.fromEntries(
+      source.forecastOverrides
+        .filter((row) => row.monthIndex !== undefined && row.extraMonthlyInvestment !== undefined)
+        .map((row) => [row.monthIndex!, row.extraMonthlyInvestment])
+    ) as Record<number, number | undefined>;
+  }
+
   let selectedMonth = $state('jun-2026');
   let selectedView = $state<'accounting' | 'investments'>('accounting');
+  let forecastMode = $state<ForecastMode>(initialTrackerData.forecastPreferences.forecastMode);
+  let investmentCurrencyMode = $state<InvestmentCurrencyMode>(
+    initialTrackerData.forecastPreferences.investmentCurrency
+  );
+  let investmentRefreshPending = $state(false);
+  let selectedReturnProfile = $state<ReturnProfileKey>(
+    initialTrackerData.forecastPreferences.returnProfile
+  );
+  let forecastRetirementAge = $state(
+    initialTrackerData.forecastPreferences.retirementAge ?? defaultForecastRetirementAge
+  );
+  let returnProfileMenuOpen = $state(false);
+  let focusedForecastSalaryYear = $state<number | null>(null);
+  let focusedForecastExtraInvestmentYear = $state<number | null>(null);
+  let focusedCurrentYearMonthlyExtraInvestmentMonth = $state<number | null>(null);
+  let mutedForecastRows = $state<Record<number, boolean>>({});
+  let forecastInvestmentContributionOverrides = $state<Record<number, number | undefined>>(
+    yearlyForecastOverrideMap(initialTrackerData, 'investmentContributionRate')
+  );
+  let forecastSalaryOverrides = $state<Record<number, number | undefined>>(
+    yearlyForecastOverrideMap(initialTrackerData, 'salary')
+  );
+  let forecastExtraInvestmentOverrides = $state<Record<number, number | undefined>>(
+    yearlyForecastOverrideMap(initialTrackerData, 'extraMonthlyInvestment')
+  );
+  let currentYearMonthlyExtraInvestmentOverrides = $state<Record<number, number | undefined>>(
+    monthlyForecastExtraOverrideMap(initialTrackerData)
+  );
   let preferencesLoaded = $state(false);
   let ledgerSortKey = $state<LedgerSortKey>('date');
   let ledgerSortDirection = $state<SortDirection>('desc');
@@ -541,10 +1193,6 @@
     { label: 'Savings held', value: currentMonth.savings.actual, operator: '-' }
   ]);
   let reconciliationDifference = $derived(recordedEndingLiquidBalance - expectedEndingBalance);
-  let investmentTargetRate = 10;
-  let investmentTargetAmount = $derived(
-    Math.round(budgetIncomeActual * (investmentTargetRate / 100))
-  );
 
   let actualOutflow = $derived(
     currentMonth.expenses.actual +
@@ -711,6 +1359,40 @@
     };
   }
 
+  async function saveForecastPreferences(values: {
+    forecastMode?: ForecastMode;
+    returnProfile?: ReturnProfileKey;
+    investmentCurrency?: InvestmentCurrencyMode;
+    retirementAge?: number;
+  }) {
+    const formData = new FormData();
+    if (values.forecastMode) formData.set('forecastMode', values.forecastMode);
+    if (values.returnProfile) formData.set('returnProfile', values.returnProfile);
+    if (values.investmentCurrency) formData.set('investmentCurrency', values.investmentCurrency);
+    if (values.retirementAge !== undefined) formData.set('retirementAge', String(values.retirementAge));
+
+    await fetch('?/forecastPreferences', {
+      method: 'POST',
+      body: formData
+    });
+  }
+
+  function normalizeForecastRetirementAge(value: string) {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed)) return defaultForecastRetirementAge;
+    return Math.min(
+      maxForecastRetirementAge,
+      Math.max(minForecastRetirementAge, Math.round(parsed))
+    );
+  }
+
+  function setForecastRetirementAge(input: HTMLInputElement) {
+    const nextAge = normalizeForecastRetirementAge(input.value);
+    forecastRetirementAge = nextAge;
+    input.value = String(nextAge);
+    void saveForecastPreferences({ retirementAge: nextAge });
+  }
+
   function toggleCategoryMenu(entryId: string) {
     openCategoryEntryId = openCategoryEntryId === entryId ? null : entryId;
     if (openCategoryEntryId === entryId) {
@@ -727,6 +1409,24 @@
       if (form.contains(document.activeElement)) return;
       if (openCategoryEntryId === entryId) openCategoryEntryId = null;
     });
+  }
+
+  function toggleReturnProfileMenu() {
+    returnProfileMenuOpen = !returnProfileMenuOpen;
+  }
+
+  function closeReturnProfileMenu(event: FocusEvent) {
+    const container = event.currentTarget as HTMLElement;
+    window.setTimeout(() => {
+      if (container.contains(document.activeElement)) return;
+      returnProfileMenuOpen = false;
+    });
+  }
+
+  function chooseReturnProfile(key: ReturnProfileKey) {
+    selectedReturnProfile = key;
+    returnProfileMenuOpen = false;
+    void saveForecastPreferences({ returnProfile: key });
   }
 
   function chooseLedgerCategory(form: HTMLFormElement, entryId: string, category: string) {
@@ -929,12 +1629,6 @@
 <div class="mx-auto max-w-7xl space-y-2.5">
   <header class="grid gap-2 xl:grid-cols-[auto_1fr] xl:items-center">
     <div class="min-w-48">
-      <div
-        class="mb-1 flex items-center gap-2 text-[11px] font-semibold tracking-[0.14em] text-cork-500 uppercase"
-      >
-        <WalletCards class="size-4" />
-        {currentMonth.label}
-      </div>
       <h1 class="text-xl font-semibold text-cork-900 md:text-2xl">Financial Tracker</h1>
       <div class="mt-2 flex gap-1 rounded-lg border border-cork-300/45 bg-cork-50/70 p-1">
         <button
@@ -956,20 +1650,20 @@
       </div>
     </div>
 
-    <div
-      class="flex min-w-0 gap-1.5 overflow-x-auto rounded-lg border border-cork-300/45 bg-cork-50/70 p-1"
-    >
-      {#each monthTabs as month (month.key)}
-        <button
-          type="button"
-          class="month-tab"
-          class:active={selectedMonth === month.key}
-          onclick={() => (selectedMonth = month.key)}
-        >
-          <span>{month.label}</span>
-        </button>
-      {/each}
-    </div>
+    {#if selectedView === 'accounting'}
+      <div class="flex min-w-0 gap-1.5 overflow-x-auto">
+        {#each monthTabs as month (month.key)}
+          <button
+            type="button"
+            class="month-tab"
+            class:active={selectedMonth === month.key}
+            onclick={() => (selectedMonth = month.key)}
+          >
+            <span>{month.label}</span>
+          </button>
+        {/each}
+      </div>
+    {/if}
   </header>
 
   {#if selectedView === 'accounting'}
@@ -1182,11 +1876,16 @@
                         <span>{wallet.label}</span>
                       </div>
                     </td>
-                    <td>{wallet.accountNumber ?? '-'}</td>
-                    {@render MoneyCell(wallet.balance)}
-                    {@render MoneyCell(wallet.minimumHold ?? 0)}
-                    {@render MoneyCell(walletLiquidBalance(wallet.balance, wallet.minimumHold))}
-                    <td class="check-cell">
+                    <td data-label="Rekening">{wallet.accountNumber ?? '-'}</td>
+                    <td class="currency-col" data-label="Balance"></td>
+                    <td data-label="Balance">{currency.format(wallet.balance)}</td>
+                    <td class="currency-col" data-label="Min hold"></td>
+                    <td data-label="Min hold">{currency.format(wallet.minimumHold ?? 0)}</td>
+                    <td class="currency-col" data-label="Liquid"></td>
+                    <td data-label="Liquid">
+                      {currency.format(walletLiquidBalance(wallet.balance, wallet.minimumHold))}
+                    </td>
+                    <td class="check-cell" data-label="Updated">
                       <form
                         method="POST"
                         action="?/walletStatus"
@@ -1213,9 +1912,12 @@
               <tr class="total-row">
                 <td>Total</td>
                 <td></td>
-                {@render MoneyCell(totalWalletBalance)}
-                {@render MoneyCell(totalWalletBalance - totalWallets)}
-                {@render MoneyCell(totalWallets)}
+                <td class="currency-col" data-label="Balance"></td>
+                <td data-label="Balance">{currency.format(totalWalletBalance)}</td>
+                <td class="currency-col" data-label="Min hold"></td>
+                <td data-label="Min hold">{currency.format(totalWalletBalance - totalWallets)}</td>
+                <td class="currency-col" data-label="Liquid"></td>
+                <td data-label="Liquid">{currency.format(totalWallets)}</td>
                 <td></td>
               </tr>
             </tbody>
@@ -1228,7 +1930,7 @@
       <section class="panel">
         {@render PanelTitle(ReceiptText, 'Ledger')}
         <div class="overflow-x-auto">
-          <table class="tracker-table dense forecast-table">
+          <table class="tracker-table dense">
             <thead>
               <tr>
                 {@render LedgerSortHead('Date', 'date')}
@@ -1339,90 +2041,504 @@
       </section>
     {/if}
   {:else}
-    <section class="grid gap-3 xl:grid-cols-[0.8fr_1.2fr]">
-      <div class="panel">
-        {@render PanelTitle(PiggyBank, 'Long-Term Investments')}
+    <section class="grid min-w-0 gap-3 xl:grid-cols-[0.8fr_1.2fr]">
+      <div class="panel min-w-0">
+        <div
+          class="forecast-panel-header investment-panel-header mb-3 flex items-center justify-between gap-2 border-b border-cork-200 pb-2"
+        >
+          <h2 class="investment-panel-title flex items-center gap-2 text-sm font-semibold text-cork-900">
+            <PiggyBank class="size-4 text-cork-500" />
+            Long-Term Investments
+          </h2>
+          <div class="flex items-center gap-1.5">
+            <span class="investment-fx-rate">{displayedUsdIdrRate()}</span>
+            <form
+              method="POST"
+              action="?/refreshInvestments"
+              use:enhance={() => {
+                investmentRefreshPending = true;
+
+                return async ({ update }) => {
+                  await update();
+                  investmentRefreshPending = false;
+                };
+              }}
+            >
+              <button
+                type="submit"
+                class="panel-icon-button investment-refresh-button"
+                class:attention={investmentQuotesNeedRefresh}
+                class:spinning={investmentRefreshPending}
+                disabled={investmentRefreshPending}
+                title="Refresh prices"
+              >
+                <RefreshCw class="size-3.5" />
+              </button>
+            </form>
+            <div class="investment-currency-switch" role="group" aria-label="Investment currency">
+              <button
+                type="button"
+                class:active={investmentCurrencyMode === 'idr'}
+                onclick={() => {
+                  investmentCurrencyMode = 'idr';
+                  void saveForecastPreferences({ investmentCurrency: 'idr' });
+                }}
+              >
+                Rp
+              </button>
+              <button
+                type="button"
+                class:active={investmentCurrencyMode === 'usd'}
+                onclick={() => {
+                  investmentCurrencyMode = 'usd';
+                  void saveForecastPreferences({ investmentCurrency: 'usd' });
+                }}
+              >
+                $
+              </button>
+            </div>
+          </div>
+        </div>
         <div class="space-y-1.5">
           {#each investments as investment (investment.label)}
-            <div
-              class="grid grid-cols-[1fr_auto_auto_auto] items-center gap-2 rounded bg-emerald-50/70 px-2 py-1 text-xs"
-            >
-              <span class="font-medium text-cork-700">{investment.label}</span>
-              <span class={investment.direction === 'up' ? 'text-emerald-600' : 'text-red-600'}>
-                {investment.change}
+            <div class="investment-row">
+              <span class="flex min-w-0 flex-col">
+                <span class="investment-ticker">{investment.label}</span>
+                <span class="investment-meta">
+                  {#if displayedInvestmentUnitPrice(investment)}
+                    {displayedInvestmentUnitPrice(investment)} · {shortDateTime(
+                      investment.latestPriceAt
+                    )}
+                  {:else}
+                    {shortDateTime(investment.latestPriceAt)}
+                  {/if}
+                </span>
               </span>
-              <span class="text-cork-400">Rp</span>
-              <span class="font-medium text-cork-900">{amount.format(investment.balance)}</span>
+              <span
+                class={`investment-change ${
+                  investment.direction === 'up' ? 'text-emerald-600' : 'text-red-600'
+                }`}
+              >
+                <span class="font-semibold">{investment.change}</span>
+              </span>
+              <span
+                class={`investment-gain ${
+                  investment.direction === 'up' ? 'text-emerald-600' : 'text-red-600'
+                }`}
+              >
+                {displayedInvestmentGain(investment) ?? '-'}
+              </span>
+              <span class="font-medium text-cork-900">{displayedInvestmentValue(investment)}</span>
             </div>
           {/each}
-          <div
-            class="grid grid-cols-[1fr_auto_auto] items-center gap-2 rounded bg-cork-200 px-2 py-1 text-xs font-semibold"
-          >
-            <span>Total invested</span>
-            <span class="text-cork-500">Rp</span>
-            <span>{amount.format(totalInvestments)}</span>
+          <div class="investment-summary">
+            <div class="investment-summary-row primary">
+              <span>Portfolio value</span>
+              <strong>{displayedPortfolioValue()}</strong>
+            </div>
+            <div class="investment-summary-row">
+              <span>Total gain</span>
+              <strong
+                class={`investment-summary-gain ${
+                  totalInvestmentGain >= 0 ? 'positive' : 'negative'
+                }`}
+              >
+                <span class="portfolio-gain-percent"
+                  >{totalInvestmentGain >= 0 ? '+' : ''}{totalInvestmentGainPercent.toFixed(
+                    2
+                  )}%</span
+                >
+                <span class="portfolio-gain-amount">{displayedPortfolioGain()}</span>
+              </strong>
+            </div>
+            <div class="investment-summary-row">
+              <span>Cost basis</span>
+              <strong>{displayedPortfolioCostBasis()}</strong>
+            </div>
           </div>
           <p class="text-[10px] text-cork-400">Excluded from liquid wallet balance.</p>
+          <div class="investment-history">
+            <div class="investment-history-title">
+              <span>Monthly Growth</span>
+              <span>Month-close values</span>
+            </div>
+            {#if investmentHistoryChartRows.length > 0}
+              <div class="investment-history-chart" aria-label="Monthly portfolio growth chart">
+                <Chart
+                  data={investmentHistoryChartRows}
+                  x="date"
+                  y="portfolioValue"
+                  xScale={scaleTime()}
+                  yDomain={investmentHistoryYDomain}
+                  padding={{ top: 14, right: 18, bottom: 28, left: 18 }}
+                  tooltip={{ mode: 'bisect-x' }}
+                >
+                  <Svg>
+                    <Grid y classes={{ line: 'investment-history-grid-line' }} />
+                    <Area curve={curveMonotoneX} class="investment-history-area" />
+                    <Spline curve={curveMonotoneX} class="investment-history-line" />
+                    <Axis
+                      placement="bottom"
+                      ticks={investmentHistoryChartRows.map((row) => row.date)}
+                      format={displayedShortMonthLabel}
+                      tickLength={0}
+                      classes={{
+                        rule: 'investment-history-axis-rule',
+                        tick: 'investment-history-axis-tick',
+                        tickLabel: 'investment-history-axis-label'
+                      }}
+                    />
+                    <Highlight
+                      lines={{ class: 'investment-history-highlight-line' }}
+                      points={{ class: 'investment-history-highlight-point', r: 3.2 }}
+                    />
+                  </Svg>
+
+                  <Tooltip.Root
+                    anchor="top"
+                    variant="none"
+                    classes={{ container: 'investment-history-tooltip-container' }}
+                    let:data
+                  >
+                    <div class="investment-history-tooltip">
+                      <span>{data.label}</span>
+                      <strong>{data.valueLabel}</strong>
+                      <em
+                        class:positive-growth={data.monthlyGrowth >= 0}
+                        class:negative-growth={data.monthlyGrowth < 0}
+                      >
+                        {data.growthLabel}
+                      </em>
+                    </div>
+                  </Tooltip.Root>
+                </Chart>
+              </div>
+            {:else}
+              <p class="investment-history-empty">
+                No snapshots yet. Refresh prices to start history.
+              </p>
+            {/if}
+          </div>
         </div>
       </div>
 
-      <div class="panel">
-        {@render PanelTitle(ChartColumn, 'Investments Forecast')}
-        <div class="mb-3 grid grid-cols-4 gap-2 text-xs">
-          <div class="rounded bg-blue-50 p-2">
-            <p class="text-cork-500">Retirement age</p>
-            <p class="font-semibold text-cork-900">{forecastRetirementAge}</p>
-          </div>
-          <div class="rounded bg-blue-50 p-2">
-            <p class="text-cork-500">Monthly invest</p>
-            <p class="font-semibold text-cork-900">{investmentContributionRate * 100}%</p>
-          </div>
-          <div class="rounded bg-blue-50 p-2">
-            <p class="text-cork-500">Salary growth</p>
-            <p class="font-semibold text-cork-900">25.0%</p>
-          </div>
-          <div class="rounded bg-blue-50 p-2">
-            <p class="text-cork-500">Inflation</p>
-            <p class="font-semibold text-cork-900">3.0%</p>
+      <div class="panel min-w-0">
+        <div class="mb-3 flex items-center justify-between gap-2 border-b border-cork-200 pb-2">
+          <h2 class="flex items-center gap-2 text-sm font-semibold text-cork-900">
+            <ChartColumn class="size-4 text-cork-500" />
+            Investments Forecast
+          </h2>
+          <div class="forecast-assumptions">
+            <span class="forecast-assumption-inline">
+              <span>Inflation/yr</span>
+              <strong>{percent(defaultInflationRate)}</strong>
+            </span>
+            <label class="forecast-assumption-inline forecast-retirement-age-control">
+              <span>Retire age</span>
+              <input
+                class="forecast-input forecast-age-input"
+                type="number"
+                min={minForecastRetirementAge}
+                max={maxForecastRetirementAge}
+                step="1"
+                value={forecastRetirementAge}
+                aria-label="Retirement age"
+                onchange={(event) => setForecastRetirementAge(event.currentTarget)}
+                onblur={(event) => setForecastRetirementAge(event.currentTarget)}
+              />
+            </label>
+            <div class="forecast-return-profile" onfocusout={closeReturnProfileMenu}>
+              <span>Return</span>
+              <div class="return-profile-picker" class:open={returnProfileMenuOpen}>
+                <button
+                  type="button"
+                  class="return-profile-trigger"
+                  aria-haspopup="listbox"
+                  aria-expanded={returnProfileMenuOpen}
+                  onclick={toggleReturnProfileMenu}
+                >
+                  <span>{returnProfileLabel(selectedReturnProfile)}</span>
+                </button>
+                {#if returnProfileMenuOpen}
+                  <div class="return-profile-menu" role="listbox" tabindex="-1">
+                    {#each returnProfileOptions as [key] (key)}
+                      <button
+                        type="button"
+                        class="return-profile-option"
+                        class:active={selectedReturnProfile === key}
+                        role="option"
+                        aria-selected={selectedReturnProfile === key}
+                        onclick={() => chooseReturnProfile(key)}
+                      >
+                        <span>{returnProfileLabel(key)}</span>
+                        {#if selectedReturnProfile === key}
+                          <Check class="return-profile-check" />
+                        {/if}
+                      </button>
+                    {/each}
+                  </div>
+                {/if}
+              </div>
+            </div>
+            <div class="forecast-mode-switch" role="group" aria-label="Forecast mode">
+              <button
+                type="button"
+                class="optimist"
+                class:active={forecastMode === 'optimistic'}
+                onclick={() => {
+                  forecastMode = 'optimistic';
+                  void saveForecastPreferences({ forecastMode: 'optimistic' });
+                }}
+              >
+                Optimist
+              </button>
+              <button
+                type="button"
+                class="pessimist"
+                class:active={forecastMode === 'pessimistic'}
+                onclick={() => {
+                  forecastMode = 'pessimistic';
+                  void saveForecastPreferences({ forecastMode: 'pessimistic' });
+                }}
+              >
+                Pessimist
+              </button>
+            </div>
           </div>
         </div>
-        <div class="overflow-x-auto">
+        <div class="forecast-scroll overflow-x-auto">
           <table class="tracker-table dense forecast-table">
             <thead>
               <tr>
                 <th>Year</th>
                 <th>Age</th>
-                {@render MoneyHead('Optimist')}
-                {@render MoneyHead('Pessimist')}
-                {@render MoneyHead('Annual Salary')}
-                {@render MoneyHead('Monthly Salary')}
-                {@render MoneyHead('Monthly Invest')}
+                {@render MoneyHead('Salary/mo')}
+                <th>Invest %</th>
+                {@render MoneyHead('Extra 1x')}
+                {@render MoneyHead('Invest/mo')}
+                {@render MoneyHead('Budget/mo')}
+                {@render MoneyHead('Projected')}
+                {@render MoneyHead('Today Value')}
+                {@render MoneyHead('Gain')}
+                <th>Return</th>
               </tr>
             </thead>
             <tbody>
               {#each investmentForecast as row (row.year)}
                 <tr
                   class:forecast-current-row={row.year < 0}
-                  class:bg-amber-100={forecastAge(row.year) === forecastRetirementAge}
+                  class:forecast-millionaire-row={row.year === millionaireForecastYear}
+                  class:forecast-retirement-row={forecastAge(row.year) === forecastRetirementAge}
+                  class:forecast-muted-row={forecastRowMuted(row.year)}
                 >
-                  <td>{forecastCalendarYear(row.year)}</td>
+                  <td>
+                    <span>{forecastCalendarYear(row.year)}</span>
+                  </td>
                   <td>{forecastAge(row.year)}</td>
-                  {@render MoneyCell(row.optimistic, '', true)}
-                  {@render MoneyCell(row.pessimist, '', true)}
-                  {@render MoneyCell(row.salary * 12, '', true)}
-                  {@render MoneyCell(row.salary, '', true)}
-                  {@render MoneyCell(row.monthlyInvestment, '', true)}
+                  <td class="currency-col">Rp</td>
+                  <td>
+                    <form
+                      method="POST"
+                      action="?/forecastOverride"
+                      use:enhance={keepFormState}
+                      class="forecast-inline-form"
+                    >
+                      <input type="hidden" name="relativeYear" value={row.year} />
+                      <input type="hidden" name="salary" value={row.salary} />
+                      <input
+                        class="forecast-input forecast-salary-input"
+                        type="text"
+                        inputmode="numeric"
+                        disabled={isRetiredForecastYear(row.year) || forecastRowMuted(row.year)}
+                        value={displayedForecastSalaryInput(row)}
+                        aria-label={`Monthly salary for ${forecastCalendarYear(row.year)}`}
+                        onfocus={(event) => {
+                          focusedForecastSalaryYear = row.year;
+                          event.currentTarget.value = String(row.salary);
+                        }}
+                        oninput={(event) =>
+                          handleForecastSalaryInput(row.year, event.currentTarget)}
+                        onblur={(event) => {
+                          focusedForecastSalaryYear = null;
+                          formatForecastSalaryInput(event.currentTarget, row.salary);
+                          event.currentTarget.form?.requestSubmit();
+                        }}
+                      />
+                    </form>
+                  </td>
+                  <td>
+                    <form
+                      method="POST"
+                      action="?/forecastOverride"
+                      use:enhance={keepFormState}
+                      class="forecast-inline-form"
+                    >
+                      <input type="hidden" name="relativeYear" value={row.year} />
+                      <span class="forecast-percent-control">
+                        <input
+                          class="forecast-input forecast-percent-input"
+                          name="investmentContributionPercent"
+                          type="number"
+                          min="0"
+                          max="100"
+                          step="1"
+                          disabled={isRetiredForecastYear(row.year) || forecastRowMuted(row.year)}
+                          value={Math.round(row.investmentContributionRate * 100)}
+                          aria-label={`Investment percentage for ${forecastCalendarYear(row.year)}`}
+                          oninput={(event) =>
+                            setForecastInvestmentContributionRate(
+                              row.year,
+                              event.currentTarget.value
+                            )}
+                          onchange={(event) => event.currentTarget.form?.requestSubmit()}
+                          onblur={(event) => {
+                            if (event.currentTarget.value.trim() === '') {
+                              event.currentTarget.value = '0';
+                              setForecastInvestmentContributionRate(row.year, '0');
+                            }
+                            event.currentTarget.form?.requestSubmit();
+                          }}
+                        />
+                        <span>%</span>
+                      </span>
+                    </form>
+                  </td>
+                  <td class="currency-col">Rp</td>
+                  <td>
+                    {#if row.year < 0}
+                      <span class="forecast-extra-summary">
+                        {compactForecastAmount(row.extraMonthlyInvestment)}
+                      </span>
+                    {:else}
+                      <form
+                        method="POST"
+                        action="?/forecastOverride"
+                        use:enhance={keepFormState}
+                        class="forecast-inline-form"
+                      >
+                        <input type="hidden" name="relativeYear" value={row.year} />
+                        <input
+                          class="forecast-input forecast-money-input"
+                          name="extraMonthlyInvestment"
+                          type="text"
+                          inputmode="numeric"
+                          value={displayedForecastMoneyInput(row.year, row.extraMonthlyInvestment)}
+                          aria-label={`One-time extra investment for ${forecastCalendarYear(row.year)}`}
+                          onfocus={(event) => {
+                            focusedForecastExtraInvestmentYear = row.year;
+                            event.currentTarget.value = String(row.extraMonthlyInvestment);
+                          }}
+                          oninput={(event) =>
+                            handleForecastExtraInvestmentInput(row.year, event.currentTarget)}
+                          onblur={(event) => {
+                            focusedForecastExtraInvestmentYear = null;
+                            formatForecastMoneyInput(
+                              event.currentTarget,
+                              row.extraMonthlyInvestment
+                            );
+                            event.currentTarget.form?.requestSubmit();
+                          }}
+                        />
+                      </form>
+                    {/if}
+                  </td>
+                  <td class="currency-col">Rp</td>
+                  <td
+                    class="forecast-contribution forecast-mute-toggle-cell"
+                    title={forecastRowMuted(row.year)
+                      ? 'Double-click to restore this forecast row'
+                      : 'Double-click to temporarily zero this forecast row'}
+                    ondblclick={() => toggleForecastRowMuted(row.year)}
+                  >
+                    {compactForecastAmount(displayedForecastMonthlyInvestment(row))}
+                  </td>
+                  {@render MoneyCell(
+                    forecastBudgetAfterInvestment(row),
+                    forecastBudgetAfterInvestment(row) >= 0
+                      ? 'forecast-budget-leftover'
+                      : 'forecast-budget-leftover negative',
+                    true
+                  )}
+                  {@render MoneyCell(forecastValue(row), '', true)}
+                  {@render MoneyCell(forecastRealValue(row), 'forecast-real-value', true)}
+                  <td class="currency-col">Rp</td>
+                  <td class="forecast-gain">
+                    {compactForecastGainAmount(forecastYearlyGain(row))}
+                  </td>
+                  <td class="forecast-return">{percent(forecastInvestmentReturn(row))}</td>
                 </tr>
                 {#if row.year < 0}
                   {#each currentYearMonthlyForecast as monthRow (monthRow.month)}
-                    <tr class="forecast-month-row">
+                    <tr class="forecast-month-row" class:forecast-muted-row={forecastRowMuted(-1)}>
                       <td>{monthRow.month}</td>
-                      <td>{monthRow.age}</td>
-                      {@render MoneyCell(monthRow.optimistic, '', true)}
-                      {@render MoneyCell(monthRow.pessimist, '', true)}
-                      {@render MoneyCell(monthRow.salary * 12, '', true)}
-                      {@render MoneyCell(monthRow.salary, '', true)}
-                      {@render MoneyCell(monthRow.monthlyInvestment, '', true)}
+                      <td></td>
+                      <td class="currency-col"></td>
+                      <td></td>
+                      <td></td>
+                      <td class="currency-col">Rp</td>
+                      <td>
+                        <form
+                          method="POST"
+                          action="?/forecastOverride"
+                          use:enhance={keepFormState}
+                          class="forecast-inline-form"
+                        >
+                          <input type="hidden" name="relativeYear" value="-1" />
+                          <input type="hidden" name="monthIndex" value={monthRow.monthIndex} />
+                          <input
+                            class="forecast-input forecast-money-input"
+                            name="extraMonthlyInvestment"
+                            type="text"
+                            inputmode="numeric"
+                            value={displayedCurrentYearMonthlyExtraInput(
+                              monthRow.monthIndex,
+                              monthRow.extraMonthlyInvestment
+                            )}
+                            aria-label={`One-time extra investment for ${monthRow.month}`}
+                            onfocus={(event) => {
+                              focusedCurrentYearMonthlyExtraInvestmentMonth = monthRow.monthIndex;
+                              event.currentTarget.value = String(monthRow.extraMonthlyInvestment);
+                            }}
+                            oninput={(event) =>
+                              handleCurrentYearMonthlyExtraInvestmentInput(
+                                monthRow.monthIndex,
+                                event.currentTarget
+                              )}
+                            onblur={(event) => {
+                              focusedCurrentYearMonthlyExtraInvestmentMonth = null;
+                              formatForecastMoneyInput(
+                                event.currentTarget,
+                                monthRow.extraMonthlyInvestment
+                              );
+                              event.currentTarget.form?.requestSubmit();
+                            }}
+                          />
+                        </form>
+                      </td>
+                      <td class="currency-col">Rp</td>
+                      <td
+                        class="forecast-contribution forecast-mute-toggle-cell"
+                        title={forecastRowMuted(-1)
+                          ? 'Double-click to restore the current-year row'
+                          : 'Double-click to temporarily zero the current-year row'}
+                        ondblclick={() => toggleForecastRowMuted(-1)}
+                      >
+                        {compactForecastAmount(displayedForecastMonthlyInvestment(monthRow))}
+                      </td>
+                      {@render MoneyCell(
+                        forecastBudgetAfterInvestment(monthRow),
+                        forecastBudgetAfterInvestment(monthRow) >= 0
+                          ? 'forecast-budget-leftover'
+                          : 'forecast-budget-leftover negative',
+                        true
+                      )}
+                      {@render MoneyCell(forecastValue(monthRow), '', true)}
+                      {@render MoneyCell(forecastRealValue(monthRow), 'forecast-real-value', true)}
+                      <td class="currency-col">Rp</td>
+                      <td class="forecast-gain"
+                        >{compactForecastGainAmount(forecastMonthlyGain(monthRow))}</td
+                      >
+                      <td></td>
                     </tr>
                   {/each}
                 {/if}
@@ -1518,14 +2634,6 @@
           >{currency.format(reconciliationDifference)}</strong
         >
       </div>
-      <div class="compare-item investment-target-item">
-        <span>Investment target</span>
-        <strong
-          >{investmentTargetRate}% / {currency.format(investmentTargetAmount)} / Actual {currency.format(
-            currentMonth.savings.actual
-          )}</strong
-        >
-      </div>
     </div>
   </div>
 {/snippet}
@@ -1547,9 +2655,10 @@
           {#each debtSchedule as debt (`${debt.provider}-${debt.due}-${debt.amount}-${debt.status}`)}
             <tr>
               <td>{debt.provider}</td>
-              <td>{debt.due}</td>
-              {@render MoneyCell(debt.amount)}
-              <td>
+              <td data-label="Due">{debt.due}</td>
+              <td class="currency-col" data-label="Amount"></td>
+              <td data-label="Amount">{currency.format(debt.amount)}</td>
+              <td data-label="Status">
                 <span class="debt-status" class:paid={debt.status === 'paid'}>
                   {debt.status}
                 </span>
@@ -1796,11 +2905,6 @@
     padding-left: 1.25rem;
   }
 
-  .investment-target-item {
-    border-left: 1px solid rgba(31, 82, 122, 0.16);
-    padding-left: 1.25rem;
-  }
-
   .reconciliation-compare .difference-value {
     color: #b45309;
   }
@@ -1829,11 +2933,16 @@
 
   @media (max-width: 520px) {
     .reconciliation-formula {
-      column-gap: 0.24rem;
+      display: flex;
+      width: 100%;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 0.32rem 0.42rem;
+      overflow: visible;
     }
 
     .formula-amount {
-      font-size: 0.62rem;
+      font-size: 0.68rem;
     }
 
     .formula-amount-full {
@@ -1845,24 +2954,133 @@
     }
 
     .formula-operator {
-      font-size: 0.62rem;
+      align-self: center;
+      font-size: 0.68rem;
     }
 
     .formula-label {
-      font-size: 0.5rem;
+      font-size: 0.52rem;
     }
 
     .reconciliation-compare {
-      gap: 0.7rem;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 0.35rem;
+      justify-content: stretch;
+    }
+
+    .compare-item {
+      justify-content: space-between;
+      gap: 0.8rem;
     }
 
     .difference-item {
-      padding-left: 0.7rem;
+      border-left: 0;
+      border-top: 1px solid rgba(31, 82, 122, 0.12);
+      padding-top: 0.35rem;
+      padding-left: 0;
     }
 
-    .investment-target-item {
-      border-left: 0;
-      padding-left: 0;
+    .debt-detail-table,
+    .wallet-table {
+      border-collapse: separate;
+      border-spacing: 0 0.45rem;
+    }
+
+    .debt-detail-table thead,
+    .wallet-table thead {
+      display: none;
+    }
+
+    .debt-detail-table tbody,
+    .debt-detail-table tr,
+    .debt-detail-table td,
+    .wallet-table tbody,
+    .wallet-table tr,
+    .wallet-table td {
+      display: block;
+      width: 100%;
+    }
+
+    .debt-detail-table tr:not(.total-row):not(.wallet-group-row),
+    .wallet-table tr.wallet-child-row,
+    .wallet-table tr.total-row {
+      overflow: hidden;
+      border: 1px solid rgba(31, 82, 122, 0.12);
+      border-radius: 7px;
+      background: rgba(255, 255, 255, 0.5) !important;
+    }
+
+    .debt-detail-table td,
+    .wallet-table td {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.9rem;
+      border-width: 0 0 1px;
+      padding: 0.38rem 0.5rem;
+      text-align: right;
+      white-space: normal;
+    }
+
+    .debt-detail-table td:first-child,
+    .wallet-table td:first-child {
+      border-bottom-color: rgba(31, 82, 122, 0.14);
+      background: rgba(31, 82, 122, 0.04);
+      text-align: left;
+      font-weight: 800;
+    }
+
+    .debt-detail-table td:last-child,
+    .wallet-table td:last-child {
+      border-bottom: 0;
+    }
+
+    .debt-detail-table td[data-label]::before,
+    .wallet-table td[data-label]::before {
+      content: attr(data-label);
+      flex: 0 0 auto;
+      color: var(--color-cork-400);
+      font-size: 0.58rem;
+      font-weight: 700;
+      text-align: left;
+      text-transform: uppercase;
+    }
+
+    .debt-detail-table .currency-col,
+    .wallet-table .currency-col {
+      display: none;
+    }
+
+    .wallet-group-row {
+      display: block;
+      margin-top: 0.1rem;
+    }
+
+    .wallet-group-row td {
+      display: block;
+      border: 0;
+      border-radius: 6px;
+      padding: 0.3rem 0.5rem;
+      background: color-mix(in oklab, #1f527a 12%, white);
+    }
+
+    .wallet-child-row td:first-child {
+      padding-left: 0.5rem;
+    }
+
+    .wallet-label {
+      width: 100%;
+      min-width: 0;
+    }
+
+    .wallet-label span:last-child {
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+
+    .wallet-status-form {
+      justify-content: flex-end;
     }
   }
 
@@ -2346,6 +3564,494 @@
     font-weight: 800;
   }
 
+  .forecast-millionaire-row {
+    background: color-mix(in oklab, #15803d 14%, white) !important;
+    color: #14532d;
+    font-weight: 800;
+  }
+
+  .forecast-retirement-row {
+    background: color-mix(in oklab, #d97706 16%, white) !important;
+    color: #92400e;
+    font-weight: 800;
+  }
+
+  .forecast-muted-row {
+    background: color-mix(in oklab, #1f527a 5%, white) !important;
+  }
+
+  .forecast-muted-row td {
+    color: var(--color-cork-400);
+  }
+
+  .forecast-muted-row .forecast-contribution {
+    color: var(--color-cork-700);
+  }
+
+  .forecast-panel-header {
+    align-items: flex-start;
+  }
+
+  .forecast-panel-header h2 {
+    flex: 0 0 auto;
+    max-width: 10rem;
+    line-height: 1.2;
+  }
+
+  .investment-panel-title {
+    max-width: none !important;
+    white-space: nowrap;
+  }
+
+  .investment-panel-header {
+    align-items: center;
+  }
+
+  .forecast-mode-switch,
+  .investment-currency-switch {
+    display: inline-flex;
+    flex-shrink: 0;
+    height: 1.75rem;
+    gap: 0.1rem;
+    border: 1px solid rgba(31, 82, 122, 0.16);
+    border-radius: 7px;
+    background: rgba(31, 82, 122, 0.05);
+    padding: 0.12rem;
+  }
+
+  .forecast-mode-switch button,
+  .investment-currency-switch button {
+    height: 100%;
+    border-radius: 5px;
+    padding: 0.16rem 0.42rem;
+    color: var(--color-cork-600);
+    font-size: 0.62rem;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .forecast-mode-switch button.active,
+  .investment-currency-switch button.active {
+    background: #1f527a;
+    color: white;
+  }
+
+  .forecast-mode-switch button.optimist.active {
+    background: #047857;
+    color: white;
+  }
+
+  .forecast-mode-switch button.pessimist.active {
+    background: #b45309;
+    color: white;
+  }
+
+  .forecast-assumptions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.42rem 0.72rem;
+    min-width: 0;
+    text-align: right;
+    font-size: 0.625rem;
+  }
+
+  .forecast-assumption-inline,
+  .forecast-return-profile {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.28rem;
+    color: var(--color-cork-400);
+    font-weight: 500;
+    white-space: nowrap;
+  }
+
+  .forecast-assumption-inline strong {
+    color: var(--color-cork-800);
+    font-weight: 500;
+  }
+
+  .forecast-age-input {
+    height: 1.55rem;
+    width: 2.95rem;
+    padding: 0 0.24rem;
+    text-align: center;
+  }
+
+  .return-profile-picker {
+    position: relative;
+    display: inline-flex;
+  }
+
+  .return-profile-picker.open {
+    z-index: 80;
+  }
+
+  .return-profile-trigger {
+    display: inline-flex;
+    width: 7.9rem;
+    height: 1.55rem;
+    align-items: center;
+    justify-content: flex-start;
+    border: 1px solid rgba(31, 82, 122, 0.14);
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.56);
+    padding: 0 0.46rem;
+    color: var(--color-cork-800);
+    font: inherit;
+    font-size: inherit;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .return-profile-trigger span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .return-profile-trigger:hover,
+  .return-profile-trigger:focus,
+  .return-profile-trigger[aria-expanded='true'] {
+    border-color: rgba(31, 82, 122, 0.32);
+    background: white;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(31, 82, 122, 0.08);
+  }
+
+  .return-profile-menu {
+    position: absolute;
+    z-index: 90;
+    top: calc(100% + 0.22rem);
+    right: 0;
+    width: 10.8rem;
+    overflow: hidden;
+    border: 1px solid rgba(31, 82, 122, 0.18);
+    border-radius: 7px;
+    background: #fffdf9;
+    box-shadow: 0 12px 28px rgba(31, 82, 122, 0.16);
+    padding: 0.16rem;
+    text-align: left;
+  }
+
+  .return-profile-option {
+    display: flex;
+    width: 100%;
+    min-height: 1.42rem;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    border-radius: 5px;
+    padding: 0.18rem 0.42rem;
+    text-align: left;
+    color: var(--color-cork-800);
+    font: inherit;
+    line-height: 1.15;
+    cursor: pointer;
+  }
+
+  .return-profile-option span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .return-profile-option:hover,
+  .return-profile-option:focus {
+    background: rgba(31, 82, 122, 0.09);
+    color: #1f527a;
+    outline: none;
+  }
+
+  .return-profile-option.active {
+    background: #e6eefc;
+    color: #1f527a;
+    font-weight: 600;
+  }
+
+  :global(.return-profile-check) {
+    width: 0.56rem !important;
+    height: 0.56rem !important;
+    flex: 0 0 auto;
+    color: #1f527a;
+    stroke-width: 2;
+  }
+
+  .panel-icon-button {
+    display: inline-flex;
+    width: 1.92rem;
+    height: 1.92rem;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-cork-600);
+    cursor: pointer;
+  }
+
+  .panel-icon-button:hover,
+  .panel-icon-button.active {
+    color: #1f527a;
+  }
+
+  .panel-icon-button.attention {
+    color: #b45309;
+  }
+
+  .panel-icon-button.spinning :global(svg) {
+    animation: icon-spin 0.8s linear infinite;
+  }
+
+  .panel-icon-button:disabled {
+    cursor: default;
+    opacity: 0.78;
+  }
+
+  @keyframes icon-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  .investment-row {
+    display: grid;
+    grid-template-columns: minmax(7rem, 1fr) 4.2rem 5.8rem 6.2rem;
+    align-items: center;
+    gap: 0.7rem;
+    border-bottom: 1px solid rgba(31, 82, 122, 0.12);
+    padding: 0.5rem 0.35rem;
+    font-size: 0.72rem;
+  }
+
+  .investment-row:last-child {
+    border-bottom: 0;
+  }
+
+  .investment-ticker {
+    color: var(--color-cork-900);
+    font-weight: 800;
+  }
+
+  .investment-meta {
+    color: var(--color-cork-400);
+    font-size: 0.6rem;
+  }
+
+  .investment-change,
+  .investment-gain,
+  .investment-row > span:last-child {
+    text-align: right;
+    font-weight: 800;
+  }
+
+  .investment-gain {
+    font-size: 0.66rem;
+  }
+
+  .investment-currency-switch button {
+    min-width: 1.3rem;
+    font-weight: 800;
+  }
+
+  .investment-fx-rate {
+    max-width: 11rem;
+    overflow: hidden;
+    color: var(--color-cork-500);
+    font-size: 0.62rem;
+    font-weight: 700;
+    text-align: right;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .investment-summary {
+    display: grid;
+    gap: 0.18rem;
+    border-top: 1px solid rgba(31, 82, 122, 0.12);
+    padding: 0.6rem 0.35rem 0;
+  }
+
+  .investment-summary-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.75rem;
+    color: var(--color-cork-500);
+    font-size: 0.66rem;
+  }
+
+  .investment-summary-row strong {
+    color: var(--color-cork-900);
+    font-weight: 800;
+    text-align: right;
+  }
+
+  .investment-summary-row.primary {
+    color: var(--color-cork-700);
+  }
+
+  .investment-summary-row.primary strong {
+    font-size: 0.86rem;
+  }
+
+  .investment-summary-gain {
+    display: inline-grid;
+    grid-template-columns: auto auto;
+    gap: 0.55rem;
+  }
+
+  .investment-summary-row strong.investment-summary-gain.positive {
+    color: #047857;
+  }
+
+  .investment-summary-row strong.investment-summary-gain.negative {
+    color: #b91c1c;
+  }
+
+  .portfolio-gain-percent,
+  .portfolio-gain-amount {
+    font-weight: 800;
+  }
+
+  .investment-history {
+    display: grid;
+    gap: 0.45rem;
+    border-top: 1px solid rgba(31, 82, 122, 0.12);
+    padding-top: 0.6rem;
+  }
+
+  .investment-history-title {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.75rem;
+    color: var(--color-cork-900);
+    font-size: 0.68rem;
+    font-weight: 800;
+  }
+
+  .investment-history-title span:last-child {
+    color: var(--color-cork-400);
+    font-size: 0.58rem;
+    font-weight: 700;
+  }
+
+  .investment-history-chart {
+    position: relative;
+    height: 11.4rem;
+    border: 1px solid rgba(31, 82, 122, 0.1);
+    border-radius: 7px;
+    background: linear-gradient(180deg, rgba(255, 253, 249, 0.86), rgba(255, 253, 249, 0.48));
+    padding: 0.25rem 0.34rem 0.12rem;
+  }
+
+  :global(.investment-history-area) {
+    fill: #1f527a;
+    fill-opacity: 0.08;
+    stroke: none;
+  }
+
+  :global(.investment-history-line) {
+    fill: none;
+    stroke: #1f527a;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 2.4;
+  }
+
+  :global(.investment-history-grid-line) {
+    stroke: rgba(31, 82, 122, 0.08);
+    stroke-dasharray: 2 3;
+    stroke-width: 1;
+  }
+
+  :global(.investment-history-axis-rule),
+  :global(.investment-history-axis-tick) {
+    stroke: transparent;
+  }
+
+  :global(.investment-history-axis-label) {
+    fill: var(--color-cork-400);
+    font-size: 0.58rem;
+    font-weight: 800;
+  }
+
+  :global(.investment-history-highlight-line) {
+    stroke: rgba(31, 82, 122, 0.22);
+    stroke-dasharray: 3 3;
+    stroke-width: 1.1;
+  }
+
+  :global(.investment-history-highlight-point) {
+    fill: #1f527a;
+    stroke: white;
+    stroke-width: 4;
+    paint-order: stroke;
+  }
+
+  :global(.investment-history-tooltip-container) {
+    border: 1px solid rgba(31, 82, 122, 0.14);
+    border-radius: 7px;
+    background: rgba(255, 253, 249, 0.96);
+    box-shadow: 0 12px 30px rgba(31, 82, 122, 0.16);
+    padding: 0.45rem 0.55rem;
+  }
+
+  .investment-history-tooltip {
+    display: grid;
+    gap: 0.16rem;
+    min-width: 9.4rem;
+    color: var(--color-cork-500);
+    font-size: 0.62rem;
+    line-height: 1.2;
+  }
+
+  .investment-history-tooltip span {
+    color: var(--color-cork-400);
+    font-weight: 700;
+  }
+
+  .investment-history-tooltip strong {
+    color: var(--color-cork-900);
+    font-size: 0.78rem;
+    font-weight: 800;
+  }
+
+  .investment-history-tooltip em {
+    font-style: normal;
+    font-weight: 800;
+  }
+
+  .investment-history-tooltip .positive-growth {
+    color: #047857;
+  }
+
+  .investment-history-tooltip .negative-growth {
+    color: #b91c1c;
+  }
+
+  .investment-history-empty {
+    border: 1px dashed rgba(31, 82, 122, 0.18);
+    border-radius: 6px;
+    padding: 0.6rem;
+    color: var(--color-cork-400);
+    font-size: 0.62rem;
+    text-align: center;
+  }
+
+  @media (max-width: 520px) {
+    .investment-row {
+      grid-template-columns: 1fr auto;
+      gap: 0.35rem 0.7rem;
+    }
+
+    .investment-change,
+    .investment-gain {
+      grid-column: 2;
+    }
+  }
+
   .forecast-month-row {
     background: transparent !important;
   }
@@ -2354,6 +4060,155 @@
     padding-left: 1.05rem;
     color: var(--color-cork-600);
     font-weight: 600;
+  }
+
+  .forecast-contribution {
+    color: var(--color-cork-900);
+    font-weight: 700;
+  }
+
+  .forecast-mute-toggle-cell {
+    border-radius: 4px;
+    cursor: pointer;
+    transition:
+      background 120ms ease,
+      color 120ms ease;
+  }
+
+  .forecast-mute-toggle-cell:hover {
+    background: rgba(31, 82, 122, 0.08);
+    color: #1f527a;
+  }
+
+  .forecast-real-value {
+    color: var(--color-cork-900);
+    font-weight: 700;
+  }
+
+  .forecast-input {
+    height: 1.25rem;
+    border: 1px solid rgba(31, 82, 122, 0.16);
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.54);
+    color: var(--color-cork-900);
+    font-size: 0.62rem;
+    font-weight: 500;
+    line-height: 1;
+    outline: none;
+  }
+
+  .forecast-inline-form {
+    display: inline-flex;
+    margin: 0;
+  }
+
+  .forecast-input:hover {
+    border-color: rgba(31, 82, 122, 0.32);
+    background: white;
+  }
+
+  .forecast-input:focus {
+    border-color: #1f527a;
+    background: white;
+    box-shadow: 0 0 0 2px rgba(31, 82, 122, 0.12);
+  }
+
+  .forecast-input:disabled {
+    border-color: rgba(31, 82, 122, 0.08);
+    background: rgba(31, 82, 122, 0.04);
+    color: var(--color-cork-400);
+    cursor: default;
+  }
+
+  .forecast-input::-webkit-outer-spin-button,
+  .forecast-input::-webkit-inner-spin-button {
+    margin: 0;
+    appearance: none;
+  }
+
+  .forecast-percent-input {
+    width: 2.2rem;
+    padding: 0 0.24rem;
+    text-align: right;
+  }
+
+  .forecast-percent-control {
+    display: inline-flex;
+    height: 1.25rem;
+    align-items: center;
+    gap: 0.12rem;
+    color: var(--color-cork-500);
+    font-size: 0.62rem;
+    font-weight: 700;
+  }
+
+  .forecast-salary-input,
+  .forecast-money-input {
+    width: 5.7rem;
+    padding: 0 0.28rem;
+    text-align: right;
+  }
+
+  .forecast-extra-summary {
+    display: inline-flex;
+    width: 5.7rem;
+    height: 1.25rem;
+    align-items: center;
+    justify-content: flex-end;
+    padding: 0 0.28rem;
+    color: var(--color-cork-500);
+    font-size: 0.62rem;
+    font-weight: 700;
+  }
+
+  .forecast-gain {
+    color: #15803d;
+    font-weight: 800;
+  }
+
+  .forecast-return {
+    color: var(--color-cork-700);
+    font-weight: 600;
+  }
+
+  .forecast-budget-leftover {
+    color: var(--color-cork-900);
+    font-weight: 700;
+  }
+
+  .forecast-budget-leftover.negative {
+    color: #b91c1c;
+    font-weight: 800;
+  }
+
+  .forecast-scroll {
+    max-width: 100%;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .forecast-scroll::-webkit-scrollbar {
+    display: none;
+  }
+
+  .forecast-table {
+    width: max-content;
+    min-width: 100%;
+  }
+
+  .forecast-table th,
+  .forecast-table td {
+    padding-right: 0.22rem;
+    padding-left: 0.22rem;
+  }
+
+  .forecast-table .currency-col {
+    width: 1rem;
+    min-width: 1rem;
+    padding-right: 0.08rem;
+    padding-left: 0.08rem;
   }
 
   .tracker-table .total-row {

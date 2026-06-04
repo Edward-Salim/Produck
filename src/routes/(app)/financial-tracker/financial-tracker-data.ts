@@ -28,9 +28,42 @@ export type WalletRow = {
 
 export type InvestmentRow = {
   label: string;
+  ticker?: string;
   balance: number;
+  costBasis?: number;
   change: string;
   direction: 'up' | 'down';
+  shares?: number;
+  latestPrice?: number;
+  latestPriceAt?: string;
+};
+
+export type MonthlyInvestmentHistoryRow = {
+  monthKey: string;
+  snapshotKey: string;
+  portfolioValue: number;
+  costBasis: number;
+  gain: number;
+  gainPercent: number;
+  hasPreviousMonth: boolean;
+  growthBaselineLabel: string;
+  monthlyGrowth: number;
+  monthlyGrowthPercent: number;
+};
+
+export type ForecastPreferences = {
+  forecastMode: 'optimistic' | 'pessimistic';
+  returnProfile: 'vti' | 'sp500' | 'gold' | 'conservative';
+  investmentCurrency: 'idr' | 'usd';
+  retirementAge: number;
+};
+
+export type ForecastOverrideRow = {
+  relativeYear: number;
+  monthIndex?: number;
+  salary?: number;
+  investmentContributionRate?: number;
+  extraMonthlyInvestment?: number;
 };
 
 export type DebtScheduleRow = {
@@ -79,6 +112,7 @@ export type LedgerEntry = {
 };
 
 export type TrackerData = {
+  usdIdrRate?: number;
   monthlyAllocation: number;
   budgetCategoryOptions: BudgetCategoryOption[];
   categories: CategoryRow[];
@@ -92,6 +126,7 @@ export type TrackerData = {
   juneBillRows: { label: string; planned: number; actual: number; due: string }[];
   wallets: WalletRow[];
   investments: InvestmentRow[];
+  monthlyInvestmentHistory: MonthlyInvestmentHistoryRow[];
   mayDebtSchedule: DebtScheduleRow[];
   ledgerEntries: LedgerEntry[];
   ledgerMonthKeys: string[];
@@ -99,10 +134,13 @@ export type TrackerData = {
   mayExpenseDetails: Record<string, DetailRow[]>;
   juneExpenseDetails: Record<string, DetailRow[]>;
   investmentForecast: { year: number; optimistic: number; pessimist: number; salary: number }[];
+  forecastPreferences: ForecastPreferences;
+  forecastOverrides: ForecastOverrideRow[];
   monthlySummaries: MonthlySummary[];
 };
 
 export const emptyTrackerData: TrackerData = {
+  usdIdrRate: undefined,
   monthlyAllocation: 0,
   budgetCategoryOptions: [],
   categories: [],
@@ -116,6 +154,7 @@ export const emptyTrackerData: TrackerData = {
   juneBillRows: [],
   wallets: [],
   investments: [],
+  monthlyInvestmentHistory: [],
   mayDebtSchedule: [],
   ledgerEntries: [],
   ledgerMonthKeys: [],
@@ -123,5 +162,12 @@ export const emptyTrackerData: TrackerData = {
   mayExpenseDetails: {},
   juneExpenseDetails: {},
   investmentForecast: [],
+  forecastPreferences: {
+    forecastMode: 'optimistic',
+    returnProfile: 'vti',
+    investmentCurrency: 'idr',
+    retirementAge: 40
+  },
+  forecastOverrides: [],
   monthlySummaries: []
 };

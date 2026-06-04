@@ -712,11 +712,33 @@ export const financialTrackerInvestment = pgTable('financial_tracker_investment'
   id: serial('id').primaryKey(),
   ownerEmail: text('owner_email').notNull(),
   label: text('label').notNull(),
+  ticker: text('ticker'),
+  sharesScaled: bigint('shares_scaled', { mode: 'number' }),
+  costBasis: money('cost_basis'),
+  currency: text('currency').notNull().default('USD'),
+  latestPriceScaled: bigint('latest_price_scaled', { mode: 'number' }),
+  latestPriceAt: timestamp('latest_price_at', { withTimezone: true }),
   balance: money('balance').notNull(),
   change: text('change').notNull(),
   direction: text('direction').notNull(),
   sortOrder: integer('sort_order').notNull().default(0),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
+});
+
+export const financialTrackerInvestmentSnapshot = pgTable('financial_tracker_investment_snapshot', {
+  id: serial('id').primaryKey(),
+  ownerEmail: text('owner_email').notNull(),
+  snapshotKey: text('snapshot_key').notNull(),
+  label: text('label').notNull(),
+  ticker: text('ticker'),
+  balance: money('balance').notNull(),
+  costBasis: money('cost_basis').notNull(),
+  change: text('change').notNull(),
+  direction: text('direction').notNull(),
+  latestPriceScaled: bigint('latest_price_scaled', { mode: 'number' }),
+  latestPriceAt: timestamp('latest_price_at', { withTimezone: true }),
+  sortOrder: integer('sort_order').notNull().default(0),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
 });
 
 export const financialTrackerDebtSchedule = pgTable('financial_tracker_debt_schedule', {
@@ -780,5 +802,26 @@ export const financialTrackerInvestmentForecast = pgTable('financial_tracker_inv
   pessimist: money('pessimist').notNull(),
   salary: money('salary').notNull(),
   sortOrder: integer('sort_order').notNull().default(0),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
+});
+
+export const financialTrackerForecastPreference = pgTable('financial_tracker_forecast_preference', {
+  id: serial('id').primaryKey(),
+  ownerEmail: text('owner_email').notNull(),
+  forecastMode: text('forecast_mode').notNull().default('optimistic'),
+  returnProfile: text('return_profile').notNull().default('vti'),
+  investmentCurrency: text('investment_currency').notNull().default('idr'),
+  retirementAge: integer('retirement_age').notNull().default(40),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
+});
+
+export const financialTrackerForecastOverride = pgTable('financial_tracker_forecast_override', {
+  id: serial('id').primaryKey(),
+  ownerEmail: text('owner_email').notNull(),
+  relativeYear: integer('relative_year').notNull(),
+  monthIndex: integer('month_index'),
+  salary: money('salary'),
+  investmentContributionRateBps: integer('investment_contribution_rate_bps'),
+  extraMonthlyInvestment: money('extra_monthly_investment'),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
 });
