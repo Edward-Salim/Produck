@@ -36,10 +36,18 @@ function recordFailedLogin(key: string) {
   attempt.count += 1;
 }
 
+function safeClientAddress(getClientAddress: () => string) {
+  try {
+    return getClientAddress();
+  } catch {
+    return 'unknown';
+  }
+}
+
 export const POST: RequestHandler = async ({ request, cookies, getClientAddress }) => {
   const { email, password } = await request.json();
   const normalizedEmail = String(email ?? '').trim().toLowerCase();
-  const attemptKey = loginAttemptKey(normalizedEmail, getClientAddress());
+  const attemptKey = loginAttemptKey(normalizedEmail, safeClientAddress(getClientAddress));
 
   if (loginIsLimited(attemptKey)) {
     return json({ error: 'Too many login attempts. Try again later.' }, { status: 429 });
