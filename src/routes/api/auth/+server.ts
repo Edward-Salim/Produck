@@ -45,15 +45,19 @@ function safeClientAddress(getClientAddress: () => string) {
 }
 
 export const POST: RequestHandler = async ({ request, cookies, getClientAddress }) => {
+  let stage = 'parse';
+
   try {
     const { email, password } = await request.json();
     const normalizedEmail = String(email ?? '').trim().toLowerCase();
     const attemptKey = loginAttemptKey(normalizedEmail, safeClientAddress(getClientAddress));
 
+    stage = 'rate-limit';
     if (loginIsLimited(attemptKey)) {
       return json({ error: 'Too many login attempts. Try again later.' }, { status: 429 });
     }
 
+    stage = 'select-user';
     const [user] = await db.select().from(appUser).where(eq(appUser.email, normalizedEmail));
 
     if (!user || !user.passwordHash) {
@@ -61,6 +65,7 @@ export const POST: RequestHandler = async ({ request, cookies, getClientAddress 
       return json({ error: 'Invalid credentials or account not initialized.' }, { status: 401 });
     }
 
+    stage = 'verify-password';
     const valid = verifyPassword(password, user.passwordHash);
     if (!valid) {
       recordFailedLogin(attemptKey);
@@ -69,7 +74,9 @@ export const POST: RequestHandler = async ({ request, cookies, getClientAddress 
 
     loginAttempts.delete(attemptKey);
 
+    stage = 'create-session';
     const sessionId = await createSession(user.id);
+    stage = 'set-cookie';
     cookies.set('session_id', sessionId, {
       path: '/',
       httpOnly: true,
@@ -80,8 +87,9 @@ export const POST: RequestHandler = async ({ request, cookies, getClientAddress 
 
     return json({ ok: true });
   } catch (error) {
-    console.error('Login failed unexpectedly', error);
-    return json({ error: 'Login failed unexpectedly.' }, { status: 500 });
+    const message = error instanceof Error ? error.message : String(error);
+    console.error('Login failed unexpectedly', { stage, error });
+    return json({ error: 'Login failed unexpectedly.', stage, message }, { status: 500 });
   }
 };
 
