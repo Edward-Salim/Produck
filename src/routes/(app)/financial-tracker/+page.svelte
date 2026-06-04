@@ -390,16 +390,18 @@
     return (balance + monthlyContribution) * (1 + annualReturn) ** (1 / 12);
   }
 
-  function monthlyInvestmentGain(balance: number, annualReturn: number) {
-    return Math.round(balance * ((1 + annualReturn) ** (1 / 12) - 1));
+  function monthlyInvestmentGain(balance: number, annualReturn: number, monthlyContribution = 0) {
+    return Math.round(
+      (balance + monthlyContribution) * ((1 + annualReturn) ** (1 / 12) - 1)
+    );
   }
 
   function yearlyInvestmentGain(balance: number, annualReturn: number, months = 12) {
     return Math.round(balance * ((1 + annualReturn) ** (months / 12) - 1));
   }
 
-  function percent(value: number) {
-    return `${amount.format(value * 100)}%`;
+  function percent(value: number, maximumFractionDigits = 0) {
+    return `${new Intl.NumberFormat('id-ID', { maximumFractionDigits }).format(value * 100)}%`;
   }
 
   function percentNumber(value: number) {
@@ -575,6 +577,10 @@
 
   function forecastInvestmentReturn(row: InvestmentForecastRow | MonthlyInvestmentForecastRow) {
     return forecastMode === 'optimistic' ? row.optimisticReturn : row.pessimisticReturn;
+  }
+
+  function forecastMonthlyInvestmentReturn(row: MonthlyInvestmentForecastRow) {
+    return (1 + forecastInvestmentReturn(row)) ** (1 / 12) - 1;
   }
 
   function displayedForecastMonthlyInvestment(
@@ -904,11 +910,13 @@
       const monthlyContribution = currentYearForecastMonthContribution(monthIndex);
       const optimisticMonthlyGain = monthlyInvestmentGain(
         optimisticBalance,
-        investmentGrowth.optimistic
+        investmentGrowth.optimistic,
+        monthlyContribution
       );
       const pessimisticMonthlyGain = monthlyInvestmentGain(
         pessimisticBalance,
-        investmentGrowth.pessimistic
+        investmentGrowth.pessimistic,
+        monthlyContribution
       );
       optimisticBalance = compoundMonth(
         optimisticBalance,
@@ -930,11 +938,11 @@
         pessimist: Math.round(pessimisticBalance),
         realOptimistic: Math.round(
           optimisticBalance /
-            (1 + defaultInflationRate) ** ((monthIndex - forecastCurrentMonthIndex) / 12)
+            (1 + defaultInflationRate) ** ((monthIndex - forecastCurrentMonthIndex + 1) / 12)
         ),
         realPessimist: Math.round(
           pessimisticBalance /
-            (1 + defaultInflationRate) ** ((monthIndex - forecastCurrentMonthIndex) / 12)
+            (1 + defaultInflationRate) ** ((monthIndex - forecastCurrentMonthIndex + 1) / 12)
         ),
         salary: monthlySalary,
         monthlyInvestment: monthlyContribution,
@@ -2542,7 +2550,9 @@
                       <td class="forecast-gain"
                         >{compactForecastGainAmount(forecastMonthlyGain(monthRow))}</td
                       >
-                      <td></td>
+                      <td class="forecast-return"
+                        >{percent(forecastMonthlyInvestmentReturn(monthRow), 1)}</td
+                      >
                     </tr>
                   {/each}
                 {/if}
