@@ -776,46 +776,15 @@
     )
   );
   let investmentForecast = $derived.by(() => {
-    const rows: InvestmentForecastRow[] = [
-      {
-        year: -1,
-        optimistic: totalInvestments,
-        pessimist: totalInvestments,
-        realOptimistic: totalInvestments,
-        realPessimist: totalInvestments,
-        salary: forecastMonthlySalary(-1),
-        monthlyInvestment: forecastMonthlyContribution(-1),
-        investmentContributionRate: investmentContributionRateForYear(-1),
-        extraMonthlyInvestment: currentYearTotalExtraInvestment(),
-        optimisticMonthlyGain: monthlyInvestmentGain(
-          totalInvestments,
-          investmentGrowthForYear().optimistic
-        ),
-        pessimisticMonthlyGain: monthlyInvestmentGain(
-          totalInvestments,
-          investmentGrowthForYear().pessimistic
-        ),
-        optimisticYearlyGain: yearlyInvestmentGain(
-          totalInvestments,
-          investmentGrowthForYear().optimistic,
-          12 - forecastCurrentMonthIndex
-        ),
-        pessimisticYearlyGain: yearlyInvestmentGain(
-          totalInvestments,
-          investmentGrowthForYear().pessimistic,
-          12 - forecastCurrentMonthIndex
-        ),
-        optimisticReturn: investmentGrowthForYear().optimistic,
-        pessimisticReturn: investmentGrowthForYear().pessimistic,
-        salaryGrowth: salaryGrowthForForecastYear(-1)
-      }
-    ];
+    const rows: InvestmentForecastRow[] = [];
     let optimisticBalance = totalInvestments;
     let pessimisticBalance = totalInvestments;
     const currentYearInvestmentGrowth = investmentGrowthForYear();
+    let currentYearTotalContribution = 0;
 
     for (let monthIndex = forecastCurrentMonthIndex; monthIndex < 12; monthIndex += 1) {
       const monthlyContribution = currentYearForecastMonthContribution(monthIndex);
+      currentYearTotalContribution += monthlyContribution;
       optimisticBalance = compoundMonth(
         optimisticBalance,
         currentYearInvestmentGrowth.optimistic,
@@ -827,6 +796,41 @@
         monthlyContribution
       );
     }
+
+    rows.push({
+      year: -1,
+      optimistic: Math.round(optimisticBalance),
+      pessimist: Math.round(pessimisticBalance),
+      realOptimistic: Math.round(
+        optimisticBalance /
+          (1 + defaultInflationRate) ** ((12 - forecastCurrentMonthIndex) / 12)
+      ),
+      realPessimist: Math.round(
+        pessimisticBalance /
+          (1 + defaultInflationRate) ** ((12 - forecastCurrentMonthIndex) / 12)
+      ),
+      salary: forecastMonthlySalary(-1),
+      monthlyInvestment: forecastMonthlyContribution(-1),
+      investmentContributionRate: investmentContributionRateForYear(-1),
+      extraMonthlyInvestment: currentYearTotalExtraInvestment(),
+      optimisticMonthlyGain: monthlyInvestmentGain(
+        optimisticBalance,
+        currentYearInvestmentGrowth.optimistic
+      ),
+      pessimisticMonthlyGain: monthlyInvestmentGain(
+        pessimisticBalance,
+        currentYearInvestmentGrowth.pessimistic
+      ),
+      optimisticYearlyGain: Math.round(
+        optimisticBalance - totalInvestments - currentYearTotalContribution
+      ),
+      pessimisticYearlyGain: Math.round(
+        pessimisticBalance - totalInvestments - currentYearTotalContribution
+      ),
+      optimisticReturn: currentYearInvestmentGrowth.optimistic,
+      pessimisticReturn: currentYearInvestmentGrowth.pessimistic,
+      salaryGrowth: salaryGrowthForForecastYear(-1)
+    });
 
     for (let relativeYear = 0; relativeYear <= forecastFinalRelativeYear; relativeYear += 1) {
       const monthlySalary = forecastMonthlySalary(relativeYear);
