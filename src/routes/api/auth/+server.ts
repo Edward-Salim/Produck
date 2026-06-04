@@ -45,40 +45,44 @@ function safeClientAddress(getClientAddress: () => string) {
 }
 
 export const POST: RequestHandler = async ({ request, cookies, getClientAddress }) => {
-  const { email, password } = await request.json();
-  const normalizedEmail = String(email ?? '').trim().toLowerCase();
-  const attemptKey = loginAttemptKey(normalizedEmail, safeClientAddress(getClientAddress));
+  try {
+    const { email, password } = await request.json();
+    const normalizedEmail = String(email ?? '').trim().toLowerCase();
+    const attemptKey = loginAttemptKey(normalizedEmail, safeClientAddress(getClientAddress));
 
-  if (loginIsLimited(attemptKey)) {
-    return json({ error: 'Too many login attempts. Try again later.' }, { status: 429 });
+    if (loginIsLimited(attemptKey)) {
+      return json({ error: 'Too many login attempts. Try again later.' }, { status: 429 });
+    }
+
+    const [user] = await db.select().from(appUser).where(eq(appUser.email, normalizedEmail));
+
+    if (!user || !user.passwordHash) {
+      recordFailedLogin(attemptKey);
+      return json({ error: 'Invalid credentials or account not initialized.' }, { status: 401 });
+    }
+
+    const valid = verifyPassword(password, user.passwordHash);
+    if (!valid) {
+      recordFailedLogin(attemptKey);
+      return json({ error: 'Invalid credentials.' }, { status: 401 });
+    }
+
+    loginAttempts.delete(attemptKey);
+
+    const sessionId = await createSession(user.id);
+    cookies.set('session_id', sessionId, {
+      path: '/',
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: 60 * 60 * 24 * 30
+    });
+
+    return json({ ok: true });
+  } catch (error) {
+    console.error('Login failed unexpectedly', error);
+    return json({ error: 'Login failed unexpectedly.' }, { status: 500 });
   }
-
-  const [user] = await db.select().from(appUser).where(eq(appUser.email, normalizedEmail));
-
-  if (!user || !user.passwordHash) {
-    recordFailedLogin(attemptKey);
-    return json({ error: 'Invalid credentials or account not initialized.' }, { status: 401 });
-  }
-
-  const valid = verifyPassword(password, user.passwordHash);
-  if (!valid) {
-    recordFailedLogin(attemptKey);
-    return json({ error: 'Invalid credentials.' }, { status: 401 });
-  }
-
-  loginAttempts.delete(attemptKey);
-
-  // Create session and set cookie
-  const sessionId = await createSession(user.id);
-  cookies.set('session_id', sessionId, {
-    path: '/',
-    httpOnly: true,
-    sameSite: 'lax',
-    secure: process.env.NODE_ENV === 'production',
-    maxAge: 60 * 60 * 24 * 30 // 30 days
-  });
-
-  return json({ ok: true });
 };
 
 export const DELETE: RequestHandler = async ({ cookies }) => {
