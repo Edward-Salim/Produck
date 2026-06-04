@@ -88,8 +88,10 @@ export const POST: RequestHandler = async ({ request, cookies, getClientAddress 
     return json({ ok: true });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
+    const cause =
+      error instanceof Error && error.cause instanceof Error ? error.cause.message : undefined;
     console.error('Login failed unexpectedly', { stage, error });
-    return json({ error: 'Login failed unexpectedly.', stage, message }, { status: 500 });
+    return json({ error: 'Login failed unexpectedly.', stage, message, cause }, { status: 500 });
   }
 };
 
