@@ -5,19 +5,60 @@ import { eq } from 'drizzle-orm';
 import { verifyPassword, createSession } from '$lib/server/auth.js';
 import type { RequestHandler } from './$types.js';
 
-export const POST: RequestHandler = async ({ request, cookies }) => {
-  const { email, password } = await request.json();
+const loginWindowMs = 15 * 60 * 1000;
+const maxLoginAttempts = 5;
+const loginAttempts = new Map<string, { count: number; resetAt: number }>();
 
-  const [user] = await db.select().from(appUser).where(eq(appUser.email, email));
+function loginAttemptKey(email: string, address: string) {
+  return `${address}:${email.toLowerCase()}`;
+}
+
+function loginIsLimited(key: string) {
+  const attempt = loginAttempts.get(key);
+  if (!attempt) return false;
+
+  if (Date.now() > attempt.resetAt) {
+    loginAttempts.delete(key);
+    return false;
+  }
+
+  return attempt.count >= maxLoginAttempts;
+}
+
+function recordFailedLogin(key: string) {
+  const now = Date.now();
+  const attempt = loginAttempts.get(key);
+  if (!attempt || now > attempt.resetAt) {
+    loginAttempts.set(key, { count: 1, resetAt: now + loginWindowMs });
+    return;
+  }
+
+  attempt.count += 1;
+}
+
+export const POST: RequestHandler = async ({ request, cookies, getClientAddress }) => {
+  const { email, password } = await request.json();
+  const normalizedEmail = String(email ?? '').trim().toLowerCase();
+  const attemptKey = loginAttemptKey(normalizedEmail, getClientAddress());
+
+  if (loginIsLimited(attemptKey)) {
+    return json({ error: 'Too many login attempts. Try again later.' }, { status: 429 });
+  }
+
+  const [user] = await db.select().from(appUser).where(eq(appUser.email, normalizedEmail));
 
   if (!user || !user.passwordHash) {
+    recordFailedLogin(attemptKey);
     return json({ error: 'Invalid credentials or account not initialized.' }, { status: 401 });
   }
 
   const valid = verifyPassword(password, user.passwordHash);
   if (!valid) {
+    recordFailedLogin(attemptKey);
     return json({ error: 'Invalid credentials.' }, { status: 401 });
   }
+
+  loginAttempts.delete(attemptKey);
 
   // Create session and set cookie
   const sessionId = await createSession(user.id);

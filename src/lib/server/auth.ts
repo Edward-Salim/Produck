@@ -3,19 +3,46 @@ import { authSession, appUser } from './db/schema.js';
 import { eq } from 'drizzle-orm';
 import { pbkdf2Sync, randomBytes, timingSafeEqual } from 'node:crypto';
 
-// Hash password with salt using PBKDF2
+const passwordHashAlgorithm = 'pbkdf2_sha512';
+const passwordHashIterations = 310_000;
+const passwordKeyLength = 64;
+
 export function hashPassword(password: string): string {
   const salt = randomBytes(16).toString('hex');
-  const hash = pbkdf2Sync(password, salt, 10000, 64, 'sha512').toString('hex');
-  return `${salt}:${hash}`;
+  const hash = pbkdf2Sync(
+    password,
+    salt,
+    passwordHashIterations,
+    passwordKeyLength,
+    'sha512'
+  ).toString('hex');
+  return `${passwordHashAlgorithm}$${passwordHashIterations}$${salt}$${hash}`;
 }
 
-// Verify password against stored hash
 export function verifyPassword(password: string, stored: string): boolean {
+  if (stored.startsWith(`${passwordHashAlgorithm}$`)) {
+    const parts = stored.split('$');
+    if (parts.length !== 4) return false;
+
+    const [, iterationsText, salt, originalHash] = parts;
+    const iterations = Number(iterationsText);
+    if (!Number.isSafeInteger(iterations) || iterations <= 0) return false;
+
+    const hash = pbkdf2Sync(password, salt, iterations, passwordKeyLength, 'sha512').toString(
+      'hex'
+    );
+    const hashBuffer = Buffer.from(hash, 'hex');
+    const originalHashBuffer = Buffer.from(originalHash, 'hex');
+    return (
+      hashBuffer.length === originalHashBuffer.length &&
+      timingSafeEqual(hashBuffer, originalHashBuffer)
+    );
+  }
+
   const parts = stored.split(':');
   if (parts.length !== 2) return false;
   const [salt, originalHash] = parts;
-  const hash = pbkdf2Sync(password, salt, 10000, 64, 'sha512').toString('hex');
+  const hash = pbkdf2Sync(password, salt, 10_000, passwordKeyLength, 'sha512').toString('hex');
   const hashBuffer = Buffer.from(hash, 'hex');
   const originalHashBuffer = Buffer.from(originalHash, 'hex');
   return (
