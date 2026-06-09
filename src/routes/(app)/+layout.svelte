@@ -6,15 +6,17 @@
   import * as Select from '$lib/components/ui/select/index.js';
   import { page } from '$app/state';
   import { goto } from '$app/navigation';
+  import { getFullscreen } from '$lib/stores/fullscreen.svelte.js';
+
+  let fullscreen = $derived(getFullscreen());
   import {
     Lightbulb,
-    Route,
     Target,
+    Layers3,
     Wrench,
     BookOpen,
     Landmark,
     WalletCards,
-    NotebookPen,
     GaugeCircle,
     Rss,
     LogOut,
@@ -147,7 +149,7 @@
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ workspaceId: id })
     });
-    window.location.href = '/dashboard';
+    window.location.reload();
   }
 
   // ── Project ──
@@ -163,6 +165,7 @@
 
   function switchProject(id: string | undefined) {
     if (!id) return;
+    document.cookie = `active_project=${id};path=/;max-age=${60 * 60 * 24 * 365};samesite=lax`;
     const url = new URL(page.url);
     url.searchParams.set('project', id);
     goto(url.toString());
@@ -174,7 +177,7 @@
   );
 
   // Main page routes for Ctrl+Tab navigation (no tools)
-  const NAV_PAGES = ['/outcomes', '/experience-map', '/ideas'];
+  const NAV_PAGES = ['/frameworks'];
 
   function getCurrentPageIndex(): number {
     return NAV_PAGES.findIndex((p) => page.url.pathname.startsWith(p));
@@ -183,7 +186,6 @@
   function buildUrl(path: string): string {
     // Carry the current project param from the URL if available, otherwise use selected
     const currentProject = page.url.searchParams.get('project') ?? selectedProjectId;
-    if (path === '/outcomes') return path;
     return `${path}?project=${currentProject}`;
   }
 
@@ -214,7 +216,8 @@
 <svelte:window onkeydown={handleKeydown} />
 
 <Sidebar.Provider bind:open={sidebarOpen} style="--sidebar-width: 14rem;">
-  <Sidebar.Root collapsible="icon">
+  {#if !fullscreen}
+    <Sidebar.Root collapsible="icon">
     <Sidebar.Header>
       <div class="flex items-center gap-2 px-2 py-1">
         <img src={logoProduck} alt="Produck" class="size-5 shrink-0 object-contain" />
@@ -228,7 +231,7 @@
           >
           <Select.Root type="single" value={selectedWorkspaceId} onValueChange={switchWorkspace}>
             <Select.Trigger
-              class="h-7 w-full border-sidebar-border bg-sidebar-accent/20 text-xs text-sidebar-foreground"
+              class="h-7 w-full cursor-pointer border-sidebar-border bg-sidebar-accent/20 text-xs text-sidebar-foreground hover:bg-sidebar-accent/40 transition-colors"
             >
               <span class="truncate">{selectedWorkspaceName}</span>
             </Select.Trigger>
@@ -236,7 +239,7 @@
               {#each data.workspaces as ws (ws.id)}
                 <Select.Item
                   value={String(ws.id)}
-                  class="text-sm text-cork-700 focus:bg-cork-200/50"
+                  class="cursor-pointer text-sm text-cork-700 hover:bg-cork-200/50 focus:bg-cork-200/50"
                 >
                   {ws.name}
                 </Select.Item>
@@ -255,51 +258,11 @@
             <Sidebar.MenuItem>
               <Sidebar.MenuButton
                 size="sm"
-                isActive={page.url.pathname.startsWith('/outcomes')}
-                tooltipContent="Outcomes"
+                isActive={page.url.pathname.startsWith('/frameworks')}
+                tooltipContent="Frameworks"
               >
                 {#snippet child({ props })}
-                  <a href="/outcomes" {...props}><Target /><span>Outcomes</span></a>
-                {/snippet}
-              </Sidebar.MenuButton>
-            </Sidebar.MenuItem>
-            <Sidebar.MenuItem>
-              <Sidebar.MenuButton
-                size="sm"
-                isActive={page.url.pathname.startsWith('/interview-snapshots')}
-                tooltipContent="Interviews"
-              >
-                {#snippet child({ props })}
-                  <a href="/interview-snapshots" {...props}
-                    ><NotebookPen /><span>Interviews</span></a
-                  >
-                {/snippet}
-              </Sidebar.MenuButton>
-            </Sidebar.MenuItem>
-            <Sidebar.MenuItem>
-              <Sidebar.MenuButton
-                size="sm"
-                isActive={page.url.pathname.startsWith('/experience-map')}
-                tooltipContent="Experience Map"
-              >
-                {#snippet child({ props })}
-                  <a href="/experience-map?project={selectedProjectId}" {...props}
-                    ><Route /><span>Experience Map</span></a
-                  >
-                {/snippet}
-              </Sidebar.MenuButton>
-            </Sidebar.MenuItem>
-            <Sidebar.MenuItem>
-              <Sidebar.MenuButton
-                size="sm"
-                isActive={page.url.pathname.startsWith('/ideas') ||
-                  page.url.pathname.startsWith('/story-map')}
-                tooltipContent="Idea Bank"
-              >
-                {#snippet child({ props })}
-                  <a href="/ideas?project={selectedProjectId}" {...props}
-                    ><Lightbulb /><span>Idea Bank</span></a
-                  >
+                  <a href="/frameworks" {...props}><Layers3 /><span>Frameworks</span></a>
                 {/snippet}
               </Sidebar.MenuButton>
             </Sidebar.MenuItem>
@@ -460,11 +423,13 @@
       </div>
     </Sidebar.Footer>
   </Sidebar.Root>
+  {/if}
 
   <Sidebar.Inset class="flex h-svh flex-col overflow-y-auto bg-cork-100">
-    <header class="sticky top-0 z-10 border-b border-cork-200 bg-cork-100">
+    {#if !fullscreen}
+      <header class="sticky top-0 z-0 border-b border-cork-200 bg-cork-100">
       <div class="flex items-center gap-2 px-4 py-1.5 md:gap-3">
-        <Sidebar.Trigger class="text-cork-500 hover:text-cork-800" />
+        <Sidebar.Trigger class="cursor-pointer text-cork-500 hover:text-cork-800" />
         <button
           type="button"
           class="flex size-6 cursor-pointer items-center justify-center rounded transition-colors {okrPanelOpen
@@ -478,18 +443,18 @@
         <div class="flex-1"></div>
         {#if data.projects.length > 0}
           <div class="flex items-center gap-1.5">
-            <span class="text-[9px] font-semibold tracking-wider text-cork-400 uppercase md:hidden"
+            <span class="text-[9px] font-semibold tracking-wider text-cork-400 uppercase"
               >Project</span
             >
             <Select.Root type="single" value={selectedProjectId} onValueChange={switchProject}>
               <Select.Trigger
-                class="h-7 max-w-64 border-cork-300 bg-cork-200/50 text-sm text-cork-700"
+                class="h-7 max-w-64 cursor-pointer border-cork-300 bg-cork-200/50 text-sm text-cork-700"
               >
                 <span class="truncate">{selectedProjectLabel}</span>
               </Select.Trigger>
               <Select.Content class="border-cork-300 bg-cork-50" preventScroll={false} align="end">
                 {#each data.projects as proj (proj.id)}
-                  <Select.Item value={String(proj.id)} class="text-cork-700 focus:bg-cork-200/50">
+                  <Select.Item value={String(proj.id)} class="cursor-pointer text-cork-700 hover:bg-cork-200/50 focus:bg-cork-200/50">
                     {proj.shortName ?? proj.name}
                   </Select.Item>
                 {/each}
@@ -501,7 +466,7 @@
 
       {#if okrPanelOpen && gaugeKRs.length > 0}
         <a
-          href="/outcomes"
+          href="/frameworks"
           class="flex cursor-pointer items-center gap-3 border-t border-cork-200/50 px-4 py-1.5 transition-colors hover:bg-cork-200/30 max-md:hidden"
         >
           <span class="shrink-0 text-[9px] font-bold tracking-widest text-cork-400 uppercase"
@@ -522,7 +487,7 @@
           {/each}
         </a>
         <a
-          href="/outcomes"
+          href="/frameworks"
           class="block cursor-pointer border-t border-cork-200/50 py-2 pr-6 pl-8 transition-colors hover:bg-cork-200/30 md:hidden"
         >
           <span class="mb-1.5 block text-[9px] font-bold tracking-widest text-cork-400 uppercase"
@@ -550,15 +515,11 @@
         </a>
       {/if}
     </header>
+    {/if}
     {@const noAccess = !data.isAdmin && data.workspaces.length === 0 && data.projects.length === 0}
     {@const isWorkRoute =
       page.url.pathname === '/dashboard' ||
       [
-        '/outcomes',
-        '/interview-snapshots',
-        '/experience-map',
-        '/ideas',
-        '/story-map',
         '/admin'
       ].some((p) => page.url.pathname.startsWith(p))}
     {#if noAccess && isWorkRoute}
@@ -569,7 +530,7 @@
         </p>
       </div>
     {:else}
-      <div class="px-4 pt-4 pb-6 md:px-6">
+      <div class="px-4 pt-6 pb-6 md:px-6">
         {@render children()}
       </div>
     {/if}

@@ -45,7 +45,7 @@
 
   let totalCols = $derived(columns.length);
 
-  let gridCols = $derived(`32px repeat(${totalCols}, minmax(125px, 1fr))`);
+  let gridCols = $derived(`36px repeat(${totalCols}, minmax(125px, 1fr))`);
 
   /* ---- Kano section config ---- */
 
@@ -89,28 +89,6 @@
     modalOpen = true;
   }
 
-  /* ---- Scroll hint ---- */
-  let boardEl = $state<HTMLDivElement | null>(null);
-  let showScrollHint = $state(false);
-
-  function checkScroll() {
-    if (!boardEl) return;
-    const isScrollable = boardEl.scrollWidth > boardEl.clientWidth;
-    const atEnd = boardEl.scrollLeft + boardEl.clientWidth >= boardEl.scrollWidth - 10;
-    showScrollHint = isScrollable && !atEnd;
-  }
-
-  $effect(() => {
-    if (!boardEl) return;
-    checkScroll();
-    boardEl.addEventListener('scroll', checkScroll);
-    window.addEventListener('resize', checkScroll);
-    return () => {
-      boardEl?.removeEventListener('scroll', checkScroll);
-      window.removeEventListener('resize', checkScroll);
-    };
-  });
-
   /* ---- Build unique activity order for spanning rows ---- */
 
   let kanoStartRow = $derived(is3Level ? 4 : 3); // row after actors + backbone + tasks (if 3-level)
@@ -131,19 +109,19 @@
   });
 </script>
 
-<!-- Board wrap (scroll hint container) -->
-<div class="relative">
   <!-- Board container -->
   <div
-    bind:this={boardEl}
-    class="overflow-x-auto rounded-xl p-4 shadow-[inset_0_1px_4px_rgba(255,255,255,.15),inset_0_-2px_6px_rgba(0,0,0,.06),0_6px_24px_rgba(0,0,0,.12)] [-ms-overflow-style:none] [scrollbar-width:none] md:p-8 [&::-webkit-scrollbar]:hidden"
+    class="rounded-xl p-4 shadow-[inset_0_1px_4px_rgba(255,255,255,.15),inset_0_-2px_6px_rgba(0,0,0,.06),0_6px_24px_rgba(0,0,0,.12)] md:p-8"
     style="background: radial-gradient(ellipse at 30% 20%, rgba(255,255,255,.18) 0%, transparent 60%), #cdc3ae;"
   >
-    <!-- CSS Grid -->
     <div
-      class="grid min-w-max items-start gap-2 md:gap-3"
-      style="grid-template-columns: {gridCols};"
+      class="overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
     >
+      <!-- CSS Grid -->
+      <div
+        class="grid min-w-max items-start gap-2 md:gap-3"
+        style="grid-template-columns: {gridCols};"
+      >
       <!-- ====== ROW 1: Actor row ====== -->
       <!-- Gutter cell for actors -->
       <div class="flex h-full items-center justify-center" style="grid-column: 1; grid-row: 1;">
@@ -167,7 +145,7 @@
                   {actorEmoji}
                   {#if actor?.label}
                     <span
-                      class="pointer-events-none absolute bottom-full left-1/2 z-10 mb-1 -translate-x-1/2 rounded bg-cork-800 px-2 py-0.5 text-[10px] font-medium whitespace-nowrap text-cork-50 opacity-0 transition-opacity duration-100 group-hover:opacity-100"
+                      class="pointer-events-none absolute top-full left-1/2 z-20 mt-1 -translate-x-1/2 rounded bg-cork-800 px-2 py-0.5 text-[10px] font-medium whitespace-nowrap text-cork-50 opacity-0 transition-opacity duration-100 group-hover:opacity-100"
                     >
                       {actor.label}
                     </span>
@@ -270,21 +248,8 @@
         {/each}
       {/each}
     </div>
+    </div>
   </div>
-  <!-- Scroll hint overlay -->
-  <div
-    class="pointer-events-none absolute top-0 right-0 bottom-0 flex w-12 items-center justify-center rounded-r-xl transition-opacity duration-300"
-    style="background: linear-gradient(to right, transparent, rgba(205,195,174,.7)); opacity: {showScrollHint
-      ? 1
-      : 0};"
-  >
-    <span
-      class="text-[10px] tracking-wider text-cork-600"
-      style="writing-mode: vertical-rl; animation: nudge 1.5s ease-in-out infinite;"
-      >scroll &rarr;</span
-    >
-  </div>
-</div>
 
 <!-- Story detail modal -->
 <StoryModal bind:open={modalOpen} story={selectedStory} />

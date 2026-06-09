@@ -52,7 +52,7 @@
 >
   <!-- Pushpin dot -->
   <span
-    class="absolute -top-1 left-1/2 z-10 h-2 w-2 -translate-x-1/2 rounded-full"
+    class="absolute -top-1 left-1/2 z-0 h-2 w-2 -translate-x-1/2 rounded-full"
     style="background: radial-gradient(circle,
 			{variant === 'activity'
       ? '#3cb371, #2e9d5e'
@@ -78,7 +78,7 @@
 
     {#if done}
       <span
-        class="absolute -top-1 -right-1 z-20 flex h-3 w-3 items-center justify-center rounded-sm border border-green-700 bg-green-500"
+        class="absolute -top-1 -right-1 z-0 flex h-3 w-3 items-center justify-center rounded-sm border border-green-700 bg-green-500"
       >
         <span class="text-[8px] leading-none font-bold text-white">&#10003;</span>
       </span>

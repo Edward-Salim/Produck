@@ -82,7 +82,7 @@ export const POST: RequestHandler = async ({ request, cookies, getClientAddress 
       httpOnly: true,
       sameSite: 'lax',
       secure: process.env.NODE_ENV === 'production',
-      maxAge: 60 * 60 * 24 * 30
+      maxAge: 60 * 60 * 24 * 365
     });
 
     return json({ ok: true });

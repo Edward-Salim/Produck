@@ -520,6 +520,100 @@ export const backlogItemRelations = relations(backlogItem, ({ one }) => ({
   story: one(story, { fields: [backlogItem.storyId], references: [story.id] })
 }));
 
+// ── Epic & Ticket (standalone, decoupled from Story Map) ──
+
+export const epic = pgTable('epic', {
+  id: serial('id').primaryKey(),
+  projectId: integer('project_id')
+    .notNull()
+    .references(() => project.id, { onDelete: 'cascade' }),
+  code: text('code').notNull(),
+  title: text('title').notNull(),
+  sortOrder: integer('sort_order').notNull().default(0),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
+});
+
+export const epicRelations = relations(epic, ({ one, many }) => ({
+  project: one(project, { fields: [epic.projectId], references: [project.id] }),
+  tickets: many(ticket)
+}));
+
+export const ticket = pgTable('ticket', {
+  id: serial('id').primaryKey(),
+  epicId: integer('epic_id')
+    .notNull()
+    .references(() => epic.id, { onDelete: 'cascade' }),
+  code: text('code').notNull(),
+  title: text('title').notNull(),
+  kano: text('kano').notNull().default('must-have'),
+  pic: text('pic').notNull().default(''),
+  picColor: text('pic_color').notNull().default(''),
+  done: boolean('done').notNull().default(false),
+  acceptanceCriteria: jsonb('acceptance_criteria')
+    .$type<string[]>()
+    .default(sql`'[]'`),
+  checkedAcs: jsonb('checked_acs')
+    .$type<{ index: number; checkedAt: string }[]>()
+    .default(sql`'[]'`),
+  sortOrder: integer('sort_order').notNull().default(0),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
+});
+
+export const ticketRelations = relations(ticket, ({ one }) => ({
+  epic: one(epic, { fields: [ticket.epicId], references: [epic.id] })
+}));
+
+// ── Assumption (standalone, decoupled from Story Map) ──
+
+export const assumption = pgTable('assumption', {
+  id: serial('id').primaryKey(),
+  projectId: integer('project_id')
+    .notNull()
+    .references(() => project.id, { onDelete: 'cascade' }),
+  type: text('type').notNull().default('desirability'),
+  assumption: text('assumption').notNull(),
+  rationale: text('rationale').notNull().default(''),
+  testMethod: text('test_method').notNull().default(''),
+  successCriteria: text('success_criteria').notNull().default(''),
+  actualResults: text('actual_results').notNull().default(''),
+  status: text('status').notNull().default('untested'),
+  lastTested: text('last_tested'),
+  importance: integer('importance').notNull().default(5),
+  evidence: integer('evidence').notNull().default(3),
+  sortOrder: integer('sort_order').notNull().default(0),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
+});
+
+export const assumptionRelations = relations(assumption, ({ one }) => ({
+  project: one(project, { fields: [assumption.projectId], references: [project.id] })
+}));
+
+// ── Kanban Card ────────────────────────────────────────
+
+export const kanbanCard = pgTable('kanban_card', {
+  id: serial('id').primaryKey(),
+  projectId: integer('project_id')
+    .notNull()
+    .references(() => project.id, { onDelete: 'cascade' }),
+  columnId: text('column_id').notNull().default('col-todo'),
+  title: text('title').notNull(),
+  description: text('description'),
+  assignee: text('assignee'),
+  dueDate: text('due_date'),
+  priority: text('priority').notNull().default('none'),
+  type: text('type').notNull().default('task'),
+  sortOrder: integer('sort_order').notNull().default(0),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
+});
+
+export const kanbanCardRelations = relations(kanbanCard, ({ one }) => ({
+  project: one(project, { fields: [kanbanCard.projectId], references: [project.id] })
+}));
+
 // ── Experience Map (decoupled from Story Map) ────────
 
 export const experiencePhase = pgTable('experience_phase', {

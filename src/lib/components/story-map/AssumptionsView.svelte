@@ -7,7 +7,7 @@
     BriefcaseBusiness
   } from '@lucide/svelte';
   import EmptyState from '$lib/components/ui/empty-state.svelte';
-  import type { BacklogEpic } from '../../../routes/(app)/story-map/+page.server.js';
+  import type { BacklogEpic } from '$lib/types/story-map.js';
   import { ASSUMPTION_STATUS, RISK_META } from '$lib/constants/colors.js';
 
   let { sortedEpics }: { sortedEpics: BacklogEpic[] } = $props();

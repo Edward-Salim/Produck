@@ -66,3 +66,85 @@ export interface DataFile {
   id: string;
   label: string;
 }
+
+// ── Idea Bank ──
+
+export interface IdeaItem {
+  id: string;
+  title: string;
+  description: string;
+  status: string;
+  proposer: string;
+  okrCode: string;
+  createdAt: string;
+}
+
+// ── Backlog ──
+
+export interface CheckedAC {
+  index: number;
+  checkedAt: string;
+}
+
+export interface BacklogStory {
+  id: string;
+  title: string;
+  epic: string;
+  task: string | null;
+  taskOrder: number;
+  kano: string;
+  pic: string;
+  picColor: string;
+  done: boolean;
+  acceptanceCriteria: string[];
+  checkedAcs: CheckedAC[];
+  assumptions: Assumption[];
+}
+
+export interface BacklogEpic {
+  code: string;
+  title: string;
+  actors: string[];
+  stories: BacklogStory[];
+}
+
+// ── Assumption Test ──
+
+export interface StaticAssumption {
+  id: string;
+  label?: string;
+  storyId?: string;
+  storyTitle?: string;
+  epicCode?: string;
+  type: 'desirability' | 'feasibility' | 'usability' | 'viability';
+  assumption: string;
+  rationale: string;
+  testMethod: string;
+  successCriteria: string;
+  actualResults: string;
+  status: 'untested' | 'validated' | 'revalidate' | 'invalidated';
+  lastTested: string | null;
+  importance: number;
+  evidence: number;
+}
+
+// ── Kanban Board ──
+
+export interface KanbanCard {
+  id: string;
+  title: string;
+  description: string;
+  assignee: string;
+  dueDate: string;
+  priority: 'none' | 'low' | 'medium' | 'high' | 'critical';
+  type: 'task' | 'bug' | 'feature' | 'improvement';
+  createdAt: string;
+}
+
+export interface KanbanColumn {
+  id: string;
+  title: string;
+  color: string;
+  wipLimit: number | null;
+  cards: KanbanCard[];
+}

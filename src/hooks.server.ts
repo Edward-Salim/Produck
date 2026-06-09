@@ -24,6 +24,14 @@ export const handle: Handle = async ({ event, resolve }) => {
         role: sessionResult.user.role
       }
     };
+    // Refresh cookie to slide expiration
+    event.cookies.set('session_id', sessionId, {
+      path: '/',
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: 60 * 60 * 24 * 7
+    });
   } else {
     event.locals.session = null;
   }

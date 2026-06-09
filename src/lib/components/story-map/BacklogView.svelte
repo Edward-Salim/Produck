@@ -11,7 +11,7 @@
   } from '@lucide/svelte';
   import EmptyState from '$lib/components/ui/empty-state.svelte';
   import { SvelteSet } from 'svelte/reactivity';
-  import type { BacklogEpic, BacklogStory } from '../../../routes/(app)/story-map/+page.server.js';
+  import type { BacklogEpic, BacklogStory } from '$lib/types/story-map.js';
   import type { StoryMapData } from '$lib/types/story-map.js';
   import { KANO, KANO_ORDER } from '$lib/constants/colors.js';
 

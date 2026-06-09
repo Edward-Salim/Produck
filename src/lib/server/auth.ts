@@ -54,7 +54,7 @@ export function verifyPassword(password: string, stored: string): boolean {
 // Create user session in SQLite database
 export async function createSession(userId: number): Promise<string> {
   const sessionId = randomBytes(32).toString('hex');
-  const expiresAt = Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 30; // 30 days expiration
+  const expiresAt = Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 7; // 7 days expiration
 
   await db.insert(authSession).values({
     id: sessionId,
@@ -77,7 +77,13 @@ export async function validateSession(sessionId: string) {
     return null;
   }
 
-  // Extend session if it is close to expiration (optional, let's keep it simple for now)
+  // Extend session expiry on each request (sliding expiration)
+  const newExpiresAt = now + 60 * 60 * 24 * 7;
+  await db
+    .update(authSession)
+    .set({ expiresAt: newExpiresAt })
+    .where(eq(authSession.id, sessionId));
+
   const [userRow] = await db.select().from(appUser).where(eq(appUser.id, sessionRow.userId));
 
   if (!userRow) return null;
