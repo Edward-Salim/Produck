@@ -136,6 +136,7 @@ export interface KanbanCard {
   description: string;
   assignee: string;
   dueDate: string;
+  storyPoints: number | null;
   priority: 'none' | 'low' | 'medium' | 'high' | 'critical';
   type: 'task' | 'bug' | 'feature' | 'improvement';
   createdAt: string;

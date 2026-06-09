@@ -4,6 +4,7 @@
   import type { StoryMapData, Story } from '$lib/types/story-map.js';
   import { KANO } from '$lib/constants/colors.js';
   import { SvelteMap, SvelteSet } from 'svelte/reactivity';
+  import * as Tooltip from '$lib/components/ui/tooltip/index.js';
 
   let { data }: { data: StoryMapData } = $props();
 
@@ -115,11 +116,11 @@
     style="background: radial-gradient(ellipse at 30% 20%, rgba(255,255,255,.18) 0%, transparent 60%), #cdc3ae;"
   >
     <div
-      class="overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      class="overflow-x-auto overflow-y-hidden [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
     >
       <!-- CSS Grid -->
       <div
-        class="grid min-w-max items-start gap-2 md:gap-3"
+        class="grid min-w-max items-start gap-2 pr-2 md:gap-3 md:pr-4"
         style="grid-template-columns: {gridCols};"
       >
       <!-- ====== ROW 1: Actor row ====== -->
@@ -141,16 +142,16 @@
             <div class="flex w-35 items-center justify-center gap-1">
               {#each act.actors as actorEmoji (actorEmoji)}
                 {@const actor = data.actors.find((a) => a.emoji === actorEmoji)}
-                <span class="group relative cursor-default text-2xl drop-shadow-sm">
-                  {actorEmoji}
+                <Tooltip.Root>
+                  <Tooltip.Trigger class="cursor-pointer text-2xl drop-shadow-sm">
+                    {actorEmoji}
+                  </Tooltip.Trigger>
                   {#if actor?.label}
-                    <span
-                      class="pointer-events-none absolute top-full left-1/2 z-20 mt-1 -translate-x-1/2 rounded bg-cork-800 px-2 py-0.5 text-[10px] font-medium whitespace-nowrap text-cork-50 opacity-0 transition-opacity duration-100 group-hover:opacity-100"
-                    >
+                    <Tooltip.Content side="top" sideOffset={4}>
                       {actor.label}
-                    </span>
+                    </Tooltip.Content>
                   {/if}
-                </span>
+                </Tooltip.Root>
               {/each}
             </div>
           {/if}

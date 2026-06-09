@@ -179,12 +179,15 @@ export const FRAMEWORK_TEMPLATES: FrameworkTemplate[] = [
     description: 'A flexible kanban board with custom columns, WIP limits, priority flags, and drag‑and‑drop.',
     icon: Columns3,
     fields: [],
-    instructions: 'Drag cards between columns to reflect status: To Do → In Progress → Review → Blocked → Done. Cards auto-sort by priority within each column. Assign an owner and optionally a type: Bug (🐛), Feature (✨), Improvement (🔧), or Task (no icon). If a card is stuck, drag it to Blocked.',
+    instructions: 'Drag cards between columns to reflect status: To Do → In Progress → Review → Blocked → Done. Click a card to expand its description. Click the assignee badge to change who owns a card. Filter cards by type using the chips at the top, or sort by Priority, Type, SP, or Assignee via the Sort dropdown. If a card is stuck, drag it to Blocked.',
     terminology: [
       { term: 'WIP', definition: 'Work In Progress limit on active cards per column.' },
       { term: 'Blocked', definition: 'cannot proceed due to a dependency or issue.' },
-      { term: 'Priority', definition: 'Critical (red), High (orange), Medium (amber), Low (blue), None (grey).' },
-      { term: 'Type', definition: 'Bug, Feature, Improvement, or Task, shown as an icon left of the card ID.' }
+      { term: 'Priority', definition: '🔴 Critical · 🟠 High · 🟡 Medium · 🔵 Low · ⚪ None. Shown as the left border color on each card.' },
+      { term: 'Type', definition: '🐛 Bug · ✨ Feature · 🔧 Improvement · 📋 Chore. Shown as an icon on each card.' },
+      { term: 'Chore', definition: 'non-feature work: migrations, testing, config, documentation, and other maintenance tasks.' },
+      { term: 'SP', definition: 'Story Points. Effort estimate shown as plain text on the card. Higher = more complex.' },
+      { term: 'Assignee', definition: 'person responsible for the card. Click the badge to assign or reassign.' }
     ]
   },
   {

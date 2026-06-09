@@ -425,9 +425,9 @@
   </Sidebar.Root>
   {/if}
 
-  <Sidebar.Inset class="flex h-svh flex-col overflow-y-auto bg-cork-100">
+  <Sidebar.Inset class="flex h-svh flex-col overflow-y-auto bg-cork-100 [scrollbar-gutter:stable]">
     {#if !fullscreen}
-      <header class="sticky top-0 z-0 border-b border-cork-200 bg-cork-100">
+      <header class="sticky top-0 z-50 border-b border-cork-200 bg-cork-100">
       <div class="flex items-center gap-2 px-4 py-1.5 md:gap-3">
         <Sidebar.Trigger class="cursor-pointer text-cork-500 hover:text-cork-800" />
         <button

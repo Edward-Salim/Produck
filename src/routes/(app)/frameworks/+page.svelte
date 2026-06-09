@@ -325,7 +325,7 @@
           <div class="flex flex-wrap gap-1.5">
             {#each categories as category (category)}
               {@const CategoryIcon = category === 'Discovery' ? Search : category === 'Strategy' ? Compass : category === 'Validation' ? FlaskConical : category === 'Delivery' ? Rocket : Target}
-              <button type="button" class="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors {selectedCategory === category ? 'bg-cork-700 text-cork-50' : 'bg-cork-200/60 text-cork-500 hover:bg-cork-300/60 hover:text-cork-700'}" onclick={() => (selectedCategory = category)}>
+              <button type="button" class="inline-flex cursor-pointer items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors {selectedCategory === category ? 'bg-cork-700 text-cork-50' : 'bg-cork-200/60 text-cork-500 hover:bg-cork-300/60 hover:text-cork-700'}" onclick={() => (selectedCategory = category)}>
                 {#if category !== 'all'}<CategoryIcon class="size-3.5" />{/if}
                 {category === 'all' ? 'All' : category}
               </button>

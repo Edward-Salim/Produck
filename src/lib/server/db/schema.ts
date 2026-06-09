@@ -605,6 +605,7 @@ export const kanbanCard = pgTable('kanban_card', {
   dueDate: text('due_date'),
   priority: text('priority').notNull().default('none'),
   type: text('type').notNull().default('task'),
+  storyPoints: integer('story_points'),
   sortOrder: integer('sort_order').notNull().default(0),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()

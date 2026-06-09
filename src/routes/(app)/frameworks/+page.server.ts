@@ -436,11 +436,17 @@ export const load: PageServerLoad = async ({ cookies, locals, url }) => {
       .where(eq(kanbanCard.projectId, projectId))
       .orderBy(asc(kanbanCard.sortOrder), asc(kanbanCard.createdAt));
 
-    // Sort within each column by priority (critical first)
-    const priorityRank: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3, none: 4 };
-    kanbanCards.sort((a, b) => (priorityRank[a.priority] ?? 4) - (priorityRank[b.priority] ?? 4));
+      // Sort within each column: priority → type
+      const priorityRank: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3, none: 4 };
+      const typeRank: Record<string, number> = { bug: 0, feature: 1, improvement: 2, task: 3 };
 
-    if (kanbanCards.length > 0) {
+      kanbanCards.sort((a, b) => {
+        const pA = priorityRank[a.priority] ?? 4, pB = priorityRank[b.priority] ?? 4;
+        const tA = typeRank[a.type] ?? 9, tB = typeRank[b.type] ?? 9;
+        return pA - pB || tA - tB;
+      });
+
+      if (kanbanCards.length > 0) {
       const columns = COLUMN_IDS.map((colId) => ({
         id: colId,
         title: COLUMN_TITLES[colId] ?? colId,
@@ -454,6 +460,7 @@ export const load: PageServerLoad = async ({ cookies, locals, url }) => {
             description: k.description ?? '',
             assignee: k.assignee ?? '',
             dueDate: k.dueDate ?? '',
+            storyPoints: k.storyPoints ?? null,
             priority: k.priority,
             type: (k.type as KanbanCard['type']) ?? 'task',
             createdAt: k.createdAt.toISOString()
