@@ -19,6 +19,7 @@ export const appUser = pgTable('app_user', {
   displayName: text('display_name').notNull(),
   role: text('role').notNull().default('member'),
   passwordHash: text('password_hash'),
+  preferences: jsonb('preferences').$type<{ music?: boolean; sounds?: boolean }>().default({ music: true, sounds: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
 });
 
