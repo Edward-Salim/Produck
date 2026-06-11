@@ -6,7 +6,6 @@ import { eq } from 'drizzle-orm';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-// Read DATABASE_URL from .env file
 const envPath = resolve(import.meta.dirname, '..', '.env');
 const envContent = readFileSync(envPath, 'utf-8');
 const dbUrlMatch = envContent.match(/DATABASE_URL\s*=\s*(.+)/);
@@ -26,35 +25,17 @@ function hashPassword(password: string): string {
   return `${passwordHashAlgorithm}$${passwordHashIterations}$${salt}$${hash}`;
 }
 
-const users = [
-  { email: 'felicia@produck.com', displayName: 'Felicia' },
+const emails = [
+  'kelvin.saputra@produck.com',
+  'acquaintance@produck.app',
 ];
 
 async function main() {
-  for (const u of users) {
-    const authId = crypto.randomUUID();
-    const existing = await db.select().from(appUser).where(eq(appUser.email, u.email)).limit(1);
-
-    if (existing.length > 0) {
-      console.log(`User ${u.email} already exists, skipping.`);
-      continue;
-    }
-
-    await db.insert(appUser).values({
-      authId,
-      email: u.email,
-      displayName: u.displayName,
-      role: 'member',
-      passwordHash: hashPassword('REDACTED_PASSWORD'),
-    });
-    console.log(`Created user: ${u.email}`);
+  const hash = hashPassword('REDACTED_PASSWORD');
+  for (const email of emails) {
+    const result = await db.update(appUser).set({ passwordHash: hash }).where(eq(appUser.email, email));
+    console.log(`Set password for ${email}`);
   }
   await client.end();
-  process.exit(0);
 }
-
-main().catch((err) => {
-  console.error(err);
-  client.end();
-  process.exit(1);
-});
+main().catch(e => { console.error(e); client.end(); });

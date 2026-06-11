@@ -4,7 +4,7 @@
   import { getFullscreen, toggleFullscreen } from '$lib/stores/fullscreen.svelte.js';
   import { FRAMEWORK_TEMPLATES, type FrameworkTemplate } from '$lib/frameworks/templates.js';
   import {
-    ArrowDownUp, CheckCircle2, ChevronLeft, ChevronRight, Circle, Compass, FlaskConical, Info, Layers3, Maximize, Minimize, Plus, Rocket, Search, Target, Trash2, X
+    ArrowDownUp, CheckCircle2, ChevronLeft, ChevronRight, Circle, Clock, Compass, FlaskConical, Info, Layers3, Maximize, Minimize, Plus, Rocket, Search, Target, Trash2, X
   } from '@lucide/svelte';
 
   import type { FrameworkSeedInstance } from './+page.server.js';
@@ -42,6 +42,7 @@
   const DRAFTS_PER_PAGE = 10;
   let fullscreen = $derived(getFullscreen());
   let showHelp = $state(false);
+  let showKanbanHistory = $state(false);
 
   const templates = FRAMEWORK_TEMPLATES;
   const templateIds = new Set(templates.map((t) => t.id));
@@ -104,7 +105,7 @@
   let existingTemplateIds = $derived(new Set(instances.map((i) => i.templateId)));
 
   // ── Custom editor map ──
-  const CUSTOM_EDITORS: Record<string, Component<{ instance: FrameworkInstance; draftMode: 'edit' | 'view'; onUpdate: (values: Record<string, string>, title?: string) => void }>> = {
+  const CUSTOM_EDITORS: Record<string, Component<{ instance: FrameworkInstance; draftMode: 'edit' | 'view'; onUpdate: (values: Record<string, string>, title?: string) => void; projectId?: string; showHistory?: boolean }>> = {
     'idea-bank': IdeaBankEditor,
     'story-map': StoryMapEditor,
     'backlog': BacklogEditor,
@@ -149,13 +150,7 @@
     } else if (template.id === 'assumption-test') {
       emptyValues.assumptions = JSON.stringify([]);
     } else if (template.id === 'kanban') {
-      emptyValues.kanban = JSON.stringify([
-        { id: 'col-todo', title: 'To Do', color: '#dbeafe', wipLimit: null, cards: [] },
-        { id: 'col-progress', title: 'In Progress', color: '#fef3c7', wipLimit: null, cards: [] },
-        { id: 'col-review', title: 'Review', color: '#f3e8ff', wipLimit: null, cards: [] },
-        { id: 'col-blocked', title: 'Blocked', color: '#fee2e2', wipLimit: null, cards: [] },
-        { id: 'col-done', title: 'Done', color: '#d1fae5', wipLimit: null, cards: [] }
-      ]);
+      // Kanban fetches from DB directly — localStorage values are not used
     } else {
       for (const f of template.fields) emptyValues[f.id] = '';
     }
@@ -213,9 +208,11 @@
   }
 
   function mergeSeededInstance(seed: FrameworkInstance, local?: FrameworkInstance) {
-    // Seed is always the DB source of truth — its values win
+    // Keep local edits when they exist; seed only fills in missing templates.
+    // Local values and timestamps are preserved so editing one draft
+    // doesn't reset or re-stamp all the others.
     if (!local) return seed;
-    return { ...local, values: seed.values, updatedAt: seed.updatedAt, updatedBy: local.updatedBy ?? seed.updatedBy };
+    return { ...local, updatedBy: local.updatedBy ?? seed.updatedBy };
   }
 
   // React to project switches — re-initialize instances from seeds + localStorage
@@ -306,6 +303,9 @@
               <h2 class="px-2 py-1 font-display text-3xl leading-none text-cork-800">{selectedInstance.title}</h2>
             </div>
             <div class="flex items-center gap-2">
+              {#if selectedTemplate.id === 'kanban'}
+                <button type="button" class="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-cork-300 bg-cork-50/60 text-cork-500 transition-colors hover:bg-cork-200/60 hover:text-cork-700" title="Activity history" aria-label="History" onclick={() => (showKanbanHistory = true)}><Clock class="size-3.5" /></button>
+              {/if}
               <button type="button" class="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-cork-300 bg-cork-50/60 text-cork-500 transition-colors hover:bg-cork-200/60 hover:text-cork-700" title="Instructions & terminology" aria-label="Help" onclick={() => (showHelp = true)}><Info class="size-3.5" /></button>
               <button type="button" class="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-cork-300 bg-cork-50/60 text-cork-500 transition-colors hover:bg-cork-200/60 hover:text-cork-700" title="Exit fullscreen (F)" aria-label="Exit fullscreen" onclick={toggleFullscreen}><Minimize class="size-3.5" /></button>
             </div>
@@ -313,7 +313,7 @@
           <p class="mt-1 px-2 text-xs text-cork-400">{selectedTemplate.description}</p>
         </div>
         <div class="p-4">
-          <EditorComponent instance={selectedInstance} draftMode={'view'} onUpdate={handleUpdate} />
+          <EditorComponent instance={selectedInstance} draftMode={'view'} onUpdate={handleUpdate} projectId={projectId} bind:showHistory={showKanbanHistory} />
         </div>
       </div>
     </div>
@@ -369,6 +369,9 @@
                 <h2 class="px-2 py-1 font-display text-3xl leading-none text-cork-800">{selectedInstance.title}</h2>
               </div>
               <div class="flex items-center gap-2">
+                {#if selectedTemplate.id === 'kanban'}
+                  <button type="button" class="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-cork-300 bg-cork-50/60 text-cork-500 transition-colors hover:bg-cork-200/60 hover:text-cork-700" title="Activity history" aria-label="History" onclick={() => (showKanbanHistory = true)}><Clock class="size-3.5" /></button>
+                {/if}
                 <button type="button" class="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-cork-300 bg-cork-50/60 text-cork-500 transition-colors hover:bg-cork-200/60 hover:text-cork-700" title="Instructions & terminology" aria-label="Help" onclick={() => (showHelp = true)}><Info class="size-3.5" /></button>
                 <button type="button" class="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-cork-300 bg-cork-50/60 text-cork-500 transition-colors hover:bg-cork-200/60 hover:text-cork-700" title={fullscreen ? 'Exit fullscreen (F)' : 'Fullscreen (F)'} aria-label="Toggle fullscreen" onclick={toggleFullscreen}>
                   {#if fullscreen}<Minimize class="size-3.5" />{:else}<Maximize class="size-3.5" />{/if}
@@ -381,7 +384,7 @@
           <!-- Editor body -->
           {#if EditorComponent}
             <div class="p-4">
-              <EditorComponent instance={selectedInstance} draftMode={'view'} onUpdate={handleUpdate} />
+              <EditorComponent instance={selectedInstance} draftMode={'view'} onUpdate={handleUpdate} projectId={projectId} bind:showHistory={showKanbanHistory} />
             </div>
           {:else}
             <div class="grid gap-4 p-4 md:grid-cols-2">

@@ -517,16 +517,12 @@
     </header>
     {/if}
     {@const noAccess = !data.isAdmin && data.workspaces.length === 0 && data.projects.length === 0}
-    {@const isWorkRoute =
-      page.url.pathname === '/dashboard' ||
-      [
-        '/admin'
-      ].some((p) => page.url.pathname.startsWith(p))}
+    {@const isWorkRoute = !page.url.pathname.startsWith('/tools') && !page.url.pathname.startsWith('/artifacts')}
     {#if noAccess && isWorkRoute}
-      <div class="flex flex-1 flex-col items-center justify-center text-center">
-        <p class="font-display text-lg text-cork-700">No access yet</p>
-        <p class="mt-1 text-sm text-cork-400">
-          Ask your admin to grant you workspace and project access.
+      <div class="flex flex-1 flex-col items-center justify-center px-6 text-center">
+        <p class="font-display text-lg text-cork-700">Can't access this page yet</p>
+        <p class="mt-1 max-w-sm text-sm text-cork-400">
+          You don't have a workspace or project assigned. Ask your admin to set you up, or browse the <a href="/tools" class="underline underline-offset-2 hover:text-cork-600">Tools</a> from the sidebar in the meantime.
         </p>
       </div>
     {:else}

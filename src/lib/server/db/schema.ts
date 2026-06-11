@@ -618,6 +618,8 @@ export const kanbanCard = pgTable('kanban_card', {
   title: text('title').notNull(),
   description: text('description'),
   assignee: text('assignee'),
+  blockReason: text('block_reason'),
+  blockedBy: text('blocked_by'),
   dueDate: text('due_date'),
   priority: text('priority').notNull().default('none'),
   type: text('type').notNull().default('task'),
@@ -630,6 +632,22 @@ export const kanbanCard = pgTable('kanban_card', {
 export const kanbanCardRelations = relations(kanbanCard, ({ one }) => ({
   project: one(project, { fields: [kanbanCard.projectId], references: [project.id] })
 }));
+
+// ── Kanban Activity Log ────────────────────────────────
+
+export const kanbanActivity = pgTable('kanban_activity', {
+  id: serial('id').primaryKey(),
+  projectId: integer('project_id')
+    .notNull()
+    .references(() => project.id, { onDelete: 'cascade' }),
+  cardId: integer('card_id').notNull(),
+  cardTitle: text('card_title').notNull(),
+  action: text('action').notNull(), // 'move' | 'assign'
+  fromValue: text('from_value'),
+  toValue: text('to_value').notNull(),
+  actor: text('actor').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
+});
 
 // ── Experience Map (decoupled from Story Map) ────────
 

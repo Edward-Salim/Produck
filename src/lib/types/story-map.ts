@@ -135,6 +135,8 @@ export interface KanbanCard {
   title: string;
   description: string;
   assignee: string;
+  blockReason?: string;
+  blockedBy?: string;
   dueDate: string;
   storyPoints: number | null;
   priority: 'none' | 'low' | 'medium' | 'high' | 'critical';

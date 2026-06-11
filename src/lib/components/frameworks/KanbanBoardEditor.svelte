@@ -2,19 +2,20 @@
   import type { KanbanCard, KanbanColumn } from '$lib/types/story-map.js';
   import type { FrameworkInstance } from './types.js';
   import { browser } from '$app/environment';
-  import { Bug, ClipboardList, Columns3, Sparkles, Wrench } from '@lucide/svelte';
+  import { Ban, Bug, ClipboardList, Clock, Columns3, Search, Sparkles, Wrench, X } from '@lucide/svelte';
   import EmptyState from '$lib/components/ui/empty-state.svelte';
   import { SvelteSet } from 'svelte/reactivity';
 
-  let { instance, draftMode, onUpdate }: {
+  let { instance, draftMode, onUpdate, projectId, showHistory = $bindable(false) }: {
     instance: FrameworkInstance;
     draftMode: 'edit' | 'view';
     onUpdate: (values: Record<string, string>, title?: string) => void;
+    projectId?: string;
+    showHistory?: boolean;
   } = $props();
 
-  // Kanban is always read-only — draftMode / onUpdate are accepted only for
-  // compatibility with the framework editor contract.
-  $effect(() => { draftMode; onUpdate; });
+  // Kanban fetches from DB directly — localStorage is not involved.
+  $effect(() => { draftMode; });
 
   const PRIORITY = [
     { key: 'none', label: 'None', dot: '#9ca3af' },
@@ -34,14 +35,105 @@
 
   let columns = $state<KanbanColumn[]>([]);
 
+  // ── Scroll indicator per column ──
+  let columnScrollRefs = new Map<string, HTMLElement>();
+  let showColumnFade = $state<Record<string, boolean>>({});
+
+  function checkColumnOverflow(colId: string) {
+    const el = columnScrollRefs.get(colId);
+    if (!el) return;
+    const canScroll = el.scrollHeight > el.clientHeight;
+    const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 4;
+    showColumnFade = { ...showColumnFade, [colId]: canScroll && !atBottom };
+  }
+
+  function scrollSpy(node: HTMLElement, colId: string) {
+    columnScrollRefs.set(colId, node);
+    requestAnimationFrame(() => checkColumnOverflow(colId));
+    return {
+      update(newId: string) {
+        if (newId !== colId) {
+          columnScrollRefs.delete(colId);
+          columnScrollRefs.set(newId, node);
+          colId = newId;
+          requestAnimationFrame(() => checkColumnOverflow(colId));
+        }
+      },
+      destroy() {
+        columnScrollRefs.delete(colId);
+        const next = { ...showColumnFade };
+        delete next[colId];
+        showColumnFade = next;
+      }
+    };
+  }
+
   $effect(() => {
+    // Re-check overflow whenever rendered cards change
+    columns.forEach((c) => c.cards.length);
+    void activeTypes.size;
+    void sortMode;
+    requestAnimationFrame(() => {
+      columns.forEach((c) => checkColumnOverflow(c.id));
+    });
+  });
+
+  let loading = $state(true);
+
+  async function loadKanban() {
+    loading = true;
     try {
-      const parsed = JSON.parse(instance.values.kanban ?? '[]');
-      columns = Array.isArray(parsed) && parsed.length > 0 ? parsed : DEFAULT_COLUMNS.map((c) => ({ ...c, cards: [] }));
+      const res = await fetch(`/api/kanban?projectId=${projectId}`);
+      const data = await res.json();
+      if (data.columns && Array.isArray(data.columns) && data.columns.length > 0) {
+        columns = data.columns;
+      } else {
+        columns = DEFAULT_COLUMNS.map((c) => ({ ...c, cards: [] }));
+      }
     } catch {
       columns = DEFAULT_COLUMNS.map((c) => ({ ...c, cards: [] }));
     }
+    loading = false;
+  }
+
+  $effect(() => {
+    if (projectId) loadKanban();
   });
+
+  // ── History ──
+  let history: Array<{ id: number; cardId: string; cardTitle: string; action: string; fromValue: string; toValue: string; actor: string; createdAt: string }> = $state([]);
+  let historyLoading = $state(false);
+
+  async function loadHistory() {
+    historyLoading = true;
+    try {
+      const res = await fetch(`/api/kanban/activity?projectId=${projectId}`);
+      const data = await res.json();
+      history = data.activities ?? [];
+    } catch {
+      history = [];
+    }
+    historyLoading = false;
+  }
+
+  $effect(() => {
+    if (showHistory) loadHistory();
+  });
+
+  function openHistory() {
+    showHistory = true;
+  }
+
+  function actorInitial(name: string): string {
+    return name.charAt(0).toUpperCase();
+  }
+
+  function formatHistoryTime(iso: string) {
+    const d = new Date(iso);
+    const date = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+    const time = d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+    return `${date} ${time}`;
+  }
 
   // ── Assignee badge colors ──
   const ASSIGNEE_MAP: Record<string, string> = {
@@ -92,7 +184,7 @@
       };
     });
     pickerCardId = null;
-    onUpdate({ kanban: JSON.stringify(columns) });
+    onUpdate({});
 
     // Persist to DB
     const numericId = cardId.replace('KC-', '');
@@ -106,6 +198,76 @@
   }
 
   function closePicker() { pickerCardId = null; }
+
+  // ── Block modal ──
+  let blockModalCardId = $state<string | null>(null);
+  let blockReasonInput = $state('');
+  let blockedByInput = $state('');
+  let blockSearch = $state('');
+  let blockDropdownOpen = $state(false);
+
+  // Cards eligible to block this one: from To Do, In Progress, Review (not Blocked or Done)
+  let blockableCards = $derived(
+    columns
+      .filter((c) => c.id !== 'col-blocked' && c.id !== 'col-done')
+      .flatMap((c) => c.cards)
+      .filter((c) => c.id !== blockModalCardId)
+  );
+
+  let filteredBlockableCards = $derived(
+    blockSearch.trim()
+      ? blockableCards.filter((c) =>
+          `${c.id} ${c.title}`.toLowerCase().includes(blockSearch.toLowerCase().trim())
+        )
+      : blockableCards
+  );
+
+  function openBlockModal(card: KanbanCard) {
+    blockModalCardId = card.id;
+    blockReasonInput = card.blockReason ?? '';
+    blockedByInput = card.blockedBy ?? '';
+    blockSearch = '';
+    blockDropdownOpen = false;
+  }
+
+  function closeBlockModal() {
+    blockModalCardId = null;
+    blockReasonInput = '';
+    blockedByInput = '';
+    blockSearch = '';
+    blockDropdownOpen = false;
+  }
+
+  function selectBlockedBy(card: KanbanCard) {
+    blockedByInput = card.id;
+    blockDropdownOpen = false;
+  }
+
+  async function saveBlock() {
+    if (!blockModalCardId) return;
+    const cardId = blockModalCardId;
+    const reason = blockReasonInput.trim();
+    const by = blockedByInput.trim();
+
+    // Optimistic local update
+    columns = columns.map((c) => ({
+      ...c,
+      cards: c.cards.map((card) =>
+        card.id === cardId ? { ...card, blockReason: reason, blockedBy: by } : card
+      )
+    }));
+    closeBlockModal();
+    onUpdate({});
+
+    const numericId = cardId.replace('KC-', '');
+    try {
+      await fetch(`/api/kanban/${numericId}/block`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ blockReason: reason || null, blockedBy: by || null })
+      });
+    } catch { /* best-effort */ }
+  }
 
   // ── Sort mode (persisted to localStorage) ──
   let sortMode = $state<'none' | 'priority' | 'type' | 'sp' | 'assignee'>(
@@ -247,7 +409,7 @@
     draggingFromColId = null;
 
     // Notify parent so sidebar timestamp / updater refreshes
-    onUpdate({ kanban: JSON.stringify(columns) });
+    onUpdate({});
 
     // Persist to DB
     try {
@@ -260,7 +422,33 @@
   }
 </script>
 
-{#if columns.length === 0}
+{#if loading}
+  <div style="height: calc(100vh - 96px);" class="flex flex-col overflow-hidden">
+    <div class="flex gap-4 px-1 pb-2 flex-1 overflow-x-auto [scrollbar-width:none]">
+      {#each DEFAULT_COLUMNS as col}
+        <div class="flex w-60 shrink-0 flex-col rounded-xl" style="background: {col.color};">
+          <div class="px-2.5 py-2 rounded-t-xl bg-black/5">
+            <div class="h-5 w-20 animate-pulse rounded bg-black/10"></div>
+          </div>
+          <div class="flex-1 space-y-1.5 p-2.5">
+            {#each Array(col.id === 'col-todo' ? 4 : col.id === 'col-progress' ? 2 : col.id === 'col-done' ? 3 : 1) as _}
+              <div class="rounded-r-lg bg-white px-2.5 py-1.5 animate-pulse" style="box-shadow: 0 1px 3px rgba(0,0,0,.06);border-left: 3px solid {col.id === 'col-blocked' ? '#fca5a5' : col.id === 'col-done' ? '#86efac' : '#cbd5e1'};">
+                <div class="mb-1 h-3 w-12 rounded bg-gray-200"></div>
+                <div class="h-4 w-full rounded bg-gray-100"></div>
+                <div class="mt-1.5 flex items-center gap-1.5">
+                  <div class="h-3 w-3 rounded bg-gray-200"></div>
+                  <div class="h-3 w-6 rounded bg-gray-200"></div>
+                  <div class="flex-1"></div>
+                  <div class="h-4 w-10 rounded-full bg-gray-200"></div>
+                </div>
+              </div>
+            {/each}
+          </div>
+        </div>
+      {/each}
+    </div>
+  </div>
+{:else if columns.length === 0}
   <EmptyState icon={Columns3} title="No columns" description="Add cards via the database to populate this board" />
 {:else}
   <div style="height: calc(100vh - 96px);" class="flex flex-col overflow-hidden">
@@ -345,39 +533,55 @@
         </div>
 
         <!-- Cards -->
-        <div class="flex-1 space-y-1.5 overflow-y-auto p-2.5 [scrollbar-width:none]" role="list">
-          {#each sortCards(activeTypes.size > 0 ? col.cards.filter((c) => activeTypes.has(c.type)) : col.cards) as card (card.id)}
-            {@const pri = priorityInfo(card.priority)}
+        <div class="relative flex-1 min-h-0">
+          <div
+            class="h-full space-y-1.5 overflow-y-auto p-2.5 [scrollbar-width:none]"
+            role="list"
+            use:scrollSpy={col.id}
+            onscroll={() => checkColumnOverflow(col.id)}
+          >
+            {#each sortCards(activeTypes.size > 0 ? col.cards.filter((c) => activeTypes.has(c.type)) : col.cards) as card (card.id)}
+              {@const pri = priorityInfo(card.priority)}
 
-            <div
-              class="relative cursor-pointer rounded-r-lg bg-white px-2.5 py-1.5 transition-all duration-200 hover:shadow-md {draggingCardId === card.id ? 'z-10 scale-105 rotate-1 shadow-xl' : ''}"
-              style="box-shadow: 0 1px 3px rgba(0,0,0,.06);border-left: 3px solid {pri.dot}"
-              draggable="true"
-              role="listitem"
-              ondragstart={(e) => onDragStart(e, card.id, col.id)}
-              ondragend={onDragEnd}
-              onclick={() => toggleDescription(card.id)}
-            >
-              <!-- Title + ID -->
-              <span class="font-mono text-[10px] text-gray-400">{card.id}</span>
-              <h3 class="font-display text-sm leading-tight text-cork-800">{card.title}</h3>
+              <div
+                class="relative cursor-pointer rounded-r-lg bg-white px-2.5 py-1.5 transition-all duration-200 hover:shadow-md {draggingCardId === card.id ? 'z-10 scale-105 rotate-1 shadow-xl' : ''}"
+                style="box-shadow: 0 1px 3px rgba(0,0,0,.06);border-left: 3px solid {pri.dot}"
+                draggable="true"
+                role="listitem"
+                ondragstart={(e) => onDragStart(e, card.id, col.id)}
+                ondragend={onDragEnd}
+                onclick={() => toggleDescription(card.id)}
+              >
+                <!-- Title + ID -->
+                <span class="font-mono text-[10px] text-gray-400">{card.id}</span>
+                <h3 class="font-display text-sm leading-tight text-cork-800">{card.title}</h3>
 
-              <!-- Description: hidden by default, click toggles full -->
-              {#if card.description && expandedCards.has(card.id)}
-                <p class="mt-0.5 text-[10px] leading-relaxed text-gray-500">{card.description}</p>
-              {/if}
+                <!-- Description: hidden by default, click toggles full -->
+                {#if card.description && expandedCards.has(card.id)}
+                  <p class="mt-0.5 text-[10px] leading-relaxed text-gray-500">{card.description}</p>
+                {/if}
 
-              <!-- Footer: type icon (left), colored assignee badge (right) -->
-              <div class="mt-1 flex items-center gap-1.5 text-[9px]">
-                {#if typeIcon(card.type)}
+                <!-- Footer: blocked icon + type (left), assignee badge (right) -->
+                <div class="mt-1 flex items-center gap-1.5 text-[9px]">
+                  {#if col.id === 'col-blocked'}
+                    <button
+                      type="button"
+                      class="shrink-0 cursor-pointer rounded p-0.5 {card.blockReason ? 'text-red-500 hover:text-red-600' : 'text-gray-300 hover:text-red-400'}"
+                      title={card.blockReason ? `Blocked by ${card.blockedBy || '?'}: ${card.blockReason}` : 'Add block reason'}
+                      onclick={(e) => { e.stopPropagation(); openBlockModal(card); }}
+                    >
+                      <Ban class="size-3" />
+                    </button>
+                  {/if}
+                  {#if typeIcon(card.type)}
                   <span class="shrink-0 text-gray-400" title={card.type}>
                     <svelte:component this={typeIcon(card.type)} class="size-3" />
                   </span>
-                {/if}
+                  {/if}
                 {#if card.storyPoints}
                   <span class="text-gray-400">{card.storyPoints} SP</span>
-                {/if}
-                <div class="flex-1"></div>
+                  {/if}
+                    <div class="flex-1"></div>
                 <!-- svelte-ignore a11y_click_events_have_key_events -->
                 <span
                   class="relative cursor-pointer rounded-full px-1.5 py-0.5 font-medium"
@@ -417,20 +621,174 @@
                         Unassign
                       </button>
                     </div>
-                  {/if}
+                    {/if}
                 </span>
               </div>
-            </div>
-          {/each}
+              </div>
+            {/each}
 
-          {#if col.cards.length === 0}
-            <p class="py-4 text-center text-[10px] italic {dark ? 'text-white/40' : 'text-gray-400'}">
-              No cards
-            </p>
+            {#if col.cards.length === 0}
+              <p class="py-4 text-center text-[10px] italic {dark ? 'text-white/40' : 'text-gray-400'}">
+                No cards
+              </p>
+            {/if}
+          </div>
+          {#if showColumnFade[col.id]}
+            <div class="pointer-events-none absolute inset-x-0 bottom-0 h-8 rounded-b-xl {dark ? '' : 'bg-gradient-to-t from-black/15 to-transparent'}" style={dark ? 'background: linear-gradient(to top, rgba(255,255,255,0.2), transparent)' : ''}></div>
           {/if}
         </div>
       </div>
     {/each}
+    </div>
+  </div>
+{/if}
+
+<!-- Block reason modal -->
+{#if blockModalCardId}
+  {@const blockedCard = columns.flatMap(c => c.cards).find(c => c.id === blockModalCardId)}
+  {@const selectedBlocker = blockableCards.find(c => c.id === blockedByInput)}
+  <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_noninteractive_element_interactions -->
+  <span
+    class="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm"
+    role="button"
+    tabindex="-1"
+    onclick={() => { if (blockDropdownOpen) { blockDropdownOpen = false; } else { closeBlockModal(); } }}
+  ></span>
+  <div class="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
+    <div class="pointer-events-auto w-full max-w-sm rounded-xl border border-cork-300 bg-white p-5 shadow-xl">
+      {#if blockedCard}
+        <span class="font-mono text-[10px] text-cork-400">{blockedCard.id}</span>
+        <h3 class="font-display text-sm font-semibold text-cork-800">{blockedCard.title}</h3>
+      {:else}
+        <h3 class="font-display text-sm font-semibold text-cork-800">Block reason</h3>
+      {/if}
+      <div class="mt-3 space-y-3">
+        <label class="block">
+          <span class="text-[10px] font-medium text-cork-500">Blocked by</span>
+          <!-- svelte-ignore a11y_click_events_have_key_events -->
+          <div class="relative mt-1">
+            <button
+              type="button"
+              class="block w-full cursor-pointer rounded-lg border border-cork-300 bg-cork-50/50 px-3 py-1.5 text-left text-sm {selectedBlocker ? 'text-cork-800' : 'text-cork-400'}"
+              onclick={() => { blockDropdownOpen = !blockDropdownOpen; blockSearch = ''; }}
+            >
+              {#if selectedBlocker}
+                <span class="font-mono text-[10px] text-cork-400">{selectedBlocker.id}</span> {selectedBlocker.title}
+              {:else}
+                Select card...
+              {/if}
+            </button>
+            {#if blockDropdownOpen}
+              <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_noninteractive_element_interactions -->
+              <span class="fixed inset-0 z-[60]" role="button" tabindex="-1" onclick={() => { blockDropdownOpen = false; }}></span>
+              <div class="absolute left-0 top-full z-[70] mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg">
+                <div class="flex items-center gap-1.5 border-b border-gray-100 px-2 py-1.5">
+                  <Search class="size-3 shrink-0 text-cork-400" />
+                  <input
+                    type="text"
+                    class="block w-full bg-transparent py-0.5 text-xs text-cork-800 outline-none focus:outline-none focus:ring-0 border-0"
+                    placeholder="Find card..."
+                    bind:value={blockSearch}
+                    oninput={() => {}}
+                  />
+                </div>
+                <div class="max-h-36 overflow-y-auto py-1">
+                  {#each filteredBlockableCards as c}
+                    <button
+                      type="button"
+                      class="block w-full cursor-pointer px-3 py-1.5 text-left text-xs {blockedByInput === c.id ? 'bg-cork-100 font-medium text-cork-800' : 'text-cork-600 hover:bg-cork-50'}"
+                      onclick={() => selectBlockedBy(c)}
+                    >
+                      <span class="font-mono text-[10px] text-cork-400">{c.id}</span>
+                      <span class="ml-1.5">{c.title}</span>
+                    </button>
+                  {/each}
+                  {#if filteredBlockableCards.length === 0}
+                    <p class="px-3 py-2 text-[10px] text-cork-400">No matching cards</p>
+                  {/if}
+                </div>
+              </div>
+            {/if}
+          </div>
+        </label>
+        <label class="block">
+          <span class="text-[10px] font-medium text-cork-500">Reason</span>
+          <textarea
+            class="mt-1 block w-full rounded-lg border border-cork-300 bg-cork-50/50 px-3 py-1.5 text-sm text-cork-800 outline-none focus:border-cork-500 focus:ring-0"
+            rows="3"
+            placeholder="Why is this blocked?"
+            bind:value={blockReasonInput}
+          ></textarea>
+        </label>
+      </div>
+      <div class="mt-4 flex justify-end gap-2">
+        <button
+          type="button"
+          class="cursor-pointer rounded-lg border border-cork-300 px-3 py-1.5 text-xs text-cork-500 hover:bg-cork-100"
+          onclick={closeBlockModal}
+        >Cancel</button>
+        <button
+          type="button"
+          class="cursor-pointer rounded-lg bg-cork-700 px-3 py-1.5 text-xs font-medium text-cork-50 hover:bg-cork-800"
+          onclick={saveBlock}
+        >Save</button>
+      </div>
+    </div>
+  </div>
+{/if}
+
+<!-- History modal -->
+{#if showHistory}
+  <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_noninteractive_element_interactions -->
+  <span
+    class="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm"
+    role="button"
+    tabindex="-1"
+    onclick={() => { showHistory = false; }}
+  ></span>
+  <div class="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
+    <div class="pointer-events-auto w-full max-w-md rounded-xl border border-cork-300 bg-white p-5 shadow-xl">
+      <div class="flex items-center justify-between">
+        <h3 class="font-display text-sm font-semibold text-cork-800">Activity</h3>
+        <button type="button" class="cursor-pointer rounded p-0.5 text-cork-400 hover:text-cork-600" onclick={() => { showHistory = false; }}><X class="size-4" /></button>
+      </div>
+      <div class="mt-3 max-h-80 overflow-y-auto">
+        {#if historyLoading}
+          <p class="py-8 text-center text-xs text-cork-400">Loading...</p>
+        {:else if history.length === 0}
+          <p class="py-8 text-center text-xs text-cork-400">No activity yet</p>
+        {:else}
+          <div class="space-y-2">
+            {#each history as entry}
+              <div class="flex gap-2 rounded-lg bg-cork-50/60 px-3 py-2">
+                <div class="flex-1 min-w-0">
+                  <p class="text-xs text-cork-800">
+                    <span class="font-mono text-[10px] text-cork-400">{entry.cardId}</span>
+                    <span class="ml-1 font-medium">{entry.cardTitle}</span>
+                  </p>
+                  <p class="mt-0.5 text-[10px] text-cork-500">
+                    {#if entry.action === 'move'}
+                      Moved from <span class="font-medium text-cork-600">{entry.fromValue}</span> to <span class="font-medium text-cork-600">{entry.toValue}</span>
+                    {:else if entry.action === 'assign'}
+                      {#if entry.fromValue === 'unassigned'}
+                        Assigned to <span class="font-medium text-cork-600">{entry.toValue}</span>
+                      {:else if entry.toValue === 'unassigned'}
+                        Unassigned (was <span class="font-medium text-cork-600">{entry.fromValue}</span>)
+                      {:else}
+                        Reassigned from <span class="font-medium text-cork-600">{entry.fromValue}</span> to <span class="font-medium text-cork-600">{entry.toValue}</span>
+                      {/if}
+                    {/if}
+                  </p>
+                  <p class="mt-0.5 flex items-center gap-1 text-[9px] text-cork-400">
+                    <span class="inline-flex size-4 shrink-0 items-center justify-center rounded-full text-[7px] font-semibold text-white" style="background: {assigneeColor(entry.actor)};">{actorInitial(entry.actor)}</span>
+                    {entry.actor} &middot; {formatHistoryTime(entry.createdAt)}
+                  </p>
+                </div>
+              </div>
+            {/each}
+          </div>
+        {/if}
+      </div>
     </div>
   </div>
 {/if}
