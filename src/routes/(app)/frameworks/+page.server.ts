@@ -15,7 +15,8 @@ import {
   epic,
   ticket,
   assumption,
-  project
+  project,
+  frameworkInstance
 } from '$lib/server/db/schema.js';
 import { asc, desc, eq } from 'drizzle-orm';
 import type { PageServerLoad } from './$types.js';
@@ -407,6 +408,28 @@ export const load: PageServerLoad = async ({ cookies, locals, url }) => {
       values: { assumptions: JSON.stringify(allAssumptions) },
       updatedAt: new Date().toISOString(),
     updatedBy: displayName
+    });
+  }
+
+  // ── User-created framework instances (drafts persisted to DB) ──
+  const userInstances = await db
+    .select()
+    .from(frameworkInstance)
+    .where(eq(frameworkInstance.projectId, projectId))
+    .orderBy(asc(frameworkInstance.updatedAt));
+
+  for (const row of userInstances) {
+    // Remove dedicated-table seed for the same template — the user-edited version wins
+    const dedupeIdx = seededInstances.findIndex((s) => s.templateId === row.templateId);
+    if (dedupeIdx >= 0) seededInstances.splice(dedupeIdx, 1);
+
+    seededInstances.push({
+      id: `db-${row.id}`,
+      templateId: row.templateId,
+      title: row.title,
+      values: (row.values as Record<string, string>) ?? {},
+      updatedAt: row.updatedAt.toISOString(),
+      updatedBy: row.updatedBy ?? undefined
     });
   }
 

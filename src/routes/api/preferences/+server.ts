@@ -28,11 +28,24 @@ export const POST: RequestHandler = async ({ request, locals }) => {
     .limit(1);
 
   const current = (existing?.preferences ?? { music: true, sounds: true }) as Record<string, unknown>;
-  const prefs = {
+  const prefs: Record<string, unknown> = {
     music: body.music ?? current.music ?? true,
     sounds: body.sounds ?? current.sounds ?? true,
+    hintAlwaysOn: body.hintAlwaysOn ?? current.hintAlwaysOn ?? false,
+    selectedLevels: body.selectedLevels ?? current.selectedLevels ?? [],
+    lastWorkspaceId: body.lastWorkspaceId !== undefined ? body.lastWorkspaceId : current.lastWorkspaceId,
+    lastProjectId: body.lastProjectId !== undefined ? body.lastProjectId : current.lastProjectId,
     gameState: body.gameState !== undefined ? body.gameState : (current.gameState ?? undefined)
   };
+  // Preserve highscore if not explicitly provided (only update when higher)
+  if (body.highscore !== undefined) {
+    const currentHighscore = (current.highscore as number) ?? 0;
+    prefs.highscore = Math.max(body.highscore, currentHighscore);
+    prefs.highscoreName = body.highscoreName ?? (current.highscoreName as string) ?? 'Anonymous';
+  } else {
+    prefs.highscore = current.highscore;
+    prefs.highscoreName = current.highscoreName;
+  }
   // Remove null game states
   if (prefs.gameState === null) delete prefs.gameState;
 

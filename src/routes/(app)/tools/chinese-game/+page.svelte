@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount, onDestroy, tick } from 'svelte';
-  import { Heart, Zap, RotateCcw, Play, Check, ChevronRight, SkipForward, ArrowLeft, Music, Volume2 } from '@lucide/svelte';
+  import { Heart, Zap, RotateCcw, Play, Send, ArrowRight, SkipForward, ArrowLeft, Music, Volume2, Lightbulb } from '@lucide/svelte';
   import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
   import type { PageData } from './$types.js';
 
@@ -51,6 +51,10 @@
   let musicEnabled = $state(true);
   let soundsEnabled = $state(true);
 
+  // ── Hint settings ──
+  let hintAlwaysOn = $state(false);
+  let hintsUsed = $state(0);
+
   async function loadSettings() {
     try {
       const res = await fetch('/api/preferences');
@@ -58,6 +62,10 @@
         const p = await res.json();
         musicEnabled = p.music ?? true;
         soundsEnabled = p.sounds ?? true;
+        hintAlwaysOn = p.hintAlwaysOn ?? false;
+        if (p.highscore != null) {
+          highscore = { score: p.highscore as number, name: (p.highscoreName as string) ?? 'Edward' };
+        }
         if (Array.isArray(p.selectedLevels)) {
           selectedLevels = new Set(p.selectedLevels);
         }
@@ -70,6 +78,7 @@
         const s = JSON.parse(raw);
         musicEnabled = s.music ?? true;
         soundsEnabled = s.sounds ?? true;
+        hintAlwaysOn = s.hintAlwaysOn ?? false;
         if (Array.isArray(s.selectedLevels)) {
           selectedLevels = new Set(s.selectedLevels);
         }
@@ -83,10 +92,10 @@
       await fetch('/api/preferences', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ music: musicEnabled, sounds: soundsEnabled, selectedLevels: [...selectedLevels] })
+        body: JSON.stringify({ music: musicEnabled, sounds: soundsEnabled, hintAlwaysOn, selectedLevels: [...selectedLevels] })
       });
     } catch {}
-    try { localStorage.setItem('hanzi-game-settings', JSON.stringify({ music: musicEnabled, sounds: soundsEnabled, selectedLevels: [...selectedLevels] })); } catch {}
+    try { localStorage.setItem('hanzi-game-settings', JSON.stringify({ music: musicEnabled, sounds: soundsEnabled, hintAlwaysOn, selectedLevels: [...selectedLevels] })); } catch {}
   }
 
   function toggleMusic() {
@@ -103,11 +112,18 @@
     saveSettings();
   }
 
+  function toggleHintAlwaysOn() {
+    hintAlwaysOn = !hintAlwaysOn;
+    saveSettings();
+  }
+
   // ── Game state ──
   let gameState = $state<GameState>('menu');
   let currentSentence = $state<SentenceData | null>(null);
   let currentLevel = $state(0);
   let userChars = $state<string[]>([]);
+  let hintedSlots = $state<Set<number>>(new Set());
+  let hintUsedThisSentence = $state(false);
   let health = $state(3);
   let streak = $state(0);
   let bestStreak = $state(0);
@@ -122,26 +138,29 @@
 
   // ── Persistence ──
   const STORAGE_KEY = 'hanzi-game-save';
-  const HIGHSCORE_KEY = 'hanzi-game-highscore';
   let restored = $state(false);
 
   let highscore = $state<{ score: number; name: string }>({ score: 0, name: '' });
+  let leaderboard = $state<{ name: string; score: number }[]>([]);
 
-  function loadHighscore() {
+  async function fetchLeaderboard() {
     try {
-      const raw = localStorage.getItem(HIGHSCORE_KEY);
-      return raw ? JSON.parse(raw) : { score: 0, name: '' };
-    } catch { return { score: 0, name: '' }; }
+      const res = await fetch('/api/hanzi-leaderboard');
+      if (res.ok) leaderboard = await res.json();
+    } catch {}
   }
 
-  function saveHighscore(score: number, name: string) {
-    try { localStorage.setItem(HIGHSCORE_KEY, JSON.stringify({ score, name })); } catch {}
-  }
-
-  function updateHighscore(score: number) {
+  async function updateHighscore(score: number) {
     if (score >= highscore.score) {
       highscore = { score, name: 'Edward' };
-      saveHighscore(score, 'Edward');
+      try {
+        await fetch('/api/preferences', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ highscore: score, highscoreName: 'Edward' })
+        });
+        await fetchLeaderboard();
+      } catch {}
     }
   }
 
@@ -159,7 +178,9 @@
       shuffledHanzi: shuffled.map(s => s.hanzi),
       feedback: feedback,
       revealedHanzi: revealedHanzi,
-      revealedPinyin: revealedPinyin
+      revealedPinyin: revealedPinyin,
+      hintedSlots: [...hintedSlots],
+      hintUsedThisSentence
     };
   }
 
@@ -215,9 +236,13 @@
     currentLevel = data.currentLevel;
     selectedLevels = new Set(data.selectedLevels);
     gameState = data.gameState;
-    // Reconstruct current sentence
-    const idx = data.poolIndex % savedShuffled.length;
-    currentSentence = savedShuffled[idx >= savedShuffled.length ? 0 : idx];
+    // Reconstruct current sentence (poolIndex was already incremented past it, so go back one)
+    const idx = ((data.poolIndex - 1) + savedShuffled.length) % savedShuffled.length;
+    currentSentence = savedShuffled[idx];
+
+    // Restore hinted slots
+    hintedSlots = new Set(data.hintedSlots ?? []);
+    hintUsedThisSentence = data.hintUsedThisSentence ?? false;
 
     // Restore feedback state: keep input mode if player was typing, show answer if they were viewing a wrong answer
     if (data.feedback === 'wrong') {
@@ -231,12 +256,29 @@
       revealedPinyin = '';
       userChars = [...currentSentence.hanzi].map(c => /[，。？、！；：]/.test(c) ? c : '');
     }
+    // Re-apply hinted characters
+    for (const i of hintedSlots) {
+      userChars[i] = [...currentSentence.hanzi][i];
+    }
+
+    // Focus first non-hinted editable slot after DOM update
+    if (feedback === null) {
+      tick().then(() => {
+        const chars = [...currentSentence.hanzi];
+        for (let i = 0; i < chars.length; i++) {
+          if (!/[，。？、！；：]/.test(chars[i]) && !hintedSlots.has(i)) {
+            inputRefs[i]?.focus();
+            break;
+          }
+        }
+      });
+    }
   }
 
   // Restore saved game + load highscore once sentences are loaded
   $effect(() => {
     if (sentences.length > 0 && !restored) {
-      highscore = loadHighscore();
+      fetchLeaderboard();
       loadSettings().then((prefs) => {
         // Prefer server game state over localStorage
         if (prefs?.gameState && prefs.gameState.gameState !== 'menu') {
@@ -328,6 +370,7 @@
     bestStreak = Math.max(bestStreak, streak);
     totalCorrect = streak;
     totalAttempts = streak;
+    hintedSlots = new Set();
     feedback = null;
     revealedHanzi = '';
     revealedPinyin = '';
@@ -339,39 +382,61 @@
     showNextSentence();
   }
 
-  function pushBackCurrent() {
-    // Move the sentence we just answered correctly toward the back of the queue
+  function swapAhead(minPct: number) {
+    // Swap the just-answered sentence (at poolIndex - 1) with one further ahead
     const idx = (poolIndex - 1 + shuffled.length) % shuffled.length;
     if (shuffled.length <= 2) return;
-    // Pick a random offset at least 30% ahead (up to near the end)
-    const minOffset = Math.floor(shuffled.length * 0.3);
+    const minOffset = Math.floor(shuffled.length * minPct);
     const maxOffset = shuffled.length - 2;
     if (minOffset >= maxOffset) return;
     const offset = minOffset + Math.floor(Math.random() * (maxOffset - minOffset));
     const targetIdx = (poolIndex + offset) % shuffled.length;
-    // Swap current with target
     const tmp = shuffled[idx];
     shuffled[idx] = shuffled[targetIdx];
     shuffled[targetIdx] = tmp;
   }
 
+  function pushBackCurrent() {
+    // Correct answer: push far back (60%+)
+    swapAhead(0.6);
+  }
+
+  function pushBackWrong() {
+    // Wrong answer: push back moderately (30%+) so it doesn't repeat immediately
+    swapAhead(0.3);
+  }
+
   function showNextSentence() {
-    const s = shuffled[poolIndex % shuffled.length];
+    // If we've wrapped around the pool, reshuffle to get a fresh order
+    if (poolIndex >= shuffled.length) {
+      poolIndex = 0;
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
+    }
+    const s = shuffled[poolIndex];
     poolIndex++;
     currentSentence = s;
     currentLevel = s.level;
     userChars = [...s.hanzi].map(c => /[，。？、！；：]/.test(c) ? c : '');
+    hintedSlots = new Set();
+    hintUsedThisSentence = false;
     feedback = null;
     revealedHanzi = '';
     revealedPinyin = '';
 
     saveState();
 
-    // Auto-focus first editable slot after DOM update
+    // Auto-focus first editable slot after DOM update (and auto-hint if enabled)
     tick().then(() => {
+      if (hintAlwaysOn) {
+        useHint();
+      }
+      // Focus the first non-hinted, non-punct slot
       const chars = [...s.hanzi];
       for (let i = 0; i < chars.length; i++) {
-        if (!/[，。？、！；：]/.test(chars[i])) {
+        if (!/[，。？、！；：]/.test(chars[i]) && !hintedSlots.has(i)) {
           inputRefs[i]?.focus();
           break;
         }
@@ -392,12 +457,13 @@
     if (isCorrect) {
       streak++;
       if (streak > bestStreak) bestStreak = streak;
-      totalCorrect++;
+      totalCorrect += currentSentence?.level ?? 1;
       feedback = 'correct';
       if (soundsEnabled && correctSound) { correctSound.currentTime = 0; correctSound.play().catch(() => {}); }
       pushBackCurrent();
       saveState();
-      showNextSentence();
+      // Brief delay so the correct animation is visible before advancing
+      setTimeout(() => showNextSentence(), 600);
     } else {
       health--;
       streak = 0;
@@ -405,6 +471,7 @@
       if (soundsEnabled && wrongSound) { wrongSound.currentTime = 0; wrongSound.play().catch(() => {}); }
       revealedHanzi = currentSentence.hanzi;
       revealedPinyin = currentSentence.pinyin;
+      pushBackWrong();
       saveState();
     }
   }
@@ -419,6 +486,7 @@
     totalAttempts++;
     feedback = 'wrong';
     if (soundsEnabled && wrongSound) { wrongSound.currentTime = 0; wrongSound.play().catch(() => {}); }
+    pushBackWrong();
     saveState();
   }
 
@@ -442,7 +510,7 @@
     if (!currentSentence) return fromIndex;
     const chars = [...currentSentence.hanzi];
     for (let j = fromIndex + 1; j < chars.length; j++) {
-      if (!isPunct(chars[j])) return j;
+      if (!isPunct(chars[j]) && !hintedSlots.has(j)) return j;
     }
     return fromIndex;
   }
@@ -451,9 +519,41 @@
     if (!currentSentence) return fromIndex;
     const chars = [...currentSentence.hanzi];
     for (let j = fromIndex - 1; j >= 0; j--) {
-      if (!isPunct(chars[j])) return j;
+      if (!isPunct(chars[j]) && !hintedSlots.has(j)) return j;
     }
     return fromIndex;
+  }
+
+  function useHint() {
+    if (!currentSentence || feedback !== null || hintUsedThisSentence) return;
+    const chars = [...currentSentence.hanzi];
+
+    // Collect all editable slots that aren't already hinted (empty or user-filled can be overridden)
+    const candidates: number[] = [];
+    for (let i = 0; i < chars.length; i++) {
+      if (!isPunct(chars[i]) && !hintedSlots.has(i)) {
+        candidates.push(i);
+      }
+    }
+    if (candidates.length === 0) return;
+
+    // Fisher-Yates partial shuffle to pick random slots without replacement
+    const shuffled = [...candidates];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+
+    // Reveal count proportional to sentence length: ~25% of hintable slots, min 1, max 4
+    const revealCount = Math.max(1, Math.min(4, Math.ceil(candidates.length * 0.25)));
+    const revealed = shuffled.slice(0, Math.min(revealCount, shuffled.length));
+    for (const idx of revealed) {
+      userChars[idx] = chars[idx];
+    }
+    hintedSlots = new Set([...hintedSlots, ...revealed]);
+    hintUsedThisSentence = true;
+    hintsUsed += revealed.length;
+    playStroke();
   }
 
   // ── Stroke sound ──
@@ -491,6 +591,16 @@
         slot++;
       }
       if (slot >= userChars.length) break;
+      // If this slot is hinted and the character matches, consume it (already correct)
+      if (hintedSlots.has(slot) && userChars[slot] === ch) {
+        slot++;
+        continue;
+      }
+      // If hinted but different char, skip to next non-hinted slot
+      while (slot < userChars.length && hintedSlots.has(slot)) {
+        slot++;
+      }
+      if (slot >= userChars.length) break;
       userChars[slot] = ch;
       slot++;
     }
@@ -512,6 +622,11 @@
     isComposing = false;
     const i = composeSlot;
     composeSlot = -1;
+    // Hinted slots are locked — revert any change
+    if (i >= 0 && hintedSlots.has(i)) {
+      userChars[i] = currentSentence ? [...currentSentence.hanzi][i] : '';
+      return;
+    }
     if (i >= 0 && userChars[i]) {
       const chars = [...userChars[i]];
       if (chars.length > 1) {
@@ -525,6 +640,11 @@
 
   function onSlotInput(index: number) {
     if (isComposing) return;
+    // Hinted slots are locked — revert any change
+    if (hintedSlots.has(index)) {
+      userChars[index] = currentSentence ? [...currentSentence.hanzi][index] : '';
+      return;
+    }
     let val = userChars[index];
     if (!val) return;
     const chars = [...val];
@@ -537,6 +657,11 @@
   }
 
   function onSlotKeydown(index: number, e: KeyboardEvent) {
+    // Hinted slots are locked — prevent editing
+    if (hintedSlots.has(index) && (e.key === 'Backspace' || e.key === 'Delete' || (e.key.length === 1 && !e.ctrlKey && !e.metaKey))) {
+      e.preventDefault();
+      return;
+    }
     if (e.key === 'Enter') {
       e.preventDefault();
       e.stopPropagation();
@@ -554,7 +679,7 @@
       e.preventDefault();
       const chars = currentSentence ? [...currentSentence.hanzi] : [];
       for (let j = chars.length - 1; j >= 0; j--) {
-        if (!isPunct(chars[j])) { inputRefs[j]?.focus(); break; }
+        if (!isPunct(chars[j]) && !hintedSlots.has(j)) { inputRefs[j]?.focus(); break; }
       }
       return;
     }
@@ -747,6 +872,21 @@
               </button>
             </div>
 
+            <!-- Hint always-on toggle -->
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <Lightbulb class="size-4 text-cork-400" />
+                <span class="text-sm text-cork-200">Always Show Hint</span>
+              </div>
+              <button
+                type="button"
+                class="toggle-switch {hintAlwaysOn ? 'on' : 'off'}"
+                onclick={toggleHintAlwaysOn}
+              >
+                <span class="toggle-knob"></span>
+              </button>
+            </div>
+
             <div class="flex-1"></div>
 
             <!-- Back button at bottom -->
@@ -766,17 +906,41 @@
 
   {:else if gameState === 'playing'}
     <!-- ── SENTENCE GAME SCREEN ── -->
-    <div class="mx-auto flex w-full max-w-xl flex-col items-center justify-center gap-4 px-2 pb-8 md:gap-6 md:min-h-[calc(100dvh-10rem)]">
+    {@const heat = streak >= 21 ? 'inferno' : streak >= 14 ? 'blaze' : streak >= 8 ? 'fire' : streak >= 5 ? 'hot' : streak >= 3 ? 'warm' : ''}
+    <!-- Full-viewport streak overlay (subtle, only for higher tiers) -->
+    <div
+      class="streak-overlay {heat === 'blaze' ? 'streak-overlay-blaze' : heat === 'inferno' ? 'streak-overlay-inferno' : 'streak-overlay-idle'}"
+    >
+      {#if heat === 'blaze' || heat === 'inferno'}
+        {@const count = heat === 'inferno' ? 24 : 14}
+        <div class="particles" aria-hidden="true" class:particles-visible={heat === 'blaze' || heat === 'inferno'}>
+          {#if heat === 'blaze' || heat === 'inferno'}
+            {#each Array(count) as _, i}
+              <span
+                class="particle"
+                style="left: {((i * 37 + 13) % 100)}%; animation-delay: {((i * 0.7) % 4).toFixed(1)}s; animation-duration: {3 + ((i * 0.4) % 4).toFixed(1)}s"
+              ></span>
+            {/each}
+          {/if}
+        </div>
+      {/if}
+    </div>
+
+    <div class="mx-auto flex w-full max-w-xl flex-col items-center justify-center gap-4 px-2 pb-8 md:gap-6 md:min-h-[calc(100dvh-10rem)] relative z-10">
 
       <!-- Health bar -->
       <div class="flex w-full items-center justify-between gap-2">
-        <div class="flex items-center gap-0.5 md:gap-1">
+        <div class="flex items-center gap-1 md:gap-1.5">
           {#each Array(maxHealth) as _, i}
-            <span class="transition-all duration-300 {i < health ? 'scale-100 opacity-100' : 'scale-75 opacity-30'}">
-              <Heart
-                class="size-4 md:size-5 {i < health ? 'fill-red-400 text-red-400' : 'text-cork-300'}"
-              />
-            </span>
+            {#if i < health}
+              <span class="transition-all duration-300 scale-100">
+                <Heart class="size-5 md:size-6 fill-red-500 text-red-500 drop-shadow-red" />
+              </span>
+            {:else}
+              <span class="transition-all duration-300 opacity-40">
+                <Heart class="size-5 md:size-6 text-cork-500" />
+              </span>
+            {/if}
           {/each}
         </div>
 
@@ -786,7 +950,7 @@
             <span class="font-display text-sm text-cork-700 md:text-base">{totalCorrect}</span>
           </div>
           <div class="flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 md:gap-1.5 md:px-3 md:py-1">
-            <span class="hidden text-[9px] font-medium uppercase tracking-wider text-amber-500 sm:inline md:text-[10px]">Best</span>
+            <span class="text-[9px] font-medium uppercase tracking-wider text-amber-500 md:text-[10px]">Best</span>
             <span class="font-display text-sm text-amber-700 md:text-base">{highscore.score}</span>
           </div>
         </div>
@@ -794,15 +958,14 @@
 
       <!-- Sentence card -->
       {#if currentSentence}
-        {@const heat = streak >= 11 ? 'inferno' : streak >= 8 ? 'blaze' : streak >= 5 ? 'fire' : streak >= 3 ? 'warm' : ''}
         <div
           class="w-full rounded-2xl border p-4 text-center shadow-sm transition-all duration-300 md:p-10 {heat
             ? 'streak-' + heat
-            : 'border-cork-300/50 bg-white'}"
+            : 'border-cork-300/50 bg-white'} {feedback === 'correct' ? 'card-correct' : ''}"
         >
         {#if feedback === null}
           {#if heat}
-            <p class="streak-text mb-2 text-xs font-semibold uppercase tracking-widest md:text-sm {heat === 'inferno' ? 'streak-inferno-text' : ''}">
+            <p class="streak-text mb-2 text-xs font-semibold uppercase tracking-widest md:text-sm">
               {streak} streak
             </p>
           {/if}
@@ -829,8 +992,10 @@
                   autocomplete="off"
                   autocorrect="off"
                   spellcheck="false"
-                  class="char-slot {userChars[i] ? 'filled' : 'empty'}"
+                  class="char-slot {userChars[i] ? 'filled' : 'empty'} {hintedSlots.has(i) ? 'hinted' : ''}"
                   bind:value={userChars[i]}
+                  readonly={hintedSlots.has(i)}
+                  tabindex={hintedSlots.has(i) ? -1 : 0}
                   oninput={() => onSlotInput(i)}
                   onkeydown={(e) => onSlotKeydown(i, e)}
                   oncompositionstart={() => onCompositionStart(i)}
@@ -844,6 +1009,17 @@
           <p class="font-outfit text-lg leading-relaxed text-cork-800 md:text-3xl">
             {currentSentence.translation}
           </p>
+          <div class="mt-4 flex flex-wrap items-center justify-center gap-1 md:mt-6 md:gap-1.5">
+            {#each userChars as ch, i}
+              {#if currentSentence && /[，。？、！；：]/.test([...currentSentence.hanzi][i])}
+                <span class="char-punct">{ch}</span>
+              {:else}
+                <span class="char-slot filled flex items-center justify-center">
+                  <span class="text-emerald-600">{ch || ''}</span>
+                </span>
+              {/if}
+            {/each}
+          </div>
 
         {:else if feedback === 'wrong'}
           <div class="flex flex-col items-center gap-2 md:gap-3">
@@ -878,13 +1054,6 @@
       </div>
       {/if}
 
-      <!-- Feedback flash -->
-      {#if feedback === 'correct'}
-        <div class="animate-pulse text-center text-sm font-semibold text-emerald-600">
-          Correct!
-        </div>
-      {/if}
-
       <!-- Controls -->
       <div class="flex flex-wrap items-center justify-center gap-2 md:gap-3">
           {#if feedback === 'wrong'}
@@ -894,8 +1063,8 @@
               class="flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-cork-200/50 bg-cork-100 px-4 py-2 text-sm font-medium text-cork-600 shadow-sm transition-all hover:border-cork-300/50 hover:bg-cork-200 hover:shadow"
               onclick={nextAfterWrong}
             >
-              <ChevronRight class="size-4" />
               Next
+              <ArrowRight class="size-4" />
             </button>
           {:else if feedback === 'correct'}
             <!-- Next button after correct, same style -->
@@ -904,33 +1073,43 @@
               class="flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-cork-200/50 bg-cork-100 px-4 py-2 text-sm font-medium text-cork-600 shadow-sm transition-all hover:border-cork-300/50 hover:bg-cork-200 hover:shadow"
               onclick={nextAfterWrong}
             >
-              <ChevronRight class="size-4" />
               Next
+              <ArrowRight class="size-4" />
             </button>
           {:else}
-            <!-- Check button -->
-            <button
-              type="button"
-              class="flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-cork-200/50 bg-cork-100 px-4 py-2 text-sm font-medium text-cork-600 shadow-sm transition-all hover:border-cork-300/50 hover:bg-cork-200 hover:shadow disabled:cursor-not-allowed disabled:opacity-40"
-              disabled={!userChars.some(c => c) || feedback !== null}
-              onclick={checkAnswer}
-            >
-              <Check class="size-4" />
-              Check
-            </button>
-            <!-- HSK badge -->
+            <!-- HSK badge (far left) -->
             <span class="inline-flex items-center rounded-lg bg-cork-100 px-3 py-2 text-[11px] font-semibold tracking-wider text-cork-400 uppercase">
               HSK {currentSentence?.level}
             </span>
             <!-- Skip button -->
             <button
               type="button"
-              class="flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-cork-200/50 bg-cork-100 px-4 py-2 text-sm font-medium text-cork-600 shadow-sm transition-all hover:border-cork-300/50 hover:bg-cork-200 hover:shadow disabled:cursor-not-allowed disabled:opacity-40"
+              class="flex cursor-pointer items-center justify-center rounded-lg border border-cork-200/50 bg-cork-100 p-2 text-cork-600 shadow-sm transition-all hover:border-cork-300/50 hover:bg-cork-200 hover:shadow disabled:cursor-not-allowed disabled:opacity-40"
               disabled={feedback !== null}
               onclick={skipSentence}
+              aria-label="Skip"
             >
               <SkipForward class="size-4" />
-              Skip
+            </button>
+            <!-- Hint button -->
+            <button
+              type="button"
+              class="flex cursor-pointer items-center justify-center rounded-lg border border-cork-200/50 bg-cork-100 p-2 text-cork-600 shadow-sm transition-all hover:border-cork-300/50 hover:bg-cork-200 hover:shadow disabled:cursor-not-allowed disabled:opacity-40"
+              disabled={feedback !== null || hintUsedThisSentence}
+              onclick={useHint}
+              aria-label="Hint"
+            >
+              <Lightbulb class="size-4" />
+            </button>
+            <!-- Check button -->
+            <button
+              type="button"
+              class="flex cursor-pointer items-center justify-center rounded-lg border border-cork-200/50 bg-cork-100 p-2 text-cork-600 shadow-sm transition-all hover:border-cork-300/50 hover:bg-cork-200 hover:shadow disabled:cursor-not-allowed disabled:opacity-40"
+              disabled={!userChars.some(c => c) || feedback !== null}
+              onclick={checkAnswer}
+              aria-label="Check"
+            >
+              <Send class="size-4" />
             </button>
           {/if}
         </div>
@@ -942,16 +1121,17 @@
       <div class="mb-6 text-center">
         <div class="mb-2 text-4xl md:text-5xl">💀</div>
         <h1 class="font-display text-3xl text-cork-800 md:text-5xl">Game Over</h1>
-        <p class="mt-1 text-sm text-cork-500">Final Score: {totalCorrect}</p>
+        <p class="mt-1 text-sm text-cork-500">Final Score: <span class="font-outfit italic">{totalCorrect}</span></p>
+        <p class="mt-0.5 text-xs text-cork-400">Personal Best: <span class="font-outfit italic">{highscore.score}</span></p>
       </div>
 
       <!-- Action buttons -->
       <div class="flex flex-wrap justify-center gap-2 md:gap-3">
         <button
           type="button"
-          class="flex cursor-pointer items-center justify-center rounded-xl bg-cork-700 p-3 text-cork-50 transition-all hover:bg-cork-800 hover:shadow-md"
+          class="flex cursor-pointer items-center justify-center rounded-xl border border-cork-300/50 bg-cork-50/80 p-2.5 text-cork-700 transition-all hover:bg-cork-200/50"
           onclick={beginGame}
-          aria-label="Play Again"
+          aria-label="Try Again"
         >
           <RotateCcw class="size-5" />
         </button>
@@ -1241,16 +1421,97 @@
     transform: translateX(20px);
   }
 
+  /* ── Streak background ── */
+  .streak-overlay {
+    position: fixed;
+    inset: 0;
+    overflow: hidden;
+    z-index: 0;
+    pointer-events: none;
+    transition: background 1.2s ease, opacity 0.8s ease;
+  }
+
+  .streak-overlay-idle {
+    background: transparent;
+    opacity: 0;
+  }
+
+  .streak-overlay-blaze {
+    background: linear-gradient(180deg, rgba(255,247,237,0.6) 0%, rgba(254,215,170,0.5) 30%, rgba(251,146,60,0.35) 70%, rgba(254,242,242,0.4) 100%);
+    opacity: 1;
+  }
+
+  .streak-overlay-inferno {
+    background: linear-gradient(180deg, rgba(254,242,242,0.5) 0%, rgba(254,202,202,0.45) 25%, rgba(248,113,113,0.35) 55%, rgba(220,38,38,0.3) 80%, rgba(127,29,29,0.25) 100%);
+    opacity: 1;
+    animation: bg-flicker 0.6s ease-in-out infinite alternate;
+  }
+
+  @keyframes bg-flicker {
+    0% { background: linear-gradient(180deg, rgba(254,242,242,0.5) 0%, rgba(254,202,202,0.45) 25%, rgba(248,113,113,0.35) 55%, rgba(220,38,38,0.3) 80%, rgba(127,29,29,0.25) 100%); }
+    100% { background: linear-gradient(180deg, rgba(254,242,242,0.6) 0%, rgba(252,165,165,0.55) 25%, rgba(239,68,68,0.45) 55%, rgba(185,28,28,0.4) 80%, rgba(69,10,10,0.35) 100%); }
+  }
+
+  /* ── Floating particles ── */
+  .particles {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .particle {
+    position: absolute;
+    bottom: -8px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #f59e0b;
+    box-shadow: 0 0 6px #f97316;
+    animation: float-up linear infinite;
+  }
+
+  .streak-overlay-blaze .particle {
+    background: #f97316;
+    box-shadow: 0 0 8px #ef4444;
+    width: 7px;
+    height: 7px;
+  }
+
+  .streak-overlay-inferno .particle {
+    background: #ef4444;
+    box-shadow: 0 0 10px #facc15, 0 0 20px #f97316;
+    width: 8px;
+    height: 8px;
+  }
+
+  @keyframes float-up {
+    0% { transform: translateY(0) scale(1); opacity: 1; }
+    100% { transform: translateY(-100vh) scale(0); opacity: 0; }
+  }
+
   /* ── Streak fire system ── */
 
-  /* Text: shared */
+  /* Text: number-focused, only inferno gets animated gradient */
   .streak-text {
+    color: #f59e0b;
+  }
+
+  .streak-fire .streak-text,
+  .streak-blaze .streak-text {
+    background: linear-gradient(90deg, #f59e0b, #f97316);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .streak-inferno .streak-text {
     background: linear-gradient(90deg, #f59e0b, #ef4444, #f97316, #f59e0b);
     background-size: 200% 100%;
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
-    animation: fire-shift 1.5s linear infinite;
+    animation: fire-shift 0.8s linear infinite, inferno-shake 0.3s ease-in-out infinite;
   }
 
   @keyframes fire-shift {
@@ -1258,55 +1519,67 @@
     100% { background-position: 0% 50%; }
   }
 
-  .streak-inferno-text {
-    animation: fire-shift 0.6s linear infinite, inferno-shake 0.3s ease-in-out infinite;
-    font-size: 1.1em;
+  @keyframes card-correct-pop {
+    0% { transform: scale(1); border-color: #c4a97d; box-shadow: 0 0 0 rgba(16, 185, 129, 0); }
+    30% { transform: scale(1.02); border-color: #10b981; box-shadow: 0 0 20px rgba(16, 185, 129, 0.3); }
+    100% { transform: scale(1); border-color: #10b981; box-shadow: 0 0 0 rgba(16, 185, 129, 0); }
+  }
+
+  .card-correct {
+    animation: card-correct-pop 0.5s ease-out;
+    border-color: #10b981 !important;
   }
 
   /* Level 1: Warm (3-4) */
+  /* Level 1: Warm (3-4) */
   .streak-warm {
-    border-color: #fb923c;
-    background: #fff7ed;
-    box-shadow: 0 0 8px rgba(251, 146, 60, 0.3);
+    border-color: rgba(251, 146, 60, 0.2);
+    background: linear-gradient(135deg, rgba(255,247,237,0.6) 0%, rgba(255,237,213,0.4) 50%, transparent 100%);
   }
 
-  /* Level 2: Fire (5-7) */
+  /* Level 2: Hot (5-7) */
+  .streak-hot {
+    border-color: rgba(251, 146, 60, 0.25);
+    background: linear-gradient(135deg, rgba(255,247,237,0.7) 0%, rgba(254,215,170,0.5) 50%, transparent 100%);
+  }
+
+  /* Level 3: Fire (8-13) */
   .streak-fire {
-    border-color: #f59e0b;
-    background: #fffbeb;
-    box-shadow: 0 0 14px rgba(251, 191, 36, 0.45), 0 4px 20px rgba(251, 146, 60, 0.25);
+    border-color: transparent;
+    background: linear-gradient(135deg, rgba(255,251,235,0.8) 0%, rgba(254,243,199,0.6) 50%, rgba(251,237,220,0.3) 100%);
+    box-shadow: 0 0 24px rgba(251, 191, 36, 0.2), 0 0 48px rgba(251, 146, 60, 0.1);
     animation: fire-pulse 1.5s ease-in-out infinite;
   }
 
   @keyframes fire-pulse {
-    0%, 100% { box-shadow: 0 0 14px rgba(251, 191, 36, 0.45), 0 4px 20px rgba(251, 146, 60, 0.25); }
-    50% { box-shadow: 0 0 24px rgba(251, 191, 36, 0.65), 0 6px 32px rgba(251, 146, 60, 0.4); }
+    0%, 100% { box-shadow: 0 0 24px rgba(251, 191, 36, 0.2), 0 0 48px rgba(251, 146, 60, 0.1); }
+    50% { box-shadow: 0 0 36px rgba(251, 191, 36, 0.35), 0 0 64px rgba(251, 146, 60, 0.18); }
   }
 
-  /* Level 3: Blaze (8-10) */
+  /* Level 4: Blaze (14-20) */
   .streak-blaze {
-    border-color: #ef4444;
-    background: #fef2f2;
-    box-shadow: 0 0 20px rgba(239, 68, 68, 0.5), 0 0 40px rgba(249, 115, 22, 0.35), 0 6px 24px rgba(251, 146, 60, 0.3);
-    animation: blaze-pulse 0.9s ease-in-out infinite;
+    border-color: transparent;
+    background: linear-gradient(135deg, rgba(254,242,242,0.7) 0%, rgba(252,211,211,0.5) 40%, rgba(251,211,190,0.3) 100%);
+    box-shadow: 0 0 32px rgba(239, 68, 68, 0.2), 0 0 64px rgba(249, 115, 22, 0.12), 0 0 88px rgba(251, 146, 60, 0.06);
+    animation: blaze-pulse 1s ease-in-out infinite;
   }
 
   @keyframes blaze-pulse {
-    0%, 100% { box-shadow: 0 0 20px rgba(239, 68, 68, 0.5), 0 0 40px rgba(249, 115, 22, 0.35), 0 6px 24px rgba(251, 146, 60, 0.3); }
-    50% { box-shadow: 0 0 32px rgba(239, 68, 68, 0.7), 0 0 56px rgba(249, 115, 22, 0.5), 0 8px 30px rgba(251, 146, 60, 0.45); }
+    0%, 100% { box-shadow: 0 0 32px rgba(239, 68, 68, 0.2), 0 0 64px rgba(249, 115, 22, 0.12), 0 0 88px rgba(251, 146, 60, 0.06); }
+    50% { box-shadow: 0 0 44px rgba(239, 68, 68, 0.35), 0 0 80px rgba(249, 115, 22, 0.22), 0 0 104px rgba(251, 146, 60, 0.14); }
   }
 
-  /* Level 4: Inferno (11+) */
+  /* Level 5: Inferno (21+) */
   .streak-inferno {
-    border-color: #dc2626;
-    background: #fef2f2;
-    box-shadow: 0 0 28px rgba(220, 38, 38, 0.6), 0 0 50px rgba(234, 88, 12, 0.45), 0 0 70px rgba(251, 191, 36, 0.35), 0 6px 30px rgba(239, 68, 68, 0.4);
-    animation: inferno-pulse 0.5s ease-in-out infinite, inferno-shake 0.3s ease-in-out infinite;
+    border-color: transparent;
+    background: linear-gradient(135deg, rgba(254,242,242,0.7) 0%, rgba(252,195,195,0.5) 35%, rgba(248,180,150,0.3) 100%);
+    box-shadow: 0 0 40px rgba(220, 38, 38, 0.25), 0 0 72px rgba(234, 88, 12, 0.15), 0 0 104px rgba(251, 191, 36, 0.08);
+    animation: inferno-pulse 0.7s ease-in-out infinite, inferno-shake 0.3s ease-in-out infinite;
   }
 
   @keyframes inferno-pulse {
-    0%, 100% { box-shadow: 0 0 28px rgba(220, 38, 38, 0.6), 0 0 50px rgba(234, 88, 12, 0.45), 0 0 70px rgba(251, 191, 36, 0.35), 0 6px 30px rgba(239, 68, 68, 0.4); }
-    50% { box-shadow: 0 0 40px rgba(220, 38, 38, 0.8), 0 0 70px rgba(234, 88, 12, 0.6), 0 0 90px rgba(251, 191, 36, 0.5), 0 8px 36px rgba(239, 68, 68, 0.55); }
+    0%, 100% { box-shadow: 0 0 48px rgba(220, 38, 38, 0.3), 0 0 88px rgba(234, 88, 12, 0.2), 0 0 120px rgba(251, 191, 36, 0.12); }
+    50% { box-shadow: 0 0 72px rgba(220, 38, 38, 0.5), 0 0 120px rgba(234, 88, 12, 0.35), 0 0 160px rgba(251, 191, 36, 0.2); }
   }
 
   @keyframes inferno-shake {
@@ -1360,6 +1633,20 @@
   .char-slot.empty {
     border-bottom-color: #cdc3ae;
     color: #3d3529;
+  }
+
+  .char-slot.hinted {
+    border-bottom-style: dashed;
+    border-bottom-color: #c4a97d;
+    color: #b0a090;
+    cursor: default;
+    background: linear-gradient(to top, rgba(196, 169, 125, 0.12), transparent 50%);
+    caret-color: transparent;
+    pointer-events: none;
+  }
+
+  .drop-shadow-red {
+    filter: drop-shadow(0 0 4px rgba(239, 68, 68, 0.5));
   }
 
   .char-punct {

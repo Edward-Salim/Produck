@@ -166,6 +166,12 @@
   function switchProject(id: string | undefined) {
     if (!id) return;
     document.cookie = `active_project=${id};path=/;max-age=${60 * 60 * 24 * 365};samesite=lax`;
+    // Persist to DB for cross-device sync (non-blocking)
+    fetch('/api/preferences', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ lastProjectId: Number(id) })
+    });
     const url = new URL(page.url);
     url.searchParams.set('project', id);
     goto(url.toString());

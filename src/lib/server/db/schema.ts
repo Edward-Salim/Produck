@@ -22,6 +22,12 @@ export const appUser = pgTable('app_user', {
   preferences: jsonb('preferences').$type<{
     music?: boolean;
     sounds?: boolean;
+    hintAlwaysOn?: boolean;
+    selectedLevels?: number[];
+    highscore?: number;
+    highscoreName?: string;
+    lastWorkspaceId?: number;
+    lastProjectId?: number;
     gameState?: {
       gameState: string;
       poolIndex: number;
@@ -33,6 +39,8 @@ export const appUser = pgTable('app_user', {
       currentLevel: number;
       selectedLevels: number[];
       shuffledHanzi: string[];
+      hintedSlots?: number[];
+      hintUsedThisSentence?: boolean;
     };
   }>().default({ music: true, sounds: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
@@ -647,6 +655,20 @@ export const kanbanActivity = pgTable('kanban_activity', {
   toValue: text('to_value').notNull(),
   actor: text('actor').notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
+});
+
+// ── Framework Instances (user drafts) ─────────────────
+
+export const frameworkInstance = pgTable('framework_instance', {
+  id: serial('id').primaryKey(),
+  projectId: integer('project_id')
+    .notNull()
+    .references(() => project.id, { onDelete: 'cascade' }),
+  templateId: text('template_id').notNull(),
+  title: text('title').notNull(),
+  values: jsonb('values').$type<Record<string, string>>().default({}),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedBy: text('updated_by')
 });
 
 // ── Experience Map (decoupled from Story Map) ────────

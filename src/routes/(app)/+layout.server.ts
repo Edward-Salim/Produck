@@ -24,6 +24,11 @@ export const load: LayoutServerLoad = async ({ cookies, locals }) => {
     ]);
     const currentUser = userRows[0];
     const isAdmin = currentUser?.role === 'admin';
+    const userPreferences = (currentUser?.preferences ?? {}) as {
+      lastWorkspaceId?: number;
+      lastProjectId?: number;
+      [key: string]: unknown;
+    };
 
     // Filter workspaces by access for members
     let workspaces = allWorkspaces;
@@ -36,13 +41,21 @@ export const load: LayoutServerLoad = async ({ cookies, locals }) => {
       workspaces = allWorkspaces.filter((w) => allowedWsIds.has(w.id));
     }
 
-    // Workspace: use cookie, fall back to first
+    // Workspace: cookie → DB prefs → first fallback
     const cookieWorkspace = cookies.get('active_workspace') ?? '';
     const cookieWsId = Number(cookieWorkspace) || 0;
-    const activeWorkspaceId =
+    let activeWorkspaceId =
       (cookieWsId && workspaces.some((w) => w.id === cookieWsId)
         ? cookieWsId
-        : workspaces[0]?.id) ?? 0;
+        : 0);
+    if (!activeWorkspaceId && userPreferences.lastWorkspaceId) {
+      activeWorkspaceId = workspaces.some((w) => w.id === userPreferences.lastWorkspaceId)
+        ? userPreferences.lastWorkspaceId
+        : 0;
+    }
+    if (!activeWorkspaceId) {
+      activeWorkspaceId = workspaces[0]?.id ?? 0;
+    }
 
     // Projects + access in parallel
     const [allProjects, accessRows] = await Promise.all([
@@ -69,10 +82,20 @@ export const load: LayoutServerLoad = async ({ cookies, locals }) => {
           })()
         : allProjects;
 
-    // Project: use cookie only if it belongs to this workspace, otherwise first
+    // Project: cookie → DB prefs → first fallback (must belong to this workspace)
     const cookieProject = cookies.get('active_project') ?? '';
-    const projectBelongs = projects.some((p) => String(p.id) === cookieProject);
-    const lastProject = projectBelongs ? cookieProject : String(projects[0]?.id ?? '');
+    let projectBelongs = projects.some((p) => String(p.id) === cookieProject);
+    let lastProject = projectBelongs ? cookieProject : '';
+    if (!lastProject && userPreferences.lastProjectId) {
+      const dbProjectValid = projects.some((p) => p.id === userPreferences.lastProjectId);
+      if (dbProjectValid) {
+        lastProject = String(userPreferences.lastProjectId);
+        projectBelongs = true;
+      }
+    }
+    if (!lastProject) {
+      lastProject = String(projects[0]?.id ?? '');
+    }
 
     // Persist corrected values back to cookies
     if (activeWorkspaceId) {
@@ -88,6 +111,31 @@ export const load: LayoutServerLoad = async ({ cookies, locals }) => {
         maxAge: 60 * 60 * 24 * 365,
         sameSite: 'lax'
       });
+    }
+
+    // Sync resolved values to DB preferences for cross-device fallback
+    const resolvedLastWsId = Number(activeWorkspaceId);
+    const resolvedLastProjId = Number(lastProject);
+    if (
+      authId &&
+      currentUser &&
+      (userPreferences.lastWorkspaceId !== resolvedLastWsId ||
+        userPreferences.lastProjectId !== resolvedLastProjId)
+    ) {
+      try {
+        await db
+          .update(appUser)
+          .set({
+            preferences: {
+              ...(currentUser.preferences ?? {}),
+              lastWorkspaceId: resolvedLastWsId,
+              lastProjectId: resolvedLastProjId
+            }
+          })
+          .where(eq(appUser.authId, authId));
+      } catch {
+        // Non-critical — cookies still work for the current session
+      }
     }
 
     // OKR gauge data for current quarter

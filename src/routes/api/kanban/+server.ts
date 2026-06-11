@@ -1,6 +1,6 @@
 import { db } from '$lib/server/db/index.js';
-import { kanbanCard } from '$lib/server/db/schema.js';
-import { asc, eq } from 'drizzle-orm';
+import { kanbanCard, kanbanActivity } from '$lib/server/db/schema.js';
+import { asc, eq, max, sql } from 'drizzle-orm';
 import { json } from '@sveltejs/kit';
 import type { KanbanCard } from '$lib/types/story-map.js';
 

@@ -168,6 +168,32 @@
     selectedInstanceId = instance.id;
     view = 'editor';
     draftPage = 0;
+
+    // Persist to DB
+    const pid = projectId;
+    fetch('/api/framework-instances', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        projectId: Number(pid),
+        templateId: template.id,
+        title: instance.title,
+        values: instance.values,
+        updatedBy: data.currentUser?.displayName
+      })
+    })
+      .then(async (res) => {
+        if (res.ok) {
+          const json = await res.json();
+          const dbId = json.instance.id;
+          instances = instances.map((i) =>
+            i.id === instance.id ? { ...i, id: dbId } : i
+          );
+          if (selectedInstanceId === instance.id) selectedInstanceId = dbId;
+          localStorage.setItem(storageKey, JSON.stringify(instances));
+        }
+      })
+      .catch(() => { /* best-effort */ });
   }
 
   function openDraft(id: string) {
@@ -182,11 +208,18 @@
 
   function deleteInstance() {
     if (!deleteTargetId) return;
-    const next = instances.filter((i) => i.id !== deleteTargetId);
+    const targetId = deleteTargetId;
+    const next = instances.filter((i) => i.id !== targetId);
     saveInstances(next);
     selectedInstanceId = next[0]?.id ?? null;
     view = 'templates';
     deleteTargetId = null;
+
+    // Delete from DB if it's a DB-backed instance
+    if (targetId.startsWith('db-')) {
+      fetch(`/api/framework-instances?id=${targetId}`, { method: 'DELETE' })
+        .catch(() => { /* best-effort */ });
+    }
   }
 
   function formatUpdatedAt(iso: string) {
@@ -198,13 +231,48 @@
 
   function handleUpdate(values: Record<string, string>, title?: string) {
     if (!selectedInstance) return;
+    const updated = {
+      ...selectedInstance,
+      values,
+      title: title ?? selectedInstance.title,
+      updatedAt: new Date().toISOString(),
+      updatedBy: data.currentUser?.displayName
+    };
     saveInstances(
-      instances.map((i) =>
-        i.id === selectedInstance.id
-          ? { ...i, values, title: title ?? i.title, updatedAt: new Date().toISOString(), updatedBy: data.currentUser?.displayName }
-          : i
-      )
+      instances.map((i) => (i.id === selectedInstance.id ? updated : i))
     );
+
+    // Persist to DB — all instances, not just db- prefixed ones
+    const pid = projectId;
+    const body: Record<string, unknown> = {
+      projectId: Number(pid),
+      templateId: updated.templateId,
+      title: updated.title,
+      values: updated.values,
+      updatedBy: updated.updatedBy
+    };
+    const isDbBacked = updated.id.startsWith('db-');
+    if (isDbBacked) body.id = updated.id;
+
+    fetch('/api/framework-instances', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    })
+      .then(async (res) => {
+        if (res.ok) {
+          const json = await res.json();
+          // If this was a first-time save (seed → db), update local id
+          if (!isDbBacked && json.instance?.id && json.instance.id !== updated.id) {
+            instances = instances.map((i) =>
+              i.id === updated.id ? { ...i, id: json.instance.id } : i
+            );
+            if (selectedInstanceId === updated.id) selectedInstanceId = json.instance.id;
+            localStorage.setItem(storageKey, JSON.stringify(instances));
+          }
+        }
+      })
+      .catch(() => { /* best-effort */ });
   }
 
   function mergeSeededInstance(seed: FrameworkInstance, local?: FrameworkInstance) {
@@ -235,9 +303,11 @@
     }
     try {
       const parsed = JSON.parse(raw) as FrameworkInstance[];
-      const seededTemplates = new Set(seeded.map((s) => s.templateId));
+      // Deduplicate by templateId (last wins: framework_instance overrides dedicated seed)
+      const dedupedSeeded = [...new Map(seeded.map((s) => [s.templateId, s])).values()];
+      const seededTemplates = new Set(dedupedSeeded.map((s) => s.templateId));
       const merged = [
-        ...seeded.map((seed) => {
+        ...dedupedSeeded.map((seed) => {
           const local = parsed.find((p) => p.templateId === seed.templateId);
           return local ? mergeSeededInstance(seed, local) : seed;
         }),
