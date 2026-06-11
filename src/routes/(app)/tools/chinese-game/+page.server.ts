@@ -224,7 +224,7 @@ function loadAllWords(): WordData[] {
 export const load: PageServerLoad = async () => {
   if (!cached) {
     const words = loadAllWords();
-    const level1Words = words.filter((w) => w.level === 1);
+    const level1Words = words.filter((w) => w.level >= 1 && w.level <= 7);
     const sentences = generateSentences(level1Words);
     cached = { words, levelNames: LEVEL_NAMES, sentences };
   }

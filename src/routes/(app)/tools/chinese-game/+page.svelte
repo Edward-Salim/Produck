@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount, onDestroy } from 'svelte';
+  import { onMount, onDestroy, tick } from 'svelte';
   import { Heart, Zap, RotateCcw, Play, Check, ChevronRight, SkipForward, ArrowLeft, Music, Volume2 } from '@lucide/svelte';
   import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
   import type { PageData } from './$types.js';
@@ -45,7 +45,7 @@
 
   // ── Menu state ──
   let menuScreen = $state<MenuScreen>('main');
-  let selectedLevels = $state<Set<number>>(new Set([1]));
+  let selectedLevels = $state<Set<number>>(new Set());
 
   // ── Audio settings ──
   let musicEnabled = $state(true);
@@ -58,7 +58,10 @@
         const p = await res.json();
         musicEnabled = p.music ?? true;
         soundsEnabled = p.sounds ?? true;
-        return;
+        if (Array.isArray(p.selectedLevels)) {
+          selectedLevels = new Set(p.selectedLevels);
+        }
+        return p;
       }
     } catch {}
     try {
@@ -67,8 +70,12 @@
         const s = JSON.parse(raw);
         musicEnabled = s.music ?? true;
         soundsEnabled = s.sounds ?? true;
+        if (Array.isArray(s.selectedLevels)) {
+          selectedLevels = new Set(s.selectedLevels);
+        }
       }
     } catch {}
+    return null;
   }
 
   async function saveSettings() {
@@ -76,10 +83,10 @@
       await fetch('/api/preferences', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ music: musicEnabled, sounds: soundsEnabled })
+        body: JSON.stringify({ music: musicEnabled, sounds: soundsEnabled, selectedLevels: [...selectedLevels] })
       });
     } catch {}
-    try { localStorage.setItem('hanzi-game-settings', JSON.stringify({ music: musicEnabled, sounds: soundsEnabled })); } catch {}
+    try { localStorage.setItem('hanzi-game-settings', JSON.stringify({ music: musicEnabled, sounds: soundsEnabled, selectedLevels: [...selectedLevels] })); } catch {}
   }
 
   function toggleMusic() {
@@ -138,9 +145,8 @@
     }
   }
 
-  function saveState() {
-    if (gameState === 'menu') return;
-    const data = {
+  function buildGameData() {
+    return {
       gameState,
       poolIndex,
       health,
@@ -150,9 +156,32 @@
       streak,
       currentLevel,
       selectedLevels: [...selectedLevels],
-      shuffledHanzi: shuffled.map(s => s.hanzi)
+      shuffledHanzi: shuffled.map(s => s.hanzi),
+      feedback: feedback,
+      revealedHanzi: revealedHanzi,
+      revealedPinyin: revealedPinyin
     };
+  }
+
+  function saveState() {
+    if (gameState === 'menu') return;
+    const data = buildGameData();
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch {}
+    syncGameToServer();
+  }
+
+  let syncTimer: ReturnType<typeof setTimeout>;
+  function syncGameToServer() {
+    clearTimeout(syncTimer);
+    syncTimer = setTimeout(async () => {
+      try {
+        await fetch('/api/preferences', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ gameState: buildGameData() })
+        });
+      } catch {}
+    }, 500);
   }
 
   function loadState() {
@@ -164,36 +193,66 @@
 
   function clearState() {
     localStorage.removeItem(STORAGE_KEY);
+    // Also clear game state on server
+    fetch('/api/preferences', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ gameState: null })
+    }).catch(() => {});
+  }
+
+  function restoreGameData(data: ReturnType<typeof buildGameData>) {
+    const hanziSet = new Set(data.shuffledHanzi);
+    const savedShuffled = sentences.filter((s: SentenceData) => hanziSet.has(s.hanzi));
+    if (savedShuffled.length === 0) return;
+    shuffled = savedShuffled;
+    poolIndex = data.poolIndex;
+    health = data.health;
+    totalCorrect = data.totalCorrect;
+    totalAttempts = data.totalAttempts;
+    bestStreak = data.bestStreak;
+    streak = data.streak;
+    currentLevel = data.currentLevel;
+    selectedLevels = new Set(data.selectedLevels);
+    gameState = data.gameState;
+    // Reconstruct current sentence
+    const idx = data.poolIndex % savedShuffled.length;
+    currentSentence = savedShuffled[idx >= savedShuffled.length ? 0 : idx];
+
+    // Restore feedback state: keep input mode if player was typing, show answer if they were viewing a wrong answer
+    if (data.feedback === 'wrong') {
+      feedback = 'wrong';
+      revealedHanzi = data.revealedHanzi || currentSentence.hanzi;
+      revealedPinyin = data.revealedPinyin || currentSentence.pinyin;
+      userChars = [...currentSentence.hanzi].map(c => /[，。？、！；：]/.test(c) ? c : '');
+    } else {
+      feedback = null;
+      revealedHanzi = '';
+      revealedPinyin = '';
+      userChars = [...currentSentence.hanzi].map(c => /[，。？、！；：]/.test(c) ? c : '');
+    }
   }
 
   // Restore saved game + load highscore once sentences are loaded
   $effect(() => {
     if (sentences.length > 0 && !restored) {
       highscore = loadHighscore();
-      loadSettings().catch(() => {});
-      const saved = loadState();
-      if (saved && saved.gameState !== 'menu') {
-        const hanziSet = new Set(saved.shuffledHanzi);
-        const savedShuffled = sentences.filter((s: SentenceData) => hanziSet.has(s.hanzi));
-        if (savedShuffled.length > 0) {
-          shuffled = savedShuffled;
-          poolIndex = saved.poolIndex;
-          health = saved.health;
-          totalCorrect = saved.totalCorrect;
-          totalAttempts = saved.totalAttempts;
-          bestStreak = saved.bestStreak;
-          streak = saved.streak;
-          currentLevel = saved.currentLevel;
-          selectedLevels = new Set(saved.selectedLevels);
-          gameState = saved.gameState;
-          // Reconstruct current sentence
-          const idx = saved.poolIndex % savedShuffled.length;
-          currentSentence = savedShuffled[idx >= savedShuffled.length ? 0 : idx];
-          feedback = 'wrong'; // show the last answer
-          revealedHanzi = currentSentence.hanzi;
-          revealedPinyin = currentSentence.pinyin;
+      loadSettings().then((prefs) => {
+        // Prefer server game state over localStorage
+        if (prefs?.gameState && prefs.gameState.gameState !== 'menu') {
+          restoreGameData(prefs.gameState);
+        } else {
+          const saved = loadState();
+          if (saved && saved.gameState !== 'menu') {
+            restoreGameData(saved);
+          }
         }
-      }
+      }).catch(() => {
+        const saved = loadState();
+        if (saved && saved.gameState !== 'menu') {
+          restoreGameData(saved);
+        }
+      });
       restored = true;
     }
   });
@@ -204,6 +263,14 @@
     totalAttempts > 0 ? Math.round((totalCorrect / totalAttempts) * 100) : 0
   );
   let sentenceCount = $derived(sentences.length);
+  let levelSentenceCounts = $derived(
+    Object.fromEntries(
+      Object.keys(levelNames).map((k) => {
+        const lv = Number(k);
+        return [lv, sentences.filter((s: SentenceData) => s.level === lv).length];
+      })
+    )
+  );
 
   const levelColorConfig = [
     { base: 'border-cork-300/40 bg-cork-100/50 text-cork-600', active: 'border-amber-400 bg-amber-300 text-amber-950 shadow-sm' },
@@ -220,12 +287,15 @@
   }
 
   function toggleLevel(level: number) {
-    if (level !== 1) return;
-    if (selectedLevels.has(1)) {
-      selectedLevels = new Set();
+    if (level > 7) return;
+    const next = new Set(selectedLevels);
+    if (next.has(level)) {
+      next.delete(level);
     } else {
-      selectedLevels = new Set([1]);
+      next.add(level);
     }
+    selectedLevels = next;
+    saveSettings();
   }
 
   function openOptions() {
@@ -237,10 +307,12 @@
   }
 
   function beginGame() {
-    if (sentences.length === 0) return;
+    // Filter sentences by selected levels
+    const filtered = sentences.filter((s: SentenceData) => selectedLevels.has(s.level));
+    if (filtered.length === 0) return;
 
-    // Fisher-Yates shuffle all sentences (Level 1 only for now)
-    const shuffledSentences = [...sentences];
+    // Fisher-Yates shuffle
+    const shuffledSentences = [...filtered];
     for (let i = shuffledSentences.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [shuffledSentences[i], shuffledSentences[j]] = [shuffledSentences[j], shuffledSentences[i]];
@@ -250,16 +322,37 @@
     shuffled = shuffledSentences;
     poolIndex = 0;
     health = 3;
-    streak = 0;
-    bestStreak = 0;
-    totalCorrect = 0;
-    totalAttempts = 0;
+    // Dev: ?streak=N in URL to preview fire levels
+    const params = new URLSearchParams(window.location.search);
+    streak = Number(params.get('streak') ?? 0);
+    bestStreak = Math.max(bestStreak, streak);
+    totalCorrect = streak;
+    totalAttempts = streak;
     feedback = null;
     revealedHanzi = '';
     revealedPinyin = '';
     gameState = 'playing';
 
+    // Prime audio context so stroke sounds work immediately
+    if (!audioCtx) { audioCtx = new AudioContext(); }
+    audioCtx.resume();
     showNextSentence();
+  }
+
+  function pushBackCurrent() {
+    // Move the sentence we just answered correctly toward the back of the queue
+    const idx = (poolIndex - 1 + shuffled.length) % shuffled.length;
+    if (shuffled.length <= 2) return;
+    // Pick a random position ahead in the queue (at least 30% ahead, up to near the end)
+    const min = poolIndex + Math.floor(shuffled.length * 0.3);
+    const max = poolIndex + shuffled.length - 2;
+    if (min >= max) return;
+    const target = min + Math.floor(Math.random() * (max - min));
+    const targetIdx = target % shuffled.length;
+    // Swap current with target
+    const tmp = shuffled[idx];
+    shuffled[idx] = shuffled[targetIdx];
+    shuffled[targetIdx] = tmp;
   }
 
   function showNextSentence() {
@@ -271,13 +364,18 @@
     feedback = null;
     revealedHanzi = '';
     revealedPinyin = '';
-    inputRefs = [];
 
     saveState();
 
-    // Auto-focus first slot
-    requestAnimationFrame(() => {
-      inputRefs[0]?.focus();
+    // Auto-focus first editable slot after DOM update
+    tick().then(() => {
+      const chars = [...s.hanzi];
+      for (let i = 0; i < chars.length; i++) {
+        if (!/[，。？、！；：]/.test(chars[i])) {
+          inputRefs[i]?.focus();
+          break;
+        }
+      }
     });
   }
 
@@ -296,17 +394,15 @@
       if (streak > bestStreak) bestStreak = streak;
       totalCorrect++;
       feedback = 'correct';
-      revealedHanzi = currentSentence.hanzi;
-      revealedPinyin = currentSentence.pinyin;
-      if (soundsEnabled) correctSound?.play().catch(() => {});
+      if (soundsEnabled && correctSound) { correctSound.currentTime = 0; correctSound.play().catch(() => {}); }
+      pushBackCurrent();
       saveState();
-      setTimeout(() => {
-        showNextSentence();
-      }, 800);
+      showNextSentence();
     } else {
       health--;
+      streak = 0;
       feedback = 'wrong';
-      if (soundsEnabled) wrongSound?.play().catch(() => {});
+      if (soundsEnabled && wrongSound) { wrongSound.currentTime = 0; wrongSound.play().catch(() => {}); }
       revealedHanzi = currentSentence.hanzi;
       revealedPinyin = currentSentence.pinyin;
       saveState();
@@ -319,9 +415,10 @@
     revealedHanzi = currentSentence.hanzi;
     revealedPinyin = currentSentence.pinyin;
     health--;
+    streak = 0;
     totalAttempts++;
     feedback = 'wrong';
-    if (soundsEnabled) wrongSound?.play().catch(() => {});
+    if (soundsEnabled && wrongSound) { wrongSound.currentTime = 0; wrongSound.play().catch(() => {}); }
     saveState();
   }
 
@@ -366,29 +463,74 @@
     if (!soundsEnabled) return;
     try {
       if (!audioCtx) audioCtx = new AudioContext();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
       const now = audioCtx.currentTime;
       const osc = audioCtx.createOscillator();
       const gain = audioCtx.createGain();
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(800, now);
-      osc.frequency.exponentialRampToValueAtTime(200, now + 0.04);
-      gain.gain.setValueAtTime(0.06, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(600, now);
+      osc.frequency.exponentialRampToValueAtTime(100, now + 0.03);
+      gain.gain.setValueAtTime(0.08, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
       osc.connect(gain);
       gain.connect(audioCtx.destination);
       osc.start(now);
-      osc.stop(now + 0.05);
+      osc.stop(now + 0.04);
     } catch {}
   }
 
-  function onSlotInput(index: number) {
-    const val = userChars[index];
-    // Only keep the last character typed (maxlength=1 behavior)
-    if (val.length > 1) {
-      userChars[index] = val.slice(-1);
+  // ── IME composition tracking ──
+  let isComposing = $state(false);
+  let composeSlot = $state(-1);
+
+  function spreadChars(fromIndex: number, chars: string[]) {
+    let slot = fromIndex;
+    for (const ch of chars) {
+      // skip punctuation slots
+      while (slot < userChars.length && isPunct([...currentSentence!.hanzi][slot])) {
+        slot++;
+      }
+      if (slot >= userChars.length) break;
+      userChars[slot] = ch;
+      slot++;
     }
-    // If character was entered, move to next editable slot
-    if (userChars[index]) {
+    // Focus the next empty editable slot after the last filled one
+    const next = nextEditableSlot(slot - 1);
+    if (next > fromIndex || userChars[next]) {
+      inputRefs[next]?.focus();
+    } else {
+      inputRefs[fromIndex]?.focus();
+    }
+  }
+
+  function onCompositionStart(index: number) {
+    isComposing = true;
+    composeSlot = index;
+  }
+
+  function onCompositionEnd() {
+    isComposing = false;
+    const i = composeSlot;
+    composeSlot = -1;
+    if (i >= 0 && userChars[i]) {
+      const chars = [...userChars[i]];
+      if (chars.length > 1) {
+        spreadChars(i, chars);
+      } else {
+        playStroke();
+        inputRefs[nextEditableSlot(i)]?.focus();
+      }
+    }
+  }
+
+  function onSlotInput(index: number) {
+    if (isComposing) return;
+    let val = userChars[index];
+    if (!val) return;
+    const chars = [...val];
+    if (chars.length > 1) {
+      spreadChars(index, chars);
+    } else if (userChars[index]) {
       playStroke();
       inputRefs[nextEditableSlot(index)]?.focus();
     }
@@ -462,7 +604,7 @@
         />
         <h1 class="font-display text-3xl text-cork-800 md:text-4xl">Hanzi Game</h1>
         <p class="mt-1 text-xs text-cork-500 md:text-sm">
-          Read the English, type the hanzi. No pinyin allowed.
+          Type the 中文, trust your 大脑. One step closer to 中国.
         </p>
       </div>
 
@@ -522,16 +664,14 @@
 
           <!-- Instructions -->
           <p class="mb-4 text-center text-xs leading-relaxed text-cork-300">
-            You get <strong class="font-semibold text-amber-400">3 health</strong>.
-            Each wrong answer costs one heart. Build your streak on every correct answer.
-            Read the English and type the full Chinese sentence in hanzi.
+            Pick levels, hit Begin. <strong class="font-semibold text-amber-400">3 hearts</strong>. Lose one per mistake, chain correct answers to streak.
           </p>
 
           <!-- Level grid -->
           <div class="flex w-full flex-col gap-1">
             {#each Object.entries(levelNames) as [levelStr, name]}
               {@const level = Number(levelStr)}
-              {@const isActive = level === 1}
+              {@const isActive = level <= 7}
               {@const colors = levelColorConfig[Math.min(level - 1, levelColorConfig.length - 1)]}
               <button
                 type="button"
@@ -550,7 +690,7 @@
                   {/if}
                 </span>
                 <span class="text-[10px] opacity-70 md:text-[11px]">
-                  {isActive ? sentenceCount + ' sentences' : ''}
+                  {isActive ? (levelSentenceCounts[level] ?? 0) + ' sentences' : ''}
                 </span>
               </button>
             {/each}
@@ -653,17 +793,17 @@
       </div>
 
       <!-- Sentence card -->
-      <div
-        class="w-full rounded-2xl border p-4 text-center shadow-sm transition-all duration-300 md:p-10 {streak >= 3
-          ? streak >= 5
-            ? 'border-amber-500 bg-amber-50 shadow-lg shadow-amber-300/60 fire-glow'
-            : 'border-orange-400 bg-orange-50 shadow-md shadow-orange-200/40'
-          : 'border-cork-300/50 bg-white'}"
-      >
-        {#if currentSentence && feedback === null}
-          {#if streak >= 3}
-            <p class="mb-2 text-xs font-semibold uppercase tracking-widest text-orange-400 md:text-sm">
-              🔥 {streak} streak
+      {#if currentSentence}
+        {@const heat = streak >= 11 ? 'inferno' : streak >= 8 ? 'blaze' : streak >= 5 ? 'fire' : streak >= 3 ? 'warm' : ''}
+        <div
+          class="w-full rounded-2xl border p-4 text-center shadow-sm transition-all duration-300 md:p-10 {heat
+            ? 'streak-' + heat
+            : 'border-cork-300/50 bg-white'}"
+        >
+        {#if feedback === null}
+          {#if heat}
+            <p class="streak-text mb-2 text-xs font-semibold uppercase tracking-widest md:text-sm {heat === 'inferno' ? 'streak-inferno-text' : ''}">
+              {streak} streak
             </p>
           {/if}
           <!-- English translation (the prompt) -->
@@ -689,22 +829,23 @@
                   autocomplete="off"
                   autocorrect="off"
                   spellcheck="false"
-                  maxlength={1}
                   class="char-slot {userChars[i] ? 'filled' : 'empty'}"
                   bind:value={userChars[i]}
                   oninput={() => onSlotInput(i)}
                   onkeydown={(e) => onSlotKeydown(i, e)}
+                  oncompositionstart={() => onCompositionStart(i)}
+                  oncompositionend={onCompositionEnd}
                 />
               {/if}
             {/each}
           </div>
 
-        {:else if currentSentence && feedback === 'correct'}
+        {:else if feedback === 'correct'}
           <p class="font-outfit text-lg leading-relaxed text-cork-800 md:text-3xl">
             {currentSentence.translation}
           </p>
 
-        {:else if currentSentence && feedback === 'wrong'}
+        {:else if feedback === 'wrong'}
           <div class="flex flex-col items-center gap-2 md:gap-3">
             <div>
               <p class="font-outfit text-lg leading-relaxed text-cork-800 md:text-3xl">
@@ -735,6 +876,7 @@
           </div>
         {/if}
       </div>
+      {/if}
 
       <!-- Feedback flash -->
       {#if feedback === 'correct'}
@@ -1099,18 +1241,78 @@
     transform: translateX(20px);
   }
 
-  /* ── Fire glow animation ── */
-  .fire-glow {
+  /* ── Streak fire system ── */
+
+  /* Text: shared */
+  .streak-text {
+    background: linear-gradient(90deg, #f59e0b, #ef4444, #f97316, #f59e0b);
+    background-size: 200% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: fire-shift 1.5s linear infinite;
+  }
+
+  @keyframes fire-shift {
+    0% { background-position: 200% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+
+  .streak-inferno-text {
+    animation: fire-shift 0.6s linear infinite, inferno-shake 0.3s ease-in-out infinite;
+    font-size: 1.1em;
+  }
+
+  /* Level 1: Warm (3-4) */
+  .streak-warm {
+    border-color: #fb923c;
+    background: #fff7ed;
+    box-shadow: 0 0 8px rgba(251, 146, 60, 0.3);
+  }
+
+  /* Level 2: Fire (5-7) */
+  .streak-fire {
+    border-color: #f59e0b;
+    background: #fffbeb;
+    box-shadow: 0 0 14px rgba(251, 191, 36, 0.45), 0 4px 20px rgba(251, 146, 60, 0.25);
     animation: fire-pulse 1.5s ease-in-out infinite;
   }
 
   @keyframes fire-pulse {
-    0%, 100% {
-      box-shadow: 0 0 12px rgba(251, 191, 36, 0.4), 0 4px 20px rgba(251, 146, 60, 0.2);
-    }
-    50% {
-      box-shadow: 0 0 20px rgba(251, 191, 36, 0.6), 0 4px 30px rgba(251, 146, 60, 0.35);
-    }
+    0%, 100% { box-shadow: 0 0 14px rgba(251, 191, 36, 0.45), 0 4px 20px rgba(251, 146, 60, 0.25); }
+    50% { box-shadow: 0 0 24px rgba(251, 191, 36, 0.65), 0 6px 32px rgba(251, 146, 60, 0.4); }
+  }
+
+  /* Level 3: Blaze (8-10) */
+  .streak-blaze {
+    border-color: #ef4444;
+    background: #fef2f2;
+    box-shadow: 0 0 20px rgba(239, 68, 68, 0.5), 0 0 40px rgba(249, 115, 22, 0.35), 0 6px 24px rgba(251, 146, 60, 0.3);
+    animation: blaze-pulse 0.9s ease-in-out infinite;
+  }
+
+  @keyframes blaze-pulse {
+    0%, 100% { box-shadow: 0 0 20px rgba(239, 68, 68, 0.5), 0 0 40px rgba(249, 115, 22, 0.35), 0 6px 24px rgba(251, 146, 60, 0.3); }
+    50% { box-shadow: 0 0 32px rgba(239, 68, 68, 0.7), 0 0 56px rgba(249, 115, 22, 0.5), 0 8px 30px rgba(251, 146, 60, 0.45); }
+  }
+
+  /* Level 4: Inferno (11+) */
+  .streak-inferno {
+    border-color: #dc2626;
+    background: #fef2f2;
+    box-shadow: 0 0 28px rgba(220, 38, 38, 0.6), 0 0 50px rgba(234, 88, 12, 0.45), 0 0 70px rgba(251, 191, 36, 0.35), 0 6px 30px rgba(239, 68, 68, 0.4);
+    animation: inferno-pulse 0.5s ease-in-out infinite, inferno-shake 0.3s ease-in-out infinite;
+  }
+
+  @keyframes inferno-pulse {
+    0%, 100% { box-shadow: 0 0 28px rgba(220, 38, 38, 0.6), 0 0 50px rgba(234, 88, 12, 0.45), 0 0 70px rgba(251, 191, 36, 0.35), 0 6px 30px rgba(239, 68, 68, 0.4); }
+    50% { box-shadow: 0 0 40px rgba(220, 38, 38, 0.8), 0 0 70px rgba(234, 88, 12, 0.6), 0 0 90px rgba(251, 191, 36, 0.5), 0 8px 36px rgba(239, 68, 68, 0.55); }
+  }
+
+  @keyframes inferno-shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-1px) rotate(-0.2deg); }
+    75% { transform: translateX(1px) rotate(0.2deg); }
   }
 
   /* Prevent zoom on mobile input focus */

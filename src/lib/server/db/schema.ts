@@ -19,7 +19,22 @@ export const appUser = pgTable('app_user', {
   displayName: text('display_name').notNull(),
   role: text('role').notNull().default('member'),
   passwordHash: text('password_hash'),
-  preferences: jsonb('preferences').$type<{ music?: boolean; sounds?: boolean }>().default({ music: true, sounds: true }),
+  preferences: jsonb('preferences').$type<{
+    music?: boolean;
+    sounds?: boolean;
+    gameState?: {
+      gameState: string;
+      poolIndex: number;
+      health: number;
+      totalCorrect: number;
+      totalAttempts: number;
+      bestStreak: number;
+      streak: number;
+      currentLevel: number;
+      selectedLevels: number[];
+      shuffledHanzi: string[];
+    };
+  }>().default({ music: true, sounds: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
 });
 

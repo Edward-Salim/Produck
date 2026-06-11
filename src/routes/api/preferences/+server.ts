@@ -21,7 +21,20 @@ export const POST: RequestHandler = async ({ request, locals }) => {
   if (!authId) return json({}, { status: 401 });
 
   const body = await request.json();
-  const prefs = { music: body.music ?? true, sounds: body.sounds ?? true };
+
+  const [existing] = await db.select({ preferences: appUser.preferences })
+    .from(appUser)
+    .where(eq(appUser.authId, authId))
+    .limit(1);
+
+  const current = (existing?.preferences ?? { music: true, sounds: true }) as Record<string, unknown>;
+  const prefs = {
+    music: body.music ?? current.music ?? true,
+    sounds: body.sounds ?? current.sounds ?? true,
+    gameState: body.gameState !== undefined ? body.gameState : (current.gameState ?? undefined)
+  };
+  // Remove null game states
+  if (prefs.gameState === null) delete prefs.gameState;
 
   await db.update(appUser)
     .set({ preferences: prefs })
