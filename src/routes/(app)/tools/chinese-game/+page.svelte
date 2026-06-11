@@ -124,6 +124,7 @@
   let userChars = $state<string[]>([]);
   let hintedSlots = $state<Set<number>>(new Set());
   let hintUsedThisSentence = $state(false);
+  let advancing = $state(false);
   let health = $state(3);
   let streak = $state(0);
   let bestStreak = $state(0);
@@ -422,6 +423,7 @@
     userChars = [...s.hanzi].map(c => /[，。？、！；：]/.test(c) ? c : '');
     hintedSlots = new Set();
     hintUsedThisSentence = false;
+    advancing = false;
     feedback = null;
     revealedHanzi = '';
     revealedPinyin = '';
@@ -459,11 +461,12 @@
       if (streak > bestStreak) bestStreak = streak;
       totalCorrect += currentSentence?.level ?? 1;
       feedback = 'correct';
+      advancing = true;
       if (soundsEnabled && correctSound) { correctSound.currentTime = 0; correctSound.play().catch(() => {}); }
       pushBackCurrent();
       saveState();
       // Brief delay so the correct animation is visible before advancing
-      setTimeout(() => showNextSentence(), 600);
+      setTimeout(() => { advancing = false; showNextSentence(); }, 600);
     } else {
       health--;
       streak = 0;
@@ -491,6 +494,7 @@
   }
 
   function nextAfterWrong() {
+    if (advancing) return;
     if (health <= 0) {
       updateHighscore(totalCorrect);
       if (soundsEnabled) gameOverSound?.play().catch(() => {});
@@ -702,7 +706,7 @@
         beginGame();
         return;
       }
-      if ((feedback === 'correct' || feedback === 'wrong') && gameState === 'playing') {
+      if ((feedback === 'correct' || feedback === 'wrong') && gameState === 'playing' && !advancing) {
         nextAfterWrong();
       }
     }
