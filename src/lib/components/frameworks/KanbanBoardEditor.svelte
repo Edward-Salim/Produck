@@ -33,8 +33,6 @@
     { id: 'col-done', title: 'Done', color: '#d1fae5', wipLimit: null, cards: [] }
   ];
 
-  let columns = $state<KanbanColumn[]>([]);
-
   // ── Scroll indicator per column ──
   let columnScrollRefs = new Map<string, HTMLElement>();
   let showColumnFade = $state<Record<string, boolean>>({});
@@ -78,23 +76,43 @@
     });
   });
 
-  let loading = $state(true);
+  // ── Module-level cache so switching templates doesn't re-fetch from scratch ──
+  const columnCache = new Map<string, KanbanColumn[]>();
+
+  let columns = $state<KanbanColumn[]>(
+    columnCache.get(projectId ?? '') ?? []
+  );
+  let loading = $state(!columnCache.has(projectId ?? ''));
 
   async function loadKanban() {
-    loading = true;
+    if (!columnCache.has(projectId ?? '')) {
+      columns = [];
+      loading = true;
+    }
+
     try {
       const res = await fetch(`/api/kanban?projectId=${projectId}`);
       const data = await res.json();
       if (data.columns && Array.isArray(data.columns) && data.columns.length > 0) {
         columns = data.columns;
-      } else {
+        columnCache.set(projectId ?? '', data.columns);
+      } else if (!columnCache.has(projectId ?? '')) {
         columns = DEFAULT_COLUMNS.map((c) => ({ ...c, cards: [] }));
       }
     } catch {
-      columns = DEFAULT_COLUMNS.map((c) => ({ ...c, cards: [] }));
+      if (!columnCache.has(projectId ?? '')) {
+        columns = DEFAULT_COLUMNS.map((c) => ({ ...c, cards: [] }));
+      }
     }
     loading = false;
   }
+
+  // Update cache whenever columns change locally (moves, assigns, blocks)
+  $effect(() => {
+    if (columns.length > 0 && projectId) {
+      columnCache.set(projectId, columns);
+    }
+  });
 
   $effect(() => {
     if (projectId) loadKanban();
