@@ -343,12 +343,12 @@
     // Move the sentence we just answered correctly toward the back of the queue
     const idx = (poolIndex - 1 + shuffled.length) % shuffled.length;
     if (shuffled.length <= 2) return;
-    // Pick a random position ahead in the queue (at least 30% ahead, up to near the end)
-    const min = poolIndex + Math.floor(shuffled.length * 0.3);
-    const max = poolIndex + shuffled.length - 2;
-    if (min >= max) return;
-    const target = min + Math.floor(Math.random() * (max - min));
-    const targetIdx = target % shuffled.length;
+    // Pick a random offset at least 30% ahead (up to near the end)
+    const minOffset = Math.floor(shuffled.length * 0.3);
+    const maxOffset = shuffled.length - 2;
+    if (minOffset >= maxOffset) return;
+    const offset = minOffset + Math.floor(Math.random() * (maxOffset - minOffset));
+    const targetIdx = (poolIndex + offset) % shuffled.length;
     // Swap current with target
     const tmp = shuffled[idx];
     shuffled[idx] = shuffled[targetIdx];
@@ -604,7 +604,7 @@
         />
         <h1 class="font-display text-3xl text-cork-800 md:text-4xl">Hanzi Game</h1>
         <p class="mt-1 text-xs text-cork-500 md:text-sm">
-          Type the 中文, trust your 大脑. One step closer to 中国.
+          Your future in 中国 starts with every 汉字 you master
         </p>
       </div>
 
