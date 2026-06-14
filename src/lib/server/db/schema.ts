@@ -872,6 +872,7 @@ export const financialTrackerInvestment = pgTable('financial_tracker_investment'
   balance: money('balance').notNull(),
   change: text('change').notNull(),
   direction: text('direction').notNull(),
+  dividendYieldBps: integer('dividend_yield_bps'),
   sortOrder: integer('sort_order').notNull().default(0),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
 });

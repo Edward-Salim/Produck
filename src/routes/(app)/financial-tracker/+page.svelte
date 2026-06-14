@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount, untrack } from 'svelte';
+  import { MediaQuery } from 'svelte/reactivity';
   import { enhance } from '$app/forms';
   import {
     ArrowDown,
@@ -11,6 +12,7 @@
     CalendarDays,
     ChartColumn,
     Check,
+    ChevronDown,
     CircleDollarSign,
     GitCompareArrows,
     PiggyBank,
@@ -512,6 +514,13 @@
       : currency.format(totalInvestmentCostBasis);
   }
 
+  function displayedPortfolioDividendIncome() {
+    const usdValue = idrToUsd(totalDividendIncome);
+    return investmentCurrencyMode === 'usd'
+      ? compactUsd.format(usdValue ?? 0)
+      : currency.format(totalDividendIncome);
+  }
+
   function displayedUsdIdrRate() {
     return trackerData.usdIdrRate === undefined
       ? 'FX unavailable'
@@ -749,6 +758,16 @@
     investments.reduce((sum, row) => sum + (investmentUsdCostBasis(row) ?? 0), 0)
   );
   let totalInvestmentUsdGain = $derived(totalInvestmentUsdValue - totalInvestmentUsdCostBasis);
+  let totalDividendIncome = $derived(
+    investments.reduce(
+      (sum, row) =>
+        sum +
+        (row.dividendYieldBps
+          ? Math.round((row.balance * row.dividendYieldBps) / 10000)
+          : 0),
+      0
+    )
+  );
   let investmentQuotesNeedRefresh = $derived(investments.some(investmentQuoteIsStale));
   let monthlyInvestmentHistory = $derived(trackerData.monthlyInvestmentHistory);
   let investmentHistoryChartRows = $derived.by(() => {
@@ -1007,6 +1026,12 @@
     initialTrackerData.forecastPreferences.investmentCurrency
   );
   let investmentRefreshPending = $state(false);
+  let reconciliationOpen = $state(false);
+  let ledgerExpanded = $state(false);
+  let forecastAssumptionsOpen = $state(false);
+  const isMobile = new MediaQuery('max-width: 519px');
+  const LEDGER_PREVIEW_COUNT = 15;
+
   let selectedReturnProfile = $state<ReturnProfileKey>(
     initialTrackerData.forecastPreferences.returnProfile
   );
@@ -1117,6 +1142,11 @@
   );
   let sortedLedgerEntries = $derived(
     sortLedgerEntries(effectiveLedgerEntries, ledgerSortKey, ledgerSortDirection)
+  );
+  let displayedLedgerEntries = $derived(
+    !isMobile.current || ledgerExpanded
+      ? sortedLedgerEntries
+      : sortedLedgerEntries.slice(0, LEDGER_PREVIEW_COUNT)
   );
   let ledgerCategoryOptions = $derived(
     [...new Set([...ledgerBaseCategoryOptions, ...Object.values(ledgerCategorySelections)])].filter(
@@ -1710,7 +1740,7 @@
           <ReceiptText class="size-4 text-cork-500" />
           Budget Performance
         </h2>
-        <div class="flex flex-wrap justify-end gap-x-4 gap-y-0.5 text-right text-[10px]">
+        <div class="budget-header-meta flex flex-wrap justify-end gap-x-4 gap-y-0.5 text-right text-[10px]">
           <div>
             <span class="text-cork-400">Budget period</span>
             <span class="ml-1 font-medium text-cork-800">{currentMonth.period}</span>
@@ -1743,7 +1773,7 @@
           <thead>
             <tr>
               <th>Category</th>
-              <th>Share</th>
+              <th class="mobile-hide">Share</th>
               {@render MoneyHead('Plan')}
               {@render MoneyHead('Actual')}
               <th>Used</th>
@@ -1756,7 +1786,7 @@
               </tr>
               {#each group.rows as row (row.label)}
                 <tr class="budget-child-row">
-                  <td>
+                  <td data-label="Category">
                     <div class="budget-category-cell">
                       <button
                         type="button"
@@ -1773,7 +1803,7 @@
                       {/if}
                     </div>
                   </td>
-                  <td>
+                  <td data-label="Share" class="mobile-hide">
                     <form method="POST" action="?/budgetShare" use:enhance class="share-form">
                       <input type="hidden" name="label" value={row.label} />
                       <input
@@ -1790,9 +1820,9 @@
                       <span>%</span>
                     </form>
                   </td>
-                  {@render MoneyCell(row.planned)}
-                  {@render MoneyCell(row.actual)}
-                  <td>
+                  {@render MoneyCell(row.planned, '', false, 'Plan')}
+                  {@render MoneyCell(row.actual, '', false, 'Actual')}
+                  <td data-label="Used">
                     <div class="flex min-w-24 items-center gap-1.5">
                       <div class="h-1.5 flex-1 rounded-full bg-cork-200">
                         <div
@@ -1823,11 +1853,11 @@
               </tr>
             {:else}
               <tr class="total-row">
-                <td>Total</td>
-                <td>{total(activeBudgetRows, 'allocationShare')}%</td>
-                {@render MoneyCell(total(activeBudgetRows, 'planned'))}
-                {@render MoneyCell(total(activeBudgetRows, 'actual'))}
-                <td
+                <td data-label="Category">Total</td>
+                <td data-label="Share" class="mobile-hide">{total(activeBudgetRows, 'allocationShare')}%</td>
+                {@render MoneyCell(total(activeBudgetRows, 'planned'), '', false, 'Plan')}
+                {@render MoneyCell(total(activeBudgetRows, 'actual'), '', false, 'Actual')}
+                <td data-label="Used"
                   >{usedPercentage(
                     total(activeBudgetRows, 'actual'),
                     total(activeBudgetRows, 'planned')
@@ -1842,7 +1872,9 @@
 
     <section class="grid gap-3 xl:grid-cols-2">
       {@render BalanceReconciliation()}
-      {@render DebtDetail()}
+      {#if debtSchedule.length > 0}
+        {@render DebtDetail()}
+      {/if}
     </section>
 
     <section class="grid gap-3 xl:grid-cols-2">
@@ -1853,11 +1885,11 @@
             <thead>
               <tr>
                 <th>Wallet</th>
-                <th>Rekening</th>
+                <th class="mobile-hide">Rekening</th>
                 {@render MoneyHead('Balance')}
                 {@render MoneyHead('Min hold')}
                 {@render MoneyHead('Liquid')}
-                <th>Updated</th>
+                <th class="mobile-hide">Updated</th>
               </tr>
             </thead>
             <tbody>
@@ -1888,7 +1920,7 @@
                         <span>{wallet.label}</span>
                       </div>
                     </td>
-                    <td data-label="Rekening">{wallet.accountNumber ?? '-'}</td>
+                    <td data-label="Rekening" class="mobile-hide">{wallet.accountNumber ?? '-'}</td>
                     <td class="currency-col" data-label="Balance"></td>
                     <td data-label="Balance">{currency.format(wallet.balance)}</td>
                     <td class="currency-col" data-label="Min hold"></td>
@@ -1897,7 +1929,7 @@
                     <td data-label="Liquid">
                       {currency.format(walletLiquidBalance(wallet.balance, wallet.minimumHold))}
                     </td>
-                    <td class="check-cell" data-label="Updated">
+                    <td class="check-cell mobile-hide" data-label="Updated">
                       <form
                         method="POST"
                         action="?/walletStatus"
@@ -1921,7 +1953,7 @@
                   </tr>
                 {/each}
               {/each}
-              <tr class="total-row">
+              <tr class="total-row mobile-hide">
                 <td>Total</td>
                 <td></td>
                 <td class="currency-col" data-label="Balance"></td>
@@ -1942,7 +1974,7 @@
       <section class="panel">
         {@render PanelTitle(ReceiptText, 'Ledger')}
         <div class="overflow-x-auto">
-          <table class="tracker-table dense">
+          <table class="tracker-table dense ledger-table">
             <thead>
               <tr>
                 {@render LedgerSortHead('Date', 'date')}
@@ -1950,17 +1982,17 @@
                 {@render LedgerSortHead('Amount', 'amount')}
                 {@render LedgerSortHead('Category', 'category')}
                 {@render LedgerSortHead('Description', 'description')}
-                {@render LedgerSortHead('Account', 'account')}
-                {@render LedgerSortHead('Payment', 'paymentType')}
-                {@render LedgerSortHead('Kind', 'kind')}
+                {@render LedgerSortHead('Account', 'account', 'mobile-hide')}
+                {@render LedgerSortHead('Payment', 'paymentType', 'mobile-hide')}
+                {@render LedgerSortHead('Kind', 'kind', 'mobile-hide')}
               </tr>
             </thead>
             <tbody>
-              {#each sortedLedgerEntries as entry (entry.id)}
+              {#each displayedLedgerEntries as entry (entry.id)}
                 <tr>
-                  <td>{entry.date}</td>
-                  {@render MoneyCell(entry.amount)}
-                  <td>
+                  <td data-label="Date">{entry.date}</td>
+                  {@render MoneyCell(entry.amount, '', false, 'Amount')}
+                  <td data-label="Category">
                     <form
                       method="POST"
                       action="?/ledgerCategory"
@@ -2034,10 +2066,10 @@
                       {/if}
                     </form>
                   </td>
-                  <td>{entry.description}</td>
-                  <td>{ledgerAccount(entry)}</td>
-                  <td>{entry.paymentType}</td>
-                  <td>{entry.kind}</td>
+                  <td data-label="Description">{entry.description}</td>
+                  <td data-label="Account" class="mobile-hide">{ledgerAccount(entry)}</td>
+                  <td data-label="Payment" class="mobile-hide">{entry.paymentType}</td>
+                  <td data-label="Kind" class="mobile-hide">{entry.kind}</td>
                 </tr>
               {/each}
               {#if sortedLedgerEntries.length === 0}
@@ -2050,6 +2082,15 @@
             </tbody>
           </table>
         </div>
+        {#if isMobile.current && sortedLedgerEntries.length > LEDGER_PREVIEW_COUNT && !ledgerExpanded}
+          <button
+            type="button"
+            class="show-more-btn"
+            onclick={() => (ledgerExpanded = true)}
+          >
+            Show all {sortedLedgerEntries.length} entries
+          </button>
+        {/if}
       </section>
     {/if}
   {:else}
@@ -2111,38 +2152,69 @@
             </div>
           </div>
         </div>
-        <div class="space-y-1.5">
-          {#each investments as investment (investment.label)}
-            <div class="investment-row">
-              <span class="flex min-w-0 flex-col">
-                <span class="investment-ticker">{investment.label}</span>
-                <span class="investment-meta">
-                  {#if displayedInvestmentUnitPrice(investment)}
-                    {displayedInvestmentUnitPrice(investment)} · {shortDateTime(
-                      investment.latestPriceAt
-                    )}
-                  {:else}
-                    {shortDateTime(investment.latestPriceAt)}
-                  {/if}
-                </span>
-              </span>
-              <span
-                class={`investment-change ${
-                  investment.direction === 'up' ? 'text-emerald-600' : 'text-red-600'
-                }`}
-              >
-                <span class="font-semibold">{investment.change}</span>
-              </span>
-              <span
-                class={`investment-gain ${
-                  investment.direction === 'up' ? 'text-emerald-600' : 'text-red-600'
-                }`}
-              >
-                {displayedInvestmentGain(investment) ?? '-'}
-              </span>
-              <span class="font-medium text-cork-900">{displayedInvestmentValue(investment)}</span>
-            </div>
-          {/each}
+        <div class="overflow-x-auto">
+          <table class="tracker-table dense investment-table">
+            <thead>
+              <tr>
+                <th>Ticker</th>
+                <th>Div. Yield</th>
+                <th>Change</th>
+                <th>Gain</th>
+                <th>Value</th>
+              </tr>
+            </thead>
+            <tbody>
+              {#each investments as investment (investment.label)}
+                <tr
+                  class:up={investment.direction === 'up'}
+                  class:down={investment.direction === 'down'}
+                >
+                  <td data-label="Ticker">
+                    <span class="investment-ticker">{investment.label}</span>
+                    <span class="investment-meta">
+                      {#if displayedInvestmentUnitPrice(investment)}
+                        {displayedInvestmentUnitPrice(investment)} · {shortDateTime(
+                          investment.latestPriceAt
+                        )}
+                      {:else}
+                        {shortDateTime(investment.latestPriceAt)}
+                      {/if}
+                    </span>
+                  </td>
+                  <td data-label="Div. Yield">
+                    {#if investment.dividendYieldBps}
+                      <span class="investment-div-yield"
+                        >{(investment.dividendYieldBps / 100).toFixed(2)}%</span
+                      >
+                      <span class="investment-div-amount"
+                        >{currency.format(Math.round((investment.balance * investment.dividendYieldBps) / 10000))}/yr</span
+                      >
+                    {:else}
+                      <span class="text-cork-300">-</span>
+                    {/if}
+                  </td>
+                  <td
+                    data-label="Change"
+                    class:up={investment.direction === 'up'}
+                    class:down={investment.direction === 'down'}
+                  >
+                    {investment.change}
+                  </td>
+                  <td
+                    data-label="Gain"
+                    class:up={investment.direction === 'up'}
+                    class:down={investment.direction === 'down'}
+                  >
+                    {displayedInvestmentGain(investment) ?? '-'}
+                  </td>
+                  <td data-label="Value" class="font-medium text-cork-900">
+                    {displayedInvestmentValue(investment)}
+                  </td>
+                </tr>
+              {/each}
+            </tbody>
+          </table>
+        </div>
           <div class="investment-summary">
             <div class="investment-summary-row primary">
               <span>Portfolio value</span>
@@ -2167,6 +2239,15 @@
               <span>Cost basis</span>
               <strong>{displayedPortfolioCostBasis()}</strong>
             </div>
+            {#if totalDividendIncome > 0}
+              <div class="investment-summary-row">
+                <span>
+                  Est. annual dividend
+                  <span class="investment-dividend-note">(at current yield)</span>
+                </span>
+                <strong>{displayedPortfolioDividendIncome()}</strong>
+              </div>
+            {/if}
           </div>
           <p class="text-[10px] text-cork-400">Excluded from liquid wallet balance.</p>
           <div class="investment-history">
@@ -2231,16 +2312,26 @@
               </p>
             {/if}
           </div>
-        </div>
       </div>
 
       <div class="panel min-w-0">
-        <div class="mb-3 flex items-center justify-between gap-2 border-b border-cork-200 pb-2">
-          <h2 class="flex items-center gap-2 text-sm font-semibold text-cork-900">
+        <div class="forecast-header mb-3 flex items-center justify-between gap-2 border-b border-cork-200 pb-2">
+          <button
+            type="button"
+            class="flex items-center gap-2 text-sm font-semibold text-cork-900"
+            onclick={() => (forecastAssumptionsOpen = !forecastAssumptionsOpen)}
+            aria-expanded={forecastAssumptionsOpen}
+          >
             <ChartColumn class="size-4 text-cork-500" />
             Investments Forecast
-          </h2>
-          <div class="forecast-assumptions">
+            <span
+              class="forecast-assumptions-chevron"
+              style:transform={forecastAssumptionsOpen ? 'rotate(180deg)' : 'rotate(0deg)'}
+            >
+              <ChevronDown class="size-3.5 text-cork-400" />
+            </span>
+          </button>
+          <div class="forecast-assumptions" class:open={forecastAssumptionsOpen}>
             <span class="forecast-assumption-inline">
               <span>Inflation/yr</span>
               <strong>{percent(defaultInflationRate)}</strong>
@@ -2580,13 +2671,13 @@
   <th>{label}</th>
 {/snippet}
 
-{#snippet MoneyCell(value: number, tone = '', compact = false)}
+{#snippet MoneyCell(value: number, tone = '', compact = false, label = '')}
   <td class="currency-col">Rp</td>
-  <td class={tone}>{compact ? compactForecastAmount(value) : amount.format(value)}</td>
+  <td class={tone} data-label={label || undefined}>{compact ? compactForecastAmount(value) : amount.format(value)}</td>
 {/snippet}
 
-{#snippet LedgerSortHead(label: string, key: LedgerSortKey)}
-  <th>
+{#snippet LedgerSortHead(label: string, key: LedgerSortKey, cls = '')}
+  <th class={cls}>
     <button
       type="button"
       class="sort-button"
@@ -2610,45 +2701,63 @@
 
 {#snippet BalanceReconciliation()}
   <div class="panel">
-    {@render PanelTitle(GitCompareArrows, 'Balance Reconciliation')}
-    <div class="reconciliation-formula" aria-label="Balance reconciliation formula">
-      {#each reconciliationFormula as term, index (term.label)}
-        {#if index > 0}
-          <span class="formula-operator">{term.operator}</span>
-        {/if}
-        <div class="formula-term">
-          <div class="formula-amount">
-            <span class="formula-amount-full">{currency.format(term.value)}</span>
-            <span class="formula-amount-compact">{compactCurrency(term.value)}</span>
-          </div>
-          <div class="formula-label">{term.label}</div>
-        </div>
-      {/each}
-      <span class="formula-operator">=</span>
-      <div class="formula-term formula-result">
-        <div class="formula-amount">
-          <span class="formula-amount-full">{currency.format(expectedEndingBalance)}</span>
-          <span class="formula-amount-compact">{compactCurrency(expectedEndingBalance)}</span>
-        </div>
-        <div class="formula-label">Expected ending</div>
-      </div>
-    </div>
-
-    <div class="reconciliation-compare">
-      <div class="compare-item">
-        <span>Recorded ending</span>
-        <strong>{currency.format(recordedEndingLiquidBalance)}</strong>
-      </div>
-      <div class="compare-item difference-item">
-        <span>Difference</span>
-        <strong
-          class="difference-value"
-          class:negative={reconciliationDifference < 0}
-          class:balanced={reconciliationDifference === 0}
-          >{currency.format(reconciliationDifference)}</strong
+    <div class="mb-3 flex items-center justify-between border-b border-cork-200 pb-2">
+      <button
+        type="button"
+        class="flex items-center gap-2 text-sm font-semibold text-cork-900"
+        onclick={() => (reconciliationOpen = !reconciliationOpen)}
+        aria-expanded={reconciliationOpen}
+      >
+        <GitCompareArrows class="size-4 text-cork-500" />
+        Balance Reconciliation
+        <span
+          class="inline-flex transition-transform"
+          style:transform={reconciliationOpen ? 'rotate(180deg)' : 'rotate(0deg)'}
         >
-      </div>
+          <ChevronDown class="size-3.5 text-cork-400" />
+        </span>
+      </button>
     </div>
+    {#if reconciliationOpen}
+      <div class="reconciliation-formula" aria-label="Balance reconciliation formula">
+        {#each reconciliationFormula as term, index (term.label)}
+          {#if index > 0}
+            <span class="formula-operator">{term.operator}</span>
+          {/if}
+          <div class="formula-term">
+            <div class="formula-amount">
+              <span class="formula-amount-full">{currency.format(term.value)}</span>
+              <span class="formula-amount-compact">{compactCurrency(term.value)}</span>
+            </div>
+            <div class="formula-label">{term.label}</div>
+          </div>
+        {/each}
+        <span class="formula-operator">=</span>
+        <div class="formula-term formula-result">
+          <div class="formula-amount">
+            <span class="formula-amount-full">{currency.format(expectedEndingBalance)}</span>
+            <span class="formula-amount-compact">{compactCurrency(expectedEndingBalance)}</span>
+          </div>
+          <div class="formula-label">Expected ending</div>
+        </div>
+      </div>
+
+      <div class="reconciliation-compare">
+        <div class="compare-item">
+          <span>Recorded ending</span>
+          <strong>{currency.format(recordedEndingLiquidBalance)}</strong>
+        </div>
+        <div class="compare-item difference-item">
+          <span>Difference</span>
+          <strong
+            class="difference-value"
+            class:negative={reconciliationDifference < 0}
+            class:balanced={reconciliationDifference === 0}
+            >{currency.format(reconciliationDifference)}</strong
+          >
+        </div>
+      </div>
+    {/if}
   </div>
 {/snippet}
 
@@ -2945,6 +3054,15 @@
     color: #15803d;
   }
 
+  .forecast-assumptions-chevron {
+    display: none;
+  }
+
+  /* Let the category dropdown escape the scroll wrapper on all screen sizes */
+  :global(.overflow-x-auto):has(.category-form.open) {
+    overflow: visible;
+  }
+
   @media (max-width: 520px) {
     .reconciliation-formula {
       display: flex;
@@ -3017,12 +3135,10 @@
     }
 
     .debt-detail-table tr:not(.total-row):not(.wallet-group-row),
-    .wallet-table tr.wallet-child-row,
-    .wallet-table tr.total-row {
+    .wallet-table tr.wallet-child-row {
       overflow: hidden;
       border: 1px solid rgba(31, 82, 122, 0.12);
-      border-radius: 7px;
-      background: rgba(255, 255, 255, 0.5) !important;
+      background: transparent;
     }
 
     .debt-detail-table td,
@@ -3032,7 +3148,7 @@
       justify-content: space-between;
       gap: 0.9rem;
       border-width: 0 0 1px;
-      padding: 0.38rem 0.5rem;
+      padding: 0.26rem 0.5rem;
       text-align: right;
       white-space: normal;
     }
@@ -3074,7 +3190,6 @@
     .wallet-group-row td {
       display: block;
       border: 0;
-      border-radius: 6px;
       padding: 0.3rem 0.5rem;
       background: color-mix(in oklab, #1f527a 12%, white);
     }
@@ -3095,6 +3210,303 @@
 
     .wallet-status-form {
       justify-content: flex-end;
+    }
+
+    /* Panel title icons — bump up for better visibility */
+    h2 :global(svg) {
+      width: 1.15rem;
+      height: 1.15rem;
+    }
+
+    /* Budget header metadata — hide on mobile to save vertical space */
+    .budget-header-meta {
+      display: none;
+    }
+
+    /* Touch targets — bump to usable size */
+    .month-tab {
+      padding: 0.5rem 0.8rem;
+      font-size: 0.78rem;
+    }
+
+    .view-tab {
+      padding: 0.45rem 0.65rem;
+      font-size: 0.74rem;
+    }
+
+    .budget-category-name {
+      padding: 0.25rem 0;
+      min-height: 1.65rem;
+    }
+
+    .check-cell input {
+      height: 1.1rem;
+      width: 1.1rem;
+    }
+
+    /* Scroll affordance — show subtle scrollbars so users know content is scrollable */
+    :global(.overflow-x-auto) {
+      scrollbar-width: thin;
+      scrollbar-color: rgba(31, 82, 122, 0.18) transparent;
+    }
+
+    :global(.overflow-x-auto::-webkit-scrollbar) {
+      display: block;
+      height: 3px;
+    }
+
+    :global(.overflow-x-auto::-webkit-scrollbar-thumb) {
+      border-radius: 999px;
+      background: rgba(31, 82, 122, 0.18);
+    }
+
+    :global(.overflow-x-auto::-webkit-scrollbar-track) {
+      background: transparent;
+    }
+
+    /* Metrics grid */
+    .grid.grid-cols-4 {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    /* Budget table card layout */
+    .budget-table {
+      border-collapse: separate;
+      border-spacing: 0 0.45rem;
+    }
+
+    .budget-table thead {
+      display: none;
+    }
+
+    .budget-table tbody,
+    .budget-table tr,
+    .budget-table td {
+      display: block;
+      width: 100%;
+    }
+
+    .budget-table tr:not(.total-row):not(.budget-group-row) {
+      overflow: hidden;
+      border: 1px solid rgba(31, 82, 122, 0.12);
+      background: transparent;
+    }
+
+    .budget-table td {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.9rem;
+      border-width: 0 0 1px;
+      padding: 0.26rem 0.5rem;
+      text-align: right;
+      white-space: normal;
+    }
+
+    .budget-table td:first-child {
+      border-bottom-color: rgba(31, 82, 122, 0.14);
+      background: rgba(31, 82, 122, 0.04);
+      text-align: left;
+      font-weight: 800;
+    }
+
+    .budget-table td:last-child {
+      border-bottom: 0;
+    }
+
+    .budget-table td[data-label]::before {
+      content: attr(data-label);
+      flex: 0 0 auto;
+      color: var(--color-cork-400);
+      font-size: 0.58rem;
+      font-weight: 700;
+      text-align: left;
+      text-transform: uppercase;
+    }
+
+    .budget-table .currency-col {
+      display: none;
+    }
+
+    .budget-table .budget-group-row {
+      display: block;
+      margin-top: 0.1rem;
+    }
+
+    .budget-table .budget-group-row td {
+      display: block;
+      border: 0;
+      padding: 0.3rem 0.5rem;
+      background: color-mix(in oklab, #1f527a 12%, white);
+    }
+
+    .budget-table .budget-child-row td:first-child {
+      padding-left: 0.5rem;
+    }
+
+    .budget-table .total-row {
+      overflow: hidden;
+      border: 1px solid rgba(31, 82, 122, 0.12);
+    }
+
+    .budget-table .total-row td {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.9rem;
+      border-width: 0 0 1px;
+      padding: 0.38rem 0.5rem;
+      text-align: right;
+    }
+
+    .budget-table .total-row td:first-child {
+      border-bottom-color: rgba(31, 82, 122, 0.14);
+      background: rgba(31, 82, 122, 0.04);
+      text-align: left;
+      font-weight: 800;
+    }
+
+    .budget-table .total-row td:last-child {
+      border-bottom: 0;
+    }
+
+    .budget-table .budget-category-cell {
+      max-width: none;
+    }
+
+    .budget-table .share-form {
+      justify-content: flex-end;
+    }
+
+    .budget-table .budget-category-name::before {
+      display: none;
+    }
+
+    /* Budget card — tighter progress bar */
+    .budget-table td :global(.flex-1.rounded-full) {
+      height: 0.22rem;
+    }
+
+    /* Ledger table card layout */
+    .ledger-table {
+      border-collapse: separate;
+      border-spacing: 0 0.45rem;
+    }
+
+    .ledger-table thead {
+      display: none;
+    }
+
+    .ledger-table tbody,
+    .ledger-table tr,
+    .ledger-table td {
+      display: block;
+      width: 100%;
+    }
+
+    .ledger-table tr:not(.total-row) {
+      overflow: hidden;
+      border: 1px solid rgba(31, 82, 122, 0.12);
+      background: rgba(157, 188, 240, 0.2);
+    }
+
+    .ledger-table tr:not(.total-row):nth-child(even) {
+      background: rgba(157, 188, 240, 0.38);
+    }
+
+    .ledger-table td {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.9rem;
+      border-width: 0 0 1px;
+      padding: 0.38rem 0.5rem;
+      text-align: right;
+      white-space: normal;
+    }
+
+    .ledger-table td:first-child {
+      border-bottom-color: rgba(31, 82, 122, 0.14);
+      background: rgba(31, 82, 122, 0.04);
+      text-align: left;
+      font-weight: 800;
+    }
+
+    .ledger-table td:last-child {
+      border-bottom: 0;
+    }
+
+    .ledger-table td[data-label]::before {
+      content: attr(data-label);
+      flex: 0 0 auto;
+      color: rgba(31, 82, 122, 0.55);
+      font-size: 0.58rem;
+      font-weight: 700;
+      text-align: left;
+      text-transform: uppercase;
+    }
+
+    .ledger-table .currency-col {
+      display: none;
+    }
+
+    .ledger-table .category-form {
+      width: 100%;
+      justify-content: flex-end;
+    }
+
+    /* Let the category dropdown escape the card boundary (mobile only) */
+    .ledger-table tr:has(.category-form.open) {
+      overflow: visible;
+      z-index: 80;
+    }
+
+    .show-more-btn {
+      display: block;
+      width: 100%;
+      margin-top: 0.35rem;
+      border: 1px dashed rgba(31, 82, 122, 0.2);
+      border-radius: 6px;
+      background: transparent;
+      padding: 0.5rem;
+      text-align: center;
+      color: #1f527a;
+      font: inherit;
+      font-size: 0.7rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .show-more-btn:hover,
+    .show-more-btn:focus-visible {
+      background: rgba(31, 82, 122, 0.06);
+      border-color: rgba(31, 82, 122, 0.4);
+      outline: none;
+    }
+
+    /* Forecast assumptions — collapsible on mobile */
+    .forecast-header {
+      flex-wrap: wrap;
+    }
+
+    .forecast-assumptions-chevron {
+      display: inline-flex;
+      transition: transform 180ms ease;
+    }
+
+    .forecast-assumptions {
+      display: none !important;
+      width: 100%;
+      flex-basis: 100%;
+    }
+
+    .forecast-assumptions.open {
+      display: flex !important;
+    }
+
+    /* Must come last — overrides card-layout display:flex on tds */
+    .mobile-hide {
+      display: none !important;
     }
   }
 
@@ -3828,39 +4240,48 @@
     }
   }
 
-  .investment-row {
-    display: grid;
-    grid-template-columns: minmax(7rem, 1fr) 4.2rem 5.8rem 6.2rem;
-    align-items: center;
-    gap: 0.7rem;
-    border-bottom: 1px solid rgba(31, 82, 122, 0.12);
-    padding: 0.5rem 0.35rem;
+  .investment-ticker {
+    display: block;
+    color: var(--color-cork-900);
+    font-weight: 800;
     font-size: 0.72rem;
   }
 
-  .investment-row:last-child {
-    border-bottom: 0;
-  }
-
-  .investment-ticker {
-    color: var(--color-cork-900);
-    font-weight: 800;
-  }
-
   .investment-meta {
+    display: block;
     color: var(--color-cork-400);
     font-size: 0.6rem;
+    margin-top: 0.08rem;
   }
 
-  .investment-change,
-  .investment-gain,
-  .investment-row > span:last-child {
-    text-align: right;
+  .investment-div-yield {
+    font-weight: 700;
+    color: var(--color-cork-800);
+  }
+
+  .investment-div-amount {
+    display: block;
+    color: var(--color-cork-400);
+    font-size: 0.6rem;
+    margin-top: 0.04rem;
+  }
+
+  .investment-dividend-note {
+    color: var(--color-cork-400);
+    font-weight: 400;
+  }
+
+  .investment-table td.up,
+  .investment-table td.down {
     font-weight: 800;
   }
 
-  .investment-gain {
-    font-size: 0.66rem;
+  .investment-table td.up {
+    color: #15803d;
+  }
+
+  .investment-table td.down {
+    color: #b91c1c;
   }
 
   .investment-currency-switch button {
@@ -3916,7 +4337,7 @@
   }
 
   .investment-summary-row strong.investment-summary-gain.positive {
-    color: #047857;
+    color: #15803d;
   }
 
   .investment-summary-row strong.investment-summary-gain.negative {
@@ -4038,7 +4459,7 @@
   }
 
   .investment-history-tooltip .positive-growth {
-    color: #047857;
+    color: #15803d;
   }
 
   .investment-history-tooltip .negative-growth {
@@ -4055,14 +4476,108 @@
   }
 
   @media (max-width: 520px) {
-    .investment-row {
-      grid-template-columns: 1fr auto;
-      gap: 0.35rem 0.7rem;
+    /* Investment table card layout */
+    .investment-table {
+      border-collapse: separate;
+      border-spacing: 0 0.55rem;
     }
 
-    .investment-change,
-    .investment-gain {
-      grid-column: 2;
+    .investment-table thead {
+      display: none;
+    }
+
+    .investment-table tbody,
+    .investment-table tr,
+    .investment-table td {
+      display: block;
+      width: 100%;
+    }
+
+    .investment-table tr {
+      overflow: hidden;
+      border: 1px solid rgba(31, 82, 122, 0.12);
+      border-left: 2.5px solid rgba(31, 82, 122, 0.18);
+      background: #fffdf9;
+      box-shadow: 0 1px 3px rgba(31, 82, 122, 0.04);
+    }
+
+    .investment-table tr.up {
+      border-left-color: #15803d;
+    }
+
+    .investment-table tr.down {
+      border-left-color: #b91c1c;
+    }
+
+    .investment-table td {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.9rem;
+      border-width: 0 0 1px;
+      border-color: rgba(31, 82, 122, 0.07);
+      padding: 0.3rem 0.55rem;
+      text-align: right;
+      white-space: normal;
+    }
+
+    .investment-table td:first-child {
+      border-bottom-color: rgba(31, 82, 122, 0.1);
+      background: rgba(31, 82, 122, 0.03);
+      padding-top: 0.4rem;
+      text-align: left;
+      font-weight: 800;
+    }
+
+    .investment-table td:last-child {
+      border-bottom: 0;
+      padding-top: 0.38rem;
+      padding-bottom: 0.4rem;
+      font-size: 0.76rem;
+      font-weight: 800;
+      color: var(--color-cork-900);
+      background: rgba(31, 82, 122, 0.025);
+    }
+
+    .investment-table td[data-label]::before {
+      content: attr(data-label);
+      flex: 0 0 auto;
+      color: var(--color-cork-400);
+      font-size: 0.58rem;
+      font-weight: 700;
+      text-align: left;
+      text-transform: uppercase;
+    }
+
+    .investment-table .investment-div-amount {
+      font-size: 0.62rem;
+    }
+
+    .investment-table .investment-meta {
+      font-size: 0.62rem;
+    }
+
+    /* Investment panel header - wrap controls on narrow screens */
+    .investment-panel-header {
+      flex-wrap: wrap;
+    }
+
+    .investment-panel-header .investment-panel-title {
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+
+    .investment-fx-rate {
+      max-width: 8rem;
+    }
+
+    /* Investment summary mobile polish */
+    .investment-summary {
+      padding: 0.55rem 0.4rem 0;
+    }
+
+    .investment-summary-row.primary strong {
+      font-size: 0.8rem;
     }
   }
 

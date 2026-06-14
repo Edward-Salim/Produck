@@ -2,21 +2,10 @@
   let cachedTf: any = null;
   let cachedModel: any = null;
   let cachedProcessor: any = null;
-  let pendingCachedData: { result: Blob; meta?: any } | null = null;
-  export function setPendingCached(data: { result: Blob; meta?: any } | null) {
-    pendingCachedData = data;
-  }
 </script>
 
 <script lang="ts">
-  import { Download, Eraser, Paintbrush, LoaderCircle, ImagePlus, X } from '@lucide/svelte';
-  import {
-    saveToCache,
-    loadFromCache,
-    getHistory,
-    createThumb,
-    removeHistoryItem
-  } from '$lib/utils/image-cache.js';
+  import { Download, Eraser, Paintbrush, LoaderCircle, ImagePlus, Sparkles, Scissors } from '@lucide/svelte';
 
   let { file, onreset: _onreset }: { file: File; onreset: () => void } = $props();
 
@@ -26,38 +15,14 @@
 
   let processing = $state(true);
   let progress = $state('Loading model...');
-  let brushMode: 'erase' | 'restore' = $state('erase');
+  let brushMode: 'erase' | 'restore' = $state('restore');
   let brushSize = $state(30);
   let isPainting = $state(false);
+  let removalMode: 'ai' | 'simple' = $state('simple');
 
   let maskData: Uint8ClampedArray | null = $state(null);
   let undoStack: Uint8ClampedArray[] = $state([]);
-
-  let historyItems: { thumb: string; index: number }[] = $state([]);
-
-  async function refreshHistory() {
-    const items = await getHistory('bg-remove');
-    // Revoke old URLs
-    historyItems.forEach((h) => URL.revokeObjectURL(h.thumb));
-    historyItems = items.map((item, i) => ({
-      thumb: item.thumb ? URL.createObjectURL(item.thumb) : '',
-      index: i
-    }));
-  }
-
-  async function loadHistoryAt(index: number) {
-    const items = await getHistory('bg-remove');
-    const cached = items[index];
-    if (!cached) return;
-    // Create a File from the cached original and swap
-    const f = new File([cached.original], 'history.png', { type: 'image/png' });
-    file = f;
-  }
-
-  async function removeHistory(index: number) {
-    await removeHistoryItem('bg-remove', index);
-    refreshHistory();
-  }
+  let modeCache: Record<string, Uint8ClampedArray> = $state({});
 
   let width = $state(0);
   let height = $state(0);
@@ -119,12 +84,16 @@
 
   function handleDownload() {
     if (!resultCanvas) return;
+    const originalName = file.name.replace(/\.[^.]+$/, '');
+    const ext = file.name.split('.').pop()?.toLowerCase() ?? 'png';
+    const downloadName = `bg-removed-${originalName}.${ext === 'jpg' || ext === 'jpeg' ? ext : 'png'}`;
+
     resultCanvas.toBlob((blob) => {
       if (!blob) return;
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'background-removed.png';
+      a.download = downloadName;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -157,17 +126,12 @@
     const y0 = Math.max(0, Math.floor(y - r)),
       y1 = Math.min(height - 1, Math.ceil(y + r));
 
+    const value = brushMode === 'erase' ? 0 : 255;
     for (let py = y0; py <= y1; py++) {
       for (let px = x0; px <= x1; px++) {
         const dist2 = (px - x) ** 2 + (py - y) ** 2;
         if (dist2 > r2) continue;
-        const idx = py * width + px;
-        const strength = 1 - Math.sqrt(dist2) / r;
-        if (brushMode === 'erase') {
-          maskData[idx] = Math.max(0, maskData[idx] - strength * 80);
-        } else {
-          maskData[idx] = Math.min(255, maskData[idx] + strength * 80);
-        }
+        maskData[py * width + px] = value;
       }
     }
   }
@@ -212,7 +176,7 @@
 
   function handlePointerLeave() {
     brushCanvas?.getContext('2d')?.clearRect(0, 0, width, height);
-    if (isPainting) isPainting = false;
+    isPainting = false;
   }
 
   function handleKeydown(e: KeyboardEvent) {
@@ -222,73 +186,67 @@
     }
   }
 
+  let lastProcessedMode: 'ai' | 'simple' | null = $state(null);
+  let _prevFile: File | null = null;
+
   $effect(() => {
     const currentFile = file;
     if (!checkerboardCanvas || !resultCanvas || !brushCanvas || !originalCanvas) return;
+
+    // Only run on actual file changes, not when removalMode triggers a re-run
+    if (currentFile === _prevFile) return;
+    _prevFile = currentFile;
 
     processing = true;
     progress = 'Loading...';
     maskData = null;
     undoStack = [];
-    refreshHistory();
+    modeCache = {};
 
-    // Check pending cached data from history click first
-    if (pendingCachedData) {
-      const pending = pendingCachedData;
-      pendingCachedData = null;
-      restoreFromCache({
-        original: currentFile,
-        result: pending.result,
-        width: 0,
-        height: 0,
-        thumb: undefined,
-        meta: pending.meta,
-        timestamp: Date.now()
-      });
-      return;
-    }
-
+    lastProcessedMode = removalMode;
     processNewFile(currentFile);
   });
 
-  async function restoreFromCache(cached: Awaited<ReturnType<typeof loadFromCache>>) {
-    if (!cached || !checkerboardCanvas || !resultCanvas || !brushCanvas || !originalCanvas) return;
+  // Re-process when mode changes after initial load
+  $effect(() => {
+    if (processing) return;
+    if (lastProcessedMode === null) return;
+    if (removalMode === lastProcessedMode) return;
+    if (!file || !originalCanvas) return;
 
-    const origUrl = URL.createObjectURL(cached.original);
-    const resultUrl = URL.createObjectURL(cached.result);
+    // Save current mask for the mode we're switching away from
+    if (maskData) {
+      modeCache = { ...modeCache, [lastProcessedMode]: new Uint8ClampedArray(maskData) };
+    }
 
-    const origImg = new Image();
-    const resultImg = new Image();
+    const cachedMask = modeCache[removalMode];
+    if (cachedMask) {
+      maskData = new Uint8ClampedArray(cachedMask);
+      applyMask();
+      undoStack = [];
+      lastProcessedMode = removalMode;
+      return;
+    }
 
-    origImg.onload = async () => {
-      width = origImg.naturalWidth;
-      height = origImg.naturalHeight;
-      await new Promise((r) => requestAnimationFrame(r));
+    processing = true;
+    progress = removalMode === 'simple' ? 'Removing white background...' : 'Loading model...';
+    maskData = null;
+    undoStack = [];
+    lastProcessedMode = removalMode;
+    processNewFile(file);
+  });
 
-      for (const c of [checkerboardCanvas!, resultCanvas!, brushCanvas!, originalCanvas!]) {
-        c.width = width;
-        c.height = height;
-      }
-
-      originalCanvas!.getContext('2d')!.drawImage(origImg, 0, 0);
-      drawCheckerboard();
-
-      resultImg.onload = () => {
-        resultCanvas!.getContext('2d')!.drawImage(resultImg, 0, 0);
-
-        // Restore mask from cache meta
-        if (cached.meta?.rawMask) {
-          const arr = cached.meta.rawMask as number[];
-          maskData = new Uint8ClampedArray(arr);
-        }
-
-        processing = false;
-        URL.revokeObjectURL(origUrl);
-        URL.revokeObjectURL(resultUrl);
-      };
-      resultImg.src = resultUrl;
-    };
-    origImg.src = origUrl;
+  function simpleWhiteRemoval(imageData: ImageData): Uint8ClampedArray {
+    const raw = new Uint8ClampedArray(width * height);
+    const data = imageData.data;
+    for (let i = 0; i < raw.length; i++) {
+      const r = data[i * 4];
+      const g = data[i * 4 + 1];
+      const b = data[i * 4 + 2];
+      // Threshold: near-white pixels become transparent
+      raw[i] = r > 240 && g > 240 && b > 240 ? 0 : 255;
+    }
+    return raw;
   }
 
   function processNewFile(currentFile: File) {
@@ -311,78 +269,76 @@
       drawCheckerboard();
 
       try {
-        const { tf, model, processor } = await loadModel();
+        if (removalMode === 'simple') {
+          // Simple PIL-style white background removal
+          progress = 'Removing white background...';
+          const origCtx = originalCanvas!.getContext('2d', { willReadFrequently: true })!;
+          const imageData = origCtx.getImageData(0, 0, width, height);
+          const raw = simpleWhiteRemoval(imageData);
 
-        progress = 'Processing image...';
-        const rawImage = await tf.RawImage.fromURL(url);
-        const { pixel_values } = await processor(rawImage);
+          maskData = new Uint8ClampedArray(raw);
+          applyMask();
+          processing = false;
+          modeCache = { ...modeCache, simple: new Uint8ClampedArray(raw) };
+        } else {
+          // AI model-based removal
+          const { tf, model, processor } = await loadModel();
 
-        progress = 'Running segmentation...';
-        const result = await model({ input: pixel_values });
+          progress = 'Processing image...';
+          const rawImage = await tf.RawImage.fromURL(url);
+          const { pixel_values } = await processor(rawImage);
 
-        // Get the raw output tensor - shape varies by model
-        const outputTensor = result.output;
-        let maskTensor = outputTensor;
+          progress = 'Running segmentation...';
+          const result = await model({ input: pixel_values });
 
-        // Navigate nested tensors: could be [batch, channel, H, W] or [batch, H, W]
-        while (maskTensor.dims && maskTensor.dims.length > 2) {
-          maskTensor = maskTensor[0];
-        }
+          // Get the raw output tensor - shape varies by model
+          const outputTensor = result.output;
+          let maskTensor = outputTensor;
 
-        // Now maskTensor is 2D (H, W) with float values 0-1
-        const maskH = maskTensor.dims[0];
-        const maskW = maskTensor.dims[1];
-        const maskValues = maskTensor.data;
-
-        // Resize mask to original image size using canvas
-        const maskCanvas = document.createElement('canvas');
-        maskCanvas.width = maskW;
-        maskCanvas.height = maskH;
-        const maskCtx = maskCanvas.getContext('2d')!;
-        const maskImgData = maskCtx.createImageData(maskW, maskH);
-
-        for (let i = 0; i < maskValues.length; i++) {
-          const v = Math.round(Math.min(1, Math.max(0, maskValues[i])) * 255);
-          maskImgData.data[i * 4] = v;
-          maskImgData.data[i * 4 + 1] = v;
-          maskImgData.data[i * 4 + 2] = v;
-          maskImgData.data[i * 4 + 3] = 255;
-        }
-        maskCtx.putImageData(maskImgData, 0, 0);
-
-        // Resize to original dimensions
-        const resizeCanvas = document.createElement('canvas');
-        resizeCanvas.width = width;
-        resizeCanvas.height = height;
-        const resizeCtx = resizeCanvas.getContext('2d')!;
-        resizeCtx.drawImage(maskCanvas, 0, 0, width, height);
-        const resizedData = resizeCtx.getImageData(0, 0, width, height);
-
-        const raw = new Uint8ClampedArray(width * height);
-        for (let i = 0; i < raw.length; i++) {
-          raw[i] = resizedData.data[i * 4]; // R channel = grayscale mask value
-        }
-
-        maskData = new Uint8ClampedArray(raw);
-        applyMask();
-        processing = false;
-
-        // Cache result with thumbnail
-        resultCanvas!.toBlob(async (blob) => {
-          if (blob) {
-            const thumb = await createThumb(blob);
-            await saveToCache('bg-remove', {
-              original: currentFile,
-              result: blob,
-              width,
-              height,
-              thumb,
-              meta: { rawMask: Array.from(raw) },
-              timestamp: Date.now()
-            });
-            refreshHistory();
+          // Navigate nested tensors: could be [batch, channel, H, W] or [batch, H, W]
+          while (maskTensor.dims && maskTensor.dims.length > 2) {
+            maskTensor = maskTensor[0];
           }
-        }, 'image/png');
+
+          // Now maskTensor is 2D (H, W) with float values 0-1
+          const maskH = maskTensor.dims[0];
+          const maskW = maskTensor.dims[1];
+          const maskValues = maskTensor.data;
+
+          // Resize mask to original image size using canvas
+          const maskCanvas = document.createElement('canvas');
+          maskCanvas.width = maskW;
+          maskCanvas.height = maskH;
+          const maskCtx = maskCanvas.getContext('2d')!;
+          const maskImgData = maskCtx.createImageData(maskW, maskH);
+
+          for (let i = 0; i < maskValues.length; i++) {
+            const v = Math.round(Math.min(1, Math.max(0, maskValues[i])) * 255);
+            maskImgData.data[i * 4] = v;
+            maskImgData.data[i * 4 + 1] = v;
+            maskImgData.data[i * 4 + 2] = v;
+            maskImgData.data[i * 4 + 3] = 255;
+          }
+          maskCtx.putImageData(maskImgData, 0, 0);
+
+          // Resize to original dimensions
+          const resizeCanvas = document.createElement('canvas');
+          resizeCanvas.width = width;
+          resizeCanvas.height = height;
+          const resizeCtx = resizeCanvas.getContext('2d')!;
+          resizeCtx.drawImage(maskCanvas, 0, 0, width, height);
+          const resizedData = resizeCtx.getImageData(0, 0, width, height);
+
+          const raw = new Uint8ClampedArray(width * height);
+          for (let i = 0; i < raw.length; i++) {
+            raw[i] = resizedData.data[i * 4]; // R channel = grayscale mask value
+          }
+
+          maskData = new Uint8ClampedArray(raw);
+          applyMask();
+          processing = false;
+          modeCache = { ...modeCache, ai: new Uint8ClampedArray(raw) };
+        }
       } catch (err) {
         console.error('Background removal failed:', err);
         progress = 'Error: removal failed';
@@ -459,42 +415,74 @@
     style="background: radial-gradient(ellipse at 70% 20%, rgba(255,255,255,.18) 0%, transparent 60%), #cdc3ae; box-shadow: inset 0 1px 4px rgba(255,255,255,.15), inset 0 -2px 6px rgba(0,0,0,.06), 0 6px 24px rgba(0,0,0,.12);"
   >
     <div>
-      <p class="mb-2 text-xs font-semibold tracking-wider text-cork-500 uppercase">Brush</p>
+      <p class="mb-2 text-xs font-semibold tracking-wider text-cork-500 uppercase">Mode</p>
       <div class="grid grid-cols-2 gap-2">
         <button
           type="button"
-          class="flex flex-col items-center gap-1.5 rounded-lg border-2 px-3 py-3 text-xs font-medium transition-colors
-						{brushMode === 'erase'
+          class="cursor-pointer flex flex-col items-center gap-1 rounded-lg border-2 px-2 py-2 text-xs font-medium transition-colors
+            {removalMode === 'simple'
             ? 'border-cork-700 bg-cork-700 text-cork-50'
             : 'border-cork-200 bg-white/60 text-cork-600 hover:border-cork-300'}"
           disabled={processing}
-          onclick={() => (brushMode = 'erase')}
+          onclick={() => (removalMode = 'simple')}
         >
-          <Eraser class="size-5" />
-          Erase
+          <Scissors class="size-4" />
+          Simple
         </button>
         <button
           type="button"
-          class="flex flex-col items-center gap-1.5 rounded-lg border-2 px-3 py-3 text-xs font-medium transition-colors
-						{brushMode === 'restore'
+          class="cursor-pointer flex flex-col items-center gap-1 rounded-lg border-2 px-2 py-2 text-xs font-medium transition-colors
+            {removalMode === 'ai'
             ? 'border-cork-700 bg-cork-700 text-cork-50'
             : 'border-cork-200 bg-white/60 text-cork-600 hover:border-cork-300'}"
           disabled={processing}
-          onclick={() => (brushMode = 'restore')}
+          onclick={() => (removalMode = 'ai')}
+          title="AI (RMBG-1.4)"
         >
-          <Paintbrush class="size-5" />
-          Restore
+          <Sparkles class="size-4" />
+          AI
+        </button>
+      </div>
+    </div>
+
+    <div class="border-t border-cork-200"></div>
+
+    <div class="flex items-center justify-between">
+      <p class="text-xs font-semibold tracking-wider text-cork-500 uppercase">Brush</p>
+      <div class="flex">
+        <button
+          type="button"
+          class="cursor-pointer flex items-center justify-center rounded-l-md border px-2 py-1 transition-colors
+            {brushMode === 'restore'
+            ? 'border-cork-600 bg-cork-700 text-cork-50'
+            : 'border-cork-300 bg-white/70 text-cork-400 hover:border-cork-400 hover:text-cork-600'}"
+          disabled={processing}
+          onclick={() => (brushMode = 'restore')}
+          title="Restore"
+        >
+          <Paintbrush class="size-3.5" />
+        </button>
+        <button
+          type="button"
+          class="cursor-pointer flex items-center justify-center rounded-r-md border px-2 py-1 transition-colors -ml-px
+            {brushMode === 'erase'
+            ? 'border-cork-600 bg-cork-700 text-cork-50'
+            : 'border-cork-300 bg-white/70 text-cork-400 hover:border-cork-400 hover:text-cork-600'}"
+          disabled={processing}
+          onclick={() => (brushMode = 'erase')}
+          title="Erase"
+        >
+          <Eraser class="size-3.5" />
         </button>
       </div>
     </div>
 
     <div>
-      <p class="mb-2 text-xs font-semibold tracking-wider text-cork-500 uppercase">Brush Size</p>
       <div class="flex gap-1.5">
         {#each [{ label: 'S', size: 10 }, { label: 'M', size: 30 }, { label: 'L', size: 60 }, { label: 'XL', size: 100 }] as preset (preset.label)}
           <button
             type="button"
-            class="flex-1 rounded-md py-1.5 text-xs font-medium transition-colors
+            class="cursor-pointer flex-1 rounded-md py-1.5 text-xs font-medium transition-colors
 							{brushSize === preset.size
               ? 'bg-cork-700 text-cork-50'
               : 'border border-cork-200 bg-white/60 text-cork-600 hover:border-cork-300'}"
@@ -512,7 +500,7 @@
     <div class="space-y-2">
       <button
         type="button"
-        class="flex w-full items-center justify-center gap-2 rounded-lg bg-cork-700 px-3 py-2 text-sm font-medium text-cork-50 hover:bg-cork-800 disabled:opacity-40"
+        class="cursor-pointer flex w-full items-center justify-center gap-2 rounded-lg bg-cork-700 px-3 py-2 text-sm font-medium text-cork-50 hover:bg-cork-800 disabled:opacity-40"
         disabled={processing}
         onclick={handleDownload}
       >
@@ -521,7 +509,7 @@
 
       <button
         type="button"
-        class="flex w-full items-center justify-center gap-2 rounded-lg border border-cork-300 px-3 py-2 text-sm font-medium text-cork-500 hover:bg-cork-200/50"
+        class="cursor-pointer flex w-full items-center justify-center gap-2 rounded-lg border border-cork-300 px-3 py-2 text-sm font-medium text-cork-500 hover:bg-cork-200/50"
         onclick={onreset}
       >
         <ImagePlus class="size-4" /> New Image
@@ -529,44 +517,4 @@
     </div>
   </div>
 
-  <!-- History column -->
-  {#if historyItems.length > 0}
-    <div class="w-full max-w-sm shrink-0 md:w-auto">
-      <p class="mb-1.5 text-[10px] font-semibold tracking-wider text-cork-400 uppercase">History</p>
-      <div class="flex flex-wrap gap-1.5 md:grid md:grid-cols-3">
-        {#each historyItems as item (item.index)}
-          <div class="group relative">
-            <button
-              type="button"
-              class="h-10 w-10 overflow-hidden rounded-md border-2 transition-colors hover:border-cork-500
-							{item.index === 0 ? 'border-cork-600' : 'border-cork-200'}"
-              disabled={processing}
-              onclick={() => loadHistoryAt(item.index)}
-            >
-              {#if item.thumb}
-                <img
-                  src={item.thumb}
-                  alt="History {item.index + 1}"
-                  class="h-full w-full object-cover"
-                />
-              {:else}
-                <div
-                  class="flex h-full w-full items-center justify-center bg-cork-200 text-[9px] text-cork-500"
-                >
-                  {item.index + 1}
-                </div>
-              {/if}
-            </button>
-            <button
-              type="button"
-              class="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-cork-600 text-cork-100 opacity-0 transition-opacity group-hover:opacity-100"
-              onclick={() => removeHistory(item.index)}
-            >
-              <X class="size-2.5" />
-            </button>
-          </div>
-        {/each}
-      </div>
-    </div>
-  {/if}
 </div>

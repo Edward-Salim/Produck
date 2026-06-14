@@ -142,6 +142,28 @@ async function fetchFinnhubQuote(ticker: string) {
   return quote.c;
 }
 
+async function fetchDividendYield(ticker: string, currentPrice: number): Promise<number | null> {
+  try {
+    const url = new URL(`https://query1.finance.yahoo.com/v8/finance/chart/${ticker}`);
+    url.searchParams.set('interval', '1d');
+    url.searchParams.set('range', '3mo');
+
+    const response = await fetch(url);
+    if (!response.ok) return null;
+
+    const body = (await response.json()) as {
+      chart?: { result?: Array<{ meta?: { trailingAnnualDividendRate?: number } }> };
+    };
+    const rate = body.chart?.result?.[0]?.meta?.trailingAnnualDividendRate;
+    if (!rate || rate <= 0 || currentPrice <= 0) return null;
+
+    // Convert to basis points: (rate / price) * 100 * 100
+    return Math.round((rate / currentPrice) * 10000);
+  } catch {
+    return null;
+  }
+}
+
 async function fetchUsdIdrRate() {
   const response = await fetch('https://api.frankfurter.app/latest?from=USD&to=IDR');
   if (!response.ok) throw new Error('USD/IDR rate fetch failed.');
@@ -221,10 +243,25 @@ async function refreshInvestmentQuotes(
 
   const usdIdrRate = usdIdrRateOverride ?? (await fetchUsdIdrRate());
 
-  for (const row of quoteRows) {
-    if (!row.ticker) continue;
+  const results = await Promise.allSettled(
+    quoteRows
+      .filter((row) => row.ticker)
+      .map(async (row) => {
+        const latestPrice = await fetchFinnhubQuote(row.ticker!);
+        const dividendYieldBps = force
+          ? await fetchDividendYield(row.ticker!, latestPrice).catch(() => null)
+          : null;
+        return { row, latestPrice, dividendYieldBps };
+      })
+  );
 
-    const latestPrice = await fetchFinnhubQuote(row.ticker);
+  for (const result of results) {
+    if (result.status === 'rejected') {
+      console.error('Finnhub quote fetch failed:', result.reason);
+      continue;
+    }
+
+    const { row, latestPrice, dividendYieldBps } = result.value;
     const latestPriceScaled = Math.round(latestPrice * priceScale);
     const existingShares = row.sharesScaled ? row.sharesScaled / sharesScale : null;
     const shares =
@@ -238,18 +275,23 @@ async function refreshInvestmentQuotes(
     const balance = Math.round(shares * latestPrice * usdIdrRate);
     const changePercent = costBasis > 0 ? ((balance - costBasis) / costBasis) * 100 : 0;
 
+    const updateData: Record<string, unknown> = {
+      sharesScaled,
+      costBasis,
+      latestPriceScaled,
+      latestPriceAt: new Date(),
+      balance,
+      change: formatInvestmentChange(changePercent),
+      direction: changePercent >= 0 ? 'up' : 'down',
+      updatedAt: new Date()
+    };
+    if (dividendYieldBps !== null && dividendYieldBps !== undefined) {
+      updateData.dividendYieldBps = dividendYieldBps;
+    }
+
     await db
       .update(financialTrackerInvestment)
-      .set({
-        sharesScaled,
-        costBasis,
-        latestPriceScaled,
-        latestPriceAt: new Date(),
-        balance,
-        change: formatInvestmentChange(changePercent),
-        direction: changePercent >= 0 ? 'up' : 'down',
-        updatedAt: new Date()
-      })
+      .set(updateData as any)
       .where(
         and(
           eq(financialTrackerInvestment.ownerEmail, ownerEmail),
@@ -614,7 +656,8 @@ export const load: PageServerLoad = async ({ locals }) => {
         direction: row.direction as InvestmentRow['direction'],
         shares: row.sharesScaled ? row.sharesScaled / sharesScale : undefined,
         latestPrice: row.latestPriceScaled ? row.latestPriceScaled / priceScale : undefined,
-        latestPriceAt: row.latestPriceAt?.toISOString()
+        latestPriceAt: row.latestPriceAt?.toISOString(),
+        dividendYieldBps: row.dividendYieldBps ?? undefined
       })
     ),
     monthlyInvestmentHistory: buildMonthlyInvestmentHistory(investmentSnapshots, investments),

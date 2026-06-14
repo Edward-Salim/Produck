@@ -36,6 +36,7 @@ export type InvestmentRow = {
   shares?: number;
   latestPrice?: number;
   latestPriceAt?: string;
+  dividendYieldBps?: number;
 };
 
 export type MonthlyInvestmentHistoryRow = {
