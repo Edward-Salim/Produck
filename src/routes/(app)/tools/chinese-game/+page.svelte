@@ -727,7 +727,7 @@
       <!-- Left column: Title + subtitle -->
       <div class="text-center md:w-48 md:text-left">
         <img
-          src="/assets/produck-chinese-logo-whitebg.png"
+          src="/assets/produck-chinese-logo.png"
           alt="Hanzi Game logo"
           class="mx-auto mb-2 h-16 w-auto object-contain md:mx-0 md:h-20"
         />
