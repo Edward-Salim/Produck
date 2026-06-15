@@ -170,28 +170,22 @@
   let inited = $state(false);
   let ready = $state(false);
 
-  // Check if there's a saved game before showing loading
-  function hasSavedGame(): boolean {
-    try {
-      const raw = localStorage.getItem('hanzi-game-save');
-      if (raw) {
-        const data = JSON.parse(raw);
-        return data?.gameState && data.gameState !== 'menu';
-      }
-    } catch {}
-    return false;
-  }
-
-  let needsRestore = $state(false);
-
   $effect(() => {
     if (sentences.length > 0 && !inited) {
       engine.init(sentences as SentenceData[], levelNames);
       engine.fetchLeaderboard();
 
-      needsRestore = hasSavedGame();
+      // Check if there's a saved game to restore
+      let hasSaved = false;
+      try {
+        const raw = localStorage.getItem('hanzi-game-save');
+        if (raw) {
+          const data = JSON.parse(raw);
+          hasSaved = data?.gameState && data.gameState !== 'menu';
+        }
+      } catch {}
 
-      const minDelay = new Promise((r) => setTimeout(r, needsRestore ? 500 : 0));
+      const minDelay = new Promise((r) => setTimeout(r, hasSaved ? 500 : 200));
 
       Promise.all([engine.loadSettings(), minDelay])
         .then(([prefs]) => {
@@ -228,7 +222,7 @@
 <div class="game-container">
   <InkWashBg />
 
-  {#if needsRestore && !ready}
+  {#if !ready}
     <div class="mx-auto flex min-h-[calc(100dvh-8rem)] max-w-2xl flex-col items-center justify-center px-4">
       <p class="animate-pulse font-display text-2xl text-cork-600 md:text-3xl">加载中...</p>
     </div>
