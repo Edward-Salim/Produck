@@ -393,9 +393,7 @@
   }
 
   function monthlyInvestmentGain(balance: number, annualReturn: number, monthlyContribution = 0) {
-    return Math.round(
-      (balance + monthlyContribution) * ((1 + annualReturn) ** (1 / 12) - 1)
-    );
+    return Math.round((balance + monthlyContribution) * ((1 + annualReturn) ** (1 / 12) - 1));
   }
 
   function yearlyInvestmentGain(balance: number, annualReturn: number, months = 12) {
@@ -681,7 +679,10 @@
   }
 
   function handleForecastExtraInvestmentInput(relativeYear: number, input: HTMLInputElement) {
-    setForecastExtraInvestment(relativeYear, input.value.replace(/[^\d-]/g, '').replace(/(?!^)-/g, ''));
+    setForecastExtraInvestment(
+      relativeYear,
+      input.value.replace(/[^\d-]/g, '').replace(/(?!^)-/g, '')
+    );
   }
 
   function handleCurrentYearMonthlyExtraInvestmentInput(
@@ -705,7 +706,9 @@
   }
 
   function displayedForecastMoneyInput(relativeYear: number, value: number) {
-    return focusedForecastExtraInvestmentYear === relativeYear ? String(value) : amount.format(value);
+    return focusedForecastExtraInvestmentYear === relativeYear
+      ? String(value)
+      : amount.format(value);
   }
 
   function displayedCurrentYearMonthlyExtraInput(monthIndex: number, value: number) {
@@ -761,10 +764,7 @@
   let totalDividendIncome = $derived(
     investments.reduce(
       (sum, row) =>
-        sum +
-        (row.dividendYieldBps
-          ? Math.round((row.balance * row.dividendYieldBps) / 10000)
-          : 0),
+        sum + (row.dividendYieldBps ? Math.round((row.balance * row.dividendYieldBps) / 10000) : 0),
       0
     )
   );
@@ -827,12 +827,10 @@
       optimistic: Math.round(optimisticBalance),
       pessimist: Math.round(pessimisticBalance),
       realOptimistic: Math.round(
-        optimisticBalance /
-          (1 + defaultInflationRate) ** ((12 - forecastCurrentMonthIndex) / 12)
+        optimisticBalance / (1 + defaultInflationRate) ** ((12 - forecastCurrentMonthIndex) / 12)
       ),
       realPessimist: Math.round(
-        pessimisticBalance /
-          (1 + defaultInflationRate) ** ((12 - forecastCurrentMonthIndex) / 12)
+        pessimisticBalance / (1 + defaultInflationRate) ** ((12 - forecastCurrentMonthIndex) / 12)
       ),
       salary: forecastMonthlySalary(-1),
       monthlyInvestment: forecastMonthlyContribution(-1),
@@ -1411,7 +1409,8 @@
     if (values.forecastMode) formData.set('forecastMode', values.forecastMode);
     if (values.returnProfile) formData.set('returnProfile', values.returnProfile);
     if (values.investmentCurrency) formData.set('investmentCurrency', values.investmentCurrency);
-    if (values.retirementAge !== undefined) formData.set('retirementAge', String(values.retirementAge));
+    if (values.retirementAge !== undefined)
+      formData.set('retirementAge', String(values.retirementAge));
 
     await fetch('?/forecastPreferences', {
       method: 'POST',
@@ -1740,7 +1739,9 @@
           <ReceiptText class="size-4 text-cork-500" />
           Budget Performance
         </h2>
-        <div class="budget-header-meta flex flex-wrap justify-end gap-x-4 gap-y-0.5 text-right text-[10px]">
+        <div
+          class="budget-header-meta flex flex-wrap justify-end gap-x-4 gap-y-0.5 text-right text-[10px]"
+        >
           <div>
             <span class="text-cork-400">Budget period</span>
             <span class="ml-1 font-medium text-cork-800">{currentMonth.period}</span>
@@ -1854,7 +1855,9 @@
             {:else}
               <tr class="total-row">
                 <td data-label="Category">Total</td>
-                <td data-label="Share" class="mobile-hide">{total(activeBudgetRows, 'allocationShare')}%</td>
+                <td data-label="Share" class="mobile-hide"
+                  >{total(activeBudgetRows, 'allocationShare')}%</td
+                >
                 {@render MoneyCell(total(activeBudgetRows, 'planned'), '', false, 'Plan')}
                 {@render MoneyCell(total(activeBudgetRows, 'actual'), '', false, 'Actual')}
                 <td data-label="Used"
@@ -2083,11 +2086,7 @@
           </table>
         </div>
         {#if isMobile.current && sortedLedgerEntries.length > LEDGER_PREVIEW_COUNT && !ledgerExpanded}
-          <button
-            type="button"
-            class="show-more-btn"
-            onclick={() => (ledgerExpanded = true)}
-          >
+          <button type="button" class="show-more-btn" onclick={() => (ledgerExpanded = true)}>
             Show all {sortedLedgerEntries.length} entries
           </button>
         {/if}
@@ -2099,7 +2098,9 @@
         <div
           class="forecast-panel-header investment-panel-header mb-3 flex items-center justify-between gap-2 border-b border-cork-200 pb-2"
         >
-          <h2 class="investment-panel-title flex items-center gap-2 text-sm font-semibold text-cork-900">
+          <h2
+            class="investment-panel-title flex items-center gap-2 text-sm font-semibold text-cork-900"
+          >
             <PiggyBank class="size-4 text-cork-500" />
             Long-Term Investments
           </h2>
@@ -2187,7 +2188,9 @@
                         >{(investment.dividendYieldBps / 100).toFixed(2)}%</span
                       >
                       <span class="investment-div-amount"
-                        >{currency.format(Math.round((investment.balance * investment.dividendYieldBps) / 10000))}/yr</span
+                        >{currency.format(
+                          Math.round((investment.balance * investment.dividendYieldBps) / 10000)
+                        )}/yr</span
                       >
                     {:else}
                       <span class="text-cork-300">-</span>
@@ -2215,107 +2218,107 @@
             </tbody>
           </table>
         </div>
-          <div class="investment-summary">
-            <div class="investment-summary-row primary">
-              <span>Portfolio value</span>
-              <strong>{displayedPortfolioValue()}</strong>
-            </div>
-            <div class="investment-summary-row">
-              <span>Total gain</span>
-              <strong
-                class={`investment-summary-gain ${
-                  totalInvestmentGain >= 0 ? 'positive' : 'negative'
-                }`}
+        <div class="investment-summary">
+          <div class="investment-summary-row primary">
+            <span>Portfolio value</span>
+            <strong>{displayedPortfolioValue()}</strong>
+          </div>
+          <div class="investment-summary-row">
+            <span>Total gain</span>
+            <strong
+              class={`investment-summary-gain ${
+                totalInvestmentGain >= 0 ? 'positive' : 'negative'
+              }`}
+            >
+              <span class="portfolio-gain-percent"
+                >{totalInvestmentGain >= 0 ? '+' : ''}{totalInvestmentGainPercent.toFixed(2)}%</span
               >
-                <span class="portfolio-gain-percent"
-                  >{totalInvestmentGain >= 0 ? '+' : ''}{totalInvestmentGainPercent.toFixed(
-                    2
-                  )}%</span
-                >
-                <span class="portfolio-gain-amount">{displayedPortfolioGain()}</span>
-              </strong>
-            </div>
+              <span class="portfolio-gain-amount">{displayedPortfolioGain()}</span>
+            </strong>
+          </div>
+          <div class="investment-summary-row">
+            <span>Cost basis</span>
+            <strong>{displayedPortfolioCostBasis()}</strong>
+          </div>
+          {#if totalDividendIncome > 0}
             <div class="investment-summary-row">
-              <span>Cost basis</span>
-              <strong>{displayedPortfolioCostBasis()}</strong>
+              <span>
+                Est. annual dividend
+                <span class="investment-dividend-note">(at current yield)</span>
+              </span>
+              <strong>{displayedPortfolioDividendIncome()}</strong>
             </div>
-            {#if totalDividendIncome > 0}
-              <div class="investment-summary-row">
-                <span>
-                  Est. annual dividend
-                  <span class="investment-dividend-note">(at current yield)</span>
-                </span>
-                <strong>{displayedPortfolioDividendIncome()}</strong>
-              </div>
-            {/if}
+          {/if}
+        </div>
+        <p class="text-[10px] text-cork-400">Excluded from liquid wallet balance.</p>
+        <div class="investment-history">
+          <div class="investment-history-title">
+            <span>Monthly Growth</span>
+            <span>Month-close values</span>
           </div>
-          <p class="text-[10px] text-cork-400">Excluded from liquid wallet balance.</p>
-          <div class="investment-history">
-            <div class="investment-history-title">
-              <span>Monthly Growth</span>
-              <span>Month-close values</span>
-            </div>
-            {#if investmentHistoryChartRows.length > 0}
-              <div class="investment-history-chart" aria-label="Monthly portfolio growth chart">
-                <Chart
-                  data={investmentHistoryChartRows}
-                  x="date"
-                  y="portfolioValue"
-                  xScale={scaleTime()}
-                  yDomain={investmentHistoryYDomain}
-                  padding={{ top: 14, right: 18, bottom: 28, left: 18 }}
-                  tooltip={{ mode: 'bisect-x' }}
-                >
-                  <Svg>
-                    <Grid y classes={{ line: 'investment-history-grid-line' }} />
-                    <Area curve={curveMonotoneX} class="investment-history-area" />
-                    <Spline curve={curveMonotoneX} class="investment-history-line" />
-                    <Axis
-                      placement="bottom"
-                      ticks={investmentHistoryChartRows.map((row) => row.date)}
-                      format={displayedShortMonthLabel}
-                      tickLength={0}
-                      classes={{
-                        rule: 'investment-history-axis-rule',
-                        tick: 'investment-history-axis-tick',
-                        tickLabel: 'investment-history-axis-label'
-                      }}
-                    />
-                    <Highlight
-                      lines={{ class: 'investment-history-highlight-line' }}
-                      points={{ class: 'investment-history-highlight-point', r: 3.2 }}
-                    />
-                  </Svg>
+          {#if investmentHistoryChartRows.length > 0}
+            <div class="investment-history-chart" aria-label="Monthly portfolio growth chart">
+              <Chart
+                data={investmentHistoryChartRows}
+                x="date"
+                y="portfolioValue"
+                xScale={scaleTime()}
+                yDomain={investmentHistoryYDomain}
+                padding={{ top: 14, right: 18, bottom: 28, left: 18 }}
+                tooltip={{ mode: 'bisect-x' }}
+              >
+                <Svg>
+                  <Grid y classes={{ line: 'investment-history-grid-line' }} />
+                  <Area curve={curveMonotoneX} class="investment-history-area" />
+                  <Spline curve={curveMonotoneX} class="investment-history-line" />
+                  <Axis
+                    placement="bottom"
+                    ticks={investmentHistoryChartRows.map((row) => row.date)}
+                    format={displayedShortMonthLabel}
+                    tickLength={0}
+                    classes={{
+                      rule: 'investment-history-axis-rule',
+                      tick: 'investment-history-axis-tick',
+                      tickLabel: 'investment-history-axis-label'
+                    }}
+                  />
+                  <Highlight
+                    lines={{ class: 'investment-history-highlight-line' }}
+                    points={{ class: 'investment-history-highlight-point', r: 3.2 }}
+                  />
+                </Svg>
 
-                  <Tooltip.Root
-                    anchor="top"
-                    variant="none"
-                    classes={{ container: 'investment-history-tooltip-container' }}
-                    let:data
-                  >
-                    <div class="investment-history-tooltip">
-                      <span>{data.label}</span>
-                      <strong>{data.valueLabel}</strong>
-                      <em
-                        class:positive-growth={data.monthlyGrowth >= 0}
-                        class:negative-growth={data.monthlyGrowth < 0}
-                      >
-                        {data.growthLabel}
-                      </em>
-                    </div>
-                  </Tooltip.Root>
-                </Chart>
-              </div>
-            {:else}
-              <p class="investment-history-empty">
-                No snapshots yet. Refresh prices to start history.
-              </p>
-            {/if}
-          </div>
+                <Tooltip.Root
+                  anchor="top"
+                  variant="none"
+                  classes={{ container: 'investment-history-tooltip-container' }}
+                  let:data
+                >
+                  <div class="investment-history-tooltip">
+                    <span>{data.label}</span>
+                    <strong>{data.valueLabel}</strong>
+                    <em
+                      class:positive-growth={data.monthlyGrowth >= 0}
+                      class:negative-growth={data.monthlyGrowth < 0}
+                    >
+                      {data.growthLabel}
+                    </em>
+                  </div>
+                </Tooltip.Root>
+              </Chart>
+            </div>
+          {:else}
+            <p class="investment-history-empty">
+              No snapshots yet. Refresh prices to start history.
+            </p>
+          {/if}
+        </div>
       </div>
 
       <div class="panel min-w-0">
-        <div class="forecast-header mb-3 flex items-center justify-between gap-2 border-b border-cork-200 pb-2">
+        <div
+          class="forecast-header mb-3 flex items-center justify-between gap-2 border-b border-cork-200 pb-2"
+        >
           <button
             type="button"
             class="flex items-center gap-2 text-sm font-semibold text-cork-900"
@@ -2673,7 +2676,9 @@
 
 {#snippet MoneyCell(value: number, tone = '', compact = false, label = '')}
   <td class="currency-col">Rp</td>
-  <td class={tone} data-label={label || undefined}>{compact ? compactForecastAmount(value) : amount.format(value)}</td>
+  <td class={tone} data-label={label || undefined}
+    >{compact ? compactForecastAmount(value) : amount.format(value)}</td
+  >
 {/snippet}
 
 {#snippet LedgerSortHead(label: string, key: LedgerSortKey, cls = '')}

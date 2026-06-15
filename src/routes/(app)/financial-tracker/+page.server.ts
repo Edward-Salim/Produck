@@ -82,7 +82,9 @@ function parseOptionalMoney(value: FormDataEntryValue | null) {
 
 function parseOptionalSignedMoney(value: FormDataEntryValue | null) {
   if (value === null) return undefined;
-  const text = String(value).replace(/[^\d-]/g, '').replace(/(?!^)-/g, '');
+  const text = String(value)
+    .replace(/[^\d-]/g, '')
+    .replace(/(?!^)-/g, '');
   if (text === '' || text === '-') return null;
   const parsed = Number(text);
   return Number.isSafeInteger(parsed) ? parsed : undefined;
@@ -708,7 +710,7 @@ export const load: PageServerLoad = async ({ locals }) => {
     forecastOverrides: forecastOverrides.map((row) => ({
       relativeYear: row.relativeYear,
       monthIndex: row.monthIndex ?? undefined,
-    salary: normalizeForecastSalary(row.salary) ?? undefined,
+      salary: normalizeForecastSalary(row.salary) ?? undefined,
       investmentContributionRate:
         row.investmentContributionRateBps === null
           ? undefined

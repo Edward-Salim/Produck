@@ -5,7 +5,15 @@
 </script>
 
 <script lang="ts">
-  import { Download, Eraser, Paintbrush, LoaderCircle, ImagePlus, Sparkles, Scissors } from '@lucide/svelte';
+  import {
+    Download,
+    Eraser,
+    Paintbrush,
+    LoaderCircle,
+    ImagePlus,
+    Sparkles,
+    Scissors
+  } from '@lucide/svelte';
 
   let { file, onreset: _onreset }: { file: File; onreset: () => void } = $props();
 
@@ -419,7 +427,7 @@
       <div class="grid grid-cols-2 gap-2">
         <button
           type="button"
-          class="cursor-pointer flex flex-col items-center gap-1 rounded-lg border-2 px-2 py-2 text-xs font-medium transition-colors
+          class="flex cursor-pointer flex-col items-center gap-1 rounded-lg border-2 px-2 py-2 text-xs font-medium transition-colors
             {removalMode === 'simple'
             ? 'border-cork-700 bg-cork-700 text-cork-50'
             : 'border-cork-200 bg-white/60 text-cork-600 hover:border-cork-300'}"
@@ -431,7 +439,7 @@
         </button>
         <button
           type="button"
-          class="cursor-pointer flex flex-col items-center gap-1 rounded-lg border-2 px-2 py-2 text-xs font-medium transition-colors
+          class="flex cursor-pointer flex-col items-center gap-1 rounded-lg border-2 px-2 py-2 text-xs font-medium transition-colors
             {removalMode === 'ai'
             ? 'border-cork-700 bg-cork-700 text-cork-50'
             : 'border-cork-200 bg-white/60 text-cork-600 hover:border-cork-300'}"
@@ -452,7 +460,7 @@
       <div class="flex">
         <button
           type="button"
-          class="cursor-pointer flex items-center justify-center rounded-l-md border px-2 py-1 transition-colors
+          class="flex cursor-pointer items-center justify-center rounded-l-md border px-2 py-1 transition-colors
             {brushMode === 'restore'
             ? 'border-cork-600 bg-cork-700 text-cork-50'
             : 'border-cork-300 bg-white/70 text-cork-400 hover:border-cork-400 hover:text-cork-600'}"
@@ -464,7 +472,7 @@
         </button>
         <button
           type="button"
-          class="cursor-pointer flex items-center justify-center rounded-r-md border px-2 py-1 transition-colors -ml-px
+          class="-ml-px flex cursor-pointer items-center justify-center rounded-r-md border px-2 py-1 transition-colors
             {brushMode === 'erase'
             ? 'border-cork-600 bg-cork-700 text-cork-50'
             : 'border-cork-300 bg-white/70 text-cork-400 hover:border-cork-400 hover:text-cork-600'}"
@@ -482,7 +490,7 @@
         {#each [{ label: 'S', size: 10 }, { label: 'M', size: 30 }, { label: 'L', size: 60 }, { label: 'XL', size: 100 }] as preset (preset.label)}
           <button
             type="button"
-            class="cursor-pointer flex-1 rounded-md py-1.5 text-xs font-medium transition-colors
+            class="flex-1 cursor-pointer rounded-md py-1.5 text-xs font-medium transition-colors
 							{brushSize === preset.size
               ? 'bg-cork-700 text-cork-50'
               : 'border border-cork-200 bg-white/60 text-cork-600 hover:border-cork-300'}"
@@ -500,7 +508,7 @@
     <div class="space-y-2">
       <button
         type="button"
-        class="cursor-pointer flex w-full items-center justify-center gap-2 rounded-lg bg-cork-700 px-3 py-2 text-sm font-medium text-cork-50 hover:bg-cork-800 disabled:opacity-40"
+        class="flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-cork-700 px-3 py-2 text-sm font-medium text-cork-50 hover:bg-cork-800 disabled:opacity-40"
         disabled={processing}
         onclick={handleDownload}
       >
@@ -509,12 +517,11 @@
 
       <button
         type="button"
-        class="cursor-pointer flex w-full items-center justify-center gap-2 rounded-lg border border-cork-300 px-3 py-2 text-sm font-medium text-cork-500 hover:bg-cork-200/50"
+        class="flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg border border-cork-300 px-3 py-2 text-sm font-medium text-cork-500 hover:bg-cork-200/50"
         onclick={onreset}
       >
         <ImagePlus class="size-4" /> New Image
       </button>
     </div>
   </div>
-
 </div>

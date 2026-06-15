@@ -110,19 +110,19 @@
   });
 </script>
 
-  <!-- Board container -->
+<!-- Board container -->
+<div
+  class="rounded-xl p-4 shadow-[inset_0_1px_4px_rgba(255,255,255,.15),inset_0_-2px_6px_rgba(0,0,0,.06),0_6px_24px_rgba(0,0,0,.12)] md:p-8"
+  style="background: radial-gradient(ellipse at 30% 20%, rgba(255,255,255,.18) 0%, transparent 60%), #cdc3ae;"
+>
   <div
-    class="rounded-xl p-4 shadow-[inset_0_1px_4px_rgba(255,255,255,.15),inset_0_-2px_6px_rgba(0,0,0,.06),0_6px_24px_rgba(0,0,0,.12)] md:p-8"
-    style="background: radial-gradient(ellipse at 30% 20%, rgba(255,255,255,.18) 0%, transparent 60%), #cdc3ae;"
+    class="overflow-x-auto overflow-y-hidden [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
   >
+    <!-- CSS Grid -->
     <div
-      class="overflow-x-auto overflow-y-hidden [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      class="grid min-w-max items-start gap-2 pr-2 md:gap-3 md:pr-4"
+      style="grid-template-columns: {gridCols};"
     >
-      <!-- CSS Grid -->
-      <div
-        class="grid min-w-max items-start gap-2 pr-2 md:gap-3 md:pr-4"
-        style="grid-template-columns: {gridCols};"
-      >
       <!-- ====== ROW 1: Actor row ====== -->
       <!-- Gutter cell for actors -->
       <div class="flex h-full items-center justify-center" style="grid-column: 1; grid-row: 1;">
@@ -249,8 +249,8 @@
         {/each}
       {/each}
     </div>
-    </div>
   </div>
+</div>
 
 <!-- Story detail modal -->
 <StoryModal bind:open={modalOpen} story={selectedStory} />

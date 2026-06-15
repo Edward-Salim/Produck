@@ -49,7 +49,9 @@ export const POST: RequestHandler = async ({ request, cookies, getClientAddress 
 
   try {
     const { email, password } = await request.json();
-    const normalizedEmail = String(email ?? '').trim().toLowerCase();
+    const normalizedEmail = String(email ?? '')
+      .trim()
+      .toLowerCase();
     const attemptKey = loginAttemptKey(normalizedEmail, safeClientAddress(getClientAddress));
 
     stage = 'rate-limit';

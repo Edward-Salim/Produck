@@ -5,10 +5,11 @@ import { asc } from 'drizzle-orm';
 import type { RequestHandler } from './$types.js';
 
 export const GET: RequestHandler = async () => {
-  const users = await db.select({
-    displayName: appUser.displayName,
-    preferences: appUser.preferences
-  })
+  const users = await db
+    .select({
+      displayName: appUser.displayName,
+      preferences: appUser.preferences
+    })
     .from(appUser);
 
   const leaderboard = users

@@ -122,10 +122,9 @@ async function migrateTable(tableName: string) {
   }
 
   const columns = sqliteColumns(tableName);
-  const rows = sqlite.query(`SELECT ${columns.map((column) => `"${column}"`).join(', ')} FROM ${tableName}`).all() as Record<
-    string,
-    unknown
-  >[];
+  const rows = sqlite
+    .query(`SELECT ${columns.map((column) => `"${column}"`).join(', ')} FROM ${tableName}`)
+    .all() as Record<string, unknown>[];
 
   if (rows.length === 0) {
     console.log(`${tableName}: 0 rows`);

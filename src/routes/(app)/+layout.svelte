@@ -224,311 +224,321 @@
 <Sidebar.Provider bind:open={sidebarOpen} style="--sidebar-width: 14rem;">
   {#if !fullscreen}
     <Sidebar.Root collapsible="icon">
-    <Sidebar.Header>
-      <div class="flex items-center gap-2 px-2 py-1">
-        <img src={logoProduck} alt="Produck" class="size-5 shrink-0 object-contain" />
-        <span class="font-display text-xl group-data-[collapsible=icon]:hidden">Produck</span>
-      </div>
-      {#if data.workspaces.length > 0}
-        <div class="px-2 pb-1 group-data-[collapsible=icon]:hidden">
-          <span
-            class="mb-1 block text-[9px] font-semibold tracking-wider text-sidebar-foreground/40 uppercase"
-            >Workspace</span
-          >
-          <Select.Root type="single" value={selectedWorkspaceId} onValueChange={switchWorkspace}>
-            <Select.Trigger
-              class="h-7 w-full cursor-pointer border-sidebar-border bg-sidebar-accent/20 text-xs text-sidebar-foreground hover:bg-sidebar-accent/40 transition-colors"
-            >
-              <span class="truncate">{selectedWorkspaceName}</span>
-            </Select.Trigger>
-            <Select.Content class="border-cork-300 bg-cork-50" preventScroll={false}>
-              {#each data.workspaces as ws (ws.id)}
-                <Select.Item
-                  value={String(ws.id)}
-                  class="cursor-pointer text-sm text-cork-700 hover:bg-cork-200/50 focus:bg-cork-200/50"
-                >
-                  {ws.name}
-                </Select.Item>
-              {/each}
-            </Select.Content>
-          </Select.Root>
+      <Sidebar.Header>
+        <div class="flex items-center gap-2 px-2 py-1">
+          <img src={logoProduck} alt="Produck" class="size-5 shrink-0 object-contain" />
+          <span class="font-display text-xl group-data-[collapsible=icon]:hidden">Produck</span>
         </div>
-      {/if}
-    </Sidebar.Header>
-
-    <Sidebar.Content>
-      <Sidebar.Group>
-        <Sidebar.GroupLabel>Work</Sidebar.GroupLabel>
-        <Sidebar.GroupContent>
-          <Sidebar.Menu>
-            <Sidebar.MenuItem>
-              <Sidebar.MenuButton
-                size="sm"
-                isActive={page.url.pathname.startsWith('/frameworks')}
-                tooltipContent="Frameworks"
-              >
-                {#snippet child({ props })}
-                  <a href="/frameworks" {...props}><Layers3 /><span>Frameworks</span></a>
-                {/snippet}
-              </Sidebar.MenuButton>
-            </Sidebar.MenuItem>
-          </Sidebar.Menu>
-        </Sidebar.GroupContent>
-      </Sidebar.Group>
-
-      <Sidebar.Separator />
-
-      <Sidebar.Group>
-        <Sidebar.GroupLabel>Research</Sidebar.GroupLabel>
-        <Sidebar.GroupContent>
-          <Sidebar.Menu>
-            <Sidebar.MenuItem>
-              <Sidebar.MenuButton
-                size="sm"
-                isActive={page.url.pathname.startsWith('/artifacts')}
-                tooltipContent="PM Toolkit"
-              >
-                {#snippet child({ props })}
-                  <a href="/artifacts" {...props}><BookOpen /><span>PM Toolkit</span></a>
-                {/snippet}
-              </Sidebar.MenuButton>
-            </Sidebar.MenuItem>
-            <Sidebar.MenuItem>
-              <Sidebar.MenuButton
-                size="sm"
-                isActive={page.url.pathname.startsWith('/landscape')}
-                tooltipContent="Fintech Map"
-              >
-                {#snippet child({ props })}
-                  <a href="/landscape" {...props}><Landmark /><span>Fintech Map</span></a>
-                {/snippet}
-              </Sidebar.MenuButton>
-            </Sidebar.MenuItem>
-            <Sidebar.MenuItem>
-              <Sidebar.MenuButton
-                size="sm"
-                isActive={page.url.pathname.startsWith('/trends')}
-                tooltipContent="Trends"
-              >
-                {#snippet child({ props })}
-                  <a href="/trends" {...props}><Rss /><span>Trends</span></a>
-                {/snippet}
-              </Sidebar.MenuButton>
-            </Sidebar.MenuItem>
-            <Sidebar.MenuItem>
-              <Sidebar.MenuButton
-                size="sm"
-                isActive={page.url.pathname.startsWith('/financial-tracker')}
-                tooltipContent="Financial Tracker"
-              >
-                {#snippet child({ props })}
-                  <a href="/financial-tracker" {...props}
-                    ><WalletCards /><span>Financial Tracker</span></a
-                  >
-                {/snippet}
-              </Sidebar.MenuButton>
-            </Sidebar.MenuItem>
-          </Sidebar.Menu>
-        </Sidebar.GroupContent>
-      </Sidebar.Group>
-
-      <Sidebar.Separator />
-
-      <Sidebar.Separator />
-
-      <Sidebar.Group>
-        <Sidebar.GroupContent>
-          <Sidebar.Menu>
-            <Sidebar.MenuItem>
-              <Sidebar.MenuButton
-                size="sm"
-                isActive={page.url.pathname.startsWith('/tools')}
-                tooltipContent="Tools"
-              >
-                {#snippet child({ props })}
-                  <a href="/tools" {...props}><Wrench /><span>Tools</span></a>
-                {/snippet}
-              </Sidebar.MenuButton>
-            </Sidebar.MenuItem>
-          </Sidebar.Menu>
-        </Sidebar.GroupContent>
-      </Sidebar.Group>
-    </Sidebar.Content>
-
-    <Sidebar.Footer class="border-t border-cork-300/40 pt-2">
-      <div
-        class="flex items-center gap-2 px-2 pb-1 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0"
-      >
-        {#if data.currentUser?.email === 'ewodku@dummy.com'}
-          <img
-            src={edwardAvatar}
-            alt="Avatar"
-            class="size-7 shrink-0 rounded-full object-cover ring-2 ring-cork-400/40 group-data-[collapsible=icon]:hidden"
-          />
-        {:else}
-          <span
-            class="flex size-7 shrink-0 items-center justify-center rounded-full bg-cork-600 text-xs font-semibold text-cork-50 group-data-[collapsible=icon]:hidden"
-          >
-            {(data.currentUser?.displayName ?? 'U').charAt(0).toUpperCase()}
-          </span>
-        {/if}
-        <div class="min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
-          <p class="truncate text-xs font-medium text-sidebar-foreground">
-            {data.currentUser?.displayName ?? 'User'}
-          </p>
-          <p class="truncate text-[10px] text-sidebar-foreground/50">
-            {data.currentUser?.email ?? ''}
-          </p>
-        </div>
-        <DropdownMenu.Root>
-          <DropdownMenu.Trigger
-            class="flex size-6 shrink-0 cursor-pointer items-center justify-center rounded text-cork-400 transition-colors hover:bg-cork-200/50 hover:text-cork-600"
-          >
-            <EllipsisVertical class="size-4" />
-          </DropdownMenu.Trigger>
-          <DropdownMenu.Portal>
-            <DropdownMenu.Content
-              side="top"
-              align="end"
-              sideOffset={8}
-              class="z-50 min-w-40 rounded-lg border border-cork-300 bg-cork-50 p-1 shadow-md"
+        {#if data.workspaces.length > 0}
+          <div class="px-2 pb-1 group-data-[collapsible=icon]:hidden">
+            <span
+              class="mb-1 block text-[9px] font-semibold tracking-wider text-sidebar-foreground/40 uppercase"
+              >Workspace</span
             >
-              {#if data.isAdmin}
-                <DropdownMenu.Item
-                  class="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm text-cork-700 outline-none hover:bg-cork-200/50 data-highlighted:bg-cork-200/50"
-                  onSelect={() => goto('/admin')}
-                >
-                  <Database class="size-3.5" />
-                  Admin Data
-                </DropdownMenu.Item>
-                <DropdownMenu.Item
-                  class="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm text-cork-700 outline-none hover:bg-cork-200/50 data-highlighted:bg-cork-200/50"
-                  onSelect={() => {
-                    loadAccess();
-                    accessDialogOpen = true;
-                  }}
-                >
-                  <Shield class="size-3.5" />
-                  Manage Access
-                </DropdownMenu.Item>
-                <DropdownMenu.Separator class="my-1 h-px bg-cork-300/40" />
-              {/if}
-              <DropdownMenu.Item
-                class="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm text-cork-700 outline-none hover:bg-cork-200/50 data-highlighted:bg-cork-200/50"
-                onSelect={async () => {
-                  await fetch('/api/auth', { method: 'DELETE' });
-                  goto('/login');
-                }}
-              >
-                <LogOut class="size-3.5" />
-                Sign Out
-              </DropdownMenu.Item>
-            </DropdownMenu.Content>
-          </DropdownMenu.Portal>
-        </DropdownMenu.Root>
-      </div>
-    </Sidebar.Footer>
-  </Sidebar.Root>
-  {/if}
-
-  <Sidebar.Inset class="flex h-svh flex-col overflow-y-auto bg-cork-100 [scrollbar-gutter:stable]">
-    {#if !fullscreen}
-      <header class="sticky top-0 z-50 border-b border-cork-200 bg-cork-100">
-      <div class="flex items-center gap-2 px-4 py-1.5 md:gap-3">
-        <Sidebar.Trigger class="cursor-pointer text-cork-500 hover:text-cork-800" />
-        <button
-          type="button"
-          class="flex size-6 cursor-pointer items-center justify-center rounded transition-colors {okrPanelOpen
-            ? 'bg-cork-700 text-cork-50'
-            : 'text-cork-400 hover:text-cork-600'}"
-          onclick={toggleOkrPanel}
-          title="Toggle OKR panel"
-        >
-          <GaugeCircle class="size-4" />
-        </button>
-        <div class="flex-1"></div>
-        {#if data.projects.length > 0}
-          <div class="flex items-center gap-1.5">
-            <span class="text-[9px] font-semibold tracking-wider text-cork-400 uppercase"
-              >Project</span
-            >
-            <Select.Root type="single" value={selectedProjectId} onValueChange={switchProject}>
+            <Select.Root type="single" value={selectedWorkspaceId} onValueChange={switchWorkspace}>
               <Select.Trigger
-                class="h-7 max-w-64 cursor-pointer border-cork-300 bg-cork-200/50 text-sm text-cork-700"
+                class="h-7 w-full cursor-pointer border-sidebar-border bg-sidebar-accent/20 text-xs text-sidebar-foreground transition-colors hover:bg-sidebar-accent/40"
               >
-                <span class="truncate">{selectedProjectLabel}</span>
+                <span class="truncate">{selectedWorkspaceName}</span>
               </Select.Trigger>
-              <Select.Content class="border-cork-300 bg-cork-50" preventScroll={false} align="end">
-                {#each data.projects as proj (proj.id)}
-                  <Select.Item value={String(proj.id)} class="cursor-pointer text-cork-700 hover:bg-cork-200/50 focus:bg-cork-200/50">
-                    {proj.shortName ?? proj.name}
+              <Select.Content class="border-cork-300 bg-cork-50" preventScroll={false}>
+                {#each data.workspaces as ws (ws.id)}
+                  <Select.Item
+                    value={String(ws.id)}
+                    class="cursor-pointer text-sm text-cork-700 hover:bg-cork-200/50 focus:bg-cork-200/50"
+                  >
+                    {ws.name}
                   </Select.Item>
                 {/each}
               </Select.Content>
             </Select.Root>
           </div>
         {/if}
-      </div>
+      </Sidebar.Header>
 
-      {#if okrPanelOpen && gaugeKRs.length > 0}
-        <a
-          href="/frameworks"
-          class="flex cursor-pointer items-center gap-3 border-t border-cork-200/50 px-4 py-1.5 transition-colors hover:bg-cork-200/30 max-md:hidden"
+      <Sidebar.Content>
+        <Sidebar.Group>
+          <Sidebar.GroupLabel>Work</Sidebar.GroupLabel>
+          <Sidebar.GroupContent>
+            <Sidebar.Menu>
+              <Sidebar.MenuItem>
+                <Sidebar.MenuButton
+                  size="sm"
+                  isActive={page.url.pathname.startsWith('/frameworks')}
+                  tooltipContent="Frameworks"
+                >
+                  {#snippet child({ props })}
+                    <a href="/frameworks" {...props}><Layers3 /><span>Frameworks</span></a>
+                  {/snippet}
+                </Sidebar.MenuButton>
+              </Sidebar.MenuItem>
+            </Sidebar.Menu>
+          </Sidebar.GroupContent>
+        </Sidebar.Group>
+
+        <Sidebar.Separator />
+
+        <Sidebar.Group>
+          <Sidebar.GroupLabel>Research</Sidebar.GroupLabel>
+          <Sidebar.GroupContent>
+            <Sidebar.Menu>
+              <Sidebar.MenuItem>
+                <Sidebar.MenuButton
+                  size="sm"
+                  isActive={page.url.pathname.startsWith('/artifacts')}
+                  tooltipContent="PM Toolkit"
+                >
+                  {#snippet child({ props })}
+                    <a href="/artifacts" {...props}><BookOpen /><span>PM Toolkit</span></a>
+                  {/snippet}
+                </Sidebar.MenuButton>
+              </Sidebar.MenuItem>
+              <Sidebar.MenuItem>
+                <Sidebar.MenuButton
+                  size="sm"
+                  isActive={page.url.pathname.startsWith('/landscape')}
+                  tooltipContent="Fintech Map"
+                >
+                  {#snippet child({ props })}
+                    <a href="/landscape" {...props}><Landmark /><span>Fintech Map</span></a>
+                  {/snippet}
+                </Sidebar.MenuButton>
+              </Sidebar.MenuItem>
+              <Sidebar.MenuItem>
+                <Sidebar.MenuButton
+                  size="sm"
+                  isActive={page.url.pathname.startsWith('/trends')}
+                  tooltipContent="Trends"
+                >
+                  {#snippet child({ props })}
+                    <a href="/trends" {...props}><Rss /><span>Trends</span></a>
+                  {/snippet}
+                </Sidebar.MenuButton>
+              </Sidebar.MenuItem>
+              <Sidebar.MenuItem>
+                <Sidebar.MenuButton
+                  size="sm"
+                  isActive={page.url.pathname.startsWith('/financial-tracker')}
+                  tooltipContent="Financial Tracker"
+                >
+                  {#snippet child({ props })}
+                    <a href="/financial-tracker" {...props}
+                      ><WalletCards /><span>Financial Tracker</span></a
+                    >
+                  {/snippet}
+                </Sidebar.MenuButton>
+              </Sidebar.MenuItem>
+            </Sidebar.Menu>
+          </Sidebar.GroupContent>
+        </Sidebar.Group>
+
+        <Sidebar.Separator />
+
+        <Sidebar.Separator />
+
+        <Sidebar.Group>
+          <Sidebar.GroupContent>
+            <Sidebar.Menu>
+              <Sidebar.MenuItem>
+                <Sidebar.MenuButton
+                  size="sm"
+                  isActive={page.url.pathname.startsWith('/tools')}
+                  tooltipContent="Tools"
+                >
+                  {#snippet child({ props })}
+                    <a href="/tools" {...props}><Wrench /><span>Tools</span></a>
+                  {/snippet}
+                </Sidebar.MenuButton>
+              </Sidebar.MenuItem>
+            </Sidebar.Menu>
+          </Sidebar.GroupContent>
+        </Sidebar.Group>
+      </Sidebar.Content>
+
+      <Sidebar.Footer class="border-t border-cork-300/40 pt-2">
+        <div
+          class="flex items-center gap-2 px-2 pb-1 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0"
         >
-          <span class="shrink-0 text-[9px] font-bold tracking-widest text-cork-400 uppercase"
-            >Q{gaugeQuarter} FY{gaugeYear}</span
+          {#if data.currentUser?.email === 'ewodku@dummy.com'}
+            <img
+              src={edwardAvatar}
+              alt="Avatar"
+              class="size-7 shrink-0 rounded-full object-cover ring-2 ring-cork-400/40 group-data-[collapsible=icon]:hidden"
+            />
+          {:else}
+            <span
+              class="flex size-7 shrink-0 items-center justify-center rounded-full bg-cork-600 text-xs font-semibold text-cork-50 group-data-[collapsible=icon]:hidden"
+            >
+              {(data.currentUser?.displayName ?? 'U').charAt(0).toUpperCase()}
+            </span>
+          {/if}
+          <div class="min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
+            <p class="truncate text-xs font-medium text-sidebar-foreground">
+              {data.currentUser?.displayName ?? 'User'}
+            </p>
+            <p class="truncate text-[10px] text-sidebar-foreground/50">
+              {data.currentUser?.email ?? ''}
+            </p>
+          </div>
+          <DropdownMenu.Root>
+            <DropdownMenu.Trigger
+              class="flex size-6 shrink-0 cursor-pointer items-center justify-center rounded text-cork-400 transition-colors hover:bg-cork-200/50 hover:text-cork-600"
+            >
+              <EllipsisVertical class="size-4" />
+            </DropdownMenu.Trigger>
+            <DropdownMenu.Portal>
+              <DropdownMenu.Content
+                side="top"
+                align="end"
+                sideOffset={8}
+                class="z-50 min-w-40 rounded-lg border border-cork-300 bg-cork-50 p-1 shadow-md"
+              >
+                {#if data.isAdmin}
+                  <DropdownMenu.Item
+                    class="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm text-cork-700 outline-none hover:bg-cork-200/50 data-highlighted:bg-cork-200/50"
+                    onSelect={() => goto('/admin')}
+                  >
+                    <Database class="size-3.5" />
+                    Admin Data
+                  </DropdownMenu.Item>
+                  <DropdownMenu.Item
+                    class="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm text-cork-700 outline-none hover:bg-cork-200/50 data-highlighted:bg-cork-200/50"
+                    onSelect={() => {
+                      loadAccess();
+                      accessDialogOpen = true;
+                    }}
+                  >
+                    <Shield class="size-3.5" />
+                    Manage Access
+                  </DropdownMenu.Item>
+                  <DropdownMenu.Separator class="my-1 h-px bg-cork-300/40" />
+                {/if}
+                <DropdownMenu.Item
+                  class="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm text-cork-700 outline-none hover:bg-cork-200/50 data-highlighted:bg-cork-200/50"
+                  onSelect={async () => {
+                    await fetch('/api/auth', { method: 'DELETE' });
+                    goto('/login');
+                  }}
+                >
+                  <LogOut class="size-3.5" />
+                  Sign Out
+                </DropdownMenu.Item>
+              </DropdownMenu.Content>
+            </DropdownMenu.Portal>
+          </DropdownMenu.Root>
+        </div>
+      </Sidebar.Footer>
+    </Sidebar.Root>
+  {/if}
+
+  <Sidebar.Inset class="flex h-svh flex-col overflow-y-auto bg-cork-100 [scrollbar-gutter:stable]">
+    {#if !fullscreen}
+      <header class="sticky top-0 z-50 border-b border-cork-200 bg-cork-100">
+        <div class="flex items-center gap-2 px-4 py-1.5 md:gap-3">
+          <Sidebar.Trigger class="cursor-pointer text-cork-500 hover:text-cork-800" />
+          <button
+            type="button"
+            class="flex size-6 cursor-pointer items-center justify-center rounded transition-colors {okrPanelOpen
+              ? 'bg-cork-700 text-cork-50'
+              : 'text-cork-400 hover:text-cork-600'}"
+            onclick={toggleOkrPanel}
+            title="Toggle OKR panel"
           >
-          {#each gaugeKRs as kr}
-            {@const pct = okrProgress(kr.targetValue, kr.currentValue, kr.unit)}
-            <div class="flex min-w-0 flex-1 items-center gap-1.5" title={kr.description}>
-              <span class="max-w-28 truncate text-[9px] text-cork-500">{kr.description}</span>
-              <div class="h-1 w-12 overflow-hidden rounded-full bg-cork-300/40">
-                <div
-                  class="h-full rounded-full"
-                  style="width: {pct}%; background: {okrColor(pct)};"
-                ></div>
-              </div>
-              <span class="text-[9px] text-cork-400">{Math.round(pct)}%</span>
+            <GaugeCircle class="size-4" />
+          </button>
+          <div class="flex-1"></div>
+          {#if data.projects.length > 0}
+            <div class="flex items-center gap-1.5">
+              <span class="text-[9px] font-semibold tracking-wider text-cork-400 uppercase"
+                >Project</span
+              >
+              <Select.Root type="single" value={selectedProjectId} onValueChange={switchProject}>
+                <Select.Trigger
+                  class="h-7 max-w-64 cursor-pointer border-cork-300 bg-cork-200/50 text-sm text-cork-700"
+                >
+                  <span class="truncate">{selectedProjectLabel}</span>
+                </Select.Trigger>
+                <Select.Content
+                  class="border-cork-300 bg-cork-50"
+                  preventScroll={false}
+                  align="end"
+                >
+                  {#each data.projects as proj (proj.id)}
+                    <Select.Item
+                      value={String(proj.id)}
+                      class="cursor-pointer text-cork-700 hover:bg-cork-200/50 focus:bg-cork-200/50"
+                    >
+                      {proj.shortName ?? proj.name}
+                    </Select.Item>
+                  {/each}
+                </Select.Content>
+              </Select.Root>
             </div>
-          {/each}
-        </a>
-        <a
-          href="/frameworks"
-          class="block cursor-pointer border-t border-cork-200/50 py-2 pr-6 pl-8 transition-colors hover:bg-cork-200/30 md:hidden"
-        >
-          <span class="mb-1.5 block text-[9px] font-bold tracking-widest text-cork-400 uppercase"
-            >Q{gaugeQuarter} FY{gaugeYear}</span
+          {/if}
+        </div>
+
+        {#if okrPanelOpen && gaugeKRs.length > 0}
+          <a
+            href="/frameworks"
+            class="flex cursor-pointer items-center gap-3 border-t border-cork-200/50 px-4 py-1.5 transition-colors hover:bg-cork-200/30 max-md:hidden"
           >
-          <div class="space-y-1.5">
+            <span class="shrink-0 text-[9px] font-bold tracking-widest text-cork-400 uppercase"
+              >Q{gaugeQuarter} FY{gaugeYear}</span
+            >
             {#each gaugeKRs as kr}
               {@const pct = okrProgress(kr.targetValue, kr.currentValue, kr.unit)}
-              <div class="flex items-center gap-2">
-                <span class="min-w-0 flex-1 truncate text-[10px] text-cork-500"
-                  >{kr.description}</span
-                >
-                <div class="h-1 w-16 shrink-0 overflow-hidden rounded-full bg-cork-300/40">
+              <div class="flex min-w-0 flex-1 items-center gap-1.5" title={kr.description}>
+                <span class="max-w-28 truncate text-[9px] text-cork-500">{kr.description}</span>
+                <div class="h-1 w-12 overflow-hidden rounded-full bg-cork-300/40">
                   <div
                     class="h-full rounded-full"
                     style="width: {pct}%; background: {okrColor(pct)};"
                   ></div>
                 </div>
-                <span class="w-9 shrink-0 text-right text-[9px] text-cork-400"
-                  >{Math.round(pct)}%</span
-                >
+                <span class="text-[9px] text-cork-400">{Math.round(pct)}%</span>
               </div>
             {/each}
-          </div>
-        </a>
-      {/if}
-    </header>
+          </a>
+          <a
+            href="/frameworks"
+            class="block cursor-pointer border-t border-cork-200/50 py-2 pr-6 pl-8 transition-colors hover:bg-cork-200/30 md:hidden"
+          >
+            <span class="mb-1.5 block text-[9px] font-bold tracking-widest text-cork-400 uppercase"
+              >Q{gaugeQuarter} FY{gaugeYear}</span
+            >
+            <div class="space-y-1.5">
+              {#each gaugeKRs as kr}
+                {@const pct = okrProgress(kr.targetValue, kr.currentValue, kr.unit)}
+                <div class="flex items-center gap-2">
+                  <span class="min-w-0 flex-1 truncate text-[10px] text-cork-500"
+                    >{kr.description}</span
+                  >
+                  <div class="h-1 w-16 shrink-0 overflow-hidden rounded-full bg-cork-300/40">
+                    <div
+                      class="h-full rounded-full"
+                      style="width: {pct}%; background: {okrColor(pct)};"
+                    ></div>
+                  </div>
+                  <span class="w-9 shrink-0 text-right text-[9px] text-cork-400"
+                    >{Math.round(pct)}%</span
+                  >
+                </div>
+              {/each}
+            </div>
+          </a>
+        {/if}
+      </header>
     {/if}
     {@const noAccess = !data.isAdmin && data.workspaces.length === 0 && data.projects.length === 0}
-    {@const isWorkRoute = !page.url.pathname.startsWith('/tools') && !page.url.pathname.startsWith('/artifacts')}
+    {@const isWorkRoute =
+      !page.url.pathname.startsWith('/tools') && !page.url.pathname.startsWith('/artifacts')}
     {#if noAccess && isWorkRoute}
       <div class="flex flex-1 flex-col items-center justify-center px-6 text-center">
         <p class="font-display text-lg text-cork-700">Can't access this page yet</p>
         <p class="mt-1 max-w-sm text-sm text-cork-400">
-          You don't have a workspace or project assigned. Ask your admin to set you up, or browse the <a href="/tools" class="underline underline-offset-2 hover:text-cork-600">Tools</a> from the sidebar in the meantime.
+          You don't have a workspace or project assigned. Ask your admin to set you up, or browse
+          the <a href="/tools" class="underline underline-offset-2 hover:text-cork-600">Tools</a> from
+          the sidebar in the meantime.
         </p>
       </div>
     {:else}

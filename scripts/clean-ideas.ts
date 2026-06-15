@@ -25,7 +25,10 @@ async function main() {
   const kowlId = kowl[0].id;
   console.log(`Keeping: "${kowl[0].title}" (id: ${kowlId})`);
 
-  const others = await db.select({ id: idea.id, title: idea.title }).from(idea).where(ne(idea.id, kowlId));
+  const others = await db
+    .select({ id: idea.id, title: idea.title })
+    .from(idea)
+    .where(ne(idea.id, kowlId));
   const otherIds = others.map((i) => i.id);
 
   console.log(`Deleting ${others.length} ideas: ${others.map((i) => i.title).join(', ')}`);
@@ -35,7 +38,10 @@ async function main() {
     process.exit(0);
   }
 
-  const otherActivities = await db.select({ id: activity.id }).from(activity).where(inArray(activity.ideaId, otherIds));
+  const otherActivities = await db
+    .select({ id: activity.id })
+    .from(activity)
+    .where(inArray(activity.ideaId, otherIds));
   const otherActivityIds = otherActivities.map((a) => a.id);
 
   if (otherActivityIds.length > 0) {

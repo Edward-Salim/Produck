@@ -45,9 +45,7 @@ export const load: LayoutServerLoad = async ({ cookies, locals }) => {
     const cookieWorkspace = cookies.get('active_workspace') ?? '';
     const cookieWsId = Number(cookieWorkspace) || 0;
     let activeWorkspaceId =
-      (cookieWsId && workspaces.some((w) => w.id === cookieWsId)
-        ? cookieWsId
-        : 0);
+      cookieWsId && workspaces.some((w) => w.id === cookieWsId) ? cookieWsId : 0;
     if (!activeWorkspaceId && userPreferences.lastWorkspaceId) {
       activeWorkspaceId = workspaces.some((w) => w.id === userPreferences.lastWorkspaceId)
         ? userPreferences.lastWorkspaceId

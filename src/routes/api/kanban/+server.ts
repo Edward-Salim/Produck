@@ -32,12 +32,20 @@ export async function GET({ url }) {
       .where(eq(kanbanCard.projectId, projectId))
       .orderBy(asc(kanbanCard.sortOrder), asc(kanbanCard.createdAt));
 
-    const priorityRank: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3, none: 4 };
+    const priorityRank: Record<string, number> = {
+      critical: 0,
+      high: 1,
+      medium: 2,
+      low: 3,
+      none: 4
+    };
     const typeRank: Record<string, number> = { bug: 0, feature: 1, improvement: 2, task: 3 };
 
     cards.sort((a, b) => {
-      const pA = priorityRank[a.priority] ?? 4, pB = priorityRank[b.priority] ?? 4;
-      const tA = typeRank[a.type] ?? 9, tB = typeRank[b.type] ?? 9;
+      const pA = priorityRank[a.priority] ?? 4,
+        pB = priorityRank[b.priority] ?? 4;
+      const tA = typeRank[a.type] ?? 9,
+        tB = typeRank[b.type] ?? 9;
       return pA - pB || tA - tB;
     });
 

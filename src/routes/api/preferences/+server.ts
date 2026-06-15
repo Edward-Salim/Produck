@@ -8,7 +8,8 @@ export const GET: RequestHandler = async ({ locals }) => {
   const authId = locals.session?.user?.id;
   if (!authId) return json({}, { status: 401 });
 
-  const [user] = await db.select({ preferences: appUser.preferences })
+  const [user] = await db
+    .select({ preferences: appUser.preferences })
     .from(appUser)
     .where(eq(appUser.authId, authId))
     .limit(1);
@@ -22,18 +23,23 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
   const body = await request.json();
 
-  const [existing] = await db.select({ preferences: appUser.preferences })
+  const [existing] = await db
+    .select({ preferences: appUser.preferences })
     .from(appUser)
     .where(eq(appUser.authId, authId))
     .limit(1);
 
-  const current = (existing?.preferences ?? { music: true, sounds: true }) as Record<string, unknown>;
+  const current = (existing?.preferences ?? { music: true, sounds: true }) as Record<
+    string,
+    unknown
+  >;
   const prefs: Record<string, unknown> = {
     music: body.music ?? current.music ?? true,
     sounds: body.sounds ?? current.sounds ?? true,
     hintAlwaysOn: body.hintAlwaysOn ?? current.hintAlwaysOn ?? false,
     selectedLevels: body.selectedLevels ?? current.selectedLevels ?? [],
-    lastWorkspaceId: body.lastWorkspaceId !== undefined ? body.lastWorkspaceId : current.lastWorkspaceId,
+    lastWorkspaceId:
+      body.lastWorkspaceId !== undefined ? body.lastWorkspaceId : current.lastWorkspaceId,
     lastProjectId: body.lastProjectId !== undefined ? body.lastProjectId : current.lastProjectId,
     gameState: body.gameState !== undefined ? body.gameState : (current.gameState ?? undefined)
   };
@@ -46,12 +52,22 @@ export const POST: RequestHandler = async ({ request, locals }) => {
     prefs.highscore = current.highscore;
     prefs.highscoreName = current.highscoreName;
   }
+  // Preserve masteredHanzi (merge: keep max sentences mastered per level)
+  if (body.masteredHanzi !== undefined) {
+    const incoming = body.masteredHanzi as Record<string, string[]>;
+    const stored = (current.masteredHanzi as Record<string, string[]>) ?? {};
+    const merged: Record<string, string[]> = {};
+    for (const lv of new Set([...Object.keys(stored), ...Object.keys(incoming)])) {
+      merged[lv] = [...new Set([...(stored[lv] ?? []), ...(incoming[lv] ?? [])])];
+    }
+    prefs.masteredHanzi = merged;
+  } else {
+    prefs.masteredHanzi = current.masteredHanzi;
+  }
   // Remove null game states
   if (prefs.gameState === null) delete prefs.gameState;
 
-  await db.update(appUser)
-    .set({ preferences: prefs })
-    .where(eq(appUser.authId, authId));
+  await db.update(appUser).set({ preferences: prefs }).where(eq(appUser.authId, authId));
 
   return json(prefs);
 };

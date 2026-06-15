@@ -29,18 +29,19 @@
 
 <div class="flex min-h-svh items-center justify-center bg-cork-100 px-5">
   <div class="flex items-center gap-6">
-
     <img src="/assets/produck-dead.png" alt="" class="h-28 w-auto shrink-0" />
 
     <div>
       <p class="text-5xl font-black tracking-tight text-cork-800">{status}</p>
       <p class="mt-0.5 text-sm font-semibold text-cork-600">{label}</p>
       <p class="mt-2 max-w-64 text-[13px] leading-relaxed text-cork-500">{detail}</p>
-      <a href="/" class="mt-4 inline-flex items-center gap-1.5 text-xs font-medium text-cork-400 transition-colors hover:text-cork-600">
+      <a
+        href="/"
+        class="mt-4 inline-flex items-center gap-1.5 text-xs font-medium text-cork-400 transition-colors hover:text-cork-600"
+      >
         <ArrowLeft class="size-3" />
         Back to Produck
       </a>
     </div>
-
   </div>
 </div>

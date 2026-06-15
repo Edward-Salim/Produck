@@ -4,12 +4,17 @@
   import type { Story } from '$lib/types/story-map.js';
   import { PIC_COLORS, PIC_DEFAULT_HEX } from '$lib/constants/colors.js';
 
-  let { open = $bindable(false), story }: {
+  let {
+    open = $bindable(false),
+    story
+  }: {
     open: boolean;
     story: Story | null;
   } = $props();
 
-  let picHex = $derived(story ? (PIC_COLORS[story.picColor]?.hex ?? PIC_DEFAULT_HEX) : PIC_DEFAULT_HEX);
+  let picHex = $derived(
+    story ? (PIC_COLORS[story.picColor]?.hex ?? PIC_DEFAULT_HEX) : PIC_DEFAULT_HEX
+  );
   let hasConnextra = $derived(story?.asA && story?.wantTo);
 
   function handleClose(v: boolean) {

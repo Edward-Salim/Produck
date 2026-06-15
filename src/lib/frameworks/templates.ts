@@ -34,14 +34,19 @@ export const FRAMEWORK_TEMPLATES: FrameworkTemplate[] = [
     id: 'outcomes',
     name: 'Outcomes',
     category: 'Strategy',
-    description: 'Track business outcomes, product objectives, and key results by year and quarter.',
+    description:
+      'Track business outcomes, product objectives, and key results by year and quarter.',
     icon: TrendingUp,
     fields: [],
-    instructions: 'Define Business Outcomes (company-level goals), Product Objectives (quarterly targets), and Key Results (measurable metrics with target vs current value). Link KRs to objectives and track progress by year and quarter.',
+    instructions:
+      'Define Business Outcomes (company-level goals), Product Objectives (quarterly targets), and Key Results (measurable metrics with target vs current value). Link KRs to objectives and track progress by year and quarter.',
     terminology: [
       { term: 'Business Outcome', definition: 'top-level company goal tied to strategy.' },
       { term: 'Objective', definition: 'product goal for a specific quarter.' },
-      { term: 'Key Result', definition: 'measurable metric with a target value and current progress.' },
+      {
+        term: 'Key Result',
+        definition: 'measurable metric with a target value and current progress.'
+      },
       { term: 'OKR', definition: 'Objective + Key Results framework.' }
     ],
     coverGradient: 'linear-gradient(135deg, #fdf4d8 0%, #f0e0b8 50%, #e8d4a8 100%)'
@@ -50,10 +55,12 @@ export const FRAMEWORK_TEMPLATES: FrameworkTemplate[] = [
     id: 'experience-map',
     name: 'Experience Map',
     category: 'Discovery',
-    description: 'Map the customer journey across phases, actors, touchpoints, pains, gains, and KPIs.',
+    description:
+      'Map the customer journey across phases, actors, touchpoints, pains, gains, and KPIs.',
     icon: Route,
     fields: [],
-    instructions: 'Define Phases (high-level journey stages like Discover → Onboard → Use → Advocate). Add Steps within each phase, then Touchpoints within steps. Each touchpoint captures actor, action, outcome, pains, gains, and KPI.',
+    instructions:
+      'Define Phases (high-level journey stages like Discover → Onboard → Use → Advocate). Add Steps within each phase, then Touchpoints within steps. Each touchpoint captures actor, action, outcome, pains, gains, and KPI.',
     terminology: [
       { term: 'Phase', definition: 'high-level stage of the journey.' },
       { term: 'Step', definition: 'specific action within a phase.' },
@@ -68,11 +75,16 @@ export const FRAMEWORK_TEMPLATES: FrameworkTemplate[] = [
     id: 'interview-snapshot',
     name: 'Interview Snapshot',
     category: 'Discovery',
-    description: 'A one-page synthesis of an interview: context, quote, facts, insights, and opportunities.',
+    description:
+      'A one-page synthesis of an interview: context, quote, facts, insights, and opportunities.',
     icon: NotebookPen,
-    instructions: 'Create one snapshot per interview. Fill in the person\'s name and role, add context about their situation, capture a verbatim quote that reveals a key need, list quick facts, then distill insights and opportunities.',
+    instructions:
+      "Create one snapshot per interview. Fill in the person's name and role, add context about their situation, capture a verbatim quote that reveals a key need, list quick facts, then distill insights and opportunities.",
     terminology: [
-      { term: 'Quote', definition: 'verbatim sentence that reveals a need, behavior, or motivation.' },
+      {
+        term: 'Quote',
+        definition: 'verbatim sentence that reveals a need, behavior, or motivation.'
+      },
       { term: 'Quick Fact', definition: 'objective detail about the person or situation.' },
       { term: 'Insight', definition: 'pattern, surprise, or learning from the interview.' },
       { term: 'Opportunity', definition: 'unmet need or product gap to address.' }
@@ -127,13 +139,15 @@ export const FRAMEWORK_TEMPLATES: FrameworkTemplate[] = [
     id: 'idea-bank',
     name: 'Idea Bank',
     category: 'Discovery',
-    description: 'Collect and triage product ideas through a kanban board from discovery to release.',
+    description:
+      'Collect and triage product ideas through a kanban board from discovery to release.',
     icon: Lightbulb,
     fields: [],
-    instructions: 'Collect product ideas and move them through stages: Raw → Triaged → Validated → Backlog → Doing → Done → Released. Assign a proposer to each idea and optionally link to an OKR code for traceability.',
+    instructions:
+      'Collect product ideas and move them through stages: Raw → Triaged → Validated → Backlog → Doing → Done → Released. Assign a proposer to each idea and optionally link to an OKR code for traceability.',
     terminology: [
       { term: 'OKR', definition: 'Objective and Key Result code for alignment.' },
-      { term: 'Triage', definition: 'initial assessment of an idea\'s merit and fit.' },
+      { term: 'Triage', definition: "initial assessment of an idea's merit and fit." },
       { term: 'Proposer', definition: 'person who submitted the idea.' },
       { term: 'Stages', definition: 'workflow columns from raw collection to release.' }
     ],
@@ -143,15 +157,20 @@ export const FRAMEWORK_TEMPLATES: FrameworkTemplate[] = [
     id: 'story-map',
     name: 'User Story Map',
     category: 'Discovery',
-    description: 'Map user workflows with actors, activities, tasks, and stories organized by priority.',
+    description:
+      'Map user workflows with actors, activities, tasks, and stories organized by priority.',
     icon: MapPinned,
     fields: [],
-    instructions: 'Start by naming your product and listing the Actors, the people or roles who use it. Then map out Activities as the big goals they\'re trying to accomplish, arranged left-to-right in the order a user would actually experience them. Under each activity, break things down into Tasks (the steps that make up that workflow), and below those, write atomic Stories: small, sprint-sized features that follow the "As a… I want to… So that…" format. Each story lands in one of three Kano rows: Must-Have for essentials, Performance for nice-to-haves, or Delighter for surprises. Keep stories in plain language. Describe the user outcome, not the implementation. The map reads top-down for detail and left-to-right as a narrative, like walking through your product from first touch to lasting engagement. This map documents what already exists in the product today, not a wishlist of future ideas.',
+    instructions:
+      'Start by naming your product and listing the Actors, the people or roles who use it. Then map out Activities as the big goals they\'re trying to accomplish, arranged left-to-right in the order a user would actually experience them. Under each activity, break things down into Tasks (the steps that make up that workflow), and below those, write atomic Stories: small, sprint-sized features that follow the "As a… I want to… So that…" format. Each story lands in one of three Kano rows: Must-Have for essentials, Performance for nice-to-haves, or Delighter for surprises. Keep stories in plain language. Describe the user outcome, not the implementation. The map reads top-down for detail and left-to-right as a narrative, like walking through your product from first touch to lasting engagement. This map documents what already exists in the product today, not a wishlist of future ideas.',
     terminology: [
       { term: 'Actor', definition: 'persona or user role (e.g. Student, Viewer, Team).' },
       { term: 'Activity', definition: 'high-level user goal, ordered left-to-right as a journey.' },
       { term: 'Task', definition: 'step or workflow within an activity.' },
-      { term: 'Story', definition: 'atomic, sprint-sized feature. Write as a user outcome, not a technical spec.' },
+      {
+        term: 'Story',
+        definition: 'atomic, sprint-sized feature. Write as a user outcome, not a technical spec.'
+      },
       { term: 'Kano', definition: 'Must-Have, Performance, or Delighter priority class.' },
       { term: 'PIC', definition: 'Person In Charge. Assign an owner to each story.' }
     ]
@@ -163,12 +182,16 @@ export const FRAMEWORK_TEMPLATES: FrameworkTemplate[] = [
     description: 'Epics with stories, acceptance criteria, priority, and PIC assignment.',
     icon: ClipboardList,
     fields: [],
-    instructions: 'Organize work into Epics (large themes). Add Stories under each epic with acceptance criteria. Assign a PIC (Person In Charge) and mark stories as done when complete. Stories are sorted within each epic.',
+    instructions:
+      'Organize work into Epics (large themes). Add Stories under each epic with acceptance criteria. Assign a PIC (Person In Charge) and mark stories as done when complete. Stories are sorted within each epic.',
     terminology: [
       { term: 'Epic', definition: 'large body of work broken into stories.' },
       { term: 'Story', definition: 'specific user-facing feature.' },
       { term: 'PIC', definition: 'Person In Charge / owner.' },
-      { term: 'Acceptance Criteria', definition: 'conditions that must be met for the story to be considered done.' },
+      {
+        term: 'Acceptance Criteria',
+        definition: 'conditions that must be met for the story to be considered done.'
+      },
       { term: 'Kano', definition: 'priority classification for the story.' }
     ]
   },
@@ -176,18 +199,39 @@ export const FRAMEWORK_TEMPLATES: FrameworkTemplate[] = [
     id: 'kanban',
     name: 'Kanban Board',
     category: 'Delivery',
-    description: 'A flexible kanban board with custom columns, WIP limits, priority flags, and drag‑and‑drop.',
+    description:
+      'A flexible kanban board with custom columns, WIP limits, priority flags, and drag‑and‑drop.',
     icon: Columns3,
     fields: [],
-    instructions: 'Drag cards between columns to reflect status: To Do → In Progress → Review → Blocked → Done. Click a card to expand its description. Click the assignee badge to change who owns a card. Filter cards by type using the chips at the top, or sort by Priority, Type, SP, or Assignee via the Sort dropdown. If a card is stuck, drag it to Blocked.',
+    instructions:
+      'Drag cards between columns to reflect status: To Do → In Progress → Review → Blocked → Done. Click a card to expand its description. Click the assignee badge to change who owns a card. Filter cards by type using the chips at the top, or sort by Priority, Type, SP, or Assignee via the Sort dropdown. If a card is stuck, drag it to Blocked.',
     terminology: [
       { term: 'WIP', definition: 'Work In Progress limit on active cards per column.' },
       { term: 'Blocked', definition: 'cannot proceed due to a dependency or issue.' },
-      { term: 'Priority', definition: '🔴 Critical · 🟠 High · 🟡 Medium · 🔵 Low · ⚪ None. Shown as the left border color on each card.' },
-      { term: 'Type', definition: '🐛 Bug · ✨ Feature · 🔧 Improvement · 📋 Chore. Shown as an icon on each card.' },
-      { term: 'Chore', definition: 'non-feature work: migrations, testing, config, documentation, and other maintenance tasks.' },
-      { term: 'SP', definition: 'Story Points. Effort estimate shown as plain text on the card. Higher = more complex.' },
-      { term: 'Assignee', definition: 'person responsible for the card. Click the badge to assign or reassign.' }
+      {
+        term: 'Priority',
+        definition:
+          '🔴 Critical · 🟠 High · 🟡 Medium · 🔵 Low · ⚪ None. Shown as the left border color on each card.'
+      },
+      {
+        term: 'Type',
+        definition:
+          '🐛 Bug · ✨ Feature · 🔧 Improvement · 📋 Chore. Shown as an icon on each card.'
+      },
+      {
+        term: 'Chore',
+        definition:
+          'non-feature work: migrations, testing, config, documentation, and other maintenance tasks.'
+      },
+      {
+        term: 'SP',
+        definition:
+          'Story Points. Effort estimate shown as plain text on the card. Higher = more complex.'
+      },
+      {
+        term: 'Assignee',
+        definition: 'person responsible for the card. Click the badge to assign or reassign.'
+      }
     ]
   },
   {
@@ -197,7 +241,8 @@ export const FRAMEWORK_TEMPLATES: FrameworkTemplate[] = [
     description: 'Track and test assumptions on a priority quadrant (importance vs evidence).',
     icon: FlaskConical,
     fields: [],
-    instructions: 'Log each assumption with a type (Desirability, Feasibility, Usability, Viability). Define a test method and success criteria. Update status as you test: Untested → Testing → Validated → Invalidated. Plot by importance and evidence strength.',
+    instructions:
+      'Log each assumption with a type (Desirability, Feasibility, Usability, Viability). Define a test method and success criteria. Update status as you test: Untested → Testing → Validated → Invalidated. Plot by importance and evidence strength.',
     terminology: [
       { term: 'Desirability', definition: 'do users want it?' },
       { term: 'Feasibility', definition: 'can we build it?' },

@@ -28,13 +28,24 @@ function hashPassword(password: string): string {
 async function main() {
   // Set ewodku password
   const ewodHash = hashPassword('PBlW0z$proHQpY8jeSR^');
-  await db.update(appUser).set({ passwordHash: ewodHash }).where(eq(appUser.email, 'ewodku@dummy.com'));
+  await db
+    .update(appUser)
+    .set({ passwordHash: ewodHash })
+    .where(eq(appUser.email, 'ewodku@dummy.com'));
   console.log('Set password for ewodku@dummy.com');
 
   // Remove alice, bob, carol (delete sessions first, then users)
-  const toDelete = ['alice@dummy.com', 'bob@dummy.com', 'carol@dummy.com', 'acquaintance@produck.app'];
-  const usersToDelete = await db.select({ id: appUser.id }).from(appUser).where(inArray(appUser.email, toDelete));
-  const ids = usersToDelete.map(u => u.id);
+  const toDelete = [
+    'alice@dummy.com',
+    'bob@dummy.com',
+    'carol@dummy.com',
+    'acquaintance@produck.app'
+  ];
+  const usersToDelete = await db
+    .select({ id: appUser.id })
+    .from(appUser)
+    .where(inArray(appUser.email, toDelete));
+  const ids = usersToDelete.map((u) => u.id);
   if (ids.length > 0) {
     await db.delete(authSession).where(inArray(authSession.userId, ids));
     await db.delete(appUser).where(inArray(appUser.email, toDelete));
@@ -43,4 +54,7 @@ async function main() {
 
   await client.end();
 }
-main().catch(e => { console.error(e); client.end(); });
+main().catch((e) => {
+  console.error(e);
+  client.end();
+});

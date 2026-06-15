@@ -28,7 +28,11 @@ export const POST: RequestHandler = async ({ request, cookies, locals }) => {
       await db
         .update(appUser)
         .set({
-          preferences: { ...current, lastWorkspaceId: Number(workspaceId), lastProjectId: undefined }
+          preferences: {
+            ...current,
+            lastWorkspaceId: Number(workspaceId),
+            lastProjectId: undefined
+          }
         })
         .where(eq(appUser.authId, authId));
     } catch {

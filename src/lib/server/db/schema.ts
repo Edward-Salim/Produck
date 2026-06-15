@@ -19,30 +19,32 @@ export const appUser = pgTable('app_user', {
   displayName: text('display_name').notNull(),
   role: text('role').notNull().default('member'),
   passwordHash: text('password_hash'),
-  preferences: jsonb('preferences').$type<{
-    music?: boolean;
-    sounds?: boolean;
-    hintAlwaysOn?: boolean;
-    selectedLevels?: number[];
-    highscore?: number;
-    highscoreName?: string;
-    lastWorkspaceId?: number;
-    lastProjectId?: number;
-    gameState?: {
-      gameState: string;
-      poolIndex: number;
-      health: number;
-      totalCorrect: number;
-      totalAttempts: number;
-      bestStreak: number;
-      streak: number;
-      currentLevel: number;
-      selectedLevels: number[];
-      shuffledHanzi: string[];
-      hintedSlots?: number[];
-      hintUsedThisSentence?: boolean;
-    };
-  }>().default({ music: true, sounds: true }),
+  preferences: jsonb('preferences')
+    .$type<{
+      music?: boolean;
+      sounds?: boolean;
+      hintAlwaysOn?: boolean;
+      selectedLevels?: number[];
+      highscore?: number;
+      highscoreName?: string;
+      lastWorkspaceId?: number;
+      lastProjectId?: number;
+      gameState?: {
+        gameState: string;
+        poolIndex: number;
+        health: number;
+        totalCorrect: number;
+        totalAttempts: number;
+        bestStreak: number;
+        streak: number;
+        currentLevel: number;
+        selectedLevels: number[];
+        shuffledHanzi: string[];
+        hintedSlots?: number[];
+        hintUsedThisSentence?: boolean;
+      };
+    }>()
+    .default({ music: true, sounds: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
 });
 

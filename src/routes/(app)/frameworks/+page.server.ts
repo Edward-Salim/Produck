@@ -56,8 +56,20 @@ export const load: PageServerLoad = async ({ cookies, locals, url }) => {
   const workspaceId = Number(cookies.get('active_workspace'));
   const projectId = Number(url.searchParams.get('project') || cookies.get('active_project'));
   const displayName = locals.session?.user?.displayName;
-  if (!workspaceId) return { seededInstances: [] as FrameworkSeedInstance[], workspaceId: 0 as number, projectId: 0 as number, displayName };
-  if (!projectId) return { seededInstances: [] as FrameworkSeedInstance[], workspaceId: workspaceId as number, projectId: 0 as number, displayName };
+  if (!workspaceId)
+    return {
+      seededInstances: [] as FrameworkSeedInstance[],
+      workspaceId: 0 as number,
+      projectId: 0 as number,
+      displayName
+    };
+  if (!projectId)
+    return {
+      seededInstances: [] as FrameworkSeedInstance[],
+      workspaceId: workspaceId as number,
+      projectId: 0 as number,
+      displayName
+    };
 
   const seededInstances: FrameworkSeedInstance[] = [];
 
@@ -107,21 +119,21 @@ export const load: PageServerLoad = async ({ cookies, locals, url }) => {
       id: `outcomes-db-project-${projectId}`,
       templateId: 'outcomes',
       title: 'Outcomes',
-    values: {
-      outcomes: JSON.stringify({
-        businessOutcomes: bos.map((bo) => ({
-          id: String(bo.id),
-          code: bo.code,
-          title: bo.title,
-          description: bo.description ?? '',
-          metrics: ((bo.metrics ?? []) as string[]).join('\n'),
-          year: bo.year
-        })),
-        objectives: objectiveRows
-      })
-    },
-    updatedAt: new Date().toISOString(),
-    updatedBy: displayName
+      values: {
+        outcomes: JSON.stringify({
+          businessOutcomes: bos.map((bo) => ({
+            id: String(bo.id),
+            code: bo.code,
+            title: bo.title,
+            description: bo.description ?? '',
+            metrics: ((bo.metrics ?? []) as string[]).join('\n'),
+            year: bo.year
+          })),
+          objectives: objectiveRows
+        })
+      },
+      updatedAt: new Date().toISOString(),
+      updatedBy: displayName
     });
   }
 
@@ -182,7 +194,7 @@ export const load: PageServerLoad = async ({ cookies, locals, url }) => {
         })
       },
       updatedAt: new Date().toISOString(),
-    updatedBy: displayName
+      updatedBy: displayName
     });
   }
 
@@ -245,7 +257,7 @@ export const load: PageServerLoad = async ({ cookies, locals, url }) => {
         )
       },
       updatedAt: new Date().toISOString(),
-    updatedBy: displayName
+      updatedBy: displayName
     });
   }
 
@@ -278,9 +290,7 @@ export const load: PageServerLoad = async ({ cookies, locals, url }) => {
   const projectTasks = allTasks.filter((t) => activityIds.includes(t.activityId));
 
   const allStories =
-    activityIds.length > 0
-      ? await db.select().from(story).orderBy(asc(story.sortOrder))
-      : [];
+    activityIds.length > 0 ? await db.select().from(story).orderBy(asc(story.sortOrder)) : [];
   const projectStories = allStories.filter((s) => activityIds.includes(s.activityId));
 
   const activityCodeMap = new Map(projectActivities.map((a) => [a.id, a.code]));
@@ -289,29 +299,29 @@ export const load: PageServerLoad = async ({ cookies, locals, url }) => {
   // ── Story Map (only if there are stories) ──
   if (projectStories.length > 0) {
     const storyMap = {
-    product: projectRow?.name ?? 'Project',
-    actors: projectActors.map((a) => ({ emoji: a.emoji, label: a.label })),
-    levels: projectRow?.levels ?? 2,
-    activities: projectActivities.map((a) => ({
-      id: a.code,
-      title: a.title,
-      actors: (a.actorEmojis as string[]) ?? [],
-      tasks: projectTasks
-        .filter((t) => t.activityId === a.id)
-        .map((t) => ({ id: t.code, title: t.title }))
-    })),
-    stories: {
-      'must-have': projectStories
-        .filter((s) => s.kano === 'must-have')
-        .map((s) => mapStory(s, activityCodeMap, taskCodeMap)),
-      performance: projectStories
-        .filter((s) => s.kano === 'performance')
-        .map((s) => mapStory(s, activityCodeMap, taskCodeMap)),
-      delighter: projectStories
-        .filter((s) => s.kano === 'delighter')
-        .map((s) => mapStory(s, activityCodeMap, taskCodeMap))
-    } as Record<string, any[]>
-  };
+      product: projectRow?.name ?? 'Project',
+      actors: projectActors.map((a) => ({ emoji: a.emoji, label: a.label })),
+      levels: projectRow?.levels ?? 2,
+      activities: projectActivities.map((a) => ({
+        id: a.code,
+        title: a.title,
+        actors: (a.actorEmojis as string[]) ?? [],
+        tasks: projectTasks
+          .filter((t) => t.activityId === a.id)
+          .map((t) => ({ id: t.code, title: t.title }))
+      })),
+      stories: {
+        'must-have': projectStories
+          .filter((s) => s.kano === 'must-have')
+          .map((s) => mapStory(s, activityCodeMap, taskCodeMap)),
+        performance: projectStories
+          .filter((s) => s.kano === 'performance')
+          .map((s) => mapStory(s, activityCodeMap, taskCodeMap)),
+        delighter: projectStories
+          .filter((s) => s.kano === 'delighter')
+          .map((s) => mapStory(s, activityCodeMap, taskCodeMap))
+      } as Record<string, any[]>
+    };
 
     seededInstances.push({
       id: `story-map-db-project-${projectId}`,
@@ -319,7 +329,7 @@ export const load: PageServerLoad = async ({ cookies, locals, url }) => {
       title: 'Story Map',
       values: { storyMap: JSON.stringify(storyMap) },
       updatedAt: new Date().toISOString(),
-    updatedBy: displayName
+      updatedBy: displayName
     });
   }
 
@@ -332,9 +342,7 @@ export const load: PageServerLoad = async ({ cookies, locals, url }) => {
 
   const epicIds = epicRows.map((e) => e.id);
   const ticketRows =
-    epicIds.length > 0
-      ? await db.select().from(ticket).orderBy(asc(ticket.sortOrder))
-      : [];
+    epicIds.length > 0 ? await db.select().from(ticket).orderBy(asc(ticket.sortOrder)) : [];
 
   if (epicRows.length > 0) {
     const epicsData = epicRows.map((e) => ({
@@ -365,7 +373,7 @@ export const load: PageServerLoad = async ({ cookies, locals, url }) => {
       title: 'Epics',
       values: { backlog: JSON.stringify({ epics: epicsData }) },
       updatedAt: new Date().toISOString(),
-    updatedBy: displayName
+      updatedBy: displayName
     });
   }
 
@@ -377,10 +385,18 @@ export const load: PageServerLoad = async ({ cookies, locals, url }) => {
     .orderBy(asc(assumption.sortOrder));
 
   if (assumptionRows.length > 0) {
-    const typeOrder: Record<string, number> = { desirability: 0, feasibility: 1, usability: 2, viability: 3 };
+    const typeOrder: Record<string, number> = {
+      desirability: 0,
+      feasibility: 1,
+      usability: 2,
+      viability: 3
+    };
     const typeIndex: Record<string, number> = {};
     const prefixMap: Record<string, string> = {
-      desirability: 'D', feasibility: 'F', usability: 'U', viability: 'V'
+      desirability: 'D',
+      feasibility: 'F',
+      usability: 'U',
+      viability: 'V'
     };
 
     const allAssumptions = assumptionRows.map((a) => {
@@ -407,7 +423,7 @@ export const load: PageServerLoad = async ({ cookies, locals, url }) => {
       title: 'Assumption Test',
       values: { assumptions: JSON.stringify(allAssumptions) },
       updatedAt: new Date().toISOString(),
-    updatedBy: displayName
+      updatedBy: displayName
     });
   }
 

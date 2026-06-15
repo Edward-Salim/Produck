@@ -28,7 +28,8 @@ export async function GET({ url }) {
       cardId: `KC-${r.cardId}`,
       cardTitle: r.cardTitle,
       action: r.action,
-      fromValue: r.action === 'move' ? (COLUMN_LABELS[r.fromValue ?? ''] ?? r.fromValue) : r.fromValue,
+      fromValue:
+        r.action === 'move' ? (COLUMN_LABELS[r.fromValue ?? ''] ?? r.fromValue) : r.fromValue,
       toValue: r.action === 'move' ? (COLUMN_LABELS[r.toValue] ?? r.toValue) : r.toValue,
       actor: r.actor,
       createdAt: r.createdAt.toISOString()

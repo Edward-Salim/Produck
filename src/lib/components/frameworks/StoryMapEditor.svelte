@@ -4,7 +4,11 @@
   import type { FrameworkInstance } from './types.js';
   import { Plus, X, Pencil } from '@lucide/svelte';
 
-  let { instance, draftMode, onUpdate }: {
+  let {
+    instance,
+    draftMode,
+    onUpdate
+  }: {
     instance: FrameworkInstance;
     draftMode: 'edit' | 'view';
     onUpdate: (values: Record<string, string>, title?: string) => void;
@@ -124,7 +128,11 @@
     save();
   }
 
-  function updateStoryTitle(kano: 'must-have' | 'performance' | 'delighter', storyId: string, title: string) {
+  function updateStoryTitle(
+    kano: 'must-have' | 'performance' | 'delighter',
+    storyId: string,
+    title: string
+  ) {
     const stories = data.stories[kano].map((s) => (s.id === storyId ? { ...s, title } : s));
     data = { ...data, stories: { ...data.stories, [kano]: stories } };
     save();
@@ -136,64 +144,111 @@
     save();
   }
 
-  const KANO_LABELS: Record<string, string> = { 'must-have': 'Must Have', performance: 'Performance', delighter: 'Delighter' };
+  const KANO_LABELS: Record<string, string> = {
+    'must-have': 'Must Have',
+    performance: 'Performance',
+    delighter: 'Delighter'
+  };
 </script>
 
 <div class="space-y-4">
   {#if draftMode === 'edit'}
-    <div class="rounded-xl border border-cork-300/50 bg-white/60 p-4 space-y-4">
+    <div class="space-y-4 rounded-xl border border-cork-300/50 bg-white/60 p-4">
       <label class="block">
         <span class="text-xs font-medium text-cork-700">Product Name</span>
         <input
           value={data.product}
           class="mt-1 w-full rounded border border-cork-300/50 bg-cork-100 px-2 py-1.5 text-sm text-cork-800 outline-none"
-          oninput={(e) => { data = { ...data, product: e.currentTarget.value }; save(); }}
+          oninput={(e) => {
+            data = { ...data, product: e.currentTarget.value };
+            save();
+          }}
         />
       </label>
 
       <div>
-        <div class="flex items-center justify-between mb-2">
+        <div class="mb-2 flex items-center justify-between">
           <span class="text-xs font-medium text-cork-700">Actors</span>
-          <button type="button" class="cursor-pointer text-xs text-cork-500 hover:text-cork-700" onclick={addActor}>
-            <Plus class="size-3 inline" /> Add
+          <button
+            type="button"
+            class="cursor-pointer text-xs text-cork-500 hover:text-cork-700"
+            onclick={addActor}
+          >
+            <Plus class="inline size-3" /> Add
           </button>
         </div>
         <div class="space-y-1.5">
           {#each data.actors as actor, i (i)}
             <div class="flex items-center gap-2">
-              <input value={actor.emoji} class="w-10 rounded border border-cork-300/50 bg-cork-100 px-1 py-1 text-center text-sm outline-none" oninput={(e) => updateActor(i, 'emoji', e.currentTarget.value)} />
-              <input value={actor.label} class="flex-1 rounded border border-cork-300/50 bg-cork-100 px-2 py-1 text-xs outline-none" oninput={(e) => updateActor(i, 'label', e.currentTarget.value)} />
-              <button type="button" class="cursor-pointer text-cork-300 hover:text-red-500" onclick={() => removeActor(i)}><X class="size-3.5" /></button>
+              <input
+                value={actor.emoji}
+                class="w-10 rounded border border-cork-300/50 bg-cork-100 px-1 py-1 text-center text-sm outline-none"
+                oninput={(e) => updateActor(i, 'emoji', e.currentTarget.value)}
+              />
+              <input
+                value={actor.label}
+                class="flex-1 rounded border border-cork-300/50 bg-cork-100 px-2 py-1 text-xs outline-none"
+                oninput={(e) => updateActor(i, 'label', e.currentTarget.value)}
+              />
+              <button
+                type="button"
+                class="cursor-pointer text-cork-300 hover:text-red-500"
+                onclick={() => removeActor(i)}><X class="size-3.5" /></button
+              >
             </div>
           {/each}
         </div>
       </div>
 
       <div>
-        <div class="flex items-center justify-between mb-2">
+        <div class="mb-2 flex items-center justify-between">
           <span class="text-xs font-medium text-cork-700">Activities</span>
-          <button type="button" class="cursor-pointer text-xs text-cork-500 hover:text-cork-700" onclick={addActivity}>
-            <Plus class="size-3 inline" /> Add
+          <button
+            type="button"
+            class="cursor-pointer text-xs text-cork-500 hover:text-cork-700"
+            onclick={addActivity}
+          >
+            <Plus class="inline size-3" /> Add
           </button>
         </div>
         <div class="space-y-2">
           {#each data.activities as act, i (act.id)}
             <div class="rounded border border-cork-300/40 bg-cork-100 p-2">
-              <div class="flex items-center gap-2 mb-2">
+              <div class="mb-2 flex items-center gap-2">
                 <span class="font-mono text-[10px] text-cork-400">{act.id}</span>
-                <input value={act.title} class="flex-1 rounded border border-cork-300/50 bg-white px-2 py-1 text-xs outline-none" oninput={(e) => updateActivity(i, 'title', e.currentTarget.value)} />
-                <button type="button" class="cursor-pointer text-cork-300 hover:text-red-500" onclick={() => removeActivity(i)}><X class="size-3.5" /></button>
+                <input
+                  value={act.title}
+                  class="flex-1 rounded border border-cork-300/50 bg-white px-2 py-1 text-xs outline-none"
+                  oninput={(e) => updateActivity(i, 'title', e.currentTarget.value)}
+                />
+                <button
+                  type="button"
+                  class="cursor-pointer text-cork-300 hover:text-red-500"
+                  onclick={() => removeActivity(i)}><X class="size-3.5" /></button
+                >
               </div>
               <div class="space-y-1 pl-4">
                 {#each act.tasks ?? [] as task, j (task.id)}
                   <div class="flex items-center gap-2">
                     <span class="font-mono text-[9px] text-cork-400">{task.id}</span>
-                    <input value={task.title} class="flex-1 rounded border border-cork-300/50 bg-white px-2 py-1 text-[10px] outline-none" oninput={(e) => updateTask(i, j, e.currentTarget.value)} />
-                    <button type="button" class="cursor-pointer text-cork-300 hover:text-red-500" onclick={() => removeTask(i, j)}><X class="size-3" /></button>
+                    <input
+                      value={task.title}
+                      class="flex-1 rounded border border-cork-300/50 bg-white px-2 py-1 text-[10px] outline-none"
+                      oninput={(e) => updateTask(i, j, e.currentTarget.value)}
+                    />
+                    <button
+                      type="button"
+                      class="cursor-pointer text-cork-300 hover:text-red-500"
+                      onclick={() => removeTask(i, j)}><X class="size-3" /></button
+                    >
                   </div>
                 {/each}
-                <button type="button" class="cursor-pointer text-[10px] text-cork-400 hover:text-cork-600" onclick={() => addTask(i)}>
-                  <Plus class="size-2.5 inline" /> Add Task
+                <button
+                  type="button"
+                  class="cursor-pointer text-[10px] text-cork-400 hover:text-cork-600"
+                  onclick={() => addTask(i)}
+                >
+                  <Plus class="inline size-2.5" /> Add Task
                 </button>
               </div>
             </div>
@@ -204,9 +259,9 @@
       <div>
         <span class="text-xs font-medium text-cork-700">Stories</span>
         <div class="mt-2 grid gap-2 md:grid-cols-3">
-          {#each (['must-have', 'performance', 'delighter'] as const) as kano (kano)}
+          {#each ['must-have', 'performance', 'delighter'] as const as kano (kano)}
             <div class="rounded border border-cork-300/40 bg-cork-100 p-2">
-              <div class="flex items-center justify-between mb-1.5">
+              <div class="mb-1.5 flex items-center justify-between">
                 <span class="text-[10px] font-semibold text-cork-600">{KANO_LABELS[kano]}</span>
                 <span class="text-[9px] text-cork-400">{data.stories[kano].length}</span>
               </div>
@@ -214,14 +269,16 @@
                 {#each data.stories[kano] as story (story.id)}
                   <div class="rounded bg-white px-2 py-1.5">
                     <div class="flex items-center gap-1.5">
-                      <span class="font-mono text-[9px] text-cork-400 shrink-0">{story.id}</span>
-                      <span class="text-[10px] font-medium text-cork-800 leading-tight">{story.title}</span>
+                      <span class="shrink-0 font-mono text-[9px] text-cork-400">{story.id}</span>
+                      <span class="text-[10px] leading-tight font-medium text-cork-800"
+                        >{story.title}</span
+                      >
                     </div>
                     {#if story.asA || story.wantTo || story.soThat}
-                      <p class="mt-0.5 pl-7 text-[9px] italic text-cork-500 leading-relaxed">
-                        As a <strong class="text-cork-600">{story.asA || 'user'}</strong>,
-                        I want to <strong class="text-cork-600">{story.wantTo || '...'}</strong>,
-                        so that <strong class="text-cork-600">{story.soThat || '...'}</strong>.
+                      <p class="mt-0.5 pl-7 text-[9px] leading-relaxed text-cork-500 italic">
+                        As a <strong class="text-cork-600">{story.asA || 'user'}</strong>, I want to
+                        <strong class="text-cork-600">{story.wantTo || '...'}</strong>, so that
+                        <strong class="text-cork-600">{story.soThat || '...'}</strong>.
                       </p>
                     {/if}
                   </div>
@@ -232,13 +289,13 @@
         </div>
       </div>
     </div>
+  {:else if data.activities.length > 0}
+    <StoryMapBoard {data} />
   {:else}
-    {#if data.activities.length > 0}
-      <StoryMapBoard {data} />
-    {:else}
-      <div class="rounded-xl border border-cork-300/40 bg-cork-100 px-4 py-16 text-center">
-        <p class="text-sm text-cork-500">No activities yet. Add activities and stories via the database.</p>
-      </div>
-    {/if}
+    <div class="rounded-xl border border-cork-300/40 bg-cork-100 px-4 py-16 text-center">
+      <p class="text-sm text-cork-500">
+        No activities yet. Add activities and stories via the database.
+      </p>
+    </div>
   {/if}
 </div>

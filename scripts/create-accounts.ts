@@ -22,13 +22,17 @@ const passwordKeyLength = 64;
 
 function hashPassword(password: string): string {
   const salt = randomBytes(16).toString('hex');
-  const hash = pbkdf2Sync(password, salt, passwordHashIterations, passwordKeyLength, 'sha512').toString('hex');
+  const hash = pbkdf2Sync(
+    password,
+    salt,
+    passwordHashIterations,
+    passwordKeyLength,
+    'sha512'
+  ).toString('hex');
   return `${passwordHashAlgorithm}$${passwordHashIterations}$${salt}$${hash}`;
 }
 
-const users = [
-  { email: 'felicia@produck.com', displayName: 'Felicia' },
-];
+const users = [{ email: 'felicia@produck.com', displayName: 'Felicia' }];
 
 async function main() {
   for (const u of users) {
@@ -45,7 +49,7 @@ async function main() {
       email: u.email,
       displayName: u.displayName,
       role: 'member',
-      passwordHash: hashPassword('REDACTED_PASSWORD'),
+      passwordHash: hashPassword('REDACTED_PASSWORD')
     });
     console.log(`Created user: ${u.email}`);
   }

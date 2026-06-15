@@ -14,11 +14,16 @@ const client = postgres(dbUrl, { ssl: 'require', max: 1 });
 const db = drizzle(client, { schema: { appUser } });
 
 async function main() {
-  const users = await db.select({
-    email: appUser.email,
-    role: appUser.role,
-  }).from(appUser);
+  const users = await db
+    .select({
+      email: appUser.email,
+      role: appUser.role
+    })
+    .from(appUser);
   console.log(JSON.stringify(users, null, 2));
   await client.end();
 }
-main().catch(e => { console.error(e); client.end(); });
+main().catch((e) => {
+  console.error(e);
+  client.end();
+});

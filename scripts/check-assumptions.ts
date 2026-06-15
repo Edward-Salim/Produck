@@ -1,4 +1,5 @@
-import { config } from 'dotenv'; config();
+import { config } from 'dotenv';
+config();
 import postgres from 'postgres';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import { idea, story, activity } from '../src/lib/server/db/schema.js';
@@ -13,7 +14,7 @@ async function main() {
 
   for (const i of ideas) {
     const activities = await db.select().from(activity).where(eq(activity.ideaId, i.id));
-    const activityIds = activities.map(a => a.id);
+    const activityIds = activities.map((a) => a.id);
 
     if (activityIds.length === 0) {
       console.log(`${i.title}: 0 stories, 0 assumptions`);
@@ -21,8 +22,11 @@ async function main() {
     }
 
     const allStories = await db.select().from(story);
-    const ideaStories = allStories.filter(s => activityIds.includes(s.activityId));
-    const totalAssumptions = ideaStories.reduce((c,s) => c + (Array.isArray(s.assumptions) ? s.assumptions.length : 0), 0);
+    const ideaStories = allStories.filter((s) => activityIds.includes(s.activityId));
+    const totalAssumptions = ideaStories.reduce(
+      (c, s) => c + (Array.isArray(s.assumptions) ? s.assumptions.length : 0),
+      0
+    );
 
     console.log(`${i.title}: ${ideaStories.length} stories, ${totalAssumptions} assumptions`);
   }
@@ -30,4 +34,7 @@ async function main() {
   process.exit(0);
 }
 
-main().catch(e => { console.error(e); process.exit(1); });
+main().catch((e) => {
+  console.error(e);
+  process.exit(1);
+});

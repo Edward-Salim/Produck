@@ -4,7 +4,11 @@
   import { Plus, X } from '@lucide/svelte';
   import type { FrameworkInstance } from './types.js';
 
-  let { instance, draftMode, onUpdate }: {
+  let {
+    instance,
+    draftMode,
+    onUpdate
+  }: {
     instance: FrameworkInstance;
     draftMode: 'edit' | 'view';
     onUpdate: (values: Record<string, string>, title?: string) => void;
@@ -120,7 +124,7 @@
 
   {#if showAdd && draftMode === 'edit'}
     <div class="rounded-xl border border-cork-300/50 bg-white/60 p-3">
-      <div class="flex items-center gap-2 mb-2">
+      <div class="mb-2 flex items-center gap-2">
         <select
           bind:value={addStatus}
           class="rounded border border-cork-300/50 bg-cork-100 px-2 py-1 text-xs text-cork-700 outline-none"
@@ -141,14 +145,16 @@
       <input
         bind:value={newTitle}
         placeholder="Idea title"
-        class="w-full rounded border border-cork-300/50 bg-cork-100 px-2 py-1.5 text-sm text-cork-800 outline-none placeholder:text-cork-400 mb-2"
-        onkeydown={(e) => { if (e.key === 'Enter') addIdea(); }}
+        class="mb-2 w-full rounded border border-cork-300/50 bg-cork-100 px-2 py-1.5 text-sm text-cork-800 outline-none placeholder:text-cork-400"
+        onkeydown={(e) => {
+          if (e.key === 'Enter') addIdea();
+        }}
       />
       <textarea
         bind:value={newDescription}
         placeholder="Description (optional)"
         rows="2"
-        class="w-full rounded border border-cork-300/50 bg-cork-100 px-2 py-1.5 text-xs text-cork-700 outline-none placeholder:text-cork-400 resize-none mb-2"
+        class="mb-2 w-full resize-none rounded border border-cork-300/50 bg-cork-100 px-2 py-1.5 text-xs text-cork-700 outline-none placeholder:text-cork-400"
       ></textarea>
       <button
         type="button"
@@ -160,13 +166,18 @@
     </div>
   {/if}
 
-  <div class="flex gap-3 overflow-x-auto [scrollbar-width:none]" style="min-height: calc(100vh - 300px);">
+  <div
+    class="flex gap-3 overflow-x-auto [scrollbar-width:none]"
+    style="min-height: calc(100vh - 300px);"
+  >
     {#each IDEA_SECTIONS as section (section.key)}
       {@const sectionIdeas = ideasForSection(section.key)}
       {@const isDropping = dropTarget === section.key && draggingId !== null}
 
       <div
-        class="flex w-56 shrink-0 flex-col rounded-xl transition-all {isDropping ? 'scale-[1.01] ring-2 ring-cork-500/50' : ''}"
+        class="flex w-56 shrink-0 flex-col rounded-xl transition-all {isDropping
+          ? 'scale-[1.01] ring-2 ring-cork-500/50'
+          : ''}"
         style="background: {section.bg};"
         ondragover={(e) => onDragOver(e, section.key)}
         ondragleave={(e) => onDragLeave(e, section.key)}
@@ -175,16 +186,25 @@
       >
         <div class="border-b px-3 py-2.5 {section.dark ? 'border-white/10' : 'border-cork-300/30'}">
           <div class="flex items-center gap-2">
-            <h2 class="text-xs font-bold {section.dark ? 'text-white/90' : 'text-cork-700'}">{section.label}</h2>
-            <span class="text-[10px] {section.dark ? 'text-white/50' : 'text-cork-400'}">({sectionIdeas.length})</span>
+            <h2 class="text-xs font-bold {section.dark ? 'text-white/90' : 'text-cork-700'}">
+              {section.label}
+            </h2>
+            <span class="text-[10px] {section.dark ? 'text-white/50' : 'text-cork-400'}"
+              >({sectionIdeas.length})</span
+            >
           </div>
-          <p class="mt-0.5 text-[9px] {section.dark ? 'text-white/40' : 'text-cork-400'}">{section.desc}</p>
+          <p class="mt-0.5 text-[9px] {section.dark ? 'text-white/40' : 'text-cork-400'}">
+            {section.desc}
+          </p>
         </div>
 
         <div class="flex-1 space-y-2 overflow-y-auto p-2 [scrollbar-width:none]">
           {#each sectionIdeas as idea (idea.id)}
             <div
-              class="group rounded-lg bg-white/60 p-3 text-left transition-all duration-200 hover:shadow-md {draggingId === idea.id ? 'z-10 scale-105 rotate-2 shadow-xl ring-2 ring-cork-500/30' : ''}"
+              class="group rounded-lg bg-white/60 p-3 text-left transition-all duration-200 hover:shadow-md {draggingId ===
+              idea.id
+                ? 'z-10 scale-105 rotate-2 shadow-xl ring-2 ring-cork-500/30'
+                : ''}"
               style="box-shadow: 0 1px 3px rgba(0,0,0,.06);"
               draggable={draftMode === 'edit'}
               ondragstart={(e) => onDragStart(e, idea.id)}
@@ -195,7 +215,7 @@
                 {#if draftMode === 'edit'}
                   <button
                     type="button"
-                    class="cursor-pointer text-cork-300 opacity-0 transition-opacity hover:text-red-500 group-hover:opacity-100"
+                    class="cursor-pointer text-cork-300 opacity-0 transition-opacity group-hover:opacity-100 hover:text-red-500"
                     onclick={() => deleteIdea(idea.id)}
                   >
                     <X class="size-3" />
@@ -205,14 +225,14 @@
               {#if draftMode === 'edit'}
                 <input
                   value={idea.title}
-                  class="w-full rounded border border-transparent bg-transparent p-0 font-display text-sm leading-tight text-cork-800 outline-none transition-colors hover:border-cork-300/50 focus:border-cork-500/60 focus:bg-white/50 focus:px-1 focus:py-0.5"
+                  class="w-full rounded border border-transparent bg-transparent p-0 font-display text-sm leading-tight text-cork-800 transition-colors outline-none hover:border-cork-300/50 focus:border-cork-500/60 focus:bg-white/50 focus:px-1 focus:py-0.5"
                   oninput={(e) => updateIdeaField(idea.id, 'title', e.currentTarget.value)}
                 />
                 <textarea
                   value={idea.description}
                   placeholder="Description..."
                   rows="1"
-                  class="mt-1 w-full resize-none rounded border border-transparent bg-transparent p-0 text-[10px] text-cork-500 outline-none transition-colors hover:border-cork-300/50 focus:border-cork-500/60 focus:bg-white/50 focus:px-1 focus:py-0.5"
+                  class="mt-1 w-full resize-none rounded border border-transparent bg-transparent p-0 text-[10px] text-cork-500 transition-colors outline-none hover:border-cork-300/50 focus:border-cork-500/60 focus:bg-white/50 focus:px-1 focus:py-0.5"
                   oninput={(e) => updateIdeaField(idea.id, 'description', e.currentTarget.value)}
                 ></textarea>
               {:else}
@@ -226,10 +246,14 @@
                 <span>{formatDate(idea.createdAt)}</span>
                 <div class="flex items-center gap-1">
                   {#if idea.proposer}
-                    <span class="rounded bg-cork-200/80 px-1 py-0.5 font-medium">{idea.proposer}</span>
+                    <span class="rounded bg-cork-200/80 px-1 py-0.5 font-medium"
+                      >{idea.proposer}</span
+                    >
                   {/if}
                   {#if idea.okrCode}
-                    <span class="rounded bg-cork-200/80 px-1 py-0.5 font-medium">{idea.okrCode}</span>
+                    <span class="rounded bg-cork-200/80 px-1 py-0.5 font-medium"
+                      >{idea.okrCode}</span
+                    >
                   {/if}
                 </div>
               </div>
@@ -237,7 +261,11 @@
           {/each}
 
           {#if sectionIdeas.length === 0}
-            <p class="py-4 text-center text-[10px] italic {section.dark ? 'text-white/40' : 'text-cork-400'}">
+            <p
+              class="py-4 text-center text-[10px] italic {section.dark
+                ? 'text-white/40'
+                : 'text-cork-400'}"
+            >
               No ideas
             </p>
           {/if}
