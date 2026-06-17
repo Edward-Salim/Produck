@@ -1,112 +1,103 @@
 <script lang="ts">
-  import { invalidateAll } from '$app/navigation';
   import * as Dialog from '$lib/components/ui/dialog/index.js';
-  import { SvelteMap } from 'svelte/reactivity';
-  import {
-    RefreshCw,
-    LoaderCircle,
-    Settings,
-    Calendar,
-    ExternalLink,
-    Rss,
-    Plus,
-    ToggleLeft,
-    ToggleRight,
-    Trash2
-  } from '@lucide/svelte';
+  import { Rss, ExternalLink, ChevronLeft, ChevronRight } from '@lucide/svelte';
 
   let { data } = $props();
 
   let sourcesDialogOpen = $state(false);
-  let fetching = $state(false);
-  let fetchResult = $state<{ fetched: number; errors: { source: string; error: string }[] } | null>(
-    null
-  );
-  let newSourceName = $state('');
-  let newSourceUrl = $state('');
+  let detailArticle = $state<(typeof data.articles)[number] | null>(null);
+  let newIds = $state<Set<number>>(new Set(data.newArticleIds ?? []));
+  const DAYS_PER_WEEK = 7;
 
-  type Article = (typeof data.articles)[number];
-
-  interface DayGroup {
-    dateKey: string;
-    label: string;
-    articles: Article[];
-    summary?: string | null;
+  // Compute Monday of any week relative to today
+  function weekMonday(offset: number): Date {
+    const today = new Date();
+    const dayOfWeek = today.getDay();
+    const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+    const monday = new Date(today);
+    monday.setDate(today.getDate() + mondayOffset + offset * 7);
+    return monday;
   }
 
-  let dayGroups: DayGroup[] = $derived.by(() => {
-    const groups = new SvelteMap<string, Article[]>();
-    for (const article of data.articles) {
-      const d = article.publishedAt ? new Date(article.publishedAt) : new Date(article.fetchedAt);
+  const todayKey = new Date().toISOString().slice(0, 10);
+  const blockDateKeys = $derived(new Set(data.dayBlocks.map((b: (typeof data.dayBlocks)[number]) => b.dateKey)));
+
+  let weekOffset = $state(0); // 0 = this week, -1 = last week
+  let activeFilter = $state(blockDateKeys.has(todayKey) ? todayKey : blockDateKeys.values().next().value ?? todayKey);
+
+  function switchWeek(dir: number) {
+    weekOffset += dir;
+    // Pick the first available day of the new week
+    const mon = weekMonday(weekOffset);
+    for (let i = 0; i < DAYS_PER_WEEK; i++) {
+      const d = new Date(mon);
+      d.setDate(mon.getDate() + i);
       const key = d.toISOString().slice(0, 10);
-      if (!groups.has(key)) groups.set(key, []);
-      groups.get(key)!.push(article);
+      if (blockDateKeys.has(key)) { activeFilter = key; return; }
     }
+    activeFilter = mon.toISOString().slice(0, 10);
+  }
 
-    const summaryMap = new Map(data.summaries.map((s) => [s.date, s.summary]));
+  const weekDates = $derived(
+    Array.from({ length: DAYS_PER_WEEK }, (_, i) => {
+      const d = new Date(weekMonday(weekOffset));
+      d.setDate(d.getDate() + i);
+      return {
+        key: d.toISOString().slice(0, 10),
+        dayName: d.toLocaleDateString('en-US', { weekday: 'short' }),
+        dateNum: d.getDate(),
+        month: d.toLocaleDateString('en-US', { month: 'short' })
+      };
+    })
+  );
 
-    const result: DayGroup[] = [];
-    for (const [dateKey, articles] of groups) {
-      result.push({
-        dateKey,
-        label: new Date(dateKey + 'T00:00:00').toLocaleDateString('en-US', {
-          weekday: 'long',
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric'
-        }),
-        articles,
-        summary: summaryMap.get(dateKey)
+  const visibleBlocks = $derived(
+    data.dayBlocks.filter((b: (typeof data.dayBlocks)[number]) => {
+      const d = new Date(b.dateKey + 'T00:00:00');
+      const mon = weekMonday(weekOffset);
+      const sun = new Date(mon);
+      sun.setDate(mon.getDate() + 6);
+      return d >= mon && d <= sun;
+    })
+  );
+
+  const filteredBlocks = $derived(
+    visibleBlocks.filter((b: (typeof data.dayBlocks)[number]) => b.dateKey === activeFilter)
+  );
+
+  const briefing = $derived(data.briefings[activeFilter] ?? null);
+
+  function handleFeedClick(e: MouseEvent) {
+    const target = (e.target as HTMLElement).closest('[data-article-id]') as HTMLElement | null;
+    if (!target) return;
+    const id = Number(target.dataset.articleId);
+    if (newIds.has(id)) {
+      newIds.delete(id);
+      newIds = newIds;
+    }
+    const article = data.articles.find((a: (typeof data.articles)[number]) => a.id === id);
+    if (article) detailArticle = article;
+  }
+
+  // Sync highlight class on DOM elements when newIds or visible blocks change
+  $effect(() => {
+    // Triggered whenever newIds or filteredBlocks change (re-renders {@html})
+    // Use a microtask to run after DOM settles
+    const ids = newIds;
+    queueMicrotask(() => {
+      document.querySelectorAll('[data-article-id].highlight-new').forEach((el) => {
+        if (!ids.has(Number((el as HTMLElement).dataset.articleId))) {
+          el.classList.remove('highlight-new');
+        }
       });
-    }
-    return result.sort((a, b) => b.dateKey.localeCompare(a.dateKey));
+      for (const id of ids) {
+        const el = document.querySelector(`[data-article-id="${id}"]`);
+        if (el && !el.classList.contains('highlight-new')) {
+          el.classList.add('highlight-new');
+        }
+      }
+    });
   });
-
-  async function fetchFeeds() {
-    fetching = true;
-    fetchResult = null;
-    try {
-      const res = await fetch('/api/rss/fetch', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ workspaceId: data.workspaceId })
-      });
-      fetchResult = await res.json();
-      await invalidateAll();
-    } finally {
-      fetching = false;
-    }
-  }
-
-  async function addSource() {
-    if (!newSourceName.trim() || !newSourceUrl.trim()) return;
-    await fetch('/api/rss/sources', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        workspaceId: data.workspaceId,
-        name: newSourceName.trim(),
-        url: newSourceUrl.trim()
-      })
-    });
-    newSourceName = '';
-    newSourceUrl = '';
-    await invalidateAll();
-  }
-
-  async function toggleSource(id: number, currentEnabled: boolean) {
-    await fetch('/api/rss/sources', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id, enabled: !currentEnabled })
-    });
-    await invalidateAll();
-  }
-
-  async function deleteSource(id: number) {
-    await fetch(`/api/rss/sources?id=${id}`, { method: 'DELETE' });
-    await invalidateAll();
-  }
 </script>
 
 <svelte:head>
@@ -115,125 +106,84 @@
 
 <header class="mb-4 md:mb-6">
   <h1 class="font-display text-2xl text-cork-800 md:text-4xl">Trends</h1>
-  <p class="mt-0.5 text-sm text-cork-500">RSS feed digest — product news grouped by day</p>
-</header>
-
-<!-- Toolbar -->
-<div class="mb-4 flex items-center justify-between gap-2 md:mb-6">
-  <button
-    type="button"
-    class="flex cursor-pointer items-center gap-1.5 rounded-lg bg-cork-700 px-2.5 py-1.5 text-xs font-medium text-cork-50 transition-colors hover:bg-cork-800 md:gap-2 md:px-3 md:py-2 md:text-sm"
-    onclick={fetchFeeds}
-    disabled={fetching}
-  >
-    {#if fetching}
-      <LoaderCircle class="size-4 animate-spin" />
-    {:else}
-      <RefreshCw class="size-4" />
-    {/if}
-    <span class="hidden sm:inline">Fetch Now</span>
-  </button>
-
-  <button
-    type="button"
-    class="flex cursor-pointer items-center gap-1.5 rounded-lg border border-cork-300 px-2.5 py-1.5 text-xs font-medium text-cork-600 transition-colors hover:bg-cork-200/50 md:gap-2 md:px-3 md:py-2 md:text-sm"
+  <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
+  <p
+    class="mt-0.5 cursor-pointer text-sm text-cork-500 hover:text-cork-600 hover:underline hover:decoration-dotted hover:underline-offset-2"
     onclick={() => (sourcesDialogOpen = true)}
   >
-    <Settings class="size-4" />
-    <span class="hidden sm:inline">Manage Sources</span>
-    <span
-      class="rounded-full bg-cork-200 px-1.5 py-0.5 text-[9px] font-semibold text-cork-600 md:text-[10px]"
-      >{data.sources.length}</span
-    >
-  </button>
-</div>
+    Product news from {data.sources.length} feeds, screened by AI and grouped by day
+  </p>
+</header>
 
-{#if fetchResult}
-  <div
-    class="mb-4 flex items-center justify-between rounded-lg border border-cork-200 bg-white/80 px-4 py-2.5 text-sm text-cork-700"
-  >
-    <span
-      >Fetched <strong>{fetchResult.fetched}</strong> new articles{#if fetchResult.errors.length > 0},
-        <span class="text-red-600">{fetchResult.errors.length} feeds failed</span>{/if}</span
-    >
-    {#if fetchResult.errors.length > 0}
-      <details class="text-xs text-cork-500">
-        <summary class="cursor-pointer hover:text-cork-700">Show errors</summary>
-        <ul class="mt-1 list-disc space-y-0.5 pl-4">
-          {#each fetchResult.errors as err}
-            <li><strong>{err.source}</strong>: {err.error}</li>
-          {/each}
-        </ul>
-      </details>
-    {/if}
+<!-- Date filter buttons -->
+{#if data.dayBlocks.length > 0}
+  <div class="mb-4">
+    <p class="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-cork-400">{weekOffset === 0 ? 'This week' : weekOffset === -1 ? 'Last week' : weekMonday(weekOffset).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</p>
+    <div class="relative md:static">
+    <div class="hide-scrollbar flex gap-1.5 overflow-x-auto pb-1 -mx-1 px-1 md:overflow-visible md:pb-0 md:px-0 md:mx-0">
+      {#each weekDates as d}
+        {@const hasArticles = blockDateKeys.has(d.key)}
+        <button
+          type="button"
+          disabled={!hasArticles}
+          class="shrink-0 md:flex-1 rounded-lg px-2 py-1.5 text-center text-xs font-medium transition-colors {!hasArticles ? 'border border-cork-200 text-cork-400/40' : 'cursor-pointer ' + (activeFilter === d.key ? 'bg-cork-700 text-cork-50' : 'border border-cork-300 text-cork-500 hover:bg-cork-100')}"
+          onclick={() => (activeFilter = d.key)}
+        >
+          <span class="font-semibold">{d.dayName}</span>
+          <span class="ml-1 opacity-70">{d.month} {d.dateNum}</span>
+        </button>
+      {/each}
+      <button
+        type="button"
+        class="shrink-0 cursor-pointer rounded-lg px-1.5 py-1.5 text-cork-500 transition-colors hover:bg-cork-100 disabled:opacity-30 disabled:cursor-default"
+        onclick={() => switchWeek(-1)}
+        disabled={weekOffset <= -1}
+        title="Last week"
+      >
+        <ChevronLeft class="size-3.5" />
+      </button>
+      <button
+        type="button"
+        class="shrink-0 cursor-pointer rounded-lg px-1.5 py-1.5 text-cork-500 transition-colors hover:bg-cork-100 disabled:opacity-30 disabled:cursor-default"
+        onclick={() => switchWeek(1)}
+        disabled={weekOffset >= 0}
+        title="This week"
+      >
+        <ChevronRight class="size-3.5" />
+      </button>
+    </div>
+    <div class="pointer-events-none absolute top-0 right-0 h-full w-8 bg-gradient-to-l from-cork-50 to-transparent md:hidden"></div>
+    </div>
   </div>
 {/if}
 
-<!-- Main content — Daily Article Feed -->
-{#if dayGroups.length > 0}
-  <div class="space-y-5">
-    {#each dayGroups as group (group.dateKey)}
-      <div class="overflow-hidden rounded-xl border border-cork-200 bg-white/80">
-        <!-- Day header -->
-        <div
-          class="flex items-center justify-between border-b border-cork-200 bg-cork-50 px-3 py-2 md:px-5 md:py-3"
-        >
-          <div class="flex items-center gap-1.5 md:gap-2">
-            <Calendar class="size-3.5 text-cork-400 md:size-4" />
-            <span class="text-xs font-semibold text-cork-700 md:text-sm">{group.label}</span>
-          </div>
-          <span class="text-[10px] text-cork-400 md:text-xs">{group.articles.length}</span>
-        </div>
-
-        <!-- Summary (if exists for this day) -->
-        {#if group.summary}
-          <div
-            class="border-b border-cork-100 bg-cork-50/50 px-3 py-2.5 text-xs text-cork-700 md:px-5 md:py-3 md:text-sm"
-          >
-            <p
-              class="mb-1 text-[10px] font-medium tracking-wider text-cork-600 uppercase md:text-xs"
-            >
-              AI Summary
-            </p>
-            <p>{group.summary}</p>
-          </div>
-        {/if}
-
-        <!-- Article list -->
-        <div class="divide-y divide-cork-100">
-          {#each group.articles as article (article.id)}
-            <a
-              href={article.url}
-              target="_blank"
-              rel="noopener"
-              class="block px-3 py-2.5 transition-colors hover:bg-cork-50/50 md:px-5 md:py-3"
-            >
-              <div class="flex items-start gap-3">
-                <div class="min-w-0 flex-1">
-                  <p class="text-sm leading-snug font-medium text-cork-800">{article.title}</p>
-                  {#if article.description}
-                    <p class="mt-1 line-clamp-2 text-xs text-cork-500">{article.description}</p>
-                  {/if}
-                  <div class="mt-1.5 flex items-center gap-2">
-                    <span
-                      class="rounded bg-cork-100 px-1.5 py-0.5 text-[10px] font-medium text-cork-400"
-                      >{article.sourceName}</span
-                    >
-                    {#if article.author}
-                      <span class="text-[10px] text-cork-400">{article.author}</span>
-                    {/if}
-                  </div>
-                </div>
-                <ExternalLink class="mt-1 size-3.5 shrink-0 text-cork-300" />
-              </div>
-            </a>
-          {/each}
-        </div>
+<!-- Daily Briefing -->
+{#if briefing}
+  <div class="mb-5 overflow-hidden rounded-xl border border-cork-200 bg-white/80">
+    <div class="flex items-start gap-3 px-3 py-3 md:px-5 md:py-4">
+      <img src="/assets/produck-news.png" alt="" class="mt-0.5 h-20 w-24 shrink-0 rounded-lg object-cover" />
+      <div class="min-w-0">
+        <p class="text-[10px] font-semibold uppercase tracking-wide text-cork-400">Daily Briefing · {briefing.label}</p>
+        <p class="mt-1 text-xs leading-relaxed text-cork-700 sm:text-sm">{briefing.summary}</p>
       </div>
+    </div>
+  </div>
+{/if}
+
+<!-- Feed -->
+{#if filteredBlocks.length > 0}
+  <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
+  <div onclick={handleFeedClick}>
+    {#each filteredBlocks as block (block.dateKey)}
+      {@html block.html}
     {/each}
   </div>
+
+{:else if data.dayBlocks.length > 0}
+  <div class="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-cork-300/50 py-16 text-center">
+    <p class="text-sm text-cork-500">No articles match this filter</p>
+  </div>
 {:else}
-  <!-- Empty state -->
   <div
     class="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-cork-300/50 text-center"
     style="height: calc(100vh - 220px)"
@@ -248,62 +198,23 @@
 <Dialog.Root bind:open={sourcesDialogOpen}>
   <Dialog.Content class="max-w-[calc(100%-3rem)] border-cork-300 bg-cork-50 sm:max-w-lg">
     <Dialog.Header>
-      <Dialog.Title class="text-cork-800">Manage RSS Sources</Dialog.Title>
+      <Dialog.Title class="text-cork-800">RSS Sources</Dialog.Title>
       <Dialog.Description class="text-cork-500"
-        >Add, edit, or remove your RSS feeds</Dialog.Description
+        >Ranked by category match accuracy</Dialog.Description
       >
     </Dialog.Header>
 
-    <!-- Add new source form -->
-    <div class="mb-4 space-y-2 rounded-lg border border-cork-200 bg-white p-3">
-      <div class="flex gap-2">
-        <input
-          bind:value={newSourceName}
-          placeholder="Source name"
-          class="h-8 flex-1 rounded-md border border-cork-200 bg-cork-50/50 px-3 text-sm text-cork-800 placeholder:text-cork-400 focus:ring-2 focus:ring-cork-400/50 focus:outline-none"
-        />
-        <button
-          type="button"
-          class="flex h-8 cursor-pointer items-center gap-1.5 rounded-md bg-cork-700 px-3 text-xs font-medium text-cork-50 transition-colors hover:bg-cork-800 disabled:opacity-40"
-          onclick={addSource}
-          disabled={!newSourceName.trim() || !newSourceUrl.trim()}
-        >
-          <Plus class="size-3.5" />Add
-        </button>
-      </div>
-      <input
-        bind:value={newSourceUrl}
-        placeholder="https://example.com/feed.xml"
-        class="h-8 w-full rounded-md border border-cork-200 bg-cork-50/50 px-3 font-mono text-xs text-cork-700 placeholder:text-cork-400 focus:ring-2 focus:ring-cork-400/50 focus:outline-none"
-      />
-    </div>
-
-    <!-- Source list -->
-    <div class="max-h-72 space-y-2 overflow-y-auto">
+    <div class="max-h-72 space-y-2 overflow-y-auto pr-1 custom-scrollbar">
       {#each data.sources as source (source.id)}
         <div class="flex items-center gap-3 rounded-lg border border-cork-200 bg-white px-3 py-2">
-          <button
-            type="button"
-            onclick={() => toggleSource(source.id, source.enabled)}
-            class="cursor-pointer"
-          >
-            {#if source.enabled}
-              <ToggleRight class="size-5 text-green-600" />
-            {:else}
-              <ToggleLeft class="size-5 text-cork-300" />
-            {/if}
-          </button>
+          {#if source.domain}
+            <img src="https://www.google.com/s2/favicons?domain={source.domain}&sz=32" alt="" class="size-5 shrink-0 rounded-sm" onerror={(e) => (e.target as HTMLImageElement).remove()} />
+          {/if}
           <div class="min-w-0 flex-1">
             <p class="truncate text-sm font-medium text-cork-700">{source.name}</p>
-            <p class="truncate text-[10px] text-cork-400">{source.url}</p>
+            <p class="truncate text-[10px] text-cork-400">{source.category} / {source.region}</p>
           </div>
-          <button
-            type="button"
-            class="cursor-pointer text-cork-300 transition-colors hover:text-red-500"
-            onclick={() => deleteSource(source.id)}
-          >
-            <Trash2 class="size-4" />
-          </button>
+          <span class="shrink-0 text-[10px] font-semibold {source.accuracy >= 90 ? 'text-emerald-600' : source.accuracy >= 70 ? 'text-amber-600' : 'text-red-500'}">{source.accuracy}%</span>
         </div>
       {/each}
       {#if data.sources.length === 0}
@@ -312,3 +223,71 @@
     </div>
   </Dialog.Content>
 </Dialog.Root>
+
+<!-- Article Detail Modal -->
+<Dialog.Root open={detailArticle != null} onOpenChange={(o) => { if (!o) detailArticle = null; }}>
+  <Dialog.Content class="max-w-[calc(100%-2rem)] max-h-[calc(100vh-3rem)] overflow-y-auto border-cork-300 bg-cork-50 sm:max-w-xl">
+    {#if detailArticle}
+      <Dialog.Header>
+        <Dialog.Title class="text-cork-800 break-words">{detailArticle.title}</Dialog.Title>
+        <Dialog.Description class="text-cork-500">
+          {detailArticle.sourceName}{#if detailArticle.author} — {detailArticle.author}{/if}
+        </Dialog.Description>
+      </Dialog.Header>
+
+      <div class="space-y-4">
+        {#if detailArticle.imageUrl}
+          <img src={detailArticle.imageUrl} alt="" class="w-full rounded-lg object-cover max-h-64" />
+        {/if}
+
+        {#if detailArticle.description}
+          <p class="text-sm text-cork-700 leading-relaxed break-words whitespace-pre-line">{detailArticle.description}</p>
+        {/if}
+
+        <a
+          href={detailArticle.url}
+          target="_blank"
+          rel="noopener"
+          class="inline-flex items-center gap-1.5 rounded-lg bg-cork-700 px-4 py-2 text-sm font-medium text-cork-50 transition-colors hover:bg-cork-800"
+        >
+          <ExternalLink class="size-4" />
+          Read full article
+        </a>
+      </div>
+    {/if}
+  </Dialog.Content>
+</Dialog.Root>
+
+<style>
+  [data-article-id].highlight-new {
+    position: relative;
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.08) 0%, transparent 50%);
+    border-left: 3px solid rgba(245, 158, 11, 0.5);
+    transition: background 0.3s, border-color 0.3s;
+  }
+
+  .hide-scrollbar {
+    scrollbar-width: none;
+  }
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(33 22% 80%) transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: hsl(33 22% 80%);
+    border-radius: 3px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: hsl(33 22% 65%);
+  }
+</style>

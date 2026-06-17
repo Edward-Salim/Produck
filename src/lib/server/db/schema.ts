@@ -747,6 +747,7 @@ export const rssSource = pgTable('rss_source', {
   name: text('name').notNull(),
   url: text('url').notNull(),
   category: text('category').notNull().default('general'),
+  region: text('region').notNull().default('global'),
   enabled: boolean('enabled').notNull().default(true),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
 });
@@ -766,6 +767,7 @@ export const rssArticle = pgTable('rss_article', {
   description: text('description'),
   content: text('content'),
   author: text('author'),
+  imageUrl: text('image_url'),
   publishedAt: timestamp('published_at', { withTimezone: true }),
   fetchedAt: timestamp('fetched_at', { withTimezone: true }).notNull().defaultNow()
 });

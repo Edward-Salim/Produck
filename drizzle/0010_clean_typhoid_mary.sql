@@ -1,0 +1,1 @@
+ALTER TABLE "rss_source" ADD COLUMN "region" text DEFAULT 'global' NOT NULL;
