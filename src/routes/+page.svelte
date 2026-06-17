@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
+  import { goto } from '$app/navigation';
   import { reveal } from '$lib/actions/reveal';
   import {
     GraduationCap,
@@ -1188,21 +1189,21 @@
         <!-- Auth Action -->
         <div class="flex items-center gap-4">
           {#if data.currentUser}
-            <a
-              href="/dashboard"
+            <button
+              onclick={() => goto('/dashboard')}
               class="flex cursor-pointer items-center gap-1.5 rounded-full bg-amber-500 px-4 py-1.5 text-xs font-semibold text-stone-950 shadow-md transition-all hover:scale-105 hover:bg-amber-400"
             >
               <LayoutDashboard class="size-3.5" />
               <span>Workspace App</span>
-            </a>
+            </button>
           {:else}
-            <a
-              href="/login"
+            <button
+              onclick={() => goto('/login')}
               class="flex cursor-pointer items-center gap-1.5 rounded-full border border-amber-500/30 bg-gradient-to-r from-red-700 to-red-600 px-4 py-1.5 text-xs font-bold text-white shadow-md transition-all hover:scale-105 hover:from-red-600 hover:to-red-500"
             >
               <LogIn class="size-3.5 text-amber-300" />
               <span>Workspace Sign In</span>
-            </a>
+            </button>
           {/if}
         </div>
       </div>
@@ -2099,21 +2100,21 @@
 
                   {#if project.isSelf}
                     {#if data.currentUser}
-                      <a
-                        href="/dashboard"
+                      <button
+                        onclick={() => goto('/dashboard')}
                         class="flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg bg-amber-500 py-2 text-center text-xs font-bold text-stone-950 shadow-md transition-all hover:bg-amber-400"
                       >
                         <span>Launch Workspace</span>
                         <ArrowUpRight class="size-3.5" />
-                      </a>
+                      </button>
                     {:else}
-                      <a
-                        href="/login"
+                      <button
+                        onclick={() => goto('/login')}
                         class="flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-stone-700 bg-stone-800 py-2 text-center text-xs font-bold text-stone-200 shadow-md transition-all hover:bg-stone-700"
                       >
                         <span>Login to Workspace</span>
                         <ArrowUpRight class="size-3.5 text-amber-400" />
-                      </a>
+                      </button>
                     {/if}
                   {/if}
                 </div>

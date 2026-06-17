@@ -1,8 +1,8 @@
 import { db } from '$lib/server/db/index.js';
 import { rssSource, rssArticle, trendSummary } from '$lib/server/db/schema.js';
-import { eq, desc, isNull, lt, inArray } from 'drizzle-orm';
+import { eq, desc, isNull, lt, inArray, sql } from 'drizzle-orm';
 import type { PageServerLoad } from './$types.js';
-import { createParser, extractImage, screenArticles, generateDailySummary } from '$lib/server/rss.js';
+import { createParser, extractImage, scrapeOgImage, screenArticles, generateDailySummary, type ScreeningStats } from '$lib/server/rss.js';
 
 const parser = createParser();
 
@@ -40,7 +40,7 @@ async function fetchFeeds(sources: typeof rssSource.$inferSelect[]) {
         url: item.link,
         description: cleanDescription(item.contentSnippet || item.summary),
         author: item.creator || item.author || null,
-        imageUrl: extractImage(item, htmlContent),
+        imageUrl: extractImage(item, item.link, htmlContent),
         publishedAt: item.isoDate ? new Date(item.isoDate) : null
       });
       existingUrls.add(item.link);
@@ -52,11 +52,14 @@ async function fetchFeeds(sources: typeof rssSource.$inferSelect[]) {
   if (toInsert.length > 0) {
     const inserted = await db.insert(rssArticle).values(toInsert).returning({ id: rssArticle.id, url: rssArticle.url });
 
-    // Screen synchronously: run Gemini to filter off-topic articles before page renders
+    // Screen synchronously: run AI to filter off-topic articles before page renders
     const sourceMap = new Map(enabled.map((s) => [s.id, { category: s.category, region: s.region, sourceName: s.name }]));
-    const keepTitles = await screenArticles(
+    const { kept: keepTitles, stats } = await screenArticles(
       toInsert.map((a) => ({ title: a.title!, ...sourceMap.get(a.sourceId!)! }))
     );
+
+    // Update rolling accuracy from this screening run
+    updateSourceAccuracy(stats);
 
     const keepUrls = new Set<string>();
     for (const item of toInsert) {
@@ -71,42 +74,94 @@ async function fetchFeeds(sources: typeof rssSource.$inferSelect[]) {
     newIds = inserted.filter((r) => keepUrls.has(r.url)).map((r) => r.id);
   }
 
-  // Backfill imageUrl from description for articles missing images
-  const orphaned = await db
-    .select({ id: rssArticle.id, description: rssArticle.description })
-    .from(rssArticle)
-    .where(isNull(rssArticle.imageUrl))
-    .limit(100);
-  for (const row of orphaned) {
-    const html = row.description;
-    if (!html) continue;
-    const match = html.match(/<img[^>]+src=["']([^"']+)["'][^>]*>/i);
-    if (match?.[1]) {
-      let src = match[1];
-      if (src.startsWith('//')) src = 'https:' + src;
-      await db.update(rssArticle).set({ imageUrl: src }).where(eq(rssArticle.id, row.id));
-    }
-  }
-
-  // Prune articles older than 14 days
-  const cutoff = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
-  await db.delete(rssArticle).where(lt(rssArticle.fetchedAt, cutoff));
+  // Prune articles older than last week (keep this week + last week only).
+  // Use WIB explicitly so the Monday cutoff is correct regardless of server timezone.
+  const nowWib = new Date(Date.now() + 7 * 60 * 60 * 1000);
+  const dayOfWeek = nowWib.getUTCDay();
+  const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+  const lastWeekMonday = new Date(Date.UTC(
+    nowWib.getUTCFullYear(),
+    nowWib.getUTCMonth(),
+    nowWib.getUTCDate() + mondayOffset - 7
+  ));
+  const cutoff = lastWeekMonday.toISOString();
+  await db.delete(rssArticle).where(
+    lt(sql`COALESCE(${rssArticle.publishedAt}, ${rssArticle.fetchedAt})`, cutoff)
+  );
 
   return { totalFetched: toInsert.length, newIds };
+}
+
+/** Backfill missing imageUrl for articles. Extracts <img> from description
+ *  instantly (regex), then scrapes og:image from article pages in parallel. */
+async function backfillImages() {
+  const orphaned = await db
+    .select({ id: rssArticle.id, description: rssArticle.description, url: rssArticle.url })
+    .from(rssArticle)
+    .where(isNull(rssArticle.imageUrl))
+    .orderBy(desc(rssArticle.id))
+    .limit(20);
+
+  const needScrape: typeof orphaned = [];
+  for (const row of orphaned) {
+    const baseUrl = row.url ? (() => { try { return new URL(row.url).origin; } catch { return null; } })() : null;
+    const resolve = (src: string) => {
+      if (src.startsWith('//')) return 'https:' + src;
+      if (src.startsWith('/') && baseUrl) return baseUrl + src;
+      return src;
+    };
+    const html = row.description;
+    if (html) {
+      const imgMatch = html.match(/<img[^>]+src=["']([^"']+)["'][^>]*>/i);
+      if (imgMatch?.[1]) {
+        await db.update(rssArticle).set({ imageUrl: resolve(imgMatch[1]) }).where(eq(rssArticle.id, row.id));
+        continue;
+      }
+      const bgMatch = html.match(/background-image\s*:\s*url\(["']?([^)"']+)["']?\)/i);
+      if (bgMatch?.[1]) {
+        await db.update(rssArticle).set({ imageUrl: resolve(bgMatch[1]) }).where(eq(rssArticle.id, row.id));
+        continue;
+      }
+    }
+    if (row.url) needScrape.push(row);
+  }
+
+  if (needScrape.length > 0) {
+    await Promise.allSettled(
+      needScrape.map(async (row) => {
+        const ogImage = await scrapeOgImage(row.url!);
+        if (ogImage) {
+          await db.update(rssArticle).set({ imageUrl: ogImage }).where(eq(rssArticle.id, row.id));
+        }
+      })
+    );
+  }
 }
 
 export const load: PageServerLoad = async ({ cookies }) => {
   // RSS is profile-level, not workspace-scoped — load all sources
   const sources = await db.select().from(rssSource).orderBy(rssSource.region, rssSource.category, rssSource.name);
 
-  // Fetch fresh articles on every page load
+  // Fetch fresh articles — with a 10-minute cooldown to keep page loads fast
   let newArticleIds: number[] = [];
-  if (sources.length > 0) {
+  const lastFetched = await db
+    .select({ at: rssArticle.fetchedAt })
+    .from(rssArticle)
+    .orderBy(desc(rssArticle.fetchedAt))
+    .limit(1);
+  const cooldownMs = 10 * 60 * 1000; // 10 minutes
+  const shouldFetch = !lastFetched[0] || (Date.now() - lastFetched[0].at.getTime()) > cooldownMs;
+  if (sources.length > 0 && shouldFetch) {
     const result = await fetchFeeds(sources);
     newArticleIds = result.newIds;
   }
 
-  // Get recent articles with source info (last 200)
+  // Backfill missing article images (fire-and-forget, runs every page load)
+  if (sources.length > 0) {
+    void backfillImages().catch((err) => console.error('backfillImages failed:', err));
+  }
+
+  // Get articles for this week + last week
   const articles = await db
     .select({
       id: rssArticle.id,
@@ -124,8 +179,15 @@ export const load: PageServerLoad = async ({ cookies }) => {
     })
     .from(rssArticle)
     .innerJoin(rssSource, eq(rssArticle.sourceId, rssSource.id))
-    .orderBy(desc(rssArticle.publishedAt))
-    .limit(200);
+    .orderBy(desc(rssArticle.publishedAt));
+
+  // Deduplicate by URL — keep the most-recently-published row per URL
+  const seenUrls = new Set<string>();
+  const dedupedArticles = articles.filter((a) => {
+    if (seenUrls.has(a.url)) return false;
+    seenUrls.add(a.url);
+    return true;
+  });
 
   const summaries = await db.select().from(trendSummary).orderBy(desc(trendSummary.date)).limit(30);
 
@@ -135,7 +197,7 @@ export const load: PageServerLoad = async ({ cookies }) => {
 
   // Normalize to plain primitives: Date → ISO string, null → '' for optional text fields.
   // This ensures devalue serializes identically for SSR and client hydration.
-  const flatArticles = articles.map((a) => ({
+  const flatArticles = dedupedArticles.map((a) => ({
     id: a.id,
     title: decodeEntities(a.title),
     url: a.url,
@@ -150,46 +212,93 @@ export const load: PageServerLoad = async ({ cookies }) => {
     sourceRegion: a.sourceRegion
   }));
 
-  // Group articles by date, compute day labels server-side so toLocaleDateString
-  // runs only in Node.js (avoids Intl discrepancies with the browser).
+  // Group articles by WIB date so local date keys match the client's week navigation
+  function toWibDateKey(iso: string | null, fallback: string): string {
+    const d = new Date(iso ?? fallback);
+    const wib = new Date(d.getTime() + 7 * 60 * 60 * 1000); // UTC+7
+    return wib.toISOString().slice(0, 10);
+  }
+
   const groupMap = new Map<string, typeof flatArticles>();
   for (const article of flatArticles) {
-    const key = (article.publishedAt ?? article.fetchedAt).slice(0, 10);
+    const key = toWibDateKey(article.publishedAt, article.fetchedAt);
     if (!groupMap.has(key)) groupMap.set(key, []);
     groupMap.get(key)!.push(article);
   }
 
-  const summaryMap = new Map(summaries.map((s) => [s.date, s.summary]));
-  const todayKey = new Date().toISOString().slice(0, 10);
+  // Summary map keyed by date+window so morning and evening coexist
+  const summaryByDateWindow = new Map<string, { morning?: string; evening?: string }>();
+  for (const s of summaries) {
+    const entry = summaryByDateWindow.get(s.date) ?? {};
+    entry[s.window] = s.summary ?? undefined;
+    summaryByDateWindow.set(s.date, entry);
+  }
+
+  const todayKey = (() => {
+    const wib = new Date(Date.now() + 7 * 60 * 60 * 1000);
+    return wib.toISOString().slice(0, 10);
+  })();
+  const workspaceId =
+    Number(cookies.get('active_workspace') || '0') || sources[0]?.workspaceId || 0;
 
   const dayGroups = Array.from(groupMap, ([dateKey, arts]) => ({
     dateKey,
     label: formatDayLabel(dateKey),
     count: arts.length,
-    summary: summaryMap.get(dateKey) ?? null,
+    summary: summaryByDateWindow.get(dateKey)?.evening ?? summaryByDateWindow.get(dateKey)?.morning ?? null,
     articles: arts
   })).sort((a, b) => b.dateKey.localeCompare(a.dateKey));
 
-  // Generate missing daily summaries (only once per day, after 8 AM WIB / 1 AM UTC)
-  const nowUtcHour = new Date().getUTCHours();
-  const refreshHour = 1; // 8 AM WIB
+  // Generate missing summaries — morning at 8 AM WIB, evening at 6 PM WIB.
+  // Past dates are backfilled up to MAX_PAST_BACKFILL per page load.
+  const nowWibHour = new Date(Date.now() + 7 * 60 * 60 * 1000).getUTCHours();
+  const MORNING_HOUR = 8;   // 8 AM WIB
+  const EVENING_HOUR = 18;  // 6 PM WIB
+  const MAX_PAST_BACKFILL = 3;
+  let pastBackfilled = 0;
   for (const g of dayGroups) {
-    if (g.summary != null) continue;
-    if (g.dateKey === todayKey && nowUtcHour < refreshHour) continue; // wait until refresh hour
-    try {
-      const text = await generateDailySummary(g.articles);
-      if (text) {
-        await db.insert(trendSummary).values({
-          workspaceId,
-          date: g.dateKey,
-          summary: text,
-          articleCount: g.count,
-          generatedAt: new Date()
-        });
-        g.summary = text;
-      }
-    } catch (err) { console.error('generateDailySummary failed for ' + g.dateKey + ':', err); }
+    if (g.articles.length === 0) continue;
+    const entry = summaryByDateWindow.get(g.dateKey) ?? {};
+    const isToday = g.dateKey === todayKey;
+    const isPast = g.dateKey < todayKey;
+
+    // Morning: only for today, if missing and past 8 AM WIB
+    if (isToday && !entry.morning && nowWibHour >= MORNING_HOUR) {
+      try {
+        const text = await generateDailySummary(g.articles);
+        if (text) {
+          await db.insert(trendSummary).values({
+            workspaceId, date: g.dateKey, window: 'morning',
+            summary: text, articleCount: g.count, generatedAt: new Date()
+          });
+          entry.morning = text;
+          summaryByDateWindow.set(g.dateKey, entry);
+          if (!entry.evening) g.summary = text;
+        }
+      } catch (err) { console.error('generateDailySummary (morning) failed for ' + g.dateKey + ':', err); }
+    }
+
+    // Evening: for today if past 6 PM WIB, or for one past date per load
+    const needsEvening = (isToday && nowWibHour >= EVENING_HOUR)
+      || (isPast && pastBackfilled < MAX_PAST_BACKFILL && !entry.morning && !entry.evening);
+    if (!entry.evening && needsEvening) {
+      try {
+        const text = await generateDailySummary(g.articles);
+        if (text) {
+          await db.insert(trendSummary).values({
+            workspaceId, date: g.dateKey, window: 'evening',
+            summary: text, articleCount: g.count, generatedAt: new Date()
+          });
+          entry.evening = text;
+          summaryByDateWindow.set(g.dateKey, entry);
+          g.summary = text; // evening supersedes morning for display
+          if (isPast) pastBackfilled++;
+        }
+      } catch (err) { console.error('generateDailySummary (evening) failed for ' + g.dateKey + ':', err); }
+    }
   }
+
+  if (!accuracySeeded) await seedAccuracyFromDb();
 
   const sourcesWithDomain = sources.map((s) => ({
     ...s,
@@ -197,24 +306,27 @@ export const load: PageServerLoad = async ({ cookies }) => {
     accuracy: sourceAccuracy(s.name)
   })).sort((a, b) => b.accuracy - a.accuracy);
 
-  const workspaceId =
-    Number(cookies.get('active_workspace') || '0') || sources[0]?.workspaceId || 0;
-
   const dayBlocks = dayGroups.map((g) => ({
     dateKey: g.dateKey,
     label: g.label,
     dayName: new Date(g.dateKey + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long' }),
     count: g.count,
     hasBriefing: g.summary != null,
-    html: renderDayBlock(g, g.summary != null)
+    html: renderDayBlock(g)
   }));
 
-  // Map of dateKey → { label, summary } for days that have one
+  // Map of dateKey → { label, summary } for days that have a briefing
   const briefings: Record<string, { label: string; summary: string }> = {};
   for (const g of dayGroups) {
     if (g.summary) {
+      const entry = summaryByDateWindow.get(g.dateKey);
       const isToday = g.dateKey === todayKey;
-      const label = isToday ? '08:00' : g.label;
+      let label: string;
+      if (isToday) {
+        label = entry?.evening ? 'Evening' : 'Morning';
+      } else {
+        label = g.label;
+      }
       briefings[g.dateKey] = { label, summary: g.summary };
     }
   }
@@ -255,23 +367,60 @@ function decodeEntities(s: string): string {
     .replace(/&hellip;/g, '…');
 }
 
-/** Rough category-accuracy per source, based on observed screening results. */
+// ── Rolling accuracy tracking ────────────────────────────────────────
+// In-memory cache seeded from DB on first load, updated after each screening
+// run and persisted to rss_source.total_screened / total_kept.
+
+const rollingAccuracy = new Map<string, { total: number; kept: number }>();
+let accuracySeeded = false;
+
+async function seedAccuracyFromDb() {
+  const rows = await db.select({ name: rssSource.name, totalScreened: rssSource.totalScreened, totalKept: rssSource.totalKept }).from(rssSource);
+  for (const r of rows) {
+    if (r.totalScreened > 0) {
+      rollingAccuracy.set(r.name, { total: r.totalScreened, kept: r.totalKept });
+    }
+  }
+  accuracySeeded = true;
+}
+
+async function updateSourceAccuracy(stats: ScreeningStats) {
+  for (const [name, s] of stats.bySource) {
+    const entry = rollingAccuracy.get(name) ?? { total: 0, kept: 0 };
+    entry.total += s.total;
+    entry.kept += s.kept;
+    rollingAccuracy.set(name, entry);
+  }
+  // Persist to DB
+  for (const [name, s] of stats.bySource) {
+    await db.update(rssSource)
+      .set({ totalScreened: sql`total_screened + ${s.total}`, totalKept: sql`total_kept + ${s.kept}` })
+      .where(eq(rssSource.name, name));
+  }
+}
+
+/** Category-accuracy per source, computed from cumulative screening results.
+ *  Falls back to hardcoded defaults for sources not yet screened. */
 function sourceAccuracy(name: string): number {
-  const map: Record<string, number> = {
-    // Dedicated feeds — almost never off-topic
+  const rolling = rollingAccuracy.get(name);
+  if (rolling && rolling.total >= 5) {
+    return Math.round((rolling.kept / rolling.total) * 100);
+  }
+  // Fallback defaults for first load before any screening data
+  const fallback: Record<string, number> = {
     'TechCrunch': 100, 'The Verge': 100, 'Hacker News': 95, 'Rest of World': 95,
     'RISE by DailySocial': 95, 'CNBC': 100, 'WSJ': 100, 'Yahoo Finance': 95,
     'Detik Finance': 95, 'EFF Deeplinks': 100, 'Intercom Blog': 100,
     "Lenny's Newsletter": 100, 'Stratechery': 100, 'Policy | TechCrunch': 95,
-    // Mostly on-topic but occasionally drifts
+    'Ars Technica': 100, 'Wired': 95, 'MIT Technology Review': 100,
+    'Techmeme': 95, 'Engadget': 95, 'Bloomberg Technology': 100,
+    'MarketWatch': 90, 'Katadata': 90,
     'Detik Inet': 80,
-    // Broad feeds — lots of off-topic content mixed in
     'CNN Indonesia Tekno': 50,
     'CNN Indonesia Ekonomi': 40,
-    // Improved after URL change from terkini → politik
     'ANTARA': 90,
   };
-  return map[name] ?? 85;
+  return fallback[name] ?? 85;
 }
 
 function cleanDescription(text: string | null | undefined): string | null {
@@ -321,20 +470,17 @@ interface DayGroup {
   }[];
 }
 
-function renderDayBlock(group: DayGroup, hasSummary = true): string {
+function renderDayBlock(group: DayGroup): string {
   let h = '';
-  const borderClass = hasSummary ? 'border-cork-200' : 'border-amber-300';
-  const bgClass = hasSummary ? 'bg-cork-50' : 'bg-amber-50/50';
-  h += `<div class="overflow-hidden rounded-xl border ${borderClass} bg-white/80 mb-5">`;
-  h += `<div class="flex items-center justify-between border-b ${borderClass} ${bgClass} px-3 py-2 md:px-5 md:py-3">`;
+  h += `<div class="overflow-hidden rounded-xl border border-cork-200 bg-white/80 mb-5">`;
+  h += `<div class="flex items-center justify-between border-b border-cork-200 bg-cork-50 px-3 py-2 md:px-5 md:py-3">`;
   h += `<div class="flex items-center gap-1.5 md:gap-2">${CALENDAR_SVG}<span class="text-xs font-semibold text-cork-700 md:text-sm">${esc(group.label)}</span></div>`;
 h += `<span class="text-[10px] font-medium text-cork-400">${group.count} article${group.count !== 1 ? 's' : ''}</span>`;
   h += '</div>';
 
-  const rowTint = hasSummary ? '' : ' bg-amber-50/30';
   h += '<div class="divide-y divide-cork-100">';
   for (const a of group.articles) {
-    h += `<div data-article-id="${a.id}" class="block cursor-pointer px-3 py-2 transition-colors hover:bg-cork-50/50 md:px-5 md:py-2.5${rowTint}">`;
+    h += `<div data-article-id="${a.id}" class="block cursor-pointer px-3 py-2 transition-colors hover:bg-cork-50/50 md:px-5 md:py-2.5">`;
     h += '<div class="flex items-start gap-3">';
     if (a.imageUrl) {
       h += `<img src="${esc(a.imageUrl)}" alt="" class="mt-0.5 h-16 w-24 shrink-0 rounded-lg object-cover" loading="lazy" />`;

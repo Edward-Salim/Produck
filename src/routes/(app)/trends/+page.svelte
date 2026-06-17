@@ -1,11 +1,13 @@
 <script lang="ts">
   import * as Dialog from '$lib/components/ui/dialog/index.js';
+  import { pushState } from '$app/navigation';
   import { Rss, ExternalLink, ChevronLeft, ChevronRight } from '@lucide/svelte';
 
   let { data } = $props();
 
   let sourcesDialogOpen = $state(false);
   let detailArticle = $state<(typeof data.articles)[number] | null>(null);
+  let detailInHistory = $state(false);
   let newIds = $state<Set<number>>(new Set(data.newArticleIds ?? []));
   const DAYS_PER_WEEK = 7;
 
@@ -16,20 +18,36 @@
     const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
     const monday = new Date(today);
     monday.setDate(today.getDate() + mondayOffset + offset * 7);
+    monday.setHours(0, 0, 0, 0);
     return monday;
   }
 
-  const todayKey = new Date().toISOString().slice(0, 10);
+  const todayKey = (() => {
+    const wib = new Date(Date.now() + 7 * 60 * 60 * 1000);
+    return wib.toISOString().slice(0, 10);
+  })();
   const blockDateKeys = $derived(new Set(data.dayBlocks.map((b: (typeof data.dayBlocks)[number]) => b.dateKey)));
 
   let weekOffset = $state(0); // 0 = this week, -1 = last week
   let activeFilter = $state(blockDateKeys.has(todayKey) ? todayKey : blockDateKeys.values().next().value ?? todayKey);
 
+  // Scroll the active date filter button into view (mobile)
+  $effect(() => {
+    const key = activeFilter;
+    queueMicrotask(() => {
+      const el = document.querySelector(`[data-date-key="${key}"]`);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    });
+  });
+
   function switchWeek(dir: number) {
     weekOffset += dir;
-    // Pick the first available day of the new week
     const mon = weekMonday(weekOffset);
-    for (let i = 0; i < DAYS_PER_WEEK; i++) {
+    // Forward: pick the latest available day. Backward: pick the earliest.
+    const start = dir > 0 ? DAYS_PER_WEEK - 1 : 0;
+    const end = dir > 0 ? -1 : DAYS_PER_WEEK;
+    const step = dir > 0 ? -1 : 1;
+    for (let i = start; i !== end; i += step) {
       const d = new Date(mon);
       d.setDate(mon.getDate() + i);
       const key = d.toISOString().slice(0, 10);
@@ -42,8 +60,11 @@
     Array.from({ length: DAYS_PER_WEEK }, (_, i) => {
       const d = new Date(weekMonday(weekOffset));
       d.setDate(d.getDate() + i);
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
       return {
-        key: d.toISOString().slice(0, 10),
+        key: `${y}-${m}-${day}`,
         dayName: d.toLocaleDateString('en-US', { weekday: 'short' }),
         dateNum: d.getDate(),
         month: d.toLocaleDateString('en-US', { month: 'short' })
@@ -76,7 +97,7 @@
       newIds = newIds;
     }
     const article = data.articles.find((a: (typeof data.articles)[number]) => a.id === id);
-    if (article) detailArticle = article;
+    if (article) openDetail(article);
   }
 
   // Sync highlight class on DOM elements when newIds or visible blocks change
@@ -98,6 +119,35 @@
       }
     });
   });
+
+  // Detail modal: push history state so browser back closes the modal
+  function openDetail(article: (typeof data.articles)[number]) {
+    detailArticle = article;
+    if (!detailInHistory && typeof window !== 'undefined') {
+      pushState('', { articleDetail: true });
+      detailInHistory = true;
+    }
+  }
+
+  function closeDetail() {
+    if (detailInHistory) {
+      history.back();
+    } else {
+      detailArticle = null;
+    }
+  }
+
+  function handleDetailPopState() {
+    if (detailInHistory && detailArticle) {
+      detailArticle = null;
+      detailInHistory = false;
+    }
+  }
+
+  $effect(() => {
+    window.addEventListener('popstate', handleDetailPopState);
+    return () => window.removeEventListener('popstate', handleDetailPopState);
+  });
 </script>
 
 <svelte:head>
@@ -111,7 +161,7 @@
     class="mt-0.5 cursor-pointer text-sm text-cork-500 hover:text-cork-600 hover:underline hover:decoration-dotted hover:underline-offset-2"
     onclick={() => (sourcesDialogOpen = true)}
   >
-    Product news from {data.sources.length} feeds, screened by AI and grouped by day
+    Product news from {data.sources.length} sources, curated by AI with daily briefings
   </p>
 </header>
 
@@ -125,8 +175,9 @@
         {@const hasArticles = blockDateKeys.has(d.key)}
         <button
           type="button"
-          disabled={!hasArticles}
-          class="shrink-0 md:flex-1 rounded-lg px-2 py-1.5 text-center text-xs font-medium transition-colors {!hasArticles ? 'border border-cork-200 text-cork-400/40' : 'cursor-pointer ' + (activeFilter === d.key ? 'bg-cork-700 text-cork-50' : 'border border-cork-300 text-cork-500 hover:bg-cork-100')}"
+          disabled={!hasArticles && d.key !== todayKey}
+          data-date-key={d.key}
+          class="shrink-0 md:flex-1 rounded-lg px-2 py-1.5 text-center text-xs font-medium transition-colors {!hasArticles && d.key !== todayKey ? 'border border-cork-200 text-cork-400/40' : 'cursor-pointer ' + (activeFilter === d.key ? 'bg-cork-700 text-cork-50' : 'border border-cork-300 text-cork-500 hover:bg-cork-100')}"
           onclick={() => (activeFilter = d.key)}
         >
           <span class="font-semibold">{d.dayName}</span>
@@ -152,7 +203,6 @@
         <ChevronRight class="size-3.5" />
       </button>
     </div>
-    <div class="pointer-events-none absolute top-0 right-0 h-full w-8 bg-gradient-to-l from-cork-50 to-transparent md:hidden"></div>
     </div>
   </div>
 {/if}
@@ -164,7 +214,7 @@
       <img src="/assets/produck-news.png" alt="" class="mt-0.5 h-20 w-24 shrink-0 rounded-lg object-cover" />
       <div class="min-w-0">
         <p class="text-[10px] font-semibold uppercase tracking-wide text-cork-400">Daily Briefing · {briefing.label}</p>
-        <p class="mt-1 text-xs leading-relaxed text-cork-700 sm:text-sm">{briefing.summary}</p>
+        <p class="mt-1 text-xs leading-relaxed text-cork-700 sm:text-sm">{@html briefing.summary}</p>
       </div>
     </div>
   </div>
@@ -180,8 +230,22 @@
   </div>
 
 {:else if data.dayBlocks.length > 0}
-  <div class="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-cork-300/50 py-16 text-center">
-    <p class="text-sm text-cork-500">No articles match this filter</p>
+  <!-- Empty day container for dates with no articles -->
+  <div class="overflow-hidden rounded-xl border border-cork-200 bg-white/80 mb-5">
+    <div class="flex items-center justify-between border-b border-cork-200 bg-cork-50 px-3 py-2 md:px-5 md:py-3">
+      <div class="flex items-center gap-1.5 md:gap-2">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="size-3.5 text-cork-400 md:size-4"><path d="M8 2v4"/><path d="M16 2v4"/><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 10h18"/></svg>
+        <span class="text-xs font-semibold text-cork-700 md:text-sm">
+          {new Date(activeFilter + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+        </span>
+      </div>
+      <span class="text-[10px] font-medium text-cork-400">0 articles</span>
+    </div>
+    <div class="flex flex-col items-center justify-center gap-1 py-10">
+      <p class="text-xs text-cork-400">
+        {activeFilter === todayKey ? 'Nothing yet today, check back later' : 'No articles for this day'}
+      </p>
+    </div>
   </div>
 {:else}
   <div
@@ -225,7 +289,7 @@
 </Dialog.Root>
 
 <!-- Article Detail Modal -->
-<Dialog.Root open={detailArticle != null} onOpenChange={(o) => { if (!o) detailArticle = null; }}>
+<Dialog.Root open={detailArticle != null} onOpenChange={(o) => { if (!o) closeDetail(); }}>
   <Dialog.Content class="max-w-[calc(100%-2rem)] max-h-[calc(100vh-3rem)] overflow-y-auto border-cork-300 bg-cork-50 sm:max-w-xl">
     {#if detailArticle}
       <Dialog.Header>

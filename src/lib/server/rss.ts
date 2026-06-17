@@ -11,12 +11,20 @@ export function createParser(): Parser {
 }
 
 /** Extract the best available image from an RSS item. Pass the full HTML content as fallback. */
-export function extractImage(item: Parser.Item, htmlContent?: string | null): string | null {
+export function extractImage(item: Parser.Item, articleUrl?: string | null, htmlContent?: string | null): string | null {
+  const baseUrl = articleUrl ? new URL(articleUrl).origin : null;
+
+  function resolve(src: string): string {
+    if (src.startsWith('//')) return 'https:' + src;
+    if (src.startsWith('/') && baseUrl) return baseUrl + src;
+    return src;
+  }
+
   // 1. enclosure (most common, parsed by default)
   if (item.enclosure?.url) {
     const url = item.enclosure.url;
     if (item.enclosure.type?.startsWith('image/') || /\.(jpg|jpeg|png|webp|gif|svg)(\?|$)/i.test(url)) {
-      return url;
+      return resolve(url);
     }
   }
 
@@ -26,7 +34,7 @@ export function extractImage(item: Parser.Item, htmlContent?: string | null): st
   if (thumbs.length > 0) {
     const sorted = [...thumbs]
       .filter((t) => t.$?.url)
-      .map((t) => ({ url: t.$!.url!, w: parseInt(t.$!.width ?? '0', 10) }));
+      .map((t) => ({ url: resolve(t.$!.url!), w: parseInt(t.$!.width ?? '0', 10) }));
     sorted.sort((a, b) => b.w - a.w);
     if (sorted.length > 0) return sorted[0].url;
   }
@@ -39,17 +47,17 @@ export function extractImage(item: Parser.Item, htmlContent?: string | null): st
       c.$?.url &&
       (c.$.medium === 'image' || c.$?.type?.startsWith('image/'))
   );
-  if (image?.$?.url) return image.$.url;
+  if (image?.$?.url) return resolve(image.$.url);
 
-  // 4. Parse <img> from content:encoded / content HTML (most blog feeds use this)
+  // 4. Parse <img> and CSS background-image from content:encoded / content HTML
   if (htmlContent) {
-    const match = htmlContent.match(/<img[^>]+src=["']([^"']+)["'][^>]*>/i);
-    if (match?.[1]) {
-      let src = match[1];
-      // Convert protocol-relative URLs to https
-      if (src.startsWith('//')) src = 'https:' + src;
-      return src;
-    }
+    // <img src="...">
+    const imgMatch = htmlContent.match(/<img[^>]+src=["']([^"']+)["'][^>]*>/i);
+    if (imgMatch?.[1]) return resolve(imgMatch[1]);
+
+    // CSS background-image: url(...)
+    const bgMatch = htmlContent.match(/background-image\s*:\s*url\(["']?([^)"']+)["']?\)/i);
+    if (bgMatch?.[1]) return resolve(bgMatch[1]);
   }
 
   // 5. itunes:image (podcast feeds)
@@ -57,6 +65,61 @@ export function extractImage(item: Parser.Item, htmlContent?: string | null): st
   if (itunes?.image) return itunes.image;
 
   return null;
+}
+
+/** Scrape og:image from an article URL. Used as last-resort fallback for feeds that
+ *  don't embed images (e.g. Yahoo Finance). Returns null if the page doesn't respond
+ *  within 4 seconds or has no og:image. */
+export async function scrapeOgImage(articleUrl: string): Promise<string | null> {
+  // Skip known paywalled / blocked domains — scraping will never succeed
+  const domain = (() => { try { return new URL(articleUrl).hostname; } catch { return ''; } })();
+  const BLOCKED = [
+    'wsj.com', 'finance.yahoo.com', 'stratechery.com',
+    'barrons.com', 'investors.com', 'discuss.grapheneos.org',
+  ];
+  if (BLOCKED.some((d) => domain === d || domain.endsWith('.' + d))) return null;
+
+  try {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 4000);
+
+    const res = await fetch(articleUrl, {
+      signal: ctrl.signal,
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; Produck/1.0)' }
+    });
+    clearTimeout(t);
+
+    if (!res.ok) return null;
+
+    // Read just enough to find og:image (first ~64 KB)
+    const reader = res.body?.getReader();
+    if (!reader) return null;
+
+    let html = '';
+    const decoder = new TextDecoder();
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      html += decoder.decode(value, { stream: true });
+      // Stop once we've seen og:image or passed the head
+      if (html.includes('og:image') || html.includes('</head>')) break;
+      if (html.length > 65536) break;
+    }
+    reader.cancel();
+
+    const match = html.match(/<meta\s+[^>]*property=["']og:image["'][^>]*content=["']([^"']+)["']/i)
+      ?? html.match(/<meta\s+[^>]*content=["']([^"']+)["'][^>]*property=["']og:image["']/i);
+
+    if (match?.[1]) {
+      let src = match[1];
+      if (src.startsWith('//')) src = 'https:' + src;
+      else if (src.startsWith('/')) src = new URL(articleUrl).origin + src;
+      return src;
+    }
+    return null;
+  } catch {
+    return null;
+  }
 }
 
 interface ArticleToScreen {
@@ -69,26 +132,123 @@ interface ArticleToScreen {
 /** Phrase blocklist per source — only matches clear off-topic patterns, not single words. */
 const OFF_TOPIC_PHRASES: Record<string, string[]> = {
   'CNN Indonesia Tekno': [
+    // Weather / climate
     'prakiraan cuaca', 'diguyur hujan', 'hujan lebat', 'hujan hari ini', 'hujan sabtu',
     'hujan minggu', 'hujan senin', 'berpotensi hujan', 'musim kemarau', 'puncak kemarau',
     'el nino', 'bmkg prediksi', 'bmkg ungkap', 'bmkg jelaskan',
-    'guncang filipina', 'gempa m', 'megathrust', 'terumbu karang',
-    'fenomena bun upas', 'hujan meteor', 'panda', 'kaki seribu raksasa',
-    'debut anak', 'kiamat iklim', 'dampak perubahan iklim', 'ekosistem laut',
+    'fenomena bun upas', 'bediding', 'dinginkan jatim', 'apa itu awan',
+    // Geology / disasters
+    'guncang filipina', 'gempa m', 'gempa besar', 'megathrust', 'terumbu karang',
+    'gunung meletus', 'tsunami', 'banjir bandang',
+    // Astronomy / space (not tech)
+    'gerhana matahari', 'aurora australis', 'noctilucent', 'hujan meteor',
+    // Nature / animals
+    'kaki seribu raksasa', 'pohon raksasa', 'axolotl',
+    'debut anak', 'hewan langka', 'fauna', 'habitat',
+    // Climate general
+    'kiamat iklim', 'dampak perubahan iklim', 'ekosistem laut',
+    // Military hardware (not tech news)
+    'helikopter as', 'drone mq-9', 'ditembak jatuh iran',
+    // Sports streaming
+    'siaran langsung piala', 'live streaming piala', 'nonton streaming piala',
+    'cara nonton piala',
   ],
   'CNN Indonesia Ekonomi': [
+    // Shopping / promos
     'full day sale', 'transmart full', 'ayo belanja', 'buruan beli', 'diskon melimpah',
-    'promo mulai', 'mau set', 'intip barangnya', 'boyong',
+    'promo mulai', 'intip barangnya',
+    'shopee vip', 'gebyar diskon',
+    // Transport incidents
     'layang-layang ganggu', 'perjalanan whoosh', 'mati lampu di',
     'magang jepang', 'ka stasiun', 'avsec soetta',
-    'shopee vip', 'gebyar diskon', 'bgn bakal', 'bgn setop', 'waka bgn', 'modal rp',
+    // Nutrition program (MBG / Badan Gizi)
+    'mbg disetop', 'mbg selama', 'badan gizi', 'bgn bakal', 'bgn setop',
+    'waka bgn', 'penerima mbg', 'dapur mbg', 'makan bergizi', 'program mbg',
+    // Protests / disputes
+    'demo mahasiswa', 'berujung ricuh', 'aksi mahasiswa', 'digusur demi',
+    'tudingan warga', 'tuntutan demo',
+    // Religious / cultural
+    '1 muharram', 'masjidil haram',
+    // Diplomatic travel
+    'kunker ke',
   ],
   'Detik Inet': [
+    // Sports
     'messi hattrick', 'messi di piala', 'ronaldo', 'mbappe lampaui',
-    'hiu goblin', 'hewan aneh', 'timnas',
+    'timnas', 'pemain bintang', 'piala dunia', 'pildun', 'hattrick',
+    'top skor', 'kiper', 'suporter', 'stadion',
+    'borong', 'tahan raksasa spanyol', 'haaland', 'yamal',
+    'ea sports fc',
+    // Shopping / promos
+    'full day sale', 'transmart full', 'diskon gede', 'diskon maksimal',
+    'shopee vip', 'kulkas polytron',
+    'mesin cuci sharp', 'ac split sharp', 'cuma harga segini',
+    'langganan shopee',
+    // Clickbait / viral
+    'momen apes', 'kesialan', 'ngadi-ngadi', 'bikin yang lihat', 'tepok jidat',
+    'deretan desain aneh', 'deretan desain gagal', 'penampakan',
+    'tukang las', 'bendungan raksasa',
+    // Entertainment / YouTube
+    'youtuber pertama', 'subscriber', 'mrbeast', 'tamagotchi',
+    // Gaming / esports (tournament results, not tech)
+    'kode redeem', 'fc mobile', 'mpl id', 'juara mpl', 'grand final mpl',
+    'jadwal grand final', 'daftar juara',
+    // Sports streaming promos
+    'bundling streaming', 'live streaming pildun', 'nonton pildun', 'nonton piala dunia',
+    // Nature / animals
+    'hiu goblin', 'hewan aneh', 'orangutan', 'anjing hantu', 'kuburan',
+    'populasi', 'punah',
+    // Weather
+    'el nino sudah melanda',
+    // Gossip
+    'mantan istri bill gates', 'pacari mantan putri', 'ayah elon musk',
+    // Religious
+    'kebenaran al qur',
+  ],
+  'Ars Technica': [
+    'reader survey', 'let your voice be heard', 'tell us what you think',
+    'subscribe to', 'premium subscription', 'ars pro',
+  ],
+  'Engadget': [
+    // Gaming coverage (not tech)
+    'game fest', 'games we played', 'new game', 'game review',
+    'gta 5', 'gta 6', 'grand theft auto', 'rockstar',
+    'nintendo', 'playstation', 'xbox', 'pc game',
+    // Shopping / deals
+    'prime day', 'best deal', 'on sale', 'discount',
+    'cheaper than ever', 'price cut', 'buy now',
+  ],
+  'Wired': [
+    // Promo codes / coupons
+    'promo code', 'coupon code', 'coupons', '% off',
+    'promo codes', 'gift cards',
+    // Buying guides (product roundups, not tech reviews)
+    'best handheld', 'best robot', 'best office chair', 'best laptop',
+    'best mattress', 'best fan', 'best vacuum', 'best lawn',
+    'need a new', 'bright ideas', 'best gifts', 'gift guide',
+    'buying guide', 'things on sale', 'on sale this', 'deals on',
+    'early prime day', 'prime day deal',
+    // Home / lifestyle
+    'home decor', 'interior design', 'throw pillow', 'area rug',
+    'starter home', 'dream house', 'dumb house', 'future of home',
+    'what do we need from our homes', 'what do americans spend on housing',
+    'dwellings of tomorrow', 'building solutions keep things local',
+    'cookware', 'recipe for', 'how to clean',
+    // Entertainment
+    'hockey show', 'tv show', 'movie review', 'what to watch',
+    'streaming guide', 'best shows', 'on netflix', 'on hbo',
+    'adult swim', 'infowars', 'reality tv', 'fishtank',
+    'tim heidecker', 'paramount refused to air',
+    // Non-tech science
+    'new species', 'dinosaur', 'fossil', 'whale', 'shark',
+    'antarctica', 'climate change innovation',
+    // Sports
+    'athletes', 'separating sports from politics',
+    // Politics
+    'reflecting pool', 'trump renovation',
   ],
   'ANTARA': [
-    ' vs ', 'pertandingan', 'liga champions', 'piala dunia', 'laga',
+    'pertandingan', 'liga champions', 'piala dunia', 'laga',
   ],
 };
 
@@ -105,65 +265,127 @@ function isObviouslyOffTopic(article: ArticleToScreen): boolean {
  * Primary: DeepSeek. Fallback: Gemini Flash.
  * Returns only the articles deemed on-topic.
  */
-export async function screenArticles(articles: ArticleToScreen[]): Promise<Set<string>> {
-  if (articles.length === 0) return new Set();
+export interface ScreeningStats {
+  /** Per-source: total screened (past keyword filter) → articles kept */
+  bySource: Map<string, { total: number; kept: number }>;
+}
+
+export async function screenArticles(articles: ArticleToScreen[]): Promise<{ kept: Set<string>; stats: ScreeningStats }> {
+  const stats: ScreeningStats = { bySource: new Map() };
+
+  if (articles.length === 0) return { kept: new Set(), stats };
 
   // 1) Keyword pre-filter — catch obvious mismatches without AI
   const aiQueue: ArticleToScreen[] = [];
-  const keep = new Set<string>();
+  const kept = new Set<string>();
   for (const a of articles) {
-    if (isObviouslyOffTopic(a)) continue; // silently drop
+    if (isObviouslyOffTopic(a)) {
+      // Track keyword-rejected for accuracy
+      const s = stats.bySource.get(a.sourceName) ?? { total: 0, kept: 0 };
+      s.total++;
+      stats.bySource.set(a.sourceName, s);
+      continue;
+    }
     if (aiQueue.length === 0 && articles.length === 1) {
-      keep.add(a.title); // single article, assume on-topic
+      kept.add(a.title); // single article, assume on-topic
+      const s = stats.bySource.get(a.sourceName) ?? { total: 0, kept: 0 };
+      s.total++; s.kept++;
+      stats.bySource.set(a.sourceName, s);
     } else {
       aiQueue.push(a);
     }
   }
-  if (aiQueue.length === 0) return keep;
+  if (aiQueue.length === 0) return { kept, stats };
 
   const { env } = await import('$env/dynamic/private');
-  const articleList = aiQueue
-    .map((a, i) => `${i + 1}. [${a.category}] ${a.title}`)
-    .join('\n');
 
-  const prompt = `Screen these articles for a [category] RSS feed. Keep only articles that fit their category tag. Reject clearly off-topic ones (wrong subject, clickbait, fluff).
+  // 2) Batch AI screening for all sources
+  // Use "reject" framing so the model defaults to keeping articles
+  const BATCH_SIZE = 30;
+  for (let offset = 0; offset < aiQueue.length; offset += BATCH_SIZE) {
+    const batch = aiQueue.slice(offset, offset + BATCH_SIZE);
+    const startNum = offset + 1;
+    const articleList = batch
+      .map((a, i) => `${startNum + i}. [${a.category}] ${a.title}`)
+      .join('\n');
+
+    const prompt = `Flag articles that are off-topic for a tech/business news feed.
+
+Each article has a [category] tag. Keep articles about: software, hardware, AI, startups, cybersecurity, internet policy, science/space tech, macroeconomics, business, finance, trade, regulation, industry shifts.
+
+Reject:
+- Entertainment: TV/movie/music reviews, celebrity gossip, streaming show commentary, sports shows, awards shows
+- Sports: game results, player transfers, league news, sports betting, sports-adjacent entertainment
+- Gaming/esports: tournament results, game reviews, streamer drama (game-tech/dev is ok)
+- Health/medical: drug trials, disease outbreaks, hospital news, diet studies (health-tech/wearables are ok)
+- Crime/courts: murder trials, arrests, sentencing, lawsuits (cybercrime/tech-regulation cases are ok)
+- Lifestyle: recipes, travel tips, fashion, fitness, home decor, gardening, sex/dating advice, factory tours, industrial production documentaries
+- Career puff pieces: MBA skills, soft skills rankings, "best jobs" lists, office culture fluff (labor market data is ok)
+- Real estate: housing prices, open houses, mortgage tips (proptech is ok)
+- Science not tech: paleontology, marine biology, archeology, zoology (space/energy/materials science is ok)
+- Local general news: city council, school board, new park, local elections
+- Weather, natural disasters
+- Shopping: product roundups, buying guides, gift ideas, deals, discounts, flash sales (enterprise-tech/software roundups are ok)
+- Home decor, interior design, furniture (smart home devices are ok)
+- Religious content, clickbait, viral videos, human-interest fluff
+- Meta/housekeeping: reader surveys, site announcements, newsletter promos, subscription pitches, "tell us your thoughts", call for feedback
+- Traffic accidents, power outages, transport disruptions
 
 ${articleList}
 
-Reply with just the numbers to KEEP, comma-separated. Example: "1,3,5". If none, reply "none".`;
+Reply ONLY with the numbers of articles to REJECT, comma-separated. Example: "${startNum+2},${startNum+7}". If all are on-topic, reply "none".`;
 
-  // 1) Try DeepSeek first (fast, cheap, no free-tier RPM throttling)
-  const deepseekKey = env.DEEPSEEK_API_KEY;
-  if (deepseekKey) {
-    try {
-      const text = await callDeepSeek(prompt, deepseekKey);
-      if (text) return new Set([...keep, ...parseScreeningResponse(text, aiQueue)]);
-    } catch (err) {
-      console.error('screenArticles: DeepSeek failed, falling back to Gemini:', err);
+    let text = '';
+    // Try DeepSeek first
+    const deepseekKey = env.DEEPSEEK_API_KEY;
+    if (deepseekKey) {
+      try {
+        text = await callDeepSeek(prompt, deepseekKey);
+      } catch (err) {
+        console.error('screenArticles: DeepSeek failed:', err);
+      }
+    }
+
+    // Fall back to Gemini if DeepSeek didn't produce a result
+    if (!text) {
+      const keys = (env.GEMINI_API_KEYS ?? '').split(',').filter(Boolean);
+      if (keys.length > 0) {
+        try {
+          const { GoogleGenAI } = await import('@google/genai');
+          const key = keys[Math.floor(Date.now() / 1000) % keys.length];
+          const ai = new GoogleGenAI({ apiKey: key });
+          const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: prompt,
+            config: { maxOutputTokens: 200, temperature: 0 }
+          });
+          text = response.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+        } catch (err) {
+          console.error('screenArticles: Gemini failed:', err);
+        }
+      }
+    }
+
+    // Default to keeping everything in the batch
+    const rejectedNums = new Set<number>();
+    if (text && !text.toLowerCase().includes('none')) {
+      for (const n of (text.match(/\d+/g)?.map(Number) ?? [])) rejectedNums.add(n);
+    }
+
+    for (let j = 0; j < batch.length; j++) {
+      const article = batch[j];
+      const num = startNum + j;
+      const s = stats.bySource.get(article.sourceName) ?? { total: 0, kept: 0 };
+      s.total++;
+      if (!rejectedNums.has(num)) {
+        kept.add(article.title);
+        s.kept++;
+      }
+      stats.bySource.set(article.sourceName, s);
     }
   }
 
-  // 2) Fall back to Gemini
-  const keys = (env.GEMINI_API_KEYS ?? '').split(',').filter(Boolean);
-  if (keys.length > 0) {
-    try {
-      const { GoogleGenAI } = await import('@google/genai');
-      const key = keys[Math.floor(Date.now() / 1000) % keys.length];
-      const ai = new GoogleGenAI({ apiKey: key });
-      const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: prompt,
-        config: { maxOutputTokens: 200, temperature: 0 }
-      });
-      const text = response.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
-      return parseScreeningResponse(text, aiQueue);
-    } catch (err) {
-      console.error('screenArticles: Gemini also failed, allowing all articles through:', err);
-    }
-  }
-
-  // 3) No keys or all failed — allow all aiQueue + keyword pre-filtered keepers
-  return new Set([...keep, ...aiQueue.map((a) => a.title)]);
+  return { kept, stats };
 }
 
 async function callDeepSeek(prompt: string, apiKey: string): Promise<string> {
@@ -195,34 +417,72 @@ async function callDeepSeek(prompt: string, apiKey: string): Promise<string> {
   return lines.findLast((l: string) => l.trim())?.trim() ?? '';
 }
 
-function parseScreeningResponse(text: string, articles: ArticleToScreen[]): Set<string> {
-  if (!text || text.toLowerCase().includes('none')) return new Set();
-  const indices = text.match(/\d+/g)?.map(Number) ?? [];
-  const keep = new Set<string>();
-  for (const idx of indices) {
-    const article = articles[idx - 1];
-    if (article) keep.add(article.title);
-  }
-  return keep;
-}
 
 export interface DayArticlesForSummary {
   title: string;
   sourceName: string;
-  category: string;
+  sourceCategory: string;
+  sourceRegion: string;
+  description: string;
 }
 
-/** Generate a 1-2 sentence summary of the day's top stories via DeepSeek. */
+/** Heuristic: detect when the LLM echoes planning/instructions instead of writing the briefing. */
+function isInstructionEcho(text: string): boolean {
+  const lower = text.toLowerCase();
+  const echoMarkers = [
+    'we need to',
+    'from the list',
+    'from the given',
+    'pick one',
+    'pick two',
+    'pick 2',
+    'let me',
+    'here is',
+    'here are',
+    'i can',
+    'i will',
+    'i\'ll',
+    'sure',
+    'certainly',
+    'global story',
+    'indonesia story',
+    'must be high-signal',
+    'no markdown',
+    'plain english',
+    '2-3 sentences',
+  ];
+  const matchCount = echoMarkers.filter((m) => lower.includes(m)).length;
+  return matchCount >= 2;
+}
+
+/** Convert **bold** markdown to <strong> tags and escape any other HTML. */
+function convertBold(text: string): string {
+  // First, convert **text** → <strong>text</strong>
+  const withBold = text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  // Escape any raw HTML that isn't our <strong> tags
+  return withBold
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/&lt;(\/?strong)&gt;/g, '<$1>');
+}
+
+/** Generate a daily tech/business briefing via DeepSeek. Covers 1 global + 1 Indonesia story. */
 export async function generateDailySummary(articles: DayArticlesForSummary[]): Promise<string | null> {
-  if (articles.length < 3) return null;
+  if (articles.length < 1) return null;
 
   const { env } = await import('$env/dynamic/private');
   const key = env.DEEPSEEK_API_KEY;
   if (!key) return null;
 
-  const list = articles.map((a) => `- [${a.category}] ${a.sourceName}: ${a.title}`).join('\n');
+  const list = articles
+    .map(
+      (a) =>
+        `- [${a.sourceCategory}] ${a.sourceName} (${a.sourceRegion}): ${a.title}\n  ${a.description || '(no description)'}`
+    )
+    .join('\n\n');
 
-  const prompt = `You write a daily tech/business briefing. Cover 1 big global story AND 1 important Indonesia story. Write exactly 2 sentences. Pick only the most important stories. Connect them if there's a theme. Skip filler, weather, sports, and ads. Be specific — name names, numbers, stakes. Under 250 characters. No markdown.
+  const prompt = `Write a 2-sentence daily tech/business briefing. Sentence 1: the most important global or regional tech/business story today. Sentence 2: the most important Indonesia tech/business story today. Skip streaming promos, product deals, sports-adjacent fluff, and human-interest filler — only pick stories with real stakes: policy changes, major investments, industry shifts, competitive moves, regulatory actions, or meaningful product launches. If no Indonesia story clears that bar, write a second global/regional story instead. Never fabricate. Be specific with names, numbers, and stakes. Under 450 characters total. Use **double asterisks** around important names, numbers, and keywords to bold them. No preamble — output the briefing directly.
 
 Articles:
 ${list}`;
@@ -234,7 +494,7 @@ ${list}`;
       body: JSON.stringify({
         model: 'deepseek-v4-flash',
         messages: [{ role: 'user', content: prompt }],
-        max_tokens: 400,
+        max_tokens: 2000,
         temperature: 0.3
       })
     });
@@ -242,7 +502,15 @@ ${list}`;
     const data: any = await res.json();
     const msg = data?.choices?.[0]?.message;
     const raw = msg?.content || msg?.reasoning_content || '';
-    return raw.trim() || null;
+    const text = raw.trim();
+
+    // Discard responses where the model echoes instructions instead of producing a briefing
+    if (!text) return null;
+    if (isInstructionEcho(text)) {
+      console.warn('generateDailySummary: discarding instruction echo:', text.slice(0, 120));
+      return null;
+    }
+    return convertBold(text);
   } catch (err) {
     console.error('generateDailySummary failed:', err);
     return null;

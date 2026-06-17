@@ -749,6 +749,8 @@ export const rssSource = pgTable('rss_source', {
   category: text('category').notNull().default('general'),
   region: text('region').notNull().default('global'),
   enabled: boolean('enabled').notNull().default(true),
+  totalScreened: integer('total_screened').notNull().default(0),
+  totalKept: integer('total_kept').notNull().default(0),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
 });
 
@@ -763,7 +765,7 @@ export const rssArticle = pgTable('rss_article', {
     .notNull()
     .references(() => rssSource.id, { onDelete: 'cascade' }),
   title: text('title').notNull(),
-  url: text('url').notNull(),
+  url: text('url').notNull().unique(),
   description: text('description'),
   content: text('content'),
   author: text('author'),
@@ -782,6 +784,7 @@ export const trendSummary = pgTable('trend_summary', {
     .notNull()
     .references(() => workspace.id, { onDelete: 'cascade' }),
   date: text('date').notNull(),
+  window: text('window').notNull().default('morning'),
   summary: text('summary'),
   articleCount: integer('article_count').notNull().default(0),
   generatedAt: timestamp('generated_at', { withTimezone: true })

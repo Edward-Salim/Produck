@@ -1668,43 +1668,49 @@
 </svelte:head>
 
 <div class="mx-auto max-w-7xl space-y-2.5">
-  <header class="grid gap-2 xl:grid-cols-[auto_1fr] xl:items-center">
-    <div class="min-w-48">
-      <h1 class="text-xl font-semibold text-cork-900 md:text-2xl">Financial Tracker</h1>
-      <div class="mt-2 flex gap-1 rounded-lg border border-cork-300/45 bg-cork-50/70 p-1">
-        <button
-          type="button"
-          class="view-tab"
-          class:active={selectedView === 'accounting'}
-          onclick={() => (selectedView = 'accounting')}
-        >
-          Accounting
-        </button>
-        <button
-          type="button"
-          class="view-tab"
-          class:active={selectedView === 'investments'}
-          onclick={() => (selectedView = 'investments')}
-        >
-          Investments
-        </button>
-      </div>
-    </div>
+  <header class="mb-4 md:mb-6">
+    <h1 class="font-display text-2xl text-cork-800 md:text-4xl">Financial Tracker</h1>
+    <p class="mt-0.5 text-sm text-cork-500">
+      Track budgets, expenses and investments across accounts
+    </p>
 
-    {#if selectedView === 'accounting'}
-      <div class="flex min-w-0 gap-1.5 overflow-x-auto">
-        {#each monthTabs as month (month.key)}
+    <div class="mt-2 grid gap-2 xl:grid-cols-[auto_1fr] xl:items-center">
+      <div class="min-w-48">
+        <div class="flex gap-1 rounded-lg border border-cork-300/45 bg-cork-50/70 p-1">
           <button
             type="button"
-            class="month-tab"
-            class:active={selectedMonth === month.key}
-            onclick={() => (selectedMonth = month.key)}
+            class="view-tab"
+            class:active={selectedView === 'accounting'}
+            onclick={() => (selectedView = 'accounting')}
           >
-            <span>{month.label}</span>
+            Accounting
           </button>
-        {/each}
+          <button
+            type="button"
+            class="view-tab"
+            class:active={selectedView === 'investments'}
+            onclick={() => (selectedView = 'investments')}
+          >
+            Investments
+          </button>
+        </div>
       </div>
-    {/if}
+
+      {#if selectedView === 'accounting'}
+        <div class="flex min-w-0 gap-1.5 overflow-x-auto">
+          {#each monthTabs as month (month.key)}
+            <button
+              type="button"
+              class="month-tab"
+              class:active={selectedMonth === month.key}
+              onclick={() => (selectedMonth = month.key)}
+            >
+              <span>{month.label}</span>
+            </button>
+          {/each}
+        </div>
+      {/if}
+    </div>
   </header>
 
   {#if selectedView === 'accounting'}
