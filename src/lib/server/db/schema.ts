@@ -772,7 +772,8 @@ export const rssArticle = pgTable('rss_article', {
   imageUrl: text('image_url'),
   publishedAt: timestamp('published_at', { withTimezone: true }),
   fetchedAt: timestamp('fetched_at', { withTimezone: true }).notNull().defaultNow(),
-  rejected: boolean('rejected').notNull().default(false)
+  rejected: boolean('rejected').notNull().default(false),
+  screened: boolean('screened').notNull().default(false)
 });
 
 export const rssArticleRelations = relations(rssArticle, ({ one }) => ({

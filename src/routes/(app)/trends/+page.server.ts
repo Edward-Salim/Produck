@@ -74,15 +74,18 @@ async function fetchFeeds(sources: typeof rssSource.$inferSelect[]) {
     const aiQueue = toInsert.filter((a) => !a.rejected);
     if (aiQueue.length > 0) {
       const articlesToScreen = aiQueue.map((a) => ({ title: a.title!, ...sourceMap.get(a.sourceId!)! }));
-      void screenArticles(articlesToScreen).then(({ kept: keepTitles, stats }) => {
-        updateSourceAccuracy(stats);
+      const aiUrls = aiQueue.map((a) => a.url!);
+      void screenArticles(articlesToScreen).then(async ({ kept: keepTitles, stats }) => {
+        await updateSourceAccuracy(stats);
         const keepUrls = new Set<string>();
         for (const item of aiQueue) {
           if (keepTitles.has(item.title!)) keepUrls.add(item.url!);
         }
-        const rejectUrls = inserted.filter((r) => !keepUrls.has(r.url)).map((r) => r.url);
+        const rejectUrls = aiUrls.filter((url) => !keepUrls.has(url));
+        // Mark all AI-screened articles as screened
+        await db.update(rssArticle).set({ screened: true }).where(inArray(rssArticle.url, aiUrls));
         if (rejectUrls.length > 0) {
-          return db.update(rssArticle).set({ rejected: true }).where(inArray(rssArticle.url, rejectUrls));
+          await db.update(rssArticle).set({ rejected: true }).where(inArray(rssArticle.url, rejectUrls));
         }
       }).catch((err) => console.error('Background screening failed:', err));
     }
@@ -268,6 +271,7 @@ export const load: PageServerLoad = async ({ cookies }) => {
   const MORNING_HOUR = 8;   // 8 AM WIB
   const EVENING_HOUR = 18;  // 6 PM WIB
   const MAX_PAST_BACKFILL = 3;
+  const generatingDates = new Set<string>();
   let pastBackfilled = 0;
   for (const g of dayGroups) {
     if (g.articles.length === 0) continue;
@@ -277,6 +281,7 @@ export const load: PageServerLoad = async ({ cookies }) => {
 
     // Morning: only for today, if missing and past 8 AM WIB (fire-and-forget)
     if (isToday && !entry.morning && nowWibHour >= MORNING_HOUR) {
+      generatingDates.add(g.dateKey);
       const arts = [...g.articles];
       void generateDailySummary(arts).then(async (text) => {
         if (text) {
@@ -293,6 +298,7 @@ export const load: PageServerLoad = async ({ cookies }) => {
       || (isPast && pastBackfilled < MAX_PAST_BACKFILL && !entry.morning && !entry.evening);
     if (!entry.evening && needsEvening) {
       if (isPast) pastBackfilled++;
+      generatingDates.add(g.dateKey);
       const arts = [...g.articles];
       void generateDailySummary(arts).then(async (text) => {
         if (text) {
@@ -319,6 +325,7 @@ export const load: PageServerLoad = async ({ cookies }) => {
     dayName: new Date(g.dateKey + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long' }),
     count: g.count,
     hasBriefing: g.summary != null,
+    generating: generatingDates.has(g.dateKey),
     html: renderDayBlock(g)
   }));
 
@@ -482,7 +489,7 @@ function renderDayBlock(group: DayGroup): string {
   h += `<div class="overflow-hidden rounded-xl border border-cork-200 bg-white/80 mb-5">`;
   h += `<div class="flex items-center justify-between border-b border-cork-200 bg-cork-50 px-3 py-2 md:px-5 md:py-3">`;
   h += `<div class="flex items-center gap-1.5 md:gap-2">${CALENDAR_SVG}<span class="text-xs font-semibold text-cork-700 md:text-sm">${esc(group.label)}</span></div>`;
-h += `<span class="text-[10px] font-medium text-cork-400">${group.count} article${group.count !== 1 ? 's' : ''}<span class="screening-dot ml-1 inline-block size-1.5 rounded-full bg-amber-500 align-middle" style="display:none"></span></span>`;
+h += `<span class="screening-count text-[10px] font-medium" data-screening-count>${group.count} article${group.count !== 1 ? 's' : ''}</span>`;
   h += '</div>';
 
   h += '<div class="divide-y divide-cork-100">';

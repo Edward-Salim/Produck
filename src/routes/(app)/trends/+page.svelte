@@ -1,6 +1,6 @@
 <script lang="ts">
   import * as Dialog from '$lib/components/ui/dialog/index.js';
-  import { pushState } from '$app/navigation';
+  import { pushState, invalidateAll } from '$app/navigation';
   import { Rss, ExternalLink, ChevronLeft, ChevronRight } from '@lucide/svelte';
 
   let { data } = $props();
@@ -10,16 +10,50 @@
   let detailInHistory = $state(false);
   const DAYS_PER_WEEK = 7;
 
-  // Realtime screening dot: polls article freshness every 5s, toggles the dot in the day block header
+  // Realtime screening indicator: polls API, pulses count while screening
+  let wasScreening = $state(false);
   $effect(() => {
-    const check = () => {
-      const now = Date.now();
-      const fresh = data.articles.some((a) => now - new Date(a.fetchedAt).getTime() < 30_000);
-      for (const el of document.querySelectorAll('.screening-dot')) {
-        (el as HTMLElement).style.display = fresh ? 'inline-block' : 'none';
-      }
+    const check = async () => {
+      try {
+        const res = await fetch('/api/rss/screening-status');
+        if (res.ok) {
+          const { unscreened } = await res.json();
+          const active = unscreened > 0;
+          for (const el of document.querySelectorAll('.screening-count')) {
+            const span = el as HTMLElement;
+            if (active) {
+              span.classList.add('text-amber-600', 'animate-pulse');
+              span.classList.remove('text-emerald-600', 'text-cork-400');
+            } else if (wasScreening) {
+              span.classList.add('text-emerald-600');
+              span.classList.remove('text-amber-600', 'text-cork-400', 'animate-pulse');
+            } else {
+              span.classList.add('text-cork-400');
+              span.classList.remove('text-amber-600', 'text-emerald-600', 'animate-pulse');
+            }
+          }
+          wasScreening = active;
+        }
+      } catch { /* ignore network errors */ }
     };
     check();
+    const interval = setInterval(check, 5000);
+    return () => clearInterval(interval);
+  });
+
+  // Briefing generation poller: while skeleton is showing, check if done
+  $effect(() => {
+    if (!briefingGenerating) return;
+    const date = activeFilter;
+    const check = async () => {
+      try {
+        const res = await fetch(`/api/rss/briefing-status?date=${date}`);
+        if (res.ok) {
+          const { hasAny } = await res.json();
+          if (hasAny) invalidateAll();
+        }
+      } catch { /* ignore */ }
+    };
     const interval = setInterval(check, 5000);
     return () => clearInterval(interval);
   });
@@ -100,6 +134,18 @@
   );
 
   const briefing = $derived(data.briefings[activeFilter] ?? null);
+  const briefingGenerating = $derived(
+    !briefing && (data.dayBlocks.find((b) => b.dateKey === activeFilter)?.generating ?? false)
+  );
+
+  const generatingLabel = $derived.by(() => {
+    if (!briefingGenerating) return '';
+    const nowWibHour = new Date(Date.now() + 7 * 60 * 60 * 1000).getUTCHours();
+    if (activeFilter === todayKey) {
+      return nowWibHour >= 18 ? 'Evening' : 'Morning';
+    }
+    return new Date(activeFilter + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+  });
 
   function handleFeedClick(e: MouseEvent) {
     const target = (e.target as HTMLElement).closest('[data-article-id]') as HTMLElement | null;
@@ -204,6 +250,18 @@
       <div class="min-w-0">
         <p class="text-[10px] font-semibold uppercase tracking-wide text-cork-400">Daily Briefing · {briefing.label}</p>
         <p class="mt-1 text-xs leading-relaxed text-cork-700 sm:text-sm">{@html briefing.summary}</p>
+      </div>
+    </div>
+  </div>
+{:else if briefingGenerating}
+  <div class="mb-5 overflow-hidden rounded-xl border border-cork-200 bg-white/80">
+    <div class="flex items-start gap-3 px-3 py-3 md:px-5 md:py-4">
+      <img src="/assets/produck-news.png" alt="" class="mt-0.5 h-20 w-24 shrink-0 rounded-lg object-cover" />
+      <div class="min-w-0 flex-1 space-y-2">
+        <p class="text-[10px] font-semibold uppercase tracking-wide text-cork-400">Daily Briefing · {generatingLabel}</p>
+        <div class="h-3 w-full animate-pulse rounded bg-cork-200/50"></div>
+        <div class="h-3 w-5/6 animate-pulse rounded bg-cork-200/50"></div>
+        <div class="h-3 w-2/3 animate-pulse rounded bg-cork-200/50"></div>
       </div>
     </div>
   </div>

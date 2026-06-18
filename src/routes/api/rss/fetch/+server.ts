@@ -118,7 +118,10 @@ export const POST: RequestHandler = async ({ request }) => {
         if (keepTitles.has(item.title!)) keepUrls.add(item.url!);
       }
 
-      const rejectUrls = inserted.filter((r) => !keepUrls.has(r.url)).map((r) => r.url);
+      const aiUrls = aiQueue.map((a) => a.url!);
+      const rejectUrls = aiUrls.filter((url) => !keepUrls.has(url));
+      // Mark all AI-screened articles as screened
+      await db.update(rssArticle).set({ screened: true }).where(inArray(rssArticle.url, aiUrls));
       if (rejectUrls.length > 0) {
         await db.update(rssArticle).set({ rejected: true }).where(inArray(rssArticle.url, rejectUrls));
       }
