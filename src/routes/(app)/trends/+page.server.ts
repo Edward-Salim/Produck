@@ -52,26 +52,22 @@ async function fetchFeeds(sources: typeof rssSource.$inferSelect[]) {
   if (toInsert.length > 0) {
     const inserted = await db.insert(rssArticle).values(toInsert).returning({ id: rssArticle.id, url: rssArticle.url });
 
-    // Screen synchronously: run AI to filter off-topic articles before page renders
+    // Screen asynchronously — don't block page load (avoids Netlify 10s timeout)
+    // Articles show immediately; off-topic ones get deleted by background screening
+    newIds = inserted.map((r) => r.id);
     const sourceMap = new Map(enabled.map((s) => [s.id, { category: s.category, region: s.region, sourceName: s.name }]));
-    const { kept: keepTitles, stats } = await screenArticles(
-      toInsert.map((a) => ({ title: a.title!, ...sourceMap.get(a.sourceId!)! }))
-    );
-
-    // Update rolling accuracy from this screening run
-    updateSourceAccuracy(stats);
-
-    const keepUrls = new Set<string>();
-    for (const item of toInsert) {
-      if (keepTitles.has(item.title!)) keepUrls.add(item.url!);
-    }
-
-    const deleteUrls = inserted.filter((r) => !keepUrls.has(r.url)).map((r) => r.url);
-    if (deleteUrls.length > 0) {
-      await db.delete(rssArticle).where(inArray(rssArticle.url, deleteUrls));
-    }
-
-    newIds = inserted.filter((r) => keepUrls.has(r.url)).map((r) => r.id);
+    const articlesToScreen = toInsert.map((a) => ({ title: a.title!, ...sourceMap.get(a.sourceId!)! }));
+    void screenArticles(articlesToScreen).then(({ kept: keepTitles, stats }) => {
+      updateSourceAccuracy(stats);
+      const keepUrls = new Set<string>();
+      for (const item of toInsert) {
+        if (keepTitles.has(item.title!)) keepUrls.add(item.url!);
+      }
+      const deleteUrls = inserted.filter((r) => !keepUrls.has(r.url)).map((r) => r.url);
+      if (deleteUrls.length > 0) {
+        return db.delete(rssArticle).where(inArray(rssArticle.url, deleteUrls));
+      }
+    }).catch((err) => console.error('Background screening failed:', err));
   }
 
   // Prune articles older than last week (keep this week + last week only).
@@ -262,39 +258,33 @@ export const load: PageServerLoad = async ({ cookies }) => {
     const isToday = g.dateKey === todayKey;
     const isPast = g.dateKey < todayKey;
 
-    // Morning: only for today, if missing and past 8 AM WIB
+    // Morning: only for today, if missing and past 8 AM WIB (fire-and-forget)
     if (isToday && !entry.morning && nowWibHour >= MORNING_HOUR) {
-      try {
-        const text = await generateDailySummary(g.articles);
+      const arts = [...g.articles];
+      void generateDailySummary(arts).then(async (text) => {
         if (text) {
           await db.insert(trendSummary).values({
             workspaceId, date: g.dateKey, window: 'morning',
             summary: text, articleCount: g.count, generatedAt: new Date()
           });
-          entry.morning = text;
-          summaryByDateWindow.set(g.dateKey, entry);
-          if (!entry.evening) g.summary = text;
         }
-      } catch (err) { console.error('generateDailySummary (morning) failed for ' + g.dateKey + ':', err); }
+      }).catch((err) => console.error('generateDailySummary (morning) failed for ' + g.dateKey + ':', err));
     }
 
-    // Evening: for today if past 6 PM WIB, or for one past date per load
+    // Evening: for today if past 6 PM WIB, or for one past date per load (fire-and-forget)
     const needsEvening = (isToday && nowWibHour >= EVENING_HOUR)
       || (isPast && pastBackfilled < MAX_PAST_BACKFILL && !entry.morning && !entry.evening);
     if (!entry.evening && needsEvening) {
-      try {
-        const text = await generateDailySummary(g.articles);
+      if (isPast) pastBackfilled++;
+      const arts = [...g.articles];
+      void generateDailySummary(arts).then(async (text) => {
         if (text) {
           await db.insert(trendSummary).values({
             workspaceId, date: g.dateKey, window: 'evening',
             summary: text, articleCount: g.count, generatedAt: new Date()
           });
-          entry.evening = text;
-          summaryByDateWindow.set(g.dateKey, entry);
-          g.summary = text; // evening supersedes morning for display
-          if (isPast) pastBackfilled++;
         }
-      } catch (err) { console.error('generateDailySummary (evening) failed for ' + g.dateKey + ':', err); }
+      }).catch((err) => console.error('generateDailySummary (evening) failed for ' + g.dateKey + ':', err));
     }
   }
 
