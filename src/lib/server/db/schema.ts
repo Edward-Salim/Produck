@@ -741,9 +741,7 @@ export const experienceTouchpointRelations = relations(experienceTouchpoint, ({ 
 
 export const rssSource = pgTable('rss_source', {
   id: serial('id').primaryKey(),
-  workspaceId: integer('workspace_id')
-    .notNull()
-    .references(() => workspace.id, { onDelete: 'cascade' }),
+  workspaceId: integer('workspace_id'),
   name: text('name').notNull(),
   url: text('url').notNull(),
   category: text('category').notNull().default('general'),
@@ -754,8 +752,7 @@ export const rssSource = pgTable('rss_source', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
 });
 
-export const rssSourceRelations = relations(rssSource, ({ one, many }) => ({
-  workspace: one(workspace, { fields: [rssSource.workspaceId], references: [workspace.id] }),
+export const rssSourceRelations = relations(rssSource, ({ many }) => ({
   articles: many(rssArticle)
 }));
 
@@ -782,19 +779,13 @@ export const rssArticleRelations = relations(rssArticle, ({ one }) => ({
 
 export const trendSummary = pgTable('trend_summary', {
   id: serial('id').primaryKey(),
-  workspaceId: integer('workspace_id')
-    .notNull()
-    .references(() => workspace.id, { onDelete: 'cascade' }),
+  workspaceId: integer('workspace_id'),
   date: text('date').notNull(),
   window: text('window').notNull().default('morning'),
   summary: text('summary'),
   articleCount: integer('article_count').notNull().default(0),
   generatedAt: timestamp('generated_at', { withTimezone: true })
 });
-
-export const trendSummaryRelations = relations(trendSummary, ({ one }) => ({
-  workspace: one(workspace, { fields: [trendSummary.workspaceId], references: [workspace.id] })
-}));
 
 // ── Financial Tracker ────────────────────────────────
 

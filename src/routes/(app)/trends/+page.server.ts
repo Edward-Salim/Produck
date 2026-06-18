@@ -155,7 +155,7 @@ async function backfillImages() {
   }
 }
 
-export const load: PageServerLoad = async ({ cookies }) => {
+export const load: PageServerLoad = async () => {
   // RSS is profile-level, not workspace-scoped — load all sources
   const sources = await db.select().from(rssSource).orderBy(rssSource.region, rssSource.category, rssSource.name);
 
@@ -254,9 +254,6 @@ export const load: PageServerLoad = async ({ cookies }) => {
     const wib = new Date(Date.now() + 7 * 60 * 60 * 1000);
     return wib.toISOString().slice(0, 10);
   })();
-  const workspaceId =
-    Number(cookies.get('active_workspace') || '0') || sources[0]?.workspaceId || 0;
-
   const dayGroups = Array.from(groupMap, ([dateKey, arts]) => ({
     dateKey,
     label: formatDayLabel(dateKey),
@@ -286,7 +283,7 @@ export const load: PageServerLoad = async ({ cookies }) => {
       void generateDailySummary(arts).then(async (text) => {
         if (text) {
           await db.insert(trendSummary).values({
-            workspaceId, date: g.dateKey, window: 'morning',
+            date: g.dateKey, window: 'morning',
             summary: text, articleCount: g.count, generatedAt: new Date()
           });
         }
@@ -303,7 +300,7 @@ export const load: PageServerLoad = async ({ cookies }) => {
       void generateDailySummary(arts).then(async (text) => {
         if (text) {
           await db.insert(trendSummary).values({
-            workspaceId, date: g.dateKey, window: 'evening',
+            date: g.dateKey, window: 'evening',
             summary: text, articleCount: g.count, generatedAt: new Date()
           });
         }
@@ -345,7 +342,7 @@ export const load: PageServerLoad = async ({ cookies }) => {
     }
   }
 
-  return { sources: sourcesWithDomain, workspaceId, articles: flatArticles, dayBlocks, briefings };
+  return { sources: sourcesWithDomain, articles: flatArticles, dayBlocks, briefings };
 };
 
 // ── Feed HTML renderer ──────────────────────────────────────────────

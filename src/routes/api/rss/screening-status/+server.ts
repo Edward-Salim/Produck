@@ -4,8 +4,8 @@ import { rssArticle } from '$lib/server/db/schema.js';
 import { and, eq, gt, count } from 'drizzle-orm';
 import type { RequestHandler } from './$types.js';
 
-/** Returns how many articles are still waiting for AI screening.
- *  The client polls this to show a real-time indicator dot.
+/** Returns how many articles are still waiting for AI screening, plus total
+ *  articles in the current batch (so the client can show progress).
  *  Only counts articles fetched in the last 15 minutes to avoid stale
  *  counts from pre-migration rows or crashed screening runs. */
 export const GET: RequestHandler = async () => {
@@ -19,5 +19,10 @@ export const GET: RequestHandler = async () => {
       gt(rssArticle.fetchedAt, cutoff)
     ));
 
-  return json({ unscreened });
+  const [{ value: total }] = await db
+    .select({ value: count() })
+    .from(rssArticle)
+    .where(gt(rssArticle.fetchedAt, cutoff));
+
+  return json({ unscreened, total });
 };

@@ -13,21 +13,25 @@
   // Realtime screening indicator: polls API, colors count while screening,
   // auto-refreshes page data when screening finishes
   let wasScreening = $state(false);
+  let unscreenedCount = $state(0);
+
   $effect(() => {
     const check = async () => {
       try {
         const res = await fetch('/api/rss/screening-status');
         if (res.ok) {
           const { unscreened } = await res.json();
+          unscreenedCount = unscreened ?? 0;
           const active = unscreened > 0;
-          for (const el of document.querySelectorAll('.screening-count')) {
+          // Toggle amber/pulse on the article count pill (server-rendered HTML)
+          for (const el of document.querySelectorAll('[data-screening-count]')) {
             const span = el as HTMLElement;
             if (active) {
-              span.classList.add('text-amber-600');
+              span.classList.add('text-amber-600', 'animate-pulse');
               span.classList.remove('text-emerald-600');
             } else {
               span.classList.add('text-emerald-600');
-              span.classList.remove('text-amber-600');
+              span.classList.remove('text-amber-600', 'animate-pulse');
             }
           }
           if (wasScreening && !active) invalidateAll();

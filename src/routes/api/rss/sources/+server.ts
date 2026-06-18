@@ -4,33 +4,29 @@ import { rssSource } from '$lib/server/db/schema.js';
 import { eq } from 'drizzle-orm';
 import type { RequestHandler } from './$types.js';
 
-// List sources for a workspace
-export const GET: RequestHandler = async ({ url }) => {
-  const workspaceId = Number(url.searchParams.get('workspaceId'));
-  if (!workspaceId) return json({ error: 'Missing workspaceId' }, { status: 400 });
-
-  const sources = await db.select().from(rssSource).where(eq(rssSource.workspaceId, workspaceId));
-
+// List all sources (workspace-agnostic)
+export const GET: RequestHandler = async () => {
+  const sources = await db.select().from(rssSource);
   return json(sources);
 };
 
 // Add a new source
 export const POST: RequestHandler = async ({ request }) => {
   const body = await request.json();
-  const { workspaceId, name, url: feedUrl, category } = body;
+  const { name, url: feedUrl, category, region } = body;
 
-  if (!workspaceId || !name || !feedUrl) {
+  if (!name || !feedUrl) {
     return json({ error: 'Missing required fields' }, { status: 400 });
   }
 
   const [inserted] = await db
     .insert(rssSource)
     .values({
-      workspaceId,
       name,
       url: feedUrl,
-      category: category || 'general'
-    })
+      category: category || 'general',
+      region: region || 'global'
+    } as any)
     .returning();
 
   return json(inserted);

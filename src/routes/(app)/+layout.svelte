@@ -20,9 +20,8 @@
     GaugeCircle,
     Rss,
     LogOut,
-    Shield,
-    Database,
     EllipsisVertical,
+    Shield,
     Eye,
     EyeOff,
     Trash2
@@ -394,13 +393,6 @@
                 class="z-50 min-w-40 rounded-lg border border-cork-300 bg-cork-50 p-1 shadow-md"
               >
                 {#if data.isAdmin}
-                  <DropdownMenu.Item
-                    class="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm text-cork-700 outline-none hover:bg-cork-200/50 data-highlighted:bg-cork-200/50"
-                    onSelect={() => goto('/admin')}
-                  >
-                    <Database class="size-3.5" />
-                    Admin Data
-                  </DropdownMenu.Item>
                   <DropdownMenu.Item
                     class="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm text-cork-700 outline-none hover:bg-cork-200/50 data-highlighted:bg-cork-200/50"
                     onSelect={() => {
