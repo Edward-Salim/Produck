@@ -489,7 +489,7 @@ function renderDayBlock(group: DayGroup): string {
   h += `<div class="overflow-hidden rounded-xl border border-cork-200 bg-white/80 mb-5">`;
   h += `<div class="flex items-center justify-between border-b border-cork-200 bg-cork-50 px-3 py-2 md:px-5 md:py-3">`;
   h += `<div class="flex items-center gap-1.5 md:gap-2">${CALENDAR_SVG}<span class="text-xs font-semibold text-cork-700 md:text-sm">${esc(group.label)}</span></div>`;
-h += `<span class="screening-count text-[10px] font-medium" data-screening-count>${group.count} article${group.count !== 1 ? 's' : ''}</span>`;
+h += `<span class="screening-count text-[10px] font-medium text-emerald-600" data-screening-count>${group.count} article${group.count !== 1 ? 's' : ''}</span>`;
   h += '</div>';
 
   h += '<div class="divide-y divide-cork-100">';

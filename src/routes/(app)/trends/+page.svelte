@@ -10,7 +10,8 @@
   let detailInHistory = $state(false);
   const DAYS_PER_WEEK = 7;
 
-  // Realtime screening indicator: polls API, pulses count while screening
+  // Realtime screening indicator: polls API, colors count while screening,
+  // auto-refreshes page data when screening finishes
   let wasScreening = $state(false);
   $effect(() => {
     const check = async () => {
@@ -22,16 +23,14 @@
           for (const el of document.querySelectorAll('.screening-count')) {
             const span = el as HTMLElement;
             if (active) {
-              span.classList.add('text-amber-600', 'animate-pulse');
-              span.classList.remove('text-emerald-600', 'text-cork-400');
-            } else if (wasScreening) {
-              span.classList.add('text-emerald-600');
-              span.classList.remove('text-amber-600', 'text-cork-400', 'animate-pulse');
+              span.classList.add('text-amber-600');
+              span.classList.remove('text-emerald-600');
             } else {
-              span.classList.add('text-cork-400');
-              span.classList.remove('text-amber-600', 'text-emerald-600', 'animate-pulse');
+              span.classList.add('text-emerald-600');
+              span.classList.remove('text-amber-600');
             }
           }
+          if (wasScreening && !active) invalidateAll();
           wasScreening = active;
         }
       } catch { /* ignore network errors */ }
