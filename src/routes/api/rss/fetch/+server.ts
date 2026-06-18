@@ -1,9 +1,9 @@
 import { json } from '@sveltejs/kit';
 import { db } from '$lib/server/db/index.js';
 import { rssSource, rssArticle } from '$lib/server/db/schema.js';
-import { eq, isNull, lt } from 'drizzle-orm';
+import { eq, isNull, lt, inArray, sql } from 'drizzle-orm';
 import type { RequestHandler } from './$types.js';
-import { createParser, extractImage } from '$lib/server/rss.js';
+import { createParser, extractImage, screenArticles, type ScreeningStats } from '$lib/server/rss.js';
 
 const parser = createParser();
 
@@ -14,6 +14,14 @@ function cleanDescription(text: string | null | undefined): string | null {
   if (text.trim().length < 15) return null;
   if (/^Dear subscriber,?\s*$/i.test(text.trim())) return null;
   return text;
+}
+
+async function updateSourceAccuracy(stats: ScreeningStats) {
+  for (const [name, s] of stats.bySource) {
+    await db.update(rssSource)
+      .set({ totalScreened: sql`total_screened + ${s.total}`, totalKept: sql`total_kept + ${s.kept}` })
+      .where(eq(rssSource.name, name));
+  }
 }
 
 export const POST: RequestHandler = async ({ request }) => {
@@ -76,11 +84,29 @@ export const POST: RequestHandler = async ({ request }) => {
     }
   }
 
-  // Batch insert all new articles at once
+  // Batch insert all new articles at once, then screen for off-topic
   let newArticleIds: number[] = [];
   if (toInsert.length > 0) {
-    const inserted = await db.insert(rssArticle).values(toInsert).returning({ id: rssArticle.id });
-    newArticleIds = inserted.map((r) => r.id);
+    const inserted = await db.insert(rssArticle).values(toInsert).returning({ id: rssArticle.id, url: rssArticle.url });
+
+    const sourceMap = new Map(sources.map((s) => [s.id, { category: s.category, region: s.region, sourceName: s.name }]));
+    const { kept: keepTitles, stats } = await screenArticles(
+      toInsert.map((a) => ({ title: a.title!, ...sourceMap.get(a.sourceId!)! }))
+    );
+
+    await updateSourceAccuracy(stats);
+
+    const keepUrls = new Set<string>();
+    for (const item of toInsert) {
+      if (keepTitles.has(item.title!)) keepUrls.add(item.url!);
+    }
+
+    const deleteUrls = inserted.filter((r) => !keepUrls.has(r.url)).map((r) => r.url);
+    if (deleteUrls.length > 0) {
+      await db.delete(rssArticle).where(inArray(rssArticle.url, deleteUrls));
+    }
+
+    newArticleIds = inserted.filter((r) => keepUrls.has(r.url)).map((r) => r.id);
   }
 
   // Backfill imageUrl from description for articles missing images

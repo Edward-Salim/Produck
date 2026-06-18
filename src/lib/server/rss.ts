@@ -140,14 +140,16 @@ const OFF_TOPIC_PHRASES: Record<string, string[]> = {
     // Geology / disasters
     'guncang filipina', 'gempa m', 'gempa besar', 'megathrust', 'terumbu karang',
     'gunung meletus', 'tsunami', 'banjir bandang',
-    // Astronomy / space (not tech)
-    'gerhana matahari', 'aurora australis', 'noctilucent', 'hujan meteor',
+    // Astronomy / space (not tech) — 'gerhana matahari' removed, too many
+    // false positives on space-tech articles mentioning eclipses
+    'aurora australis', 'noctilucent', 'hujan meteor',
     // Nature / animals
     'kaki seribu raksasa', 'pohon raksasa', 'axolotl',
-    'debut anak', 'hewan langka', 'fauna', 'habitat',
+    'debut anak', 'hewan langka',
     // Climate general
     'kiamat iklim', 'dampak perubahan iklim', 'ekosistem laut',
-    // Military hardware (not tech news)
+    // Military hardware — scoped to incidents, not tech specs
+    // Allow through if the title also mentions specs/tech details
     'helikopter as', 'drone mq-9', 'ditembak jatuh iran',
     // Sports streaming
     'siaran langsung piala', 'live streaming piala', 'nonton streaming piala',
@@ -176,8 +178,8 @@ const OFF_TOPIC_PHRASES: Record<string, string[]> = {
     // Sports
     'messi hattrick', 'messi di piala', 'ronaldo', 'mbappe lampaui',
     'timnas', 'pemain bintang', 'piala dunia', 'pildun', 'hattrick',
-    'top skor', 'kiper', 'suporter', 'stadion',
-    'borong', 'tahan raksasa spanyol', 'haaland', 'yamal',
+    'top skor', 'kiper', 'suporter',
+    'tahan raksasa spanyol', 'haaland', 'yamal',
     'ea sports fc',
     // Shopping / promos
     'full day sale', 'transmart full', 'diskon gede', 'diskon maksimal',
@@ -189,7 +191,7 @@ const OFF_TOPIC_PHRASES: Record<string, string[]> = {
     'deretan desain aneh', 'deretan desain gagal', 'penampakan',
     'tukang las', 'bendungan raksasa',
     // Entertainment / YouTube
-    'youtuber pertama', 'subscriber', 'mrbeast', 'tamagotchi',
+    'youtuber pertama', 'mrbeast', 'tamagotchi',
     // Gaming / esports (tournament results, not tech)
     'kode redeem', 'fc mobile', 'mpl id', 'juara mpl', 'grand final mpl',
     'jadwal grand final', 'daftar juara',
@@ -197,7 +199,6 @@ const OFF_TOPIC_PHRASES: Record<string, string[]> = {
     'bundling streaming', 'live streaming pildun', 'nonton pildun', 'nonton piala dunia',
     // Nature / animals
     'hiu goblin', 'hewan aneh', 'orangutan', 'anjing hantu', 'kuburan',
-    'populasi', 'punah',
     // Weather
     'el nino sudah melanda',
     // Gossip
@@ -252,11 +253,26 @@ const OFF_TOPIC_PHRASES: Record<string, string[]> = {
   ],
 };
 
+/** Tech-context words that override a blocklist match — if a title hits a blocklist
+ *  phrase but also contains one of these, let it through to AI for a nuanced decision. */
+const ALLOWLIST: Record<string, string[]> = {
+  'CNN Indonesia Tekno': [
+    'spesifikasi', 'spek', 'canggih', 'roket', 'spacex', 'teknologi',
+    'ai ', 'artificial intelligence', 'software', 'hardware', 'aplikasi',
+    'chip ', 'prosesor', 'data center', 'pusat data',
+  ],
+};
+
 function isObviouslyOffTopic(article: ArticleToScreen): boolean {
   const phrases = OFF_TOPIC_PHRASES[article.sourceName];
   if (!phrases) return false;
   const lower = article.title.toLowerCase();
-  return phrases.some((p) => lower.includes(p));
+  const matched = phrases.find((p) => lower.includes(p));
+  if (!matched) return false;
+  // If the title also has a tech-context word, let AI decide — not an obvious reject
+  const allowWords = ALLOWLIST[article.sourceName] ?? [];
+  if (allowWords.some((w) => lower.includes(w))) return false;
+  return true;
 }
 
 /**
@@ -299,85 +315,142 @@ export async function screenArticles(articles: ArticleToScreen[]): Promise<{ kep
 
   const { env } = await import('$env/dynamic/private');
 
-  // 2) Batch AI screening for all sources
-  // Use "reject" framing so the model defaults to keeping articles
-  const BATCH_SIZE = 30;
+  // 2) Batch AI screening — build all batches, fire in parallel
+  const BATCH_SIZE = 50;
+
+  interface BatchResult {
+    startNum: number;
+    batch: ArticleToScreen[];
+    rejectedNums: Set<number>;
+    duplicateRejects: Set<number>;
+  }
+
+  const batchResults: BatchResult[] = [];
   for (let offset = 0; offset < aiQueue.length; offset += BATCH_SIZE) {
     const batch = aiQueue.slice(offset, offset + BATCH_SIZE);
     const startNum = offset + 1;
-    const articleList = batch
-      .map((a, i) => `${startNum + i}. [${a.category}] ${a.title}`)
-      .join('\n');
+    batchResults.push({ startNum, batch, rejectedNums: new Set(), duplicateRejects: new Set() });
+  }
 
-    const prompt = `Flag articles that are off-topic for a tech/business news feed.
+  await Promise.all(
+    batchResults.map(async (br) => {
+      const { startNum, batch } = br;
+      const articleList = batch
+        .map((a, i) => `${startNum + i}. [${a.category}] ${a.title}`)
+        .join('\n');
 
-Each article has a [category] tag. Keep articles about: software, hardware, AI, startups, cybersecurity, internet policy, science/space tech, macroeconomics, business, finance, trade, regulation, industry shifts.
+      const prompt = `Flag articles that are off-topic for a tech/business news feed.
+Articles may be in English or Indonesian — judge by topic, not language. When unsure, keep.
 
-Reject:
+Each article has a [category] tag. Keep articles about: software, hardware, AI, startups, cybersecurity, internet policy, science/space tech, macroeconomics, business, finance, trade, regulation, industry shifts, monetary policy, stock market, currency, GDP, inflation, trade policy, energy policy, state budget, banking.
+
+Reject ONLY clearly off-topic:
 - Entertainment: TV/movie/music reviews, celebrity gossip, streaming show commentary, sports shows, awards shows
 - Sports: game results, player transfers, league news, sports betting, sports-adjacent entertainment
 - Gaming/esports: tournament results, game reviews, streamer drama (game-tech/dev is ok)
 - Health/medical: drug trials, disease outbreaks, hospital news, diet studies (health-tech/wearables are ok)
 - Crime/courts: murder trials, arrests, sentencing, lawsuits (cybercrime/tech-regulation cases are ok)
 - Lifestyle: recipes, travel tips, fashion, fitness, home decor, gardening, sex/dating advice, factory tours, industrial production documentaries
-- Career puff pieces: MBA skills, soft skills rankings, "best jobs" lists, office culture fluff (labor market data is ok)
+- Career puff pieces: MBA skills, soft skills rankings, "best jobs" lists, office culture fluff, magang/internship programs (labor market data and PHK/layoffs are ok)
 - Real estate: housing prices, open houses, mortgage tips (proptech is ok)
 - Science not tech: paleontology, marine biology, archeology, zoology (space/energy/materials science is ok)
-- Local general news: city council, school board, new park, local elections
-- Weather, natural disasters
-- Shopping: product roundups, buying guides, gift ideas, deals, discounts, flash sales (enterprise-tech/software roundups are ok)
+- Local general news: city council, school board, new park, local elections, pemadaman listrik, kecelakaan, berita kriminal
+- Weather, natural disasters, cuaca, gempa, banjir
+- Shopping: product roundups, buying guides, gift ideas, deals, discounts, flash sales, diskon, promo belanja, kode kupon, full day sale (enterprise-tech/software roundups are ok)
 - Home decor, interior design, furniture (smart home devices are ok)
-- Religious content, clickbait, viral videos, human-interest fluff
-- Meta/housekeeping: reader surveys, site announcements, newsletter promos, subscription pitches, "tell us your thoughts", call for feedback
-- Traffic accidents, power outages, transport disruptions
+- Religious content, clickbait, viral videos, human-interest fluff, zakat, wakaf, muharram, masjid
+- Meta/housekeeping: reader surveys, site announcements, newsletter promos, subscription pitches, call for feedback
+- Traffic accidents, power outages, transport disruptions, mati lampu
+- Indonesian social programs: MBG, makan bergizi gratis, Badan Gizi Nasional (BGN), program sembako, bansos — ini program sosial, bukan ekonomi/finance
+
+IMPORTANT for Indonesian sources: CNN Indonesia Tekno and Detik Inet are TECHNOLOGY sections — treat them like TechCrunch or The Verge. They cover gadgets, apps, internet culture, cybersecurity, AI, startups, and yes, sometimes science/space news. That is ALL on-topic. Do NOT reject Indonesian tech articles just because they cover science, internet trends, or local startups you don't recognize.
+
+Indonesian finance sources (Detik Finance, CNN Indonesia Ekonomi, Katadata): Rupiah, IHSG, APBN, BI rate, inflation, trade, BUMN, investasi, perbankan, fintech, pajak, subsidi energi, utang negara, cadangan devisa, pertumbuhan ekonomi — these are ALL finance/economy, keep them all.
+
+ANTARA is Indonesia's national news agency. Keep articles about: government tech policy, digital economy, regulation, state budget, infrastructure investment, trade policy, energy, BUMN. Reject only: sports scores, entertainment gossip, crime reports, local pemadaman listrik.
+
+Only reject Indonesian articles that are clearly about: social programs (MBG/BGN/makan bergizi), shopping promos (diskon, full day sale), natural disasters (banjir, gempa), crime/kecelakaan, or entertainment/gossip.
+
+ALSO flag near-duplicate stories. When two or more articles cover the exact same event, company announcement, product launch, or policy decision, keep only the best one and reject the duplicates. Prefer: original reporting over syndication, specialized tech/business outlets over general news wires, articles with more specific detail over vague summaries. When articles from different sources cover different angles of the same event (not true duplicates), keep both.
 
 ${articleList}
 
-Reply ONLY with the numbers of articles to REJECT, comma-separated. Example: "${startNum+2},${startNum+7}". If all are on-topic, reply "none".`;
+Reply with TWO lines only:
+Line 1 — REJECT: comma-separated numbers of off-topic or weaker-duplicate articles to reject (or "none")
+Line 2 — DUPLICATE: semicolon-separated pairs showing which article subsumes which, e.g. "${startNum+1}>${startNum+4}; ${startNum+2}>${startNum+6}" meaning article ${startNum+1} is the better version of ${startNum+4} (so reject ${startNum+4}), and ${startNum+2} is the better version of ${startNum+6} (so reject ${startNum+6}). Or "none" if no duplicates. Always put the KEEPER first in each pair, the duplicate second.
 
-    let text = '';
-    // Try DeepSeek first
-    const deepseekKey = env.DEEPSEEK_API_KEY;
-    if (deepseekKey) {
-      try {
-        text = await callDeepSeek(prompt, deepseekKey);
-      } catch (err) {
-        console.error('screenArticles: DeepSeek failed:', err);
-      }
-    }
+Example response:
+REJECT: ${startNum+3},${startNum+8},${startNum+14}
+DUPLICATE: ${startNum+1}>${startNum+4}; ${startNum+6}>${startNum+9}`;
 
-    // Fall back to Gemini if DeepSeek didn't produce a result
-    if (!text) {
-      const keys = (env.GEMINI_API_KEYS ?? '').split(',').filter(Boolean);
-      if (keys.length > 0) {
+      let text = '';
+      const deepseekKey = env.DEEPSEEK_API_KEY;
+      if (deepseekKey) {
         try {
-          const { GoogleGenAI } = await import('@google/genai');
-          const key = keys[Math.floor(Date.now() / 1000) % keys.length];
-          const ai = new GoogleGenAI({ apiKey: key });
-          const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
-            contents: prompt,
-            config: { maxOutputTokens: 200, temperature: 0 }
-          });
-          text = response.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+          text = await callDeepSeek(prompt, deepseekKey);
         } catch (err) {
-          console.error('screenArticles: Gemini failed:', err);
+          console.error('screenArticles: DeepSeek failed:', err);
         }
       }
-    }
 
-    // Default to keeping everything in the batch
-    const rejectedNums = new Set<number>();
-    if (text && !text.toLowerCase().includes('none')) {
-      for (const n of (text.match(/\d+/g)?.map(Number) ?? [])) rejectedNums.add(n);
-    }
+      if (!text) {
+        const keys = (env.GEMINI_API_KEYS ?? '').split(',').filter(Boolean);
+        if (keys.length > 0) {
+          try {
+            const { GoogleGenAI } = await import('@google/genai');
+            const key = keys[Math.floor(Date.now() / 1000) % keys.length];
+            const ai = new GoogleGenAI({ apiKey: key });
+            const response = await ai.models.generateContent({
+              model: 'gemini-2.5-flash',
+              contents: prompt,
+              config: { temperature: 0 }
+            });
+            text = response.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+          } catch (err) {
+            console.error('screenArticles: Gemini failed:', err);
+          }
+        }
+      }
 
-    for (let j = 0; j < batch.length; j++) {
-      const article = batch[j];
-      const num = startNum + j;
+      // Parse the two-line response
+      if (text) {
+        for (const line of text.trim().split('\n')) {
+          const t = line.trim();
+          if (!t) continue;
+
+          if (t.toUpperCase().startsWith('REJECT:')) {
+            const nums = t.slice(7).trim();
+            if (nums.toLowerCase() !== 'none') {
+              for (const n of (nums.match(/\d+/g)?.map(Number) ?? [])) br.rejectedNums.add(n);
+            }
+          } else if (t.toUpperCase().startsWith('DUPLICATE:')) {
+            const pairs = t.slice(10).trim();
+            if (pairs.toLowerCase() !== 'none') {
+              for (const pair of pairs.split(';')) {
+                const nums = pair.trim().match(/\d+/g)?.map(Number) ?? [];
+                if (nums.length >= 2) br.duplicateRejects.add(nums[1]);
+              }
+            }
+          }
+        }
+      }
+
+      // Fallback: old format (just comma-separated numbers)
+      if (br.rejectedNums.size === 0 && br.duplicateRejects.size === 0 && text && !text.toLowerCase().includes('none')) {
+        for (const n of (text.match(/\d+/g)?.map(Number) ?? [])) br.rejectedNums.add(n);
+      }
+    })
+  );
+
+  // Accumulate results into shared state
+  for (const br of batchResults) {
+    const allRejected = new Set([...br.rejectedNums, ...br.duplicateRejects]);
+    for (let j = 0; j < br.batch.length; j++) {
+      const article = br.batch[j];
+      const num = br.startNum + j;
       const s = stats.bySource.get(article.sourceName) ?? { total: 0, kept: 0 };
       s.total++;
-      if (!rejectedNums.has(num)) {
+      if (!allRejected.has(num)) {
         kept.add(article.title);
         s.kept++;
       }
@@ -395,26 +468,17 @@ async function callDeepSeek(prompt: string, apiKey: string): Promise<string> {
     body: JSON.stringify({
       model: 'deepseek-v4-flash',
       messages: [{ role: 'user', content: prompt }],
-      max_tokens: 2000,
       temperature: 0
     })
   });
   if (!res.ok) throw new Error(`DeepSeek API ${res.status}: ${await res.text().catch(() => '')}`);
   const data: any = await res.json();
   const msg = data?.choices?.[0]?.message;
-  // v4-flash is a reasoning model that evaluates each article in reasoning_content,
-  // then outputs the final answer in content. If content is empty (token budget exhausted),
-  // fall back to reasoning_content and look for the answer.
-  const raw = msg?.content || msg?.reasoning_content || '';
-  // The answer is typically a comma-separated list of numbers. Find the last line
-  // that looks like one (pure digits, commas, spaces).
-  const lines = raw.trim().split('\n');
-  for (let i = lines.length - 1; i >= 0; i--) {
-    const line = lines[i].trim();
-    if (/^[\d,\s]+$/.test(line) && /\d/.test(line)) return line;
-  }
-  // Fallback: try extracting from the last non-empty line
-  return lines.findLast((l: string) => l.trim())?.trim() ?? '';
+  // v4-flash is a reasoning model: reasoning_content is chain-of-thought,
+  // content is the final answer. If content is empty (token budget exhausted),
+  // return empty so the caller falls back to Gemini. Never use reasoning_content
+  // as answer text — it's unstructured prose that produces garbage parses.
+  return (msg?.content ?? '').trim();
 }
 
 
@@ -494,17 +558,14 @@ ${list}`;
       body: JSON.stringify({
         model: 'deepseek-v4-flash',
         messages: [{ role: 'user', content: prompt }],
-        max_tokens: 2000,
         temperature: 0.3
       })
     });
     if (!res.ok) throw new Error(`DeepSeek API ${res.status}`);
     const data: any = await res.json();
     const msg = data?.choices?.[0]?.message;
-    const raw = msg?.content || msg?.reasoning_content || '';
-    const text = raw.trim();
-
-    // Discard responses where the model echoes instructions instead of producing a briefing
+    // Never use reasoning_content — it's unstructured chain-of-thought, not a briefing
+    const text = (msg?.content ?? '').trim();
     if (!text) return null;
     if (isInstructionEcho(text)) {
       console.warn('generateDailySummary: discarding instruction echo:', text.slice(0, 120));
