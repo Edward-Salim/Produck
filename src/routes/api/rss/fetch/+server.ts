@@ -1,9 +1,9 @@
 import { json } from '@sveltejs/kit';
 import { db } from '$lib/server/db/index.js';
 import { rssSource, rssArticle } from '$lib/server/db/schema.js';
-import { eq, isNull, lt, inArray, sql } from 'drizzle-orm';
+import { eq, and, isNull, lt, inArray, sql } from 'drizzle-orm';
 import type { RequestHandler } from './$types.js';
-import { createParser, extractImage, screenArticles, type ScreeningStats } from '$lib/server/rss.js';
+import { createParser, extractImage, screenArticles, isObviouslyOffTopic, type ScreeningStats } from '$lib/server/rss.js';
 
 const parser = createParser();
 
@@ -84,36 +84,52 @@ export const POST: RequestHandler = async ({ request }) => {
     }
   }
 
-  // Batch insert all new articles at once, then screen for off-topic
-  let newArticleIds: number[] = [];
+  // Keyword pre-filter: obvious off-topic articles get rejected at insert time
+  const sourceMap = new Map(sources.map((s) => [s.id, { category: s.category, region: s.region, sourceName: s.name }]));
+  const keywordStats = new Map<string, { total: number; kept: number }>();
+  for (const item of toInsert) {
+    const src = sourceMap.get(item.sourceId!);
+    if (src && isObviouslyOffTopic({ title: item.title!, ...src })) {
+      item.rejected = true;
+      const ks = keywordStats.get(src.sourceName) ?? { total: 0, kept: 0 };
+      ks.total++;
+      keywordStats.set(src.sourceName, ks);
+    }
+  }
+  if (keywordStats.size > 0) {
+    await updateSourceAccuracy({ bySource: keywordStats });
+  }
+
+  // Batch insert all articles (URL dedup works even for keyword-rejected items)
   if (toInsert.length > 0) {
     const inserted = await db.insert(rssArticle).values(toInsert).returning({ id: rssArticle.id, url: rssArticle.url });
 
-    const sourceMap = new Map(sources.map((s) => [s.id, { category: s.category, region: s.region, sourceName: s.name }]));
-    const { kept: keepTitles, stats } = await screenArticles(
-      toInsert.map((a) => ({ title: a.title!, ...sourceMap.get(a.sourceId!)! }))
-    );
+    // AI screen only the keyword-passing items
+    const aiQueue = toInsert.filter((a) => !a.rejected);
+    if (aiQueue.length > 0) {
+      const { kept: keepTitles, stats } = await screenArticles(
+        aiQueue.map((a) => ({ title: a.title!, ...sourceMap.get(a.sourceId!)! }))
+      );
 
-    await updateSourceAccuracy(stats);
+      await updateSourceAccuracy(stats);
 
-    const keepUrls = new Set<string>();
-    for (const item of toInsert) {
-      if (keepTitles.has(item.title!)) keepUrls.add(item.url!);
+      const keepUrls = new Set<string>();
+      for (const item of aiQueue) {
+        if (keepTitles.has(item.title!)) keepUrls.add(item.url!);
+      }
+
+      const rejectUrls = inserted.filter((r) => !keepUrls.has(r.url)).map((r) => r.url);
+      if (rejectUrls.length > 0) {
+        await db.update(rssArticle).set({ rejected: true }).where(inArray(rssArticle.url, rejectUrls));
+      }
     }
-
-    const deleteUrls = inserted.filter((r) => !keepUrls.has(r.url)).map((r) => r.url);
-    if (deleteUrls.length > 0) {
-      await db.delete(rssArticle).where(inArray(rssArticle.url, deleteUrls));
-    }
-
-    newArticleIds = inserted.filter((r) => keepUrls.has(r.url)).map((r) => r.id);
   }
 
   // Backfill imageUrl from description for articles missing images
   const orphaned = await db
     .select({ id: rssArticle.id, description: rssArticle.description })
     .from(rssArticle)
-    .where(isNull(rssArticle.imageUrl))
+    .where(and(isNull(rssArticle.imageUrl), eq(rssArticle.rejected, false)))
     .limit(100);
   for (const row of orphaned) {
     const html = row.description;
@@ -130,5 +146,5 @@ export const POST: RequestHandler = async ({ request }) => {
   const cutoff = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
   await db.delete(rssArticle).where(lt(rssArticle.fetchedAt, cutoff));
 
-  return json({ fetched: toInsert.length, errors, newArticleIds });
+  return json({ fetched: toInsert.length, errors });
 };

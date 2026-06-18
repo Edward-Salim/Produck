@@ -263,7 +263,7 @@ const ALLOWLIST: Record<string, string[]> = {
   ],
 };
 
-function isObviouslyOffTopic(article: ArticleToScreen): boolean {
+export function isObviouslyOffTopic(article: ArticleToScreen): boolean {
   const phrases = OFF_TOPIC_PHRASES[article.sourceName];
   if (!phrases) return false;
   const lower = article.title.toLowerCase();

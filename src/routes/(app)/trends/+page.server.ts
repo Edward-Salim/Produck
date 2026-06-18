@@ -1,14 +1,14 @@
 import { db } from '$lib/server/db/index.js';
 import { rssSource, rssArticle, trendSummary } from '$lib/server/db/schema.js';
-import { eq, desc, isNull, lt, inArray, sql } from 'drizzle-orm';
+import { eq, and, desc, isNull, lt, inArray, sql } from 'drizzle-orm';
 import type { PageServerLoad } from './$types.js';
-import { createParser, extractImage, scrapeOgImage, screenArticles, generateDailySummary, type ScreeningStats } from '$lib/server/rss.js';
+import { createParser, extractImage, scrapeOgImage, screenArticles, generateDailySummary, isObviouslyOffTopic, type ScreeningStats } from '$lib/server/rss.js';
 
 const parser = createParser();
 
 async function fetchFeeds(sources: typeof rssSource.$inferSelect[]) {
   const enabled = sources.filter((r) => r.enabled);
-  if (enabled.length === 0) return { totalFetched: 0, newIds: [] };
+  if (enabled.length === 0) return { totalFetched: 0 };
 
   const existingUrls = new Set(
     (await db.select({ url: rssArticle.url }).from(rssArticle)).map((a) => a.url)
@@ -47,27 +47,45 @@ async function fetchFeeds(sources: typeof rssSource.$inferSelect[]) {
     }
   }
 
+  // Keyword pre-filter: mark obviously off-topic articles as rejected at insert time.
+  // This prevents trash (promo codes, sports, etc.) from ever appearing to users.
+  // AI screening below catches the nuanced cases that survive the keyword pass.
+  const sourceMap = new Map(enabled.map((s) => [s.id, { category: s.category, region: s.region, sourceName: s.name }]));
+  const keywordStats = new Map<string, { total: number; kept: number }>();
+  for (const item of toInsert) {
+    const src = sourceMap.get(item.sourceId!);
+    if (src && isObviouslyOffTopic({ title: item.title!, ...src })) {
+      item.rejected = true;
+      const ks = keywordStats.get(src.sourceName) ?? { total: 0, kept: 0 };
+      ks.total++;
+      keywordStats.set(src.sourceName, ks);
+    }
+  }
+  // Immediately update accuracy for keyword rejects so the sources dialog is current
+  if (keywordStats.size > 0) {
+    await updateSourceAccuracy({ bySource: keywordStats });
+  }
+
   // Batch insert all new articles immediately
-  let newIds: number[] = [];
   if (toInsert.length > 0) {
     const inserted = await db.insert(rssArticle).values(toInsert).returning({ id: rssArticle.id, url: rssArticle.url });
 
-    // Screen asynchronously — don't block page load (avoids Netlify 10s timeout)
-    // Articles show immediately; off-topic ones get deleted by background screening
-    newIds = inserted.map((r) => r.id);
-    const sourceMap = new Map(enabled.map((s) => [s.id, { category: s.category, region: s.region, sourceName: s.name }]));
-    const articlesToScreen = toInsert.map((a) => ({ title: a.title!, ...sourceMap.get(a.sourceId!)! }));
-    void screenArticles(articlesToScreen).then(({ kept: keepTitles, stats }) => {
-      updateSourceAccuracy(stats);
-      const keepUrls = new Set<string>();
-      for (const item of toInsert) {
-        if (keepTitles.has(item.title!)) keepUrls.add(item.url!);
-      }
-      const deleteUrls = inserted.filter((r) => !keepUrls.has(r.url)).map((r) => r.url);
-      if (deleteUrls.length > 0) {
-        return db.delete(rssArticle).where(inArray(rssArticle.url, deleteUrls));
-      }
-    }).catch((err) => console.error('Background screening failed:', err));
+    // AI screen only the keyword-passing articles — fire-and-forget to avoid timeout
+    const aiQueue = toInsert.filter((a) => !a.rejected);
+    if (aiQueue.length > 0) {
+      const articlesToScreen = aiQueue.map((a) => ({ title: a.title!, ...sourceMap.get(a.sourceId!)! }));
+      void screenArticles(articlesToScreen).then(({ kept: keepTitles, stats }) => {
+        updateSourceAccuracy(stats);
+        const keepUrls = new Set<string>();
+        for (const item of aiQueue) {
+          if (keepTitles.has(item.title!)) keepUrls.add(item.url!);
+        }
+        const rejectUrls = inserted.filter((r) => !keepUrls.has(r.url)).map((r) => r.url);
+        if (rejectUrls.length > 0) {
+          return db.update(rssArticle).set({ rejected: true }).where(inArray(rssArticle.url, rejectUrls));
+        }
+      }).catch((err) => console.error('Background screening failed:', err));
+    }
   }
 
   // Prune articles older than last week (keep this week + last week only).
@@ -85,7 +103,7 @@ async function fetchFeeds(sources: typeof rssSource.$inferSelect[]) {
     lt(sql`COALESCE(${rssArticle.publishedAt}, ${rssArticle.fetchedAt})`, cutoff)
   );
 
-  return { totalFetched: toInsert.length, newIds };
+  return { totalFetched: toInsert.length };
 }
 
 /** Backfill missing imageUrl for articles. Extracts <img> from description
@@ -94,7 +112,7 @@ async function backfillImages() {
   const orphaned = await db
     .select({ id: rssArticle.id, description: rssArticle.description, url: rssArticle.url })
     .from(rssArticle)
-    .where(isNull(rssArticle.imageUrl))
+    .where(and(isNull(rssArticle.imageUrl), eq(rssArticle.rejected, false)))
     .orderBy(desc(rssArticle.id))
     .limit(20);
 
@@ -139,7 +157,6 @@ export const load: PageServerLoad = async ({ cookies }) => {
   const sources = await db.select().from(rssSource).orderBy(rssSource.region, rssSource.category, rssSource.name);
 
   // Fetch fresh articles — with a 10-minute cooldown to keep page loads fast
-  let newArticleIds: number[] = [];
   const lastFetched = await db
     .select({ at: rssArticle.fetchedAt })
     .from(rssArticle)
@@ -148,8 +165,7 @@ export const load: PageServerLoad = async ({ cookies }) => {
   const cooldownMs = 10 * 60 * 1000; // 10 minutes
   const shouldFetch = !lastFetched[0] || (Date.now() - lastFetched[0].at.getTime()) > cooldownMs;
   if (sources.length > 0 && shouldFetch) {
-    const result = await fetchFeeds(sources);
-    newArticleIds = result.newIds;
+    await fetchFeeds(sources);
   }
 
   // Backfill missing article images (fire-and-forget, runs every page load)
@@ -175,6 +191,7 @@ export const load: PageServerLoad = async ({ cookies }) => {
     })
     .from(rssArticle)
     .innerJoin(rssSource, eq(rssArticle.sourceId, rssSource.id))
+    .where(eq(rssArticle.rejected, false))
     .orderBy(desc(rssArticle.publishedAt));
 
   // Deduplicate by URL — keep the most-recently-published row per URL
@@ -321,7 +338,7 @@ export const load: PageServerLoad = async ({ cookies }) => {
     }
   }
 
-  return { sources: sourcesWithDomain, workspaceId, articles: flatArticles, dayBlocks, briefings, newArticleIds };
+  return { sources: sourcesWithDomain, workspaceId, articles: flatArticles, dayBlocks, briefings };
 };
 
 // ── Feed HTML renderer ──────────────────────────────────────────────
@@ -465,7 +482,7 @@ function renderDayBlock(group: DayGroup): string {
   h += `<div class="overflow-hidden rounded-xl border border-cork-200 bg-white/80 mb-5">`;
   h += `<div class="flex items-center justify-between border-b border-cork-200 bg-cork-50 px-3 py-2 md:px-5 md:py-3">`;
   h += `<div class="flex items-center gap-1.5 md:gap-2">${CALENDAR_SVG}<span class="text-xs font-semibold text-cork-700 md:text-sm">${esc(group.label)}</span></div>`;
-h += `<span class="text-[10px] font-medium text-cork-400">${group.count} article${group.count !== 1 ? 's' : ''}</span>`;
+h += `<span class="text-[10px] font-medium text-cork-400">${group.count} article${group.count !== 1 ? 's' : ''}<span class="screening-dot ml-1 inline-block size-1.5 rounded-full bg-amber-500 align-middle" style="display:none"></span></span>`;
   h += '</div>';
 
   h += '<div class="divide-y divide-cork-100">';

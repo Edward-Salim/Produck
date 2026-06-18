@@ -8,8 +8,21 @@
   let sourcesDialogOpen = $state(false);
   let detailArticle = $state<(typeof data.articles)[number] | null>(null);
   let detailInHistory = $state(false);
-  let newIds = $state<Set<number>>(new Set(data.newArticleIds ?? []));
   const DAYS_PER_WEEK = 7;
+
+  // Realtime screening dot: polls article freshness every 5s, toggles the dot in the day block header
+  $effect(() => {
+    const check = () => {
+      const now = Date.now();
+      const fresh = data.articles.some((a) => now - new Date(a.fetchedAt).getTime() < 30_000);
+      for (const el of document.querySelectorAll('.screening-dot')) {
+        (el as HTMLElement).style.display = fresh ? 'inline-block' : 'none';
+      }
+    };
+    check();
+    const interval = setInterval(check, 5000);
+    return () => clearInterval(interval);
+  });
 
   // Compute Monday of any week relative to today
   function weekMonday(offset: number): Date {
@@ -92,33 +105,9 @@
     const target = (e.target as HTMLElement).closest('[data-article-id]') as HTMLElement | null;
     if (!target) return;
     const id = Number(target.dataset.articleId);
-    if (newIds.has(id)) {
-      newIds.delete(id);
-      newIds = newIds;
-    }
     const article = data.articles.find((a: (typeof data.articles)[number]) => a.id === id);
     if (article) openDetail(article);
   }
-
-  // Sync highlight class on DOM elements when newIds or visible blocks change
-  $effect(() => {
-    // Triggered whenever newIds or filteredBlocks change (re-renders {@html})
-    // Use a microtask to run after DOM settles
-    const ids = newIds;
-    queueMicrotask(() => {
-      document.querySelectorAll('[data-article-id].highlight-new').forEach((el) => {
-        if (!ids.has(Number((el as HTMLElement).dataset.articleId))) {
-          el.classList.remove('highlight-new');
-        }
-      });
-      for (const id of ids) {
-        const el = document.querySelector(`[data-article-id="${id}"]`);
-        if (el && !el.classList.contains('highlight-new')) {
-          el.classList.add('highlight-new');
-        }
-      }
-    });
-  });
 
   // Detail modal: push history state so browser back closes the modal
   function openDetail(article: (typeof data.articles)[number]) {
@@ -323,13 +312,6 @@
 </Dialog.Root>
 
 <style>
-  [data-article-id].highlight-new {
-    position: relative;
-    background: linear-gradient(135deg, rgba(245, 158, 11, 0.08) 0%, transparent 50%);
-    border-left: 3px solid rgba(245, 158, 11, 0.5);
-    transition: background 0.3s, border-color 0.3s;
-  }
-
   .hide-scrollbar {
     scrollbar-width: none;
   }
