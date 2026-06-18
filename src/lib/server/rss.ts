@@ -15,8 +15,12 @@ export function extractImage(item: Parser.Item, articleUrl?: string | null, html
   const baseUrl = articleUrl ? new URL(articleUrl).origin : null;
 
   function resolve(src: string): string {
+    if (src.startsWith('https://') || src.startsWith('http://')) return src;
     if (src.startsWith('//')) return 'https:' + src;
     if (src.startsWith('/') && baseUrl) return baseUrl + src;
+    if (baseUrl && articleUrl) {
+      try { return new URL(src, articleUrl).href; } catch { return src; }
+    }
     return src;
   }
 
