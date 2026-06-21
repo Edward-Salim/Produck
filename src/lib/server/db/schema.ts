@@ -737,6 +737,47 @@ export const experienceTouchpointRelations = relations(experienceTouchpoint, ({ 
   })
 }));
 
+// ── Job Board Aggregation ────────────────────────────
+
+export const jobSource = pgTable('job_source', {
+  id: serial('id').primaryKey(),
+  name: text('name').notNull(),
+  url: text('url').notNull(),
+  type: text('type').notNull().default('bytedance'), // 'bytedance' | 'html' | 'rss'
+  region: text('region').notNull().default('indonesia'),
+  enabled: boolean('enabled').notNull().default(true),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
+});
+
+export const jobSourceRelations = relations(jobSource, ({ many }) => ({
+  listings: many(jobListing)
+}));
+
+export const jobListing = pgTable('job_listing', {
+  id: serial('id').primaryKey(),
+  sourceId: integer('source_id')
+    .notNull()
+    .references(() => jobSource.id, { onDelete: 'cascade' }),
+  title: text('title').notNull(),
+  url: text('url').notNull(),
+  department: text('department'),
+  location: text('location'),
+  description: text('description'),
+  publishedAt: timestamp('published_at', { withTimezone: true }),
+  fetchedAt: timestamp('fetched_at', { withTimezone: true }).notNull().defaultNow(),
+  isPM: boolean('is_pm').notNull().default(false),
+  experienceYears: integer('experience_years'),
+  rejected: boolean('rejected').notNull().default(false),
+  requiresChinese: boolean('requires_chinese').notNull().default(false),
+  recruitType: text('recruit_type'),
+  viewedAt: timestamp('viewed_at', { withTimezone: true })
+});
+
+export const jobListingRelations = relations(jobListing, ({ one }) => ({
+  source: one(jobSource, { fields: [jobListing.sourceId], references: [jobSource.id] })
+}));
+
 // ── RSS / Trend Analysis ─────────────────────────────
 
 export const rssSource = pgTable('rss_source', {

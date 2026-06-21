@@ -1,42 +1,32 @@
-# sv
+<p align="center">
+  <img src="src/lib/assets/logo-produck.png" alt="Produck" width="120" />
+</p>
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+# Produck
 
-## Creating a project
+Personal productivity workspace by [Edward Salim](https://github.com/Edward-Salim). Product management tooling, OKR tracking, fintech dashboards, and AI-assisted workflows.
 
-If you're seeing this, you've probably already done this step. Congrats!
+## Stack
 
-```sh
-# create a new project
-npx sv create my-app
-```
+- **Framework:** SvelteKit
+- **Database:** Neon (PostgreSQL) + Drizzle ORM
+- **Styling:** Tailwind CSS + shadcn-svelte
+- **Runtime:** Bun
+- **Auth:** Custom credential-based sessions
 
-To recreate this project with the same configuration:
-
-```sh
-# recreate this project
-bun x sv@0.13.1 create --template minimal --types ts --add prettier eslint tailwindcss="plugins:forms,typography" sveltekit-adapter="adapter:auto" drizzle="database:postgresql+postgresql:postgres.js+docker:no" mdsvex --install bun Produck
-```
-
-## Developing
-
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
+## Getting Started
 
 ```sh
-npm run dev
-
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
+pnpm install
+pnpm dev
 ```
 
-## Building
+## Scripts
 
-To create a production version of your app:
-
-```sh
-npm run build
-```
-
-You can preview the production build with `npm run preview`.
-
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+| Command | Description |
+|---------|-------------|
+| `pnpm dev` | Start dev server |
+| `pnpm build` | Production build |
+| `pnpm check` | Type-check + lint |
+| `pnpm db:push` | Push schema to Neon |
+| `pnpm db:studio` | Open Drizzle Studio |

@@ -1,1 +1,18 @@
+overrides:
+  '@protobufjs/utf8': ^1.1.1
+  brace-expansion: ^5.0.6
+  cookie: ^0.7.2
+  esbuild: ^0.25.0
+  postcss: ^8.5.10
+  protobufjs: ^7.5.8
+  ws: ^8.20.1
+
+allowBuilds:
+  '@google/genai': true
+  better-sqlite3: false
+  esbuild: true
+  onnxruntime-node: true
+  protobufjs: true
+  puppeteer: true
+  sharp: true
 onlyBuiltDependencies: []

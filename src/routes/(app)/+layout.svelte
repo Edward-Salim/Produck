@@ -19,6 +19,7 @@
     WalletCards,
     GaugeCircle,
     Rss,
+    Briefcase,
     LogOut,
     EllipsisVertical,
     Shield,
@@ -317,6 +318,17 @@
               <Sidebar.MenuItem>
                 <Sidebar.MenuButton
                   size="sm"
+                  isActive={page.url.pathname.startsWith('/jobs')}
+                  tooltipContent="PM Job Board"
+                >
+                  {#snippet child({ props })}
+                    <a href="/jobs" {...props}><Briefcase /><span>Job Board</span></a>
+                  {/snippet}
+                </Sidebar.MenuButton>
+              </Sidebar.MenuItem>
+              <Sidebar.MenuItem>
+                <Sidebar.MenuButton
+                  size="sm"
                   isActive={page.url.pathname.startsWith('/financial-tracker')}
                   tooltipContent="Financial Tracker"
                 >
@@ -523,7 +535,9 @@
     {/if}
     {@const noAccess = !data.isAdmin && data.workspaces.length === 0 && data.projects.length === 0}
     {@const isWorkRoute =
-      !page.url.pathname.startsWith('/tools') && !page.url.pathname.startsWith('/artifacts')}
+      !page.url.pathname.startsWith('/tools') &&
+      !page.url.pathname.startsWith('/artifacts') &&
+      !page.url.pathname.startsWith('/jobs')}
     {#if noAccess && isWorkRoute}
       <div class="flex flex-1 flex-col items-center justify-center px-6 text-center">
         <p class="font-display text-lg text-cork-700">Can't access this page yet</p>

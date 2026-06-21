@@ -51,7 +51,7 @@ export function verifyPassword(password: string, stored: string): boolean {
   );
 }
 
-// Create user session in SQLite database
+// Create user session in database
 export async function createSession(userId: number): Promise<string> {
   const sessionId = randomBytes(32).toString('hex');
   const expiresAt = Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 7; // 7 days expiration
@@ -100,7 +100,7 @@ export async function validateSession(sessionId: string) {
   };
 }
 
-// Delete session from SQLite database
+// Delete session from database
 export async function deleteSession(sessionId: string) {
   await db.delete(authSession).where(eq(authSession.id, sessionId));
 }

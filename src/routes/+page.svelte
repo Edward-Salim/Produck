@@ -337,7 +337,6 @@
 
   const projectTechIconMap: Record<string, string> = {
     SvelteKit: svelteSvg,
-    SQLite: sqliteSvg,
     'Next.js': nextjsSvg,
     Django: djangoSvg,
     PostgreSQL: postgresqlSvg,
@@ -420,7 +419,7 @@
       category: 'product',
       description:
         'A personal productivity and product management workspace. Integrates user-journey mapping, OKR tracking, background removal tools, fintech tracking, and AI-assisted workflows.',
-      tech: ['SvelteKit', 'SQLite', 'Drizzle ORM', 'Bun', 'Tailwind CSS'],
+      tech: ['SvelteKit', 'PostgreSQL', 'Drizzle ORM', 'Bun', 'Tailwind CSS'],
       isSelf: true,
       image: null
     },

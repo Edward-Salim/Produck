@@ -30,11 +30,3 @@ src/routes/(app)/financial-tracker/financial-tracker-data.private.ts
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 
-# SQLite
-*.db
-*.db-journal
-*.db-shm
-*.db-wal
-
-# Supabase CLI local state
-supabase/.temp/
