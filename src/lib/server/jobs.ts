@@ -40,6 +40,9 @@ const PM_PATTERNS = [
   /\bproject\s*management\b/i,
   /\btechnical\s+project\s*manager\b/i,
   /\bsenior\s+project\s*manager\b/i,
+  // Process improvement — often overlaps with PM at APAC firms
+  /\bprocess\s*improvement\s*manager\b/i,
+  /\bprocess\s*excellence\s*manager\b/i,
 ];
 
 export function isProductManagementRole(title: string): boolean {
@@ -1500,8 +1503,8 @@ async function fetchOracle(source: typeof jobSource.$inferSelect): Promise<JobFe
     // serving detail pages (the tombstone message is JS-rendered, invisible here).
     const jobBase = `${base}/hcmUI/CandidateExperience/en/sites/${siteNumber}/job`;
     const allDiscovered: { id: number; title: string }[] = [];
-    const BATCH = 20;
-    const CONSECUTIVE_MISSES = 30;
+    const BATCH = 40;
+    const CONSECUTIVE_MISSES = 40;
 
     let probeId = 1000;
     let consecutiveMisses = 0;
@@ -1676,12 +1679,17 @@ async function fetchLever(source: typeof jobSource.$inferSelect): Promise<JobFet
           desc += `\n\n### ${list.text}\n\n${cheerio.load(list.content || '').text().trim()}`;
         }
       }
-      // Strip company boilerplate
+      // Strip company boilerplate — nuke everything from the first boilerplate header to end
       desc = desc
-        .replace(/About GoTo Group[\s\S]*?(?=\n\n###|\n\nAbout the Role|\n\n$)/, '')
-        .replace(/About Gojek[\s\S]*?(?=\n\n###|\n\nAbout the Role|\n\n$)/, '')
-        .replace(/About GoTo Financial[\s\S]*?(?=\n\n###|\n\nAbout the Role|\n\n$)/, '')
-        .replace(/GoTo and its business units[\s\S]*$/, '')
+        .replace(/\n\nAbout GoTo Group[\s\S]*$/i, '')
+        .replace(/\n\nAbout Gojek[\s\S]*$/i, '')
+        .replace(/\n\nAbout GoTo Financial[\s\S]*$/i, '')
+        .replace(/\n\nAbout the team[\s\S]*$/i, '')
+        .replace(/\nGoTo and its business units[\s\S]*$/i, '')
+        .replace(/\n#LI-ONSITE[\s\S]*$/i, '')
+        .replace(/\nWe may use artificial intelligence[\s\S]*$/i, '')
+        .replace(/\nGoTo Group Home Page[\s\S]*$/i, '')
+        .replace(/\nJobs powered by[\s\S]*$/i, '')
         .trim();
 
       // Recruit type from commitment

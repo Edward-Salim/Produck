@@ -5,12 +5,9 @@ import { eq, lt } from 'drizzle-orm';
 import { fetchJobsFromSource, staleCutoff } from '$lib/server/jobs.js';
 import type { RequestHandler } from './$types.js';
 
-export const POST: RequestHandler = async () => {
+async function doRefresh() {
   const sources = await db.select().from(jobSource).where(eq(jobSource.enabled, true));
-
-  if (sources.length === 0) {
-    return json({ fetched: 0, message: 'No enabled job sources' });
-  }
+  if (sources.length === 0) return { fetched: 0, message: 'No enabled job sources' };
 
   // Extract canonical job ID from URL for cross-source matching
   const jobKey = (url: string) => {
@@ -98,5 +95,18 @@ export const POST: RequestHandler = async () => {
       .where(eq(jobSource.id, source.id));
   }
 
-  return json({ fetched: inserted, total: toInsert.length, errors });
+  return { fetched: inserted, total: toInsert.length, errors };
+}
+
+export const POST: RequestHandler = async (event) => {
+  const refreshPromise = doRefresh().then((result) => {
+    console.log(`[Refresh] done: ${result.fetched}/${result.total} jobs, ${result.errors?.length ?? 0} errors`);
+  }).catch((err) => {
+    console.error('[Refresh] failed:', err);
+  });
+
+  // Keep the function alive on Netlify via waitUntil
+  (event.platform as any)?.context?.waitUntil?.(refreshPromise);
+
+  return json({ accepted: true });
 };

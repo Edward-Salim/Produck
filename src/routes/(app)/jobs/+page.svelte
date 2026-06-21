@@ -139,7 +139,10 @@
       const res = await fetch('/api/jobs/fetch', { method: 'POST' });
       if (!res.ok) throw new Error(`Server returned ${res.status}`);
       const body = await res.json();
-      if (body.errors?.length) {
+      // Background refresh — wait a bit for sources to finish, then reload
+      if (body.accepted) {
+        await new Promise((r) => setTimeout(r, 8000));
+      } else if (body.errors?.length) {
         console.warn('Fetch warnings:', body.errors);
       }
       await invalidateAll();
