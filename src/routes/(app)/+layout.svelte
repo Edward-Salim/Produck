@@ -216,7 +216,10 @@
   }
 </script>
 
-<svelte:head><link rel="icon" href={favicon} /></svelte:head>
+<svelte:head>
+  <link rel="icon" href={favicon} />
+  <meta name="robots" content="noindex, nofollow" />
+</svelte:head>
 <svelte:window onkeydown={handleKeydown} />
 
 <Sidebar.Provider bind:open={sidebarOpen} style="--sidebar-width: 14rem;">

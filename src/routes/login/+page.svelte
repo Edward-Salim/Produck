@@ -56,6 +56,7 @@
 
 <svelte:head>
   <title>Sign In - Produck</title>
+  <meta name="robots" content="noindex, nofollow" />
 </svelte:head>
 
 <div class="flex min-h-dvh items-center justify-center bg-cork-100 px-4">

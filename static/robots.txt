@@ -1,5 +1,17 @@
-# allow crawling everything by default
 User-agent: *
-Disallow:
+Allow: /
+Disallow: /api/
+Disallow: /login
+Disallow: /dashboard
+Disallow: /frameworks
+Disallow: /artifacts
+Disallow: /landscape
+Disallow: /trends
+Disallow: /jobs
+Disallow: /financial-tracker
+Disallow: /outcomes
+Disallow: /experience-map
+Disallow: /interview-snapshots
+Disallow: /tools
 
 Sitemap: https://produck.fun/sitemap.xml

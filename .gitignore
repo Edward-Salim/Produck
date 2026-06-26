@@ -25,8 +25,8 @@ Thumbs.db
 *.private.ts
 *.private.json
 src/routes/(app)/financial-tracker/financial-tracker-data.private.ts
+static/assets/ttd_edward.png
 
 # Vite
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
-
