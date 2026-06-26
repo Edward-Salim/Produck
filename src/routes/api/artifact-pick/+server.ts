@@ -2,11 +2,13 @@ import { json } from '@sveltejs/kit';
 import { db } from '$lib/server/db/index.js';
 import { artifactPick, pmArtifact, pmBook } from '$lib/server/db/schema.js';
 import { eq, and, inArray } from 'drizzle-orm';
+import { assertProjectAccess } from '$lib/server/access.js';
 import type { RequestHandler } from './$types.js';
 
-export const POST: RequestHandler = async ({ request, cookies }) => {
+export const POST: RequestHandler = async ({ request, cookies, locals }) => {
   const projectId = Number(cookies.get('active_project'));
   if (!projectId) return json({ error: 'No active project' }, { status: 400 });
+  await assertProjectAccess(locals, projectId);
 
   const { bookId, artifactName } = await request.json();
   if (!bookId || !artifactName)
@@ -32,9 +34,10 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
   return json({ ok: true, picked: true });
 };
 
-export const PUT: RequestHandler = async ({ request, cookies }) => {
+export const PUT: RequestHandler = async ({ request, cookies, locals }) => {
   const projectId = Number(cookies.get('active_project'));
   if (!projectId) return json({ error: 'No active project' }, { status: 400 });
+  await assertProjectAccess(locals, projectId);
 
   const { preset } = await request.json();
   if (!Array.isArray(preset)) return json({ error: 'Missing preset array' }, { status: 400 });

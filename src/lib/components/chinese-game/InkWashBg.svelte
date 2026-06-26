@@ -154,7 +154,13 @@
 
   <!-- ══════════ Rice paper ══════════ -->
   <rect width="1000" height="1400" fill="#f8f0e2" filter="url(#paper)" class="desktop-paper" />
-  <rect width="1000" height="1400" fill="#f8f0e2" filter="url(#paper-mobile)" class="mobile-paper" />
+  <rect
+    width="1000"
+    height="1400"
+    fill="#f8f0e2"
+    filter="url(#paper-mobile)"
+    class="mobile-paper"
+  />
 
   <!-- ══════════ Moon ══════════ -->
   <circle cx="720" cy="280" r="140" fill="url(#moon)" filter="url(#mist)" class="mist-filtered" />
@@ -170,31 +176,42 @@
   <!-- ══════════ DISTANT MOUNTAINS ══════════ -->
   <g filter="url(#mist)" opacity="0.22" class="mist-filtered">
     <!-- Far ridge — soft rolling peaks -->
-    <path d="M0,540 Q60,490 120,510 Q180,460 250,500 Q320,450 400,490 Q480,440 560,480 Q640,450 720,490 Q800,460 880,500 Q940,470 1000,490 L1000,570 L0,570 Z"
-          fill="#cfc0a4" />
+    <path
+      d="M0,540 Q60,490 120,510 Q180,460 250,500 Q320,450 400,490 Q480,440 560,480 Q640,450 720,490 Q800,460 880,500 Q940,470 1000,490 L1000,570 L0,570 Z"
+      fill="#cfc0a4"
+    />
   </g>
 
   <!-- ══════════ MID MOUNTAINS ══════════ -->
   <g filter="url(#mist)" opacity="0.28" class="mist-filtered">
     <!-- Main range — gentle rounded peaks -->
-    <path d="M0,600 Q70,550 130,575 Q200,510 280,555 Q360,500 440,550 Q520,490 600,540 Q680,500 760,545 Q840,510 920,550 Q960,530 1000,540 L1000,660 L0,660 Z"
-          fill="#c4b290" />
+    <path
+      d="M0,600 Q70,550 130,575 Q200,510 280,555 Q360,500 440,550 Q520,490 600,540 Q680,500 760,545 Q840,510 920,550 Q960,530 1000,540 L1000,660 L0,660 Z"
+      fill="#c4b290"
+    />
   </g>
 
   <!-- ══════════ FOREGROUND HILLS ══════════ -->
   <g filter="url(#ink-far)" opacity="0.22" class="mobile-hide">
     <!-- Left hill — smooth dome -->
-    <path d="M0,820 Q100,740 200,780 Q300,730 400,790 Q460,770 480,800 L480,880 L0,880 Z"
-          fill="#b8a278" />
+    <path
+      d="M0,820 Q100,740 200,780 Q300,730 400,790 Q460,770 480,800 L480,880 L0,880 Z"
+      fill="#b8a278"
+    />
     <!-- Right hill — lower dome -->
-    <path d="M520,840 Q640,780 740,820 Q840,770 940,820 Q980,810 1000,815 L1000,880 L520,880 Z"
-          fill="#ad9870" opacity="0.7" />
+    <path
+      d="M520,840 Q640,780 740,820 Q840,770 940,820 Q980,810 1000,815 L1000,880 L520,880 Z"
+      fill="#ad9870"
+      opacity="0.7"
+    />
   </g>
 
   <!-- ══════════ BASE GROUND ══════════ -->
   <g filter="url(#ink-far)" opacity="0.18" class="mobile-hide">
-    <path d="M0,980 Q120,950 250,970 Q380,940 500,965 Q620,945 750,970 Q880,950 1000,960 L1000,1020 L0,1020 Z"
-          fill="#a08860" />
+    <path
+      d="M0,980 Q120,950 250,970 Q380,940 500,965 Q620,945 750,970 Q880,950 1000,960 L1000,1020 L0,1020 Z"
+      fill="#a08860"
+    />
   </g>
 
   <!-- ══════════ WATER / MIST AT BASE ══════════ -->
@@ -211,29 +228,77 @@
   <!-- ═══════════════ TOP-RIGHT BRANCH ═══════════════ -->
   <g filter="url(#ink-wash)">
     <!-- Main branch -->
-    <path d="M1000,0 Q920,80 850,160 Q780,240 740,200 Q700,160 680,220 Q660,280 620,330"
-          stroke="url(#ink-dark)" stroke-width="9" fill="none" stroke-linecap="round" />
-    <path d="M1000,0 Q920,80 850,160 Q780,240 740,200 Q700,160 680,220 Q660,280 620,330"
-          stroke="url(#ink-medium)" stroke-width="4.5" fill="none" stroke-linecap="round" />
+    <path
+      d="M1000,0 Q920,80 850,160 Q780,240 740,200 Q700,160 680,220 Q660,280 620,330"
+      stroke="url(#ink-dark)"
+      stroke-width="9"
+      fill="none"
+      stroke-linecap="round"
+    />
+    <path
+      d="M1000,0 Q920,80 850,160 Q780,240 740,200 Q700,160 680,220 Q660,280 620,330"
+      stroke="url(#ink-medium)"
+      stroke-width="4.5"
+      fill="none"
+      stroke-linecap="round"
+    />
 
     <!-- Drooping branch -->
-    <path d="M820,180 Q800,260 790,340 Q785,380 800,420"
-          stroke="url(#ink-dark)" stroke-width="5.5" fill="none" stroke-linecap="round" />
-    <path d="M820,180 Q800,260 790,340 Q785,380 800,420"
-          stroke="url(#ink-medium)" stroke-width="2.5" fill="none" stroke-linecap="round" />
+    <path
+      d="M820,180 Q800,260 790,340 Q785,380 800,420"
+      stroke="url(#ink-dark)"
+      stroke-width="5.5"
+      fill="none"
+      stroke-linecap="round"
+    />
+    <path
+      d="M820,180 Q800,260 790,340 Q785,380 800,420"
+      stroke="url(#ink-medium)"
+      stroke-width="2.5"
+      fill="none"
+      stroke-linecap="round"
+    />
 
     <!-- Upward twig -->
-    <path d="M760,190 Q740,150 720,120 Q710,105 700,95"
-          stroke="url(#ink-light)" stroke-width="3" fill="none" stroke-linecap="round" />
+    <path
+      d="M760,190 Q740,150 720,120 Q710,105 700,95"
+      stroke="url(#ink-light)"
+      stroke-width="3"
+      fill="none"
+      stroke-linecap="round"
+    />
 
     <!-- Crossing twig -->
-    <path d="M880,100 Q840,110 800,140 Q770,160 750,190"
-          stroke="url(#ink-medium)" stroke-width="2" fill="none" stroke-linecap="round" />
+    <path
+      d="M880,100 Q840,110 800,140 Q770,160 750,190"
+      stroke="url(#ink-medium)"
+      stroke-width="2"
+      fill="none"
+      stroke-linecap="round"
+    />
 
     <!-- Fine twigs -->
-    <path d="M740,200 Q710,210 680,230" stroke="url(#ink-light)" stroke-width="1.5" fill="none" stroke-linecap="round" />
-    <path d="M620,330 Q600,350 590,370" stroke="url(#ink-light)" stroke-width="1" fill="none" stroke-linecap="round" />
-    <path d="M800,420 Q810,440 815,460" stroke="url(#ink-light)" stroke-width="1" fill="none" stroke-linecap="round" />
+    <path
+      d="M740,200 Q710,210 680,230"
+      stroke="url(#ink-light)"
+      stroke-width="1.5"
+      fill="none"
+      stroke-linecap="round"
+    />
+    <path
+      d="M620,330 Q600,350 590,370"
+      stroke="url(#ink-light)"
+      stroke-width="1"
+      fill="none"
+      stroke-linecap="round"
+    />
+    <path
+      d="M800,420 Q810,440 815,460"
+      stroke="url(#ink-light)"
+      stroke-width="1"
+      fill="none"
+      stroke-linecap="round"
+    />
   </g>
 
   <!-- Top-right plum blossoms + round blossoms -->
@@ -283,29 +348,77 @@
   <!-- ═══════════════ BOTTOM-LEFT BRANCH ═══════════════ -->
   <g filter="url(#ink-wash)">
     <!-- Main branch -->
-    <path d="M0,1400 Q80,1320 150,1240 Q220,1160 280,1120 Q340,1080 360,1020"
-          stroke="url(#ink-dark)" stroke-width="11" fill="none" stroke-linecap="round" />
-    <path d="M0,1400 Q80,1320 150,1240 Q220,1160 280,1120 Q340,1080 360,1020"
-          stroke="url(#ink-medium)" stroke-width="5.5" fill="none" stroke-linecap="round" />
+    <path
+      d="M0,1400 Q80,1320 150,1240 Q220,1160 280,1120 Q340,1080 360,1020"
+      stroke="url(#ink-dark)"
+      stroke-width="11"
+      fill="none"
+      stroke-linecap="round"
+    />
+    <path
+      d="M0,1400 Q80,1320 150,1240 Q220,1160 280,1120 Q340,1080 360,1020"
+      stroke="url(#ink-medium)"
+      stroke-width="5.5"
+      fill="none"
+      stroke-linecap="round"
+    />
 
     <!-- Branch reaching up -->
-    <path d="M360,1020 Q400,940 420,880 Q435,830 430,780"
-          stroke="url(#ink-medium)" stroke-width="4.5" fill="none" stroke-linecap="round" />
-    <path d="M360,1020 Q400,940 420,880 Q435,830 430,780"
-          stroke="url(#ink-light)" stroke-width="2" fill="none" stroke-linecap="round" />
+    <path
+      d="M360,1020 Q400,940 420,880 Q435,830 430,780"
+      stroke="url(#ink-medium)"
+      stroke-width="4.5"
+      fill="none"
+      stroke-linecap="round"
+    />
+    <path
+      d="M360,1020 Q400,940 420,880 Q435,830 430,780"
+      stroke="url(#ink-light)"
+      stroke-width="2"
+      fill="none"
+      stroke-linecap="round"
+    />
 
     <!-- Secondary branch -->
-    <path d="M200,1220 Q240,1160 300,1120 Q340,1090 370,1080"
-          stroke="url(#ink-medium)" stroke-width="3.5" fill="none" stroke-linecap="round" />
+    <path
+      d="M200,1220 Q240,1160 300,1120 Q340,1090 370,1080"
+      stroke="url(#ink-medium)"
+      stroke-width="3.5"
+      fill="none"
+      stroke-linecap="round"
+    />
 
     <!-- Crossing twig -->
-    <path d="M280,1120 Q300,1060 320,1000 Q335,960 340,920"
-          stroke="url(#ink-light)" stroke-width="2.5" fill="none" stroke-linecap="round" />
+    <path
+      d="M280,1120 Q300,1060 320,1000 Q335,960 340,920"
+      stroke="url(#ink-light)"
+      stroke-width="2.5"
+      fill="none"
+      stroke-linecap="round"
+    />
 
     <!-- Tendrils -->
-    <path d="M430,780 Q440,740 445,700" stroke="url(#ink-light)" stroke-width="1.5" fill="none" stroke-linecap="round" />
-    <path d="M340,920 Q350,890 360,860" stroke="url(#ink-light)" stroke-width="1" fill="none" stroke-linecap="round" />
-    <path d="M150,1240 Q120,1190 100,1150" stroke="url(#ink-light)" stroke-width="2" fill="none" stroke-linecap="round" />
+    <path
+      d="M430,780 Q440,740 445,700"
+      stroke="url(#ink-light)"
+      stroke-width="1.5"
+      fill="none"
+      stroke-linecap="round"
+    />
+    <path
+      d="M340,920 Q350,890 360,860"
+      stroke="url(#ink-light)"
+      stroke-width="1"
+      fill="none"
+      stroke-linecap="round"
+    />
+    <path
+      d="M150,1240 Q120,1190 100,1150"
+      stroke="url(#ink-light)"
+      stroke-width="2"
+      fill="none"
+      stroke-linecap="round"
+    />
   </g>
 
   <!-- Bottom-left blossoms -->
@@ -359,14 +472,42 @@
   <!-- ═══════════════ BAMBOO — bottom-left cluster ═══════════════ -->
   <g filter="url(#ink-wash)" opacity="0.55" class="mobile-hide">
     <!-- Bamboo stalk -->
-    <path d="M0,1250 Q15,1200 12,1140 Q10,1090 18,1040"
-          stroke="url(#ink-bamboo)" stroke-width="3" fill="none" stroke-linecap="round" />
-    <path d="M0,1250 Q15,1200 12,1140 Q10,1090 18,1040"
-          stroke="url(#ink-light)" stroke-width="1.2" fill="none" stroke-linecap="round" />
+    <path
+      d="M0,1250 Q15,1200 12,1140 Q10,1090 18,1040"
+      stroke="url(#ink-bamboo)"
+      stroke-width="3"
+      fill="none"
+      stroke-linecap="round"
+    />
+    <path
+      d="M0,1250 Q15,1200 12,1140 Q10,1090 18,1040"
+      stroke="url(#ink-light)"
+      stroke-width="1.2"
+      fill="none"
+      stroke-linecap="round"
+    />
     <!-- Node lines -->
-    <path d="M8,1200 Q18,1197 22,1203" stroke="url(#ink-bamboo)" stroke-width="1.5" fill="none" stroke-linecap="round" />
-    <path d="M7,1140 Q17,1137 21,1143" stroke="url(#ink-bamboo)" stroke-width="1.5" fill="none" stroke-linecap="round" />
-    <path d="M10,1085 Q20,1082 24,1088" stroke="url(#ink-bamboo)" stroke-width="1.5" fill="none" stroke-linecap="round" />
+    <path
+      d="M8,1200 Q18,1197 22,1203"
+      stroke="url(#ink-bamboo)"
+      stroke-width="1.5"
+      fill="none"
+      stroke-linecap="round"
+    />
+    <path
+      d="M7,1140 Q17,1137 21,1143"
+      stroke="url(#ink-bamboo)"
+      stroke-width="1.5"
+      fill="none"
+      stroke-linecap="round"
+    />
+    <path
+      d="M10,1085 Q20,1082 24,1088"
+      stroke="url(#ink-bamboo)"
+      stroke-width="1.5"
+      fill="none"
+      stroke-linecap="round"
+    />
   </g>
 
   <!-- Bamboo leaves -->
@@ -386,10 +527,27 @@
 
   <!-- ═══════════════ BAMBOO — top-right sprig ═══════════════ -->
   <g filter="url(#ink-wash)" opacity="0.4" class="mobile-hide">
-    <path d="M900,0 Q910,40 905,80 Q900,110 908,140"
-          stroke="url(#ink-bamboo)" stroke-width="2.5" fill="none" stroke-linecap="round" />
-    <path d="M905,40 Q915,38 920,42" stroke="url(#ink-bamboo)" stroke-width="1.2" fill="none" stroke-linecap="round" />
-    <path d="M904,90 Q914,88 919,92" stroke="url(#ink-bamboo)" stroke-width="1.2" fill="none" stroke-linecap="round" />
+    <path
+      d="M900,0 Q910,40 905,80 Q900,110 908,140"
+      stroke="url(#ink-bamboo)"
+      stroke-width="2.5"
+      fill="none"
+      stroke-linecap="round"
+    />
+    <path
+      d="M905,40 Q915,38 920,42"
+      stroke="url(#ink-bamboo)"
+      stroke-width="1.2"
+      fill="none"
+      stroke-linecap="round"
+    />
+    <path
+      d="M904,90 Q914,88 919,92"
+      stroke="url(#ink-bamboo)"
+      stroke-width="1.2"
+      fill="none"
+      stroke-linecap="round"
+    />
   </g>
 
   <g filter="url(#petal-blur)" opacity="0.35" class="mobile-hide">
@@ -402,12 +560,27 @@
 
   <!-- ═══════════════ BOTTOM-RIGHT — branch tip ═══════════════ -->
   <g filter="url(#ink-wash)">
-    <path d="M1000,1400 Q920,1350 880,1290 Q850,1240 830,1200"
-          stroke="url(#ink-medium)" stroke-width="5" fill="none" stroke-linecap="round" />
-    <path d="M1000,1400 Q920,1350 880,1290 Q850,1240 830,1200"
-          stroke="url(#ink-light)" stroke-width="2.5" fill="none" stroke-linecap="round" />
-    <path d="M880,1290 Q900,1250 910,1210"
-          stroke="url(#ink-light)" stroke-width="2" fill="none" stroke-linecap="round" />
+    <path
+      d="M1000,1400 Q920,1350 880,1290 Q850,1240 830,1200"
+      stroke="url(#ink-medium)"
+      stroke-width="5"
+      fill="none"
+      stroke-linecap="round"
+    />
+    <path
+      d="M1000,1400 Q920,1350 880,1290 Q850,1240 830,1200"
+      stroke="url(#ink-light)"
+      stroke-width="2.5"
+      fill="none"
+      stroke-linecap="round"
+    />
+    <path
+      d="M880,1290 Q900,1250 910,1210"
+      stroke="url(#ink-light)"
+      stroke-width="2"
+      fill="none"
+      stroke-linecap="round"
+    />
   </g>
 
   <g filter="url(#petal-blur)">
@@ -421,12 +594,28 @@
 
   <!-- ═══════════════ TOP-LEFT — light tendril ═══════════════ -->
   <g filter="url(#ink-wash)">
-    <path d="M0,0 Q60,40 100,100 Q130,150 140,200"
-          stroke="url(#ink-light)" stroke-width="3" fill="none" stroke-linecap="round" />
-    <path d="M0,0 Q60,40 100,100 Q130,150 140,200"
-          stroke="url(#ink-light)" stroke-width="1.5" fill="none" stroke-linecap="round" opacity="0.5" />
-    <path d="M100,100 Q140,90 170,80"
-          stroke="url(#ink-light)" stroke-width="1.5" fill="none" stroke-linecap="round" />
+    <path
+      d="M0,0 Q60,40 100,100 Q130,150 140,200"
+      stroke="url(#ink-light)"
+      stroke-width="3"
+      fill="none"
+      stroke-linecap="round"
+    />
+    <path
+      d="M0,0 Q60,40 100,100 Q130,150 140,200"
+      stroke="url(#ink-light)"
+      stroke-width="1.5"
+      fill="none"
+      stroke-linecap="round"
+      opacity="0.5"
+    />
+    <path
+      d="M100,100 Q140,90 170,80"
+      stroke="url(#ink-light)"
+      stroke-width="1.5"
+      fill="none"
+      stroke-linecap="round"
+    />
   </g>
 
   <g filter="url(#petal-blur)">
@@ -475,8 +664,13 @@
   <g transform="translate(915, 1310)" opacity="0.48" filter="url(#petal-blur)">
     <rect x="0" y="0" width="32" height="32" rx="1" fill="#c04030" />
     <!-- Stylized character hint inside seal -->
-    <path d="M8,8 L24,8 M8,12 L24,12 M16,8 L16,24 M8,16 L24,16 M8,20 L24,20"
-          stroke="#f8e8d0" stroke-width="1.2" fill="none" opacity="0.5" />
+    <path
+      d="M8,8 L24,8 M8,12 L24,12 M16,8 L16,24 M8,16 L24,16 M8,20 L24,20"
+      stroke="#f8e8d0"
+      stroke-width="1.2"
+      fill="none"
+      opacity="0.5"
+    />
   </g>
 </svg>
 

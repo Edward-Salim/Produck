@@ -34,13 +34,41 @@ export function isPunct(c: string) {
 }
 
 export const levelColorConfig = [
-  { base: 'border-cork-300/40 bg-cork-100/50 text-cork-600', active: 'border-red-400 bg-red-300 text-red-950 shadow-sm', mastered: 'border-yellow-400 bg-yellow-200/80 text-yellow-900 shadow-sm shadow-yellow-300/40' },
-  { base: 'border-cork-300/40 bg-cork-100/50 text-cork-600', active: 'border-emerald-400 bg-emerald-300 text-emerald-950 shadow-sm', mastered: 'border-yellow-400 bg-yellow-200/80 text-yellow-900 shadow-sm shadow-yellow-300/40' },
-  { base: 'border-cork-300/40 bg-cork-100/50 text-cork-600', active: 'border-sky-400 bg-sky-300 text-sky-950 shadow-sm', mastered: 'border-yellow-400 bg-yellow-200/80 text-yellow-900 shadow-sm shadow-yellow-300/40' },
-  { base: 'border-cork-300/40 bg-cork-100/50 text-cork-600', active: 'border-violet-400 bg-violet-300 text-violet-950 shadow-sm', mastered: 'border-yellow-400 bg-yellow-200/80 text-yellow-900 shadow-sm shadow-yellow-300/40' },
-  { base: 'border-cork-300/40 bg-cork-100/50 text-cork-600', active: 'border-rose-400 bg-rose-300 text-rose-950 shadow-sm', mastered: 'border-yellow-400 bg-yellow-200/80 text-yellow-900 shadow-sm shadow-yellow-300/40' },
-  { base: 'border-cork-300/40 bg-cork-100/50 text-cork-600', active: 'border-teal-400 bg-teal-300 text-teal-950 shadow-sm', mastered: 'border-yellow-400 bg-yellow-200/80 text-yellow-900 shadow-sm shadow-yellow-300/40' },
-  { base: 'border-cork-300/40 bg-cork-100/50 text-cork-600', active: 'border-orange-400 bg-orange-300 text-orange-950 shadow-sm', mastered: 'border-yellow-400 bg-yellow-200/80 text-yellow-900 shadow-sm shadow-yellow-300/40' },
+  {
+    base: 'border-cork-300/40 bg-cork-100/50 text-cork-600',
+    active: 'border-red-400 bg-red-300 text-red-950 shadow-sm',
+    mastered: 'border-yellow-400 bg-yellow-200/80 text-yellow-900 shadow-sm shadow-yellow-300/40'
+  },
+  {
+    base: 'border-cork-300/40 bg-cork-100/50 text-cork-600',
+    active: 'border-emerald-400 bg-emerald-300 text-emerald-950 shadow-sm',
+    mastered: 'border-yellow-400 bg-yellow-200/80 text-yellow-900 shadow-sm shadow-yellow-300/40'
+  },
+  {
+    base: 'border-cork-300/40 bg-cork-100/50 text-cork-600',
+    active: 'border-sky-400 bg-sky-300 text-sky-950 shadow-sm',
+    mastered: 'border-yellow-400 bg-yellow-200/80 text-yellow-900 shadow-sm shadow-yellow-300/40'
+  },
+  {
+    base: 'border-cork-300/40 bg-cork-100/50 text-cork-600',
+    active: 'border-violet-400 bg-violet-300 text-violet-950 shadow-sm',
+    mastered: 'border-yellow-400 bg-yellow-200/80 text-yellow-900 shadow-sm shadow-yellow-300/40'
+  },
+  {
+    base: 'border-cork-300/40 bg-cork-100/50 text-cork-600',
+    active: 'border-rose-400 bg-rose-300 text-rose-950 shadow-sm',
+    mastered: 'border-yellow-400 bg-yellow-200/80 text-yellow-900 shadow-sm shadow-yellow-300/40'
+  },
+  {
+    base: 'border-cork-300/40 bg-cork-100/50 text-cork-600',
+    active: 'border-teal-400 bg-teal-300 text-teal-950 shadow-sm',
+    mastered: 'border-yellow-400 bg-yellow-200/80 text-yellow-900 shadow-sm shadow-yellow-300/40'
+  },
+  {
+    base: 'border-cork-300/40 bg-cork-100/50 text-cork-600',
+    active: 'border-orange-400 bg-orange-300 text-orange-950 shadow-sm',
+    mastered: 'border-yellow-400 bg-yellow-200/80 text-yellow-900 shadow-sm shadow-yellow-300/40'
+  }
 ];
 
 export class GameEngine {
@@ -92,11 +120,21 @@ export class GameEngine {
   private recentHanzi: string[] = [];
 
   // ── Derived ──
-  get maxHealth() { return 3; }
-  get absoluteMaxHealth() { return 5; }
-  get bonusHearts() { return Math.max(0, this.health - 3); }
-  get accuracy() { return this.totalAttempts > 0 ? Math.round((this.totalCorrect / this.totalAttempts) * 100) : 0; }
-  get sentenceCount() { return this.sentences.length; }
+  get maxHealth() {
+    return 3;
+  }
+  get absoluteMaxHealth() {
+    return 5;
+  }
+  get bonusHearts() {
+    return Math.max(0, this.health - 3);
+  }
+  get accuracy() {
+    return this.totalAttempts > 0 ? Math.round((this.totalCorrect / this.totalAttempts) * 100) : 0;
+  }
+  get sentenceCount() {
+    return this.sentences.length;
+  }
   get levelSentenceCounts(): Record<number, number> {
     return Object.fromEntries(
       Object.keys(this.levelNames).map((k) => {
@@ -188,13 +226,16 @@ export class GameEngine {
       });
     } catch {}
     try {
-      localStorage.setItem(SETTINGS_KEY, JSON.stringify({
-        music: this.musicEnabled,
-        sounds: this.soundsEnabled,
-        hintAlwaysOn: this.hintAlwaysOn,
-        selectedLevels: [...this.selectedLevels],
-        masteredHanzi: this.masteredHanzi
-      }));
+      localStorage.setItem(
+        SETTINGS_KEY,
+        JSON.stringify({
+          music: this.musicEnabled,
+          sounds: this.soundsEnabled,
+          hintAlwaysOn: this.hintAlwaysOn,
+          selectedLevels: [...this.selectedLevels],
+          masteredHanzi: this.masteredHanzi
+        })
+      );
     } catch {}
   }
 
@@ -261,9 +302,7 @@ export class GameEngine {
     if (filtered.length === 0) return;
 
     // Exclude already-mastered sentences so the player practices what they need
-    const masteredSet = new Set(
-      Object.values(this.masteredHanzi).flat()
-    );
+    const masteredSet = new Set(Object.values(this.masteredHanzi).flat());
     const fresh = filtered.filter((s) => !masteredSet.has(s.hanzi));
 
     // If everything is mastered, include all again (full reset)
@@ -439,7 +478,10 @@ export class GameEngine {
       slot++;
     }
     const next = this.nextEditableSlot(slot - 1);
-    return { nextSlot: next > fromIndex || this.userChars[next] ? next : fromIndex, wroteChars: true };
+    return {
+      nextSlot: next > fromIndex || this.userChars[next] ? next : fromIndex,
+      wroteChars: true
+    };
   }
 
   // ── Persistence ──
@@ -509,7 +551,9 @@ export class GameEngine {
   restoreGameData(data: SavedGameData): boolean {
     // Rebuild shuffled array in the exact saved order (preserving swaps)
     const byHanzi = new Map(this.sentences.map((s: SentenceData) => [s.hanzi, s]));
-    const savedShuffled = data.shuffledHanzi.map((h) => byHanzi.get(h)).filter(Boolean) as SentenceData[];
+    const savedShuffled = data.shuffledHanzi
+      .map((h) => byHanzi.get(h))
+      .filter(Boolean) as SentenceData[];
     if (savedShuffled.length === 0) return false;
 
     this.shuffled = savedShuffled;

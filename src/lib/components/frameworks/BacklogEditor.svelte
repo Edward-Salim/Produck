@@ -284,8 +284,9 @@
           class="grid grid-cols-[1fr_40px] gap-1.5 border-b border-cork-400/10 px-3 py-2 transition-colors md:grid-cols-[1fr_140px_120px_80px] md:gap-2 md:px-4 md:py-2.5 {hasAC
             ? 'cursor-pointer hover:bg-cork-200/40'
             : ''}"
-          role={hasAC ? 'button' : undefined}
-          tabindex={hasAC ? 0 : undefined}
+          role="button"
+          tabindex="0"
+          aria-disabled={!hasAC}
           onclick={() => hasAC && toggleStory(story.id)}
           onkeydown={(e) => {
             if (hasAC && (e.key === 'Enter' || e.key === ' ')) {

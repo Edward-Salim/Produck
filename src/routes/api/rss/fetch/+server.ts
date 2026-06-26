@@ -3,7 +3,14 @@ import { db } from '$lib/server/db/index.js';
 import { rssSource, rssArticle } from '$lib/server/db/schema.js';
 import { eq, and, isNull, lt, inArray, sql } from 'drizzle-orm';
 import type { RequestHandler } from './$types.js';
-import { createParser, extractImage, screenArticles, isObviouslyOffTopic, type ScreeningStats } from '$lib/server/rss.js';
+import {
+  createParser,
+  extractImage,
+  screenArticles,
+  isObviouslyOffTopic,
+  type ScreeningStats
+} from '$lib/server/rss.js';
+import { assertWorkspaceAccess } from '$lib/server/access.js';
 
 const parser = createParser();
 
@@ -18,20 +25,26 @@ function cleanDescription(text: string | null | undefined): string | null {
 
 async function updateSourceAccuracy(stats: ScreeningStats) {
   for (const [name, s] of stats.bySource) {
-    await db.update(rssSource)
-      .set({ totalScreened: sql`total_screened + ${s.total}`, totalKept: sql`total_kept + ${s.kept}` })
+    await db
+      .update(rssSource)
+      .set({
+        totalScreened: sql`total_screened + ${s.total}`,
+        totalKept: sql`total_kept + ${s.kept}`
+      })
       .where(eq(rssSource.name, name));
   }
 }
 
-export const POST: RequestHandler = async ({ request }) => {
+export const POST: RequestHandler = async ({ request, locals }) => {
   const body = await request.json();
   const workspaceId = (body.workspaceId as number) || 0;
+  if (workspaceId > 0) await assertWorkspaceAccess(locals, workspaceId);
 
   const allSources = await db.select().from(rssSource);
-  const sources = workspaceId > 0
-    ? allSources.filter((r) => r.enabled && r.workspaceId === workspaceId)
-    : allSources.filter((r) => r.enabled);
+  const sources =
+    workspaceId > 0
+      ? allSources.filter((r) => r.enabled && r.workspaceId === workspaceId)
+      : allSources.filter((r) => r.enabled);
 
   if (sources.length === 0) {
     return json({ fetched: 0, message: 'No enabled RSS sources' });
@@ -48,9 +61,7 @@ export const POST: RequestHandler = async ({ request }) => {
       parser.parseURL(source.url).then(
         (feed) => ({
           source,
-          items: (feed.items || []).filter(
-            (item) => item.link && !existingUrls.has(item.link)
-          )
+          items: (feed.items || []).filter((item) => item.link && !existingUrls.has(item.link))
         }),
         (err) => {
           errors.push({
@@ -85,7 +96,9 @@ export const POST: RequestHandler = async ({ request }) => {
   }
 
   // Keyword pre-filter: obvious off-topic articles get rejected at insert time
-  const sourceMap = new Map(sources.map((s) => [s.id, { category: s.category, region: s.region, sourceName: s.name }]));
+  const sourceMap = new Map(
+    sources.map((s) => [s.id, { category: s.category, region: s.region, sourceName: s.name }])
+  );
   const keywordStats = new Map<string, { total: number; kept: number }>();
   for (const item of toInsert) {
     const src = sourceMap.get(item.sourceId!);
@@ -102,7 +115,7 @@ export const POST: RequestHandler = async ({ request }) => {
 
   // Batch insert all articles (URL dedup works even for keyword-rejected items)
   if (toInsert.length > 0) {
-    const inserted = await db.insert(rssArticle).values(toInsert).returning({ id: rssArticle.id, url: rssArticle.url });
+    await db.insert(rssArticle).values(toInsert);
 
     // AI screen only the keyword-passing items
     const aiQueue = toInsert.filter((a) => !a.rejected);
@@ -123,7 +136,10 @@ export const POST: RequestHandler = async ({ request }) => {
       // Mark all AI-screened articles as screened
       await db.update(rssArticle).set({ screened: true }).where(inArray(rssArticle.url, aiUrls));
       if (rejectUrls.length > 0) {
-        await db.update(rssArticle).set({ rejected: true }).where(inArray(rssArticle.url, rejectUrls));
+        await db
+          .update(rssArticle)
+          .set({ rejected: true })
+          .where(inArray(rssArticle.url, rejectUrls));
       }
     }
   }

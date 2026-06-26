@@ -2,11 +2,19 @@ import { db } from '$lib/server/db/index.js';
 import { rssSource, rssArticle, trendSummary } from '$lib/server/db/schema.js';
 import { eq, and, desc, isNull, lt, inArray, sql } from 'drizzle-orm';
 import type { PageServerLoad } from './$types.js';
-import { createParser, extractImage, scrapeOgImage, screenArticles, generateDailySummary, isObviouslyOffTopic, type ScreeningStats } from '$lib/server/rss.js';
+import {
+  createParser,
+  extractImage,
+  scrapeOgImage,
+  screenArticles,
+  generateDailySummary,
+  isObviouslyOffTopic,
+  type ScreeningStats
+} from '$lib/server/rss.js';
 
 const parser = createParser();
 
-async function fetchFeeds(sources: typeof rssSource.$inferSelect[]) {
+async function fetchFeeds(sources: (typeof rssSource.$inferSelect)[]) {
   const enabled = sources.filter((r) => r.enabled);
   if (enabled.length === 0) return { totalFetched: 0 };
 
@@ -19,9 +27,7 @@ async function fetchFeeds(sources: typeof rssSource.$inferSelect[]) {
     enabled.map((source) =>
       parser.parseURL(source.url).then((feed) => ({
         source,
-        items: (feed.items || []).filter(
-          (item) => item.link && !existingUrls.has(item.link)
-        )
+        items: (feed.items || []).filter((item) => item.link && !existingUrls.has(item.link))
       }))
     )
   );
@@ -50,7 +56,9 @@ async function fetchFeeds(sources: typeof rssSource.$inferSelect[]) {
   // Keyword pre-filter: mark obviously off-topic articles as rejected at insert time.
   // This prevents trash (promo codes, sports, etc.) from ever appearing to users.
   // AI screening below catches the nuanced cases that survive the keyword pass.
-  const sourceMap = new Map(enabled.map((s) => [s.id, { category: s.category, region: s.region, sourceName: s.name }]));
+  const sourceMap = new Map(
+    enabled.map((s) => [s.id, { category: s.category, region: s.region, sourceName: s.name }])
+  );
   const keywordStats = new Map<string, { total: number; kept: number }>();
   for (const item of toInsert) {
     const src = sourceMap.get(item.sourceId!);
@@ -68,26 +76,37 @@ async function fetchFeeds(sources: typeof rssSource.$inferSelect[]) {
 
   // Batch insert all new articles immediately
   if (toInsert.length > 0) {
-    const inserted = await db.insert(rssArticle).values(toInsert).returning({ id: rssArticle.id, url: rssArticle.url });
+    await db.insert(rssArticle).values(toInsert);
 
     // AI screen only the keyword-passing articles — fire-and-forget to avoid timeout
     const aiQueue = toInsert.filter((a) => !a.rejected);
     if (aiQueue.length > 0) {
-      const articlesToScreen = aiQueue.map((a) => ({ title: a.title!, ...sourceMap.get(a.sourceId!)! }));
+      const articlesToScreen = aiQueue.map((a) => ({
+        title: a.title!,
+        ...sourceMap.get(a.sourceId!)!
+      }));
       const aiUrls = aiQueue.map((a) => a.url!);
-      void screenArticles(articlesToScreen).then(async ({ kept: keepTitles, stats }) => {
-        await updateSourceAccuracy(stats);
-        const keepUrls = new Set<string>();
-        for (const item of aiQueue) {
-          if (keepTitles.has(item.title!)) keepUrls.add(item.url!);
-        }
-        const rejectUrls = aiUrls.filter((url) => !keepUrls.has(url));
-        // Mark all AI-screened articles as screened
-        await db.update(rssArticle).set({ screened: true }).where(inArray(rssArticle.url, aiUrls));
-        if (rejectUrls.length > 0) {
-          await db.update(rssArticle).set({ rejected: true }).where(inArray(rssArticle.url, rejectUrls));
-        }
-      }).catch((err) => console.error('Background screening failed:', err));
+      void screenArticles(articlesToScreen)
+        .then(async ({ kept: keepTitles, stats }) => {
+          await updateSourceAccuracy(stats);
+          const keepUrls = new Set<string>();
+          for (const item of aiQueue) {
+            if (keepTitles.has(item.title!)) keepUrls.add(item.url!);
+          }
+          const rejectUrls = aiUrls.filter((url) => !keepUrls.has(url));
+          // Mark all AI-screened articles as screened
+          await db
+            .update(rssArticle)
+            .set({ screened: true })
+            .where(inArray(rssArticle.url, aiUrls));
+          if (rejectUrls.length > 0) {
+            await db
+              .update(rssArticle)
+              .set({ rejected: true })
+              .where(inArray(rssArticle.url, rejectUrls));
+          }
+        })
+        .catch((err) => console.error('Background screening failed:', err));
     }
   }
 
@@ -96,15 +115,13 @@ async function fetchFeeds(sources: typeof rssSource.$inferSelect[]) {
   const nowWib = new Date(Date.now() + 7 * 60 * 60 * 1000);
   const dayOfWeek = nowWib.getUTCDay();
   const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-  const lastWeekMonday = new Date(Date.UTC(
-    nowWib.getUTCFullYear(),
-    nowWib.getUTCMonth(),
-    nowWib.getUTCDate() + mondayOffset - 7
-  ));
-  const cutoff = lastWeekMonday.toISOString();
-  await db.delete(rssArticle).where(
-    lt(sql`COALESCE(${rssArticle.publishedAt}, ${rssArticle.fetchedAt})`, cutoff)
+  const lastWeekMonday = new Date(
+    Date.UTC(nowWib.getUTCFullYear(), nowWib.getUTCMonth(), nowWib.getUTCDate() + mondayOffset - 7)
   );
+  const cutoff = lastWeekMonday.toISOString();
+  await db
+    .delete(rssArticle)
+    .where(lt(sql`COALESCE(${rssArticle.publishedAt}, ${rssArticle.fetchedAt})`, cutoff));
 
   return { totalFetched: toInsert.length };
 }
@@ -121,7 +138,15 @@ async function backfillImages() {
 
   const needScrape: typeof orphaned = [];
   for (const row of orphaned) {
-    const baseUrl = row.url ? (() => { try { return new URL(row.url).origin; } catch { return null; } })() : null;
+    const baseUrl = row.url
+      ? (() => {
+          try {
+            return new URL(row.url).origin;
+          } catch {
+            return null;
+          }
+        })()
+      : null;
     const resolve = (src: string) => {
       if (src.startsWith('//')) return 'https:' + src;
       if (src.startsWith('/') && baseUrl) return baseUrl + src;
@@ -131,12 +156,18 @@ async function backfillImages() {
     if (html) {
       const imgMatch = html.match(/<img[^>]+src=["']([^"']+)["'][^>]*>/i);
       if (imgMatch?.[1]) {
-        await db.update(rssArticle).set({ imageUrl: resolve(imgMatch[1]) }).where(eq(rssArticle.id, row.id));
+        await db
+          .update(rssArticle)
+          .set({ imageUrl: resolve(imgMatch[1]) })
+          .where(eq(rssArticle.id, row.id));
         continue;
       }
       const bgMatch = html.match(/background-image\s*:\s*url\(["']?([^)"']+)["']?\)/i);
       if (bgMatch?.[1]) {
-        await db.update(rssArticle).set({ imageUrl: resolve(bgMatch[1]) }).where(eq(rssArticle.id, row.id));
+        await db
+          .update(rssArticle)
+          .set({ imageUrl: resolve(bgMatch[1]) })
+          .where(eq(rssArticle.id, row.id));
         continue;
       }
     }
@@ -157,7 +188,10 @@ async function backfillImages() {
 
 export const load: PageServerLoad = async () => {
   // RSS is profile-level, not workspace-scoped — load all sources
-  const sources = await db.select().from(rssSource).orderBy(rssSource.region, rssSource.category, rssSource.name);
+  const sources = await db
+    .select()
+    .from(rssSource)
+    .orderBy(rssSource.region, rssSource.category, rssSource.name);
 
   // Fetch fresh articles — with a 10-minute cooldown to keep page loads fast
   const lastFetched = await db
@@ -166,7 +200,7 @@ export const load: PageServerLoad = async () => {
     .orderBy(desc(rssArticle.fetchedAt))
     .limit(1);
   const cooldownMs = 10 * 60 * 1000; // 10 minutes
-  const shouldFetch = !lastFetched[0] || (Date.now() - lastFetched[0].at.getTime()) > cooldownMs;
+  const shouldFetch = !lastFetched[0] || Date.now() - lastFetched[0].at.getTime() > cooldownMs;
   if (sources.length > 0 && shouldFetch) {
     await fetchFeeds(sources);
   }
@@ -208,7 +242,11 @@ export const load: PageServerLoad = async () => {
   const summaries = await db.select().from(trendSummary).orderBy(desc(trendSummary.date)).limit(30);
 
   function sourceDomain(url: string): string {
-    try { return new URL(url).hostname; } catch { return ''; }
+    try {
+      return new URL(url).hostname;
+    } catch {
+      return '';
+    }
   }
 
   // Normalize to plain primitives: Date → ISO string, null → '' for optional text fields.
@@ -246,7 +284,9 @@ export const load: PageServerLoad = async () => {
   const summaryByDateWindow = new Map<string, { morning?: string; evening?: string }>();
   for (const s of summaries) {
     const entry = summaryByDateWindow.get(s.date) ?? {};
-    entry[s.window] = s.summary ?? undefined;
+    if (s.window === 'morning' || s.window === 'evening') {
+      entry[s.window] = s.summary ?? undefined;
+    }
     summaryByDateWindow.set(s.date, entry);
   }
 
@@ -258,15 +298,18 @@ export const load: PageServerLoad = async () => {
     dateKey,
     label: formatDayLabel(dateKey),
     count: arts.length,
-    summary: summaryByDateWindow.get(dateKey)?.evening ?? summaryByDateWindow.get(dateKey)?.morning ?? null,
+    summary:
+      summaryByDateWindow.get(dateKey)?.evening ??
+      summaryByDateWindow.get(dateKey)?.morning ??
+      null,
     articles: arts
   })).sort((a, b) => b.dateKey.localeCompare(a.dateKey));
 
   // Generate missing summaries — morning at 8 AM WIB, evening at 6 PM WIB.
   // Past dates are backfilled up to MAX_PAST_BACKFILL per page load.
   const nowWibHour = new Date(Date.now() + 7 * 60 * 60 * 1000).getUTCHours();
-  const MORNING_HOUR = 8;   // 8 AM WIB
-  const EVENING_HOUR = 18;  // 6 PM WIB
+  const MORNING_HOUR = 8; // 8 AM WIB
+  const EVENING_HOUR = 18; // 6 PM WIB
   const MAX_PAST_BACKFILL = 3;
   const generatingDates = new Set<string>();
   let pastBackfilled = 0;
@@ -280,41 +323,58 @@ export const load: PageServerLoad = async () => {
     if (isToday && !entry.morning && nowWibHour >= MORNING_HOUR) {
       generatingDates.add(g.dateKey);
       const arts = [...g.articles];
-      void generateDailySummary(arts).then(async (text) => {
-        if (text) {
-          await db.insert(trendSummary).values({
-            date: g.dateKey, window: 'morning',
-            summary: text, articleCount: g.count, generatedAt: new Date()
-          });
-        }
-      }).catch((err) => console.error('generateDailySummary (morning) failed for ' + g.dateKey + ':', err));
+      void generateDailySummary(arts)
+        .then(async (text) => {
+          if (text) {
+            await db.insert(trendSummary).values({
+              date: g.dateKey,
+              window: 'morning',
+              summary: text,
+              articleCount: g.count,
+              generatedAt: new Date()
+            });
+          }
+        })
+        .catch((err) =>
+          console.error('generateDailySummary (morning) failed for ' + g.dateKey + ':', err)
+        );
     }
 
     // Evening: for today if past 6 PM WIB, or for one past date per load (fire-and-forget)
-    const needsEvening = (isToday && nowWibHour >= EVENING_HOUR)
-      || (isPast && pastBackfilled < MAX_PAST_BACKFILL && !entry.morning && !entry.evening);
+    const needsEvening =
+      (isToday && nowWibHour >= EVENING_HOUR) ||
+      (isPast && pastBackfilled < MAX_PAST_BACKFILL && !entry.morning && !entry.evening);
     if (!entry.evening && needsEvening) {
       if (isPast) pastBackfilled++;
       generatingDates.add(g.dateKey);
       const arts = [...g.articles];
-      void generateDailySummary(arts).then(async (text) => {
-        if (text) {
-          await db.insert(trendSummary).values({
-            date: g.dateKey, window: 'evening',
-            summary: text, articleCount: g.count, generatedAt: new Date()
-          });
-        }
-      }).catch((err) => console.error('generateDailySummary (evening) failed for ' + g.dateKey + ':', err));
+      void generateDailySummary(arts)
+        .then(async (text) => {
+          if (text) {
+            await db.insert(trendSummary).values({
+              date: g.dateKey,
+              window: 'evening',
+              summary: text,
+              articleCount: g.count,
+              generatedAt: new Date()
+            });
+          }
+        })
+        .catch((err) =>
+          console.error('generateDailySummary (evening) failed for ' + g.dateKey + ':', err)
+        );
     }
   }
 
   if (!accuracySeeded) await seedAccuracyFromDb();
 
-  const sourcesWithDomain = sources.map((s) => ({
-    ...s,
-    domain: sourceDomain(s.url),
-    accuracy: sourceAccuracy(s.name)
-  })).sort((a, b) => b.accuracy - a.accuracy);
+  const sourcesWithDomain = sources
+    .map((s) => ({
+      ...s,
+      domain: sourceDomain(s.url),
+      accuracy: sourceAccuracy(s.name)
+    }))
+    .sort((a, b) => b.accuracy - a.accuracy);
 
   const dayBlocks = dayGroups.map((g) => ({
     dateKey: g.dateKey,
@@ -386,7 +446,13 @@ const rollingAccuracy = new Map<string, { total: number; kept: number }>();
 let accuracySeeded = false;
 
 async function seedAccuracyFromDb() {
-  const rows = await db.select({ name: rssSource.name, totalScreened: rssSource.totalScreened, totalKept: rssSource.totalKept }).from(rssSource);
+  const rows = await db
+    .select({
+      name: rssSource.name,
+      totalScreened: rssSource.totalScreened,
+      totalKept: rssSource.totalKept
+    })
+    .from(rssSource);
   for (const r of rows) {
     if (r.totalScreened > 0) {
       rollingAccuracy.set(r.name, { total: r.totalScreened, kept: r.totalKept });
@@ -404,8 +470,12 @@ async function updateSourceAccuracy(stats: ScreeningStats) {
   }
   // Persist to DB
   for (const [name, s] of stats.bySource) {
-    await db.update(rssSource)
-      .set({ totalScreened: sql`total_screened + ${s.total}`, totalKept: sql`total_kept + ${s.kept}` })
+    await db
+      .update(rssSource)
+      .set({
+        totalScreened: sql`total_screened + ${s.total}`,
+        totalKept: sql`total_kept + ${s.kept}`
+      })
       .where(eq(rssSource.name, name));
   }
 }
@@ -419,17 +489,32 @@ function sourceAccuracy(name: string): number {
   }
   // Fallback defaults for first load before any screening data
   const fallback: Record<string, number> = {
-    'TechCrunch': 100, 'The Verge': 100, 'Hacker News': 95, 'Rest of World': 95,
-    'RISE by DailySocial': 95, 'CNBC': 100, 'WSJ': 100, 'Yahoo Finance': 95,
-    'Detik Finance': 95, 'EFF Deeplinks': 100, 'Intercom Blog': 100,
-    "Lenny's Newsletter": 100, 'Stratechery': 100, 'Policy | TechCrunch': 95,
-    'Ars Technica': 100, 'Wired': 95, 'MIT Technology Review': 100,
-    'Techmeme': 95, 'Engadget': 95, 'Bloomberg Technology': 100,
-    'MarketWatch': 90, 'Katadata': 90,
+    TechCrunch: 100,
+    'The Verge': 100,
+    'Hacker News': 95,
+    'Rest of World': 95,
+    'RISE by DailySocial': 95,
+    CNBC: 100,
+    WSJ: 100,
+    'Yahoo Finance': 95,
+    'Detik Finance': 95,
+    'EFF Deeplinks': 100,
+    'Intercom Blog': 100,
+    "Lenny's Newsletter": 100,
+    Stratechery: 100,
+    'Policy | TechCrunch': 95,
+    'Ars Technica': 100,
+    Wired: 95,
+    'MIT Technology Review': 100,
+    Techmeme: 95,
+    Engadget: 95,
+    'Bloomberg Technology': 100,
+    MarketWatch: 90,
+    Katadata: 90,
     'Detik Inet': 80,
     'CNN Indonesia Tekno': 50,
     'CNN Indonesia Ekonomi': 40,
-    'ANTARA': 90,
+    ANTARA: 90
   };
   return fallback[name] ?? 85;
 }
@@ -486,7 +571,7 @@ function renderDayBlock(group: DayGroup): string {
   h += `<div class="overflow-hidden rounded-xl border border-cork-200 bg-white/80 mb-5">`;
   h += `<div class="flex items-center justify-between border-b border-cork-200 bg-cork-50 px-3 py-2 md:px-5 md:py-3">`;
   h += `<div class="flex items-center gap-1.5 md:gap-2">${CALENDAR_SVG}<span class="text-xs font-semibold text-cork-700 md:text-sm">${esc(group.label)}</span></div>`;
-h += `<span class="screening-count text-[10px] font-medium text-emerald-600" data-screening-count>${group.count} article${group.count !== 1 ? 's' : ''}</span>`;
+  h += `<span class="screening-count text-[10px] font-medium text-emerald-600" data-screening-count>${group.count} article${group.count !== 1 ? 's' : ''}</span>`;
   h += '</div>';
 
   h += '<div class="divide-y divide-cork-100">';

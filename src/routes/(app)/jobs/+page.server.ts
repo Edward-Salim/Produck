@@ -83,7 +83,7 @@ const DEFAULT_SOURCES = [
     url: 'https://career.catapa.com/GDPLabs/jobs',
     type: 'catapa',
     region: 'sea'
-  },
+  }
 ];
 
 export const load: PageServerLoad = async () => {
@@ -147,10 +147,7 @@ export const load: PageServerLoad = async () => {
     }
 
     for (const source of sources) {
-      await db
-        .update(jobSource)
-        .set({ updatedAt: new Date() })
-        .where(eq(jobSource.id, source.id));
+      await db.update(jobSource).set({ updatedAt: new Date() }).where(eq(jobSource.id, source.id));
     }
   }
 
@@ -195,15 +192,15 @@ export const load: PageServerLoad = async () => {
   // Extract external job ID from URL for cross-source dedup
   // SEA: /position/J02091584, ATS: ?id=J02091584, ByteDance: /search/123
   const jobKey = (url: string) => {
-    let m = url.match(/\/job-detail\/(J\d+)/);  // ATS / Shopee SG (new format)
+    let m = url.match(/\/job-detail\/(J\d+)/); // ATS / Shopee SG (new format)
     if (m) return m[1];
-    m = url.match(/[?&]id=(J\d+)/);             // ATS / Shopee SG (old format)
+    m = url.match(/[?&]id=(J\d+)/); // ATS / Shopee SG (old format)
     if (m) return m[1];
-    m = url.match(/\/position\/(J\d+)/);        // SEA
+    m = url.match(/\/position\/(J\d+)/); // SEA
     if (m) return m[1];
-    m = url.match(/\/search\/(\d+)/);           // ByteDance
+    m = url.match(/\/search\/(\d+)/); // ByteDance
     if (m) return 'bd-' + m[1];
-    return url;                                  // fallback
+    return url; // fallback
   };
 
   // Deduplicate by external job ID (catches ATS↔SEA overlap)
@@ -240,7 +237,9 @@ export const load: PageServerLoad = async () => {
 
   // Split PM jobs by region
   const sgJobs = pmJobs.filter((j) => /\bsingapore\b/i.test(j.location));
-  const idJobs = pmJobs.filter((j) => /\b(?:indonesia|jakarta|bandung|surabaya|medan|yogyakarta|bali)\b/i.test(j.location));
+  const idJobs = pmJobs.filter((j) =>
+    /\b(?:indonesia|jakarta|bandung|surabaya|medan|yogyakarta|bali)\b/i.test(j.location)
+  );
 
   const sourcesWithCounts = sources.map((s) => ({
     ...s,

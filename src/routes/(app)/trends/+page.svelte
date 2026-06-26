@@ -13,7 +13,6 @@
   // Realtime screening indicator: polls API, colors count while screening,
   // auto-refreshes page data when screening finishes
   let wasScreening = $state(false);
-  let unscreenedCount = $state(0);
 
   $effect(() => {
     const check = async () => {
@@ -21,7 +20,6 @@
         const res = await fetch('/api/rss/screening-status');
         if (res.ok) {
           const { unscreened } = await res.json();
-          unscreenedCount = unscreened ?? 0;
           const active = unscreened > 0;
           // Toggle amber/pulse on the article count pill (server-rendered HTML)
           for (const el of document.querySelectorAll('[data-screening-count]')) {
@@ -37,7 +35,9 @@
           if (wasScreening && !active) invalidateAll();
           wasScreening = active;
         }
-      } catch { /* ignore network errors */ }
+      } catch {
+        /* ignore network errors */
+      }
     };
     check();
     const interval = setInterval(check, 5000);
@@ -55,7 +55,9 @@
           const { hasAny } = await res.json();
           if (hasAny) invalidateAll();
         }
-      } catch { /* ignore */ }
+      } catch {
+        /* ignore */
+      }
     };
     const interval = setInterval(check, 5000);
     return () => clearInterval(interval);
@@ -76,10 +78,25 @@
     const wib = new Date(Date.now() + 7 * 60 * 60 * 1000);
     return wib.toISOString().slice(0, 10);
   })();
-  const blockDateKeys = $derived(new Set(data.dayBlocks.map((b: (typeof data.dayBlocks)[number]) => b.dateKey)));
+  const blockDateKeys = $derived(
+    new Set(data.dayBlocks.map((b: (typeof data.dayBlocks)[number]) => b.dateKey))
+  );
 
   let weekOffset = $state(0); // 0 = this week, -1 = last week
-  let activeFilter = $state(blockDateKeys.has(todayKey) ? todayKey : blockDateKeys.values().next().value ?? todayKey);
+  let activeFilterOverride = $state<string | null>(null);
+
+  function firstAvailableFilter(): string {
+    return data.dayBlocks.some((b) => b.dateKey === todayKey)
+      ? todayKey
+      : (data.dayBlocks[0]?.dateKey ?? todayKey);
+  }
+
+  const activeFilter = $derived(
+    activeFilterOverride &&
+      (blockDateKeys.has(activeFilterOverride) || activeFilterOverride === todayKey)
+      ? activeFilterOverride
+      : firstAvailableFilter()
+  );
 
   // Scroll the active date filter button into view (mobile)
   $effect(() => {
@@ -101,9 +118,12 @@
       const d = new Date(mon);
       d.setDate(mon.getDate() + i);
       const key = d.toISOString().slice(0, 10);
-      if (blockDateKeys.has(key)) { activeFilter = key; return; }
+      if (blockDateKeys.has(key)) {
+        activeFilterOverride = key;
+        return;
+      }
     }
-    activeFilter = mon.toISOString().slice(0, 10);
+    activeFilterOverride = mon.toISOString().slice(0, 10);
   }
 
   const weekDates = $derived(
@@ -147,10 +167,14 @@
     if (activeFilter === todayKey) {
       return nowWibHour >= 18 ? 'Evening' : 'Morning';
     }
-    return new Date(activeFilter + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+    return new Date(activeFilter + 'T00:00:00').toLocaleDateString('en-US', {
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric'
+    });
   });
 
-  function handleFeedClick(e: MouseEvent) {
+  function handleFeedClick(e: MouseEvent | KeyboardEvent) {
     const target = (e.target as HTMLElement).closest('[data-article-id]') as HTMLElement | null;
     if (!target) return;
     const id = Number(target.dataset.articleId);
@@ -194,53 +218,67 @@
 
 <header class="mb-4 md:mb-6">
   <h1 class="font-display text-2xl text-cork-800 md:text-4xl">Trends</h1>
-  <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
-  <p
-    class="mt-0.5 cursor-pointer text-sm text-cork-500 hover:text-cork-600 hover:underline hover:decoration-dotted hover:underline-offset-2"
+  <button
+    type="button"
+    class="mt-0.5 cursor-pointer bg-transparent p-0 text-left text-sm text-cork-500 hover:text-cork-600 hover:underline hover:decoration-dotted hover:underline-offset-2"
     onclick={() => (sourcesDialogOpen = true)}
   >
     Product news from {data.sources.length} sources, curated by AI with daily briefings
-  </p>
+  </button>
 </header>
 
 <!-- Date filter buttons -->
 {#if data.dayBlocks.length > 0}
   <div class="mb-4">
-    <p class="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-cork-400">{weekOffset === 0 ? 'This week' : weekOffset === -1 ? 'Last week' : weekMonday(weekOffset).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</p>
+    <p class="mb-1.5 text-[10px] font-semibold tracking-wide text-cork-400 uppercase">
+      {weekOffset === 0
+        ? 'This week'
+        : weekOffset === -1
+          ? 'Last week'
+          : weekMonday(weekOffset).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+    </p>
     <div class="relative md:static">
-    <div class="hide-scrollbar flex gap-1.5 overflow-x-auto pb-1 -mx-1 px-1 md:overflow-visible md:pb-0 md:px-0 md:mx-0">
-      {#each weekDates as d}
-        {@const hasArticles = blockDateKeys.has(d.key)}
+      <div
+        class="hide-scrollbar -mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1 md:mx-0 md:overflow-visible md:px-0 md:pb-0"
+      >
+        {#each weekDates as d}
+          {@const hasArticles = blockDateKeys.has(d.key)}
+          <button
+            type="button"
+            disabled={!hasArticles && d.key !== todayKey}
+            data-date-key={d.key}
+            class="shrink-0 rounded-lg px-2 py-1.5 text-center text-xs font-medium transition-colors md:flex-1 {!hasArticles &&
+            d.key !== todayKey
+              ? 'border border-cork-200 text-cork-400/40'
+              : 'cursor-pointer ' +
+                (activeFilter === d.key
+                  ? 'bg-cork-700 text-cork-50'
+                  : 'border border-cork-300 text-cork-500 hover:bg-cork-100')}"
+            onclick={() => (activeFilterOverride = d.key)}
+          >
+            <span class="font-semibold">{d.dayName}</span>
+            <span class="ml-1 opacity-70">{d.month} {d.dateNum}</span>
+          </button>
+        {/each}
         <button
           type="button"
-          disabled={!hasArticles && d.key !== todayKey}
-          data-date-key={d.key}
-          class="shrink-0 md:flex-1 rounded-lg px-2 py-1.5 text-center text-xs font-medium transition-colors {!hasArticles && d.key !== todayKey ? 'border border-cork-200 text-cork-400/40' : 'cursor-pointer ' + (activeFilter === d.key ? 'bg-cork-700 text-cork-50' : 'border border-cork-300 text-cork-500 hover:bg-cork-100')}"
-          onclick={() => (activeFilter = d.key)}
+          class="shrink-0 cursor-pointer rounded-lg px-1.5 py-1.5 text-cork-500 transition-colors hover:bg-cork-100 disabled:cursor-default disabled:opacity-30"
+          onclick={() => switchWeek(-1)}
+          disabled={weekOffset <= -1}
+          title="Last week"
         >
-          <span class="font-semibold">{d.dayName}</span>
-          <span class="ml-1 opacity-70">{d.month} {d.dateNum}</span>
+          <ChevronLeft class="size-3.5" />
         </button>
-      {/each}
-      <button
-        type="button"
-        class="shrink-0 cursor-pointer rounded-lg px-1.5 py-1.5 text-cork-500 transition-colors hover:bg-cork-100 disabled:opacity-30 disabled:cursor-default"
-        onclick={() => switchWeek(-1)}
-        disabled={weekOffset <= -1}
-        title="Last week"
-      >
-        <ChevronLeft class="size-3.5" />
-      </button>
-      <button
-        type="button"
-        class="shrink-0 cursor-pointer rounded-lg px-1.5 py-1.5 text-cork-500 transition-colors hover:bg-cork-100 disabled:opacity-30 disabled:cursor-default"
-        onclick={() => switchWeek(1)}
-        disabled={weekOffset >= 0}
-        title="This week"
-      >
-        <ChevronRight class="size-3.5" />
-      </button>
-    </div>
+        <button
+          type="button"
+          class="shrink-0 cursor-pointer rounded-lg px-1.5 py-1.5 text-cork-500 transition-colors hover:bg-cork-100 disabled:cursor-default disabled:opacity-30"
+          onclick={() => switchWeek(1)}
+          disabled={weekOffset >= 0}
+          title="This week"
+        >
+          <ChevronRight class="size-3.5" />
+        </button>
+      </div>
     </div>
   </div>
 {/if}
@@ -249,19 +287,33 @@
 {#if briefing}
   <div class="mb-5 overflow-hidden rounded-xl border border-cork-200 bg-white/80">
     <div class="flex items-start gap-3 px-3 py-3 md:px-5 md:py-4">
-      <img src="/assets/produck-news.png" alt="" class="mt-0.5 h-20 w-24 shrink-0 rounded-lg object-cover" />
+      <img
+        src="/assets/produck-news.png"
+        alt=""
+        class="mt-0.5 h-20 w-24 shrink-0 rounded-lg object-cover"
+      />
       <div class="min-w-0">
-        <p class="text-[10px] font-semibold uppercase tracking-wide text-cork-400">Daily Briefing · {briefing.label}</p>
-        <p class="mt-1 text-xs leading-relaxed text-cork-700 sm:text-sm">{@html briefing.summary}</p>
+        <p class="text-[10px] font-semibold tracking-wide text-cork-400 uppercase">
+          Daily Briefing · {briefing.label}
+        </p>
+        <p class="mt-1 text-xs leading-relaxed text-cork-700 sm:text-sm">
+          {@html briefing.summary}
+        </p>
       </div>
     </div>
   </div>
 {:else if briefingGenerating}
   <div class="mb-5 overflow-hidden rounded-xl border border-cork-200 bg-white/80">
     <div class="flex items-start gap-3 px-3 py-3 md:px-5 md:py-4">
-      <img src="/assets/produck-news.png" alt="" class="mt-0.5 h-20 w-24 shrink-0 rounded-lg object-cover" />
+      <img
+        src="/assets/produck-news.png"
+        alt=""
+        class="mt-0.5 h-20 w-24 shrink-0 rounded-lg object-cover"
+      />
       <div class="min-w-0 flex-1 space-y-2">
-        <p class="text-[10px] font-semibold uppercase tracking-wide text-cork-400">Daily Briefing · {generatingLabel}</p>
+        <p class="text-[10px] font-semibold tracking-wide text-cork-400 uppercase">
+          Daily Briefing · {generatingLabel}
+        </p>
         <div class="h-3 w-full animate-pulse rounded bg-cork-200/50"></div>
         <div class="h-3 w-5/6 animate-pulse rounded bg-cork-200/50"></div>
         <div class="h-3 w-2/3 animate-pulse rounded bg-cork-200/50"></div>
@@ -272,28 +324,62 @@
 
 <!-- Feed -->
 {#if filteredBlocks.length > 0}
-  <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
-  <div onclick={handleFeedClick}>
+  <div
+    role="button"
+    tabindex="0"
+    onclick={handleFeedClick}
+    onkeydown={(e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        handleFeedClick(e);
+      }
+    }}
+  >
     {#each filteredBlocks as block (block.dateKey)}
       {@html block.html}
     {/each}
   </div>
-
 {:else if data.dayBlocks.length > 0}
   <!-- Empty day container for dates with no articles -->
-  <div class="overflow-hidden rounded-xl border border-cork-200 bg-white/80 mb-5">
-    <div class="flex items-center justify-between border-b border-cork-200 bg-cork-50 px-3 py-2 md:px-5 md:py-3">
+  <div class="mb-5 overflow-hidden rounded-xl border border-cork-200 bg-white/80">
+    <div
+      class="flex items-center justify-between border-b border-cork-200 bg-cork-50 px-3 py-2 md:px-5 md:py-3"
+    >
       <div class="flex items-center gap-1.5 md:gap-2">
-        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="size-3.5 text-cork-400 md:size-4"><path d="M8 2v4"/><path d="M16 2v4"/><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 10h18"/></svg>
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          class="size-3.5 text-cork-400 md:size-4"
+          ><path d="M8 2v4" /><path d="M16 2v4" /><rect
+            x="3"
+            y="4"
+            width="18"
+            height="18"
+            rx="2"
+          /><path d="M3 10h18" /></svg
+        >
         <span class="text-xs font-semibold text-cork-700 md:text-sm">
-          {new Date(activeFilter + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+          {new Date(activeFilter + 'T00:00:00').toLocaleDateString('en-US', {
+            month: 'long',
+            day: 'numeric',
+            year: 'numeric'
+          })}
         </span>
       </div>
       <span class="text-[10px] font-medium text-cork-400">0 articles</span>
     </div>
     <div class="flex flex-col items-center justify-center gap-1 py-10">
       <p class="text-xs text-cork-400">
-        {activeFilter === todayKey ? 'Nothing yet today, check back later' : 'No articles for this day'}
+        {activeFilter === todayKey
+          ? 'Nothing yet today, check back later'
+          : 'No articles for this day'}
       </p>
     </div>
   </div>
@@ -318,17 +404,28 @@
       >
     </Dialog.Header>
 
-    <div class="max-h-72 space-y-2 overflow-y-auto pr-1 custom-scrollbar">
+    <div class="custom-scrollbar max-h-72 space-y-2 overflow-y-auto pr-1">
       {#each data.sources as source (source.id)}
         <div class="flex items-center gap-3 rounded-lg border border-cork-200 bg-white px-3 py-2">
           {#if source.domain}
-            <img src="https://www.google.com/s2/favicons?domain={source.domain}&sz=32" alt="" class="size-5 shrink-0 rounded-sm" onerror={(e) => (e.target as HTMLImageElement).remove()} />
+            <img
+              src="https://www.google.com/s2/favicons?domain={source.domain}&sz=32"
+              alt=""
+              class="size-5 shrink-0 rounded-sm"
+              onerror={(e) => (e.target as HTMLImageElement).remove()}
+            />
           {/if}
           <div class="min-w-0 flex-1">
             <p class="truncate text-sm font-medium text-cork-700">{source.name}</p>
             <p class="truncate text-[10px] text-cork-400">{source.category} / {source.region}</p>
           </div>
-          <span class="shrink-0 text-[10px] font-semibold {source.accuracy >= 90 ? 'text-emerald-600' : source.accuracy >= 70 ? 'text-amber-600' : 'text-red-500'}">{source.accuracy}%</span>
+          <span
+            class="shrink-0 text-[10px] font-semibold {source.accuracy >= 90
+              ? 'text-emerald-600'
+              : source.accuracy >= 70
+                ? 'text-amber-600'
+                : 'text-red-500'}">{source.accuracy}%</span
+          >
         </div>
       {/each}
       {#if data.sources.length === 0}
@@ -339,23 +436,37 @@
 </Dialog.Root>
 
 <!-- Article Detail Modal -->
-<Dialog.Root open={detailArticle != null} onOpenChange={(o) => { if (!o) closeDetail(); }}>
-  <Dialog.Content class="max-w-[calc(100%-2rem)] max-h-[calc(100vh-3rem)] overflow-y-auto border-cork-300 bg-cork-50 sm:max-w-xl">
+<Dialog.Root
+  open={detailArticle != null}
+  onOpenChange={(o) => {
+    if (!o) closeDetail();
+  }}
+>
+  <Dialog.Content
+    class="max-h-[calc(100vh-3rem)] max-w-[calc(100%-2rem)] overflow-y-auto border-cork-300 bg-cork-50 sm:max-w-xl"
+  >
     {#if detailArticle}
       <Dialog.Header>
-        <Dialog.Title class="text-cork-800 break-words">{detailArticle.title}</Dialog.Title>
+        <Dialog.Title class="break-words text-cork-800">{detailArticle.title}</Dialog.Title>
         <Dialog.Description class="text-cork-500">
-          {detailArticle.sourceName}{#if detailArticle.author} — {detailArticle.author}{/if}
+          {detailArticle.sourceName}{#if detailArticle.author}
+            — {detailArticle.author}{/if}
         </Dialog.Description>
       </Dialog.Header>
 
       <div class="space-y-4">
         {#if detailArticle.imageUrl}
-          <img src={detailArticle.imageUrl} alt="" class="w-full rounded-lg object-cover max-h-64" />
+          <img
+            src={detailArticle.imageUrl}
+            alt=""
+            class="max-h-64 w-full rounded-lg object-cover"
+          />
         {/if}
 
         {#if detailArticle.description}
-          <p class="text-sm text-cork-700 leading-relaxed break-words whitespace-pre-line">{detailArticle.description}</p>
+          <p class="text-sm leading-relaxed break-words whitespace-pre-line text-cork-700">
+            {detailArticle.description}
+          </p>
         {/if}
 
         <a

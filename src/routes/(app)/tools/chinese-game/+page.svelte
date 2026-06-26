@@ -1,7 +1,10 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
   import type { PageData } from './$types.js';
-  import { GameEngine, type SentenceData } from '$lib/components/chinese-game/game-engine.svelte.js';
+  import {
+    GameEngine,
+    type SentenceData
+  } from '$lib/components/chinese-game/game-engine.svelte.js';
   import GameMenu from '$lib/components/chinese-game/GameMenu.svelte';
   import GamePlay from '$lib/components/chinese-game/GamePlay.svelte';
   import GameOver from '$lib/components/chinese-game/GameOver.svelte';
@@ -65,7 +68,9 @@
         }
       },
       getAudioCtx: () => audioCtx,
-      setAudioCtx: (ctx: AudioContext) => { audioCtx = ctx; }
+      setAudioCtx: (ctx: AudioContext) => {
+        audioCtx = ctx;
+      }
     });
 
     if (engine.musicEnabled) bgMusic.play().catch(() => {});
@@ -223,7 +228,9 @@
   <InkWashBg />
 
   {#if !ready}
-    <div class="mx-auto flex min-h-[calc(100dvh-8rem)] max-w-2xl flex-col items-center justify-center px-4">
+    <div
+      class="mx-auto flex min-h-[calc(100dvh-8rem)] max-w-2xl flex-col items-center justify-center px-4"
+    >
       <p class="animate-pulse font-display text-2xl text-cork-600 md:text-3xl">加载中...</p>
     </div>
   {:else if engine.gameState === 'menu'}

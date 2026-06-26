@@ -1,8 +1,8 @@
 <script lang="ts">
   import StoryMapBoard from '$lib/components/story-map/StoryMapBoard.svelte';
-  import type { StoryMapData, Story } from '$lib/types/story-map.js';
+  import type { StoryMapData } from '$lib/types/story-map.js';
   import type { FrameworkInstance } from './types.js';
-  import { Plus, X, Pencil } from '@lucide/svelte';
+  import { Plus, X } from '@lucide/svelte';
 
   let {
     instance,
@@ -105,42 +105,6 @@
       return { ...a, tasks };
     });
     data = { ...data, activities };
-    save();
-  }
-
-  function addStory(kano: 'must-have' | 'performance' | 'delighter', activityId: string) {
-    const code = `S${data.stories[kano].length + 1}`;
-    const story: Story = {
-      id: code,
-      title: 'New Story',
-      activity: activityId,
-      pic: '',
-      picColor: '',
-      done: false,
-      details: [],
-      checkedAcs: [],
-      assumptions: []
-    };
-    data = {
-      ...data,
-      stories: { ...data.stories, [kano]: [...data.stories[kano], story] }
-    };
-    save();
-  }
-
-  function updateStoryTitle(
-    kano: 'must-have' | 'performance' | 'delighter',
-    storyId: string,
-    title: string
-  ) {
-    const stories = data.stories[kano].map((s) => (s.id === storyId ? { ...s, title } : s));
-    data = { ...data, stories: { ...data.stories, [kano]: stories } };
-    save();
-  }
-
-  function removeStory(kano: 'must-have' | 'performance' | 'delighter', storyId: string) {
-    const stories = data.stories[kano].filter((s) => s.id !== storyId);
-    data = { ...data, stories: { ...data.stories, [kano]: stories } };
     save();
   }
 

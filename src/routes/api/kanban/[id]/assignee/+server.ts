@@ -2,6 +2,7 @@ import { db } from '$lib/server/db/index.js';
 import { kanbanCard, kanbanActivity } from '$lib/server/db/schema.js';
 import { eq } from 'drizzle-orm';
 import { json } from '@sveltejs/kit';
+import { assertProjectAccess } from '$lib/server/access.js';
 
 export async function PATCH({ params, request, locals }) {
   const cardId = Number(params.id);
@@ -13,6 +14,8 @@ export async function PATCH({ params, request, locals }) {
   const actor = locals.session?.user?.displayName ?? 'Someone';
 
   const [card] = await db.select().from(kanbanCard).where(eq(kanbanCard.id, cardId));
+  if (!card) return json({ error: 'Card not found' }, { status: 404 });
+  await assertProjectAccess(locals, card.projectId);
   const oldAssignee = card?.assignee ?? '';
 
   await db
@@ -20,7 +23,7 @@ export async function PATCH({ params, request, locals }) {
     .set({ assignee, updatedAt: new Date() })
     .where(eq(kanbanCard.id, cardId));
 
-  if (oldAssignee !== assignee && card) {
+  if (oldAssignee !== assignee) {
     await db.insert(kanbanActivity).values({
       projectId: card.projectId,
       cardId: card.id,

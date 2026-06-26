@@ -2,11 +2,13 @@ import { json } from '@sveltejs/kit';
 import { db } from '$lib/server/db/index.js';
 import { fintechPick } from '$lib/server/db/schema.js';
 import { eq, and } from 'drizzle-orm';
+import { assertProjectAccess } from '$lib/server/access.js';
 import type { RequestHandler } from './$types.js';
 
-export const POST: RequestHandler = async ({ request, cookies }) => {
+export const POST: RequestHandler = async ({ request, cookies, locals }) => {
   const projectId = Number(cookies.get('active_project'));
   if (!projectId) return json({ error: 'No active project' }, { status: 400 });
+  await assertProjectAccess(locals, projectId);
 
   const { companyId } = await request.json();
   if (!companyId) return json({ error: 'Missing companyId' }, { status: 400 });

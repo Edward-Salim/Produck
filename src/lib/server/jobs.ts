@@ -42,7 +42,7 @@ const PM_PATTERNS = [
   /\bsenior\s+project\s*manager\b/i,
   // Process improvement — often overlaps with PM at APAC firms
   /\bprocess\s*improvement\s*manager\b/i,
-  /\bprocess\s*excellence\s*manager\b/i,
+  /\bprocess\s*excellence\s*manager\b/i
 ];
 
 export function isProductManagementRole(title: string): boolean {
@@ -52,8 +52,16 @@ export function isProductManagementRole(title: string): boolean {
 // ── Experience Extraction ─────────────────────────────────────────
 
 const NUMBER_WORDS: Record<string, number> = {
-  one: 1, two: 2, three: 3, four: 4, five: 5,
-  six: 6, seven: 7, eight: 8, nine: 9, ten: 10
+  one: 1,
+  two: 2,
+  three: 3,
+  four: 4,
+  five: 5,
+  six: 6,
+  seven: 7,
+  eight: 8,
+  nine: 9,
+  ten: 10
 };
 
 /** Matches a digit or number word, captures just the value (no + or spaces) */
@@ -68,11 +76,16 @@ export function extractMinExperienceYears(text: string | null): number | null {
 
   // Strip ceiling-only phrases so they don't leak into catch-all patterns.
   // "Up to N years" is a maximum, not a minimum — treat as entry-level.
-  text = text.replace(/(?:up\s+to|no\s+more\s+than|as\s+many\s+as)\s+\d+\+?\s*years?(?:\s+(?:of\s+)?[\s\S]{0,60}?experience)?/gi, '');
+  text = text.replace(
+    /(?:up\s+to|no\s+more\s+than|as\s+many\s+as)\s+\d+\+?\s*years?(?:\s+(?:of\s+)?[\s\S]{0,60}?experience)?/gi,
+    ''
+  );
 
   // "5-7 years of ... experience" → take lower bound (must go before "X+ years" to avoid
   // the latter matching the second number, e.g. "5-7 years" → 5, not 7)
-  let m = text.match(new RegExp(`${N}\\s*[-–—]\\s*\\d+\\s*years?\\s+(?:of\\s+)?[\\s\\S]{0,60}?experience`, 'i'));
+  let m = text.match(
+    new RegExp(`${N}\\s*[-–—]\\s*\\d+\\s*years?\\s+(?:of\\s+)?[\\s\\S]{0,60}?experience`, 'i')
+  );
   if (m) return parseNumber(m[1]);
 
   // "5+ years of ... experience" — flexible middle
@@ -80,7 +93,12 @@ export function extractMinExperienceYears(text: string | null): number | null {
   if (m) return parseNumber(m[1]);
 
   // "at least 5 years", "minimum 5 years", "more than 5 years", "no less than 5 years"
-  m = text.match(new RegExp(`(?:at\\s+least|minimum(?:\\s+of)?|more\\s+than|no\\s+less\\s+than)\\s+${N}\\+?\\s*years?`, 'i'));
+  m = text.match(
+    new RegExp(
+      `(?:at\\s+least|minimum(?:\\s+of)?|more\\s+than|no\\s+less\\s+than)\\s+${N}\\+?\\s*years?`,
+      'i'
+    )
+  );
   if (m) return parseNumber(m[1]);
 
   // "5 years of ... experience", "5 years ... experience" (catch-all, after range/plus/threshold)
@@ -97,20 +115,37 @@ export function extractMinExperienceYears(text: string | null): number | null {
 /** Infer minimum experience years from job title seniority. */
 function inferExperienceFromTitle(title: string): number | null {
   // Highest seniority first — order matters for titles containing multiple signals
-  if (/\b(?:Senior\s*VP|SVP|EVP|Executive\s*VP|First\s*VP|Managing\s*Director|MD|Head\s+of)\b/i.test(title)) return 10;
+  if (
+    /\b(?:Senior\s*VP|SVP|EVP|Executive\s*VP|First\s*VP|Managing\s*Director|MD|Head\s+of)\b/i.test(
+      title
+    )
+  )
+    return 10;
   if (/\bVP\b|\bVice\s*President\b/i.test(title)) return 7;
   if (/\bAVP\b|\bAssistant\s*VP\b|\bAssistant\s*Vice\s*President\b/i.test(title)) return 5;
-  if (/\bSenior\s*(?:Officer|Analyst|Associate|Manager|Engineer|Team\s*Lea[dr])\b/i.test(title)) return 4;
+  if (/\bSenior\s*(?:Officer|Analyst|Associate|Manager|Engineer|Team\s*Lea[dr])\b/i.test(title))
+    return 4;
   if (/\b(?:Officer|Analyst|Associate|Engineer|Team\s*Lea[dr]|Manager)\b/i.test(title)) return 2;
-  if (/\b(?:Intern|Trainee|Graduate|GRIT|Apprentice|Future\s*Bankers?\s*Program)\b/i.test(title)) return 0;
+  if (/\b(?:Intern|Trainee|Graduate|GRIT|Apprentice|Future\s*Bankers?\s*Program)\b/i.test(title))
+    return 0;
   return null;
 }
 
 // ── Expiry Detection ────────────────────────────────────────────────
 
 const SHORT_MONTHS: Record<string, number> = {
-  jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5,
-  jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11
+  jan: 0,
+  feb: 1,
+  mar: 2,
+  apr: 3,
+  may: 4,
+  jun: 5,
+  jul: 6,
+  aug: 7,
+  sep: 8,
+  oct: 9,
+  nov: 10,
+  dec: 11
 };
 
 function monthIndex(name: string): number | undefined {
@@ -120,13 +155,17 @@ function monthIndex(name: string): number | undefined {
 /** Try to parse a date string like "11 May 2026", "May 11, 2026", "2026-05-11" */
 function tryParseDate(s: string): Date | null {
   // "11 May 2026" or "11th May 2026"
-  let m = s.match(/(\d{1,2})(?:st|nd|rd|th)?\s*(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s*,?\s*(\d{4})/i);
+  let m = s.match(
+    /(\d{1,2})(?:st|nd|rd|th)?\s*(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s*,?\s*(\d{4})/i
+  );
   if (m) {
     const month = monthIndex(m[2].toLowerCase());
     if (month !== undefined) return new Date(parseInt(m[3]), month, parseInt(m[1]));
   }
   // "May 11, 2026" or "May 11 2026"
-  m = s.match(/(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+(\d{1,2})(?:st|nd|rd|th)?,?\s*,?\s*(\d{4})/i);
+  m = s.match(
+    /(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+(\d{1,2})(?:st|nd|rd|th)?,?\s*,?\s*(\d{4})/i
+  );
   if (m) {
     const month = monthIndex(m[1].toLowerCase());
     if (month !== undefined) return new Date(parseInt(m[3]), month, parseInt(m[2]));
@@ -147,7 +186,7 @@ const EXPIRY_PATTERNS = [
   // "application(s) deadline: <date>", "apply by <date>"
   /appl(?:ication|y)\s+(?:deadline|by|close[ds]?)\s*:?\s*(.+?)(?:\.|$|\)|\n)/i,
   // "from <month> to <month> <year>" — internship windows
-  /from\s+(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+(?:to|until|and|–|—|-)\s+(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+(\d{4})/i,
+  /from\s+(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+(?:to|until|and|–|—|-)\s+(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+(\d{4})/i
 ];
 
 /**
@@ -200,16 +239,21 @@ const MANDARIN_PATTERNS = [
   /(?:speak|spoken|speaking)\s+(?:mandarin|chinese)\b/i,
   /\bbahasa\s+mandarin\b/i,
   /\bchinese\s+(?:required|preferred|is\s+a\s+must)\b/i,
-  /(?:able|ability)\s+to\s+(?:speak|communicate\s+in)\s+(?:mandarin|chinese)\b/i,
+  /(?:able|ability)\s+to\s+(?:speak|communicate\s+in)\s+(?:mandarin|chinese)\b/i
 ];
 
-export function requiresChineseLanguage(description: string | null, requirement?: string | null): boolean {
+export function requiresChineseLanguage(
+  description: string | null,
+  requirement?: string | null
+): boolean {
   const text = [description, requirement].filter(Boolean).join('\n');
   if (!text) return false;
   return MANDARIN_PATTERNS.some((p) => p.test(text));
 }
 
-function normalizeRecruitType(rt: { id?: string | number; en_name?: string } | null | undefined): string | null {
+function normalizeRecruitType(
+  rt: { id?: string | number; en_name?: string } | null | undefined
+): string | null {
   if (!rt) return null;
   const id = String(rt.id ?? '');
   if (id === '201') return 'graduate';
@@ -293,8 +337,8 @@ async function fetchByteDance(source: typeof jobSource.$inferSelect): Promise<Jo
           'Content-Type': 'application/json',
           'website-path': 'en',
           'x-tt-env': 'boe_epam_api',
-          'Origin': 'https://joinbytedance.com',
-          'Referer': 'https://joinbytedance.com/',
+          Origin: 'https://joinbytedance.com',
+          Referer: 'https://joinbytedance.com/',
           'User-Agent': 'Mozilla/5.0 (compatible; Produck Job Board/1.0)'
         },
         body: JSON.stringify(body),
@@ -304,12 +348,20 @@ async function fetchByteDance(source: typeof jobSource.$inferSelect): Promise<Jo
 
     const firstRes = await fetchPage(0);
     if (!firstRes.ok) {
-      return { sourceName: source.name, listings: [], error: `ByteDance API returned ${firstRes.status}` };
+      return {
+        sourceName: source.name,
+        listings: [],
+        error: `ByteDance API returned ${firstRes.status}`
+      };
     }
 
     const firstJson = await firstRes.json();
     if (firstJson.code !== 0) {
-      return { sourceName: source.name, listings: [], error: `ByteDance API error: ${firstJson.message || firstJson.code}` };
+      return {
+        sourceName: source.name,
+        listings: [],
+        error: `ByteDance API error: ${firstJson.message || firstJson.code}`
+      };
     }
 
     allPosts.push(...(firstJson.data?.job_post_list ?? []));
@@ -323,7 +375,7 @@ async function fetchByteDance(source: typeof jobSource.$inferSelect): Promise<Jo
 
     if (pages.length > 0) {
       const remainingResults = await Promise.allSettled(
-        pages.map((off) => fetchPage(off).then(r => r.ok ? r.json() : null))
+        pages.map((off) => fetchPage(off).then((r) => (r.ok ? r.json() : null)))
       );
       for (const r of remainingResults) {
         if (r.status === 'fulfilled' && r.value?.code === 0) {
@@ -343,34 +395,40 @@ async function fetchByteDance(source: typeof jobSource.$inferSelect): Promise<Jo
     return {
       sourceName: source.name,
       listings: activePosts.map((p) => {
-          // Build location string from city_info hierarchy
-          let location = '';
-          const c = p.city_info;
-          if (c) {
-            location = [c.en_name, c.parent?.en_name, c.parent?.parent?.en_name]
+        // Build location string from city_info hierarchy
+        let location = '';
+        const c = p.city_info;
+        if (c) {
+          location =
+            [c.en_name, c.parent?.en_name, c.parent?.parent?.en_name]
               .filter((n) => n && n !== c.en_name)
               .join(', ') || c.en_name;
-          }
+        }
 
-          const reqText = p.requirement ?? '';
-          const descText = p.description ?? '';
-          const fullDesc = [
-            descText && `### Responsibilities\n${descText}`,
-            reqText && `### Qualifications\n${reqText}`
-          ].filter(Boolean).join('\n\n');
-          return {
-            title: p.title,
-            url: `https://joinbytedance.com/search/${p.id}`,
-            department: p.job_category?.en_name ?? null,
-            location: location || null,
-            description: fullDesc?.slice(0, 20000) || null,
-            publishedAt: null,
-            isPM: isProductManagementRole(p.title) || p.job_category?.en_name?.toLowerCase().startsWith('product') || false,
-            experienceYears: extractMinExperienceYears(reqText),
-            requiresChinese: requiresChineseLanguage(descText, reqText),
-            recruitType: normalizeRecruitType(p.recruit_type)
-          };
-        }),
+        const reqText = p.requirement ?? '';
+        const descText = p.description ?? '';
+        const fullDesc = [
+          descText && `### Responsibilities\n${descText}`,
+          reqText && `### Qualifications\n${reqText}`
+        ]
+          .filter(Boolean)
+          .join('\n\n');
+        return {
+          title: p.title,
+          url: `https://joinbytedance.com/search/${p.id}`,
+          department: p.job_category?.en_name ?? null,
+          location: location || null,
+          description: fullDesc?.slice(0, 20000) || null,
+          publishedAt: null,
+          isPM:
+            isProductManagementRole(p.title) ||
+            p.job_category?.en_name?.toLowerCase().startsWith('product') ||
+            false,
+          experienceYears: extractMinExperienceYears(reqText),
+          requiresChinese: requiresChineseLanguage(descText, reqText),
+          recruitType: normalizeRecruitType(p.recruit_type)
+        };
+      }),
       error: posts.length === 0 ? 'No listings returned' : null
     };
   } catch (err) {
@@ -413,7 +471,9 @@ function extractJobsFromHtml(html: string, baseUrl: string): JobListingInput[] {
           });
         }
       }
-    } catch { /* skip */ }
+    } catch {
+      /* skip */
+    }
   });
   if (jobs.length > 0) return jobs;
 
@@ -423,14 +483,24 @@ function extractJobsFromHtml(html: string, baseUrl: string): JobListingInput[] {
     const href = $el.attr('href') || '';
     const text = $el.text().trim();
     if (!text || text.length < 5 || text.length > 200) return;
-    if (/^(Home|About|Careers|Jobs|Search|Menu|Apply|Login|Sign|Back|Next|Load)/i.test(text)) return;
+    if (/^(Home|About|Careers|Jobs|Search|Menu|Apply|Login|Sign|Back|Next|Load)/i.test(text))
+      return;
 
     let url: string;
-    try { url = new URL(href, baseUrl).href; } catch { return; }
+    try {
+      url = new URL(href, baseUrl).href;
+    } catch {
+      return;
+    }
     if (!url.startsWith('http') || seen.has(url)) return;
 
     const parentText = $el.parent().text().slice(0, 10000);
-    if (!/(?:job|position|opening|career|hiring|apply|department|location|full.time|remote|hybrid|on.site|engineering|product|design|data)/i.test(parentText)) return;
+    if (
+      !/(?:job|position|opening|career|hiring|apply|department|location|full.time|remote|hybrid|on.site|engineering|product|design|data)/i.test(
+        parentText
+      )
+    )
+      return;
 
     seen.add(url);
     jobs.push({
@@ -462,7 +532,11 @@ async function fetchHtml(source: typeof jobSource.$inferSelect): Promise<JobFetc
       error: jobs.length === 0 ? 'No job listings found in HTML' : null
     };
   } catch (err) {
-    return { sourceName: source.name, listings: [], error: err instanceof Error ? err.message : 'Unknown fetch error' };
+    return {
+      sourceName: source.name,
+      listings: [],
+      error: err instanceof Error ? err.message : 'Unknown fetch error'
+    };
   }
 }
 
@@ -473,22 +547,32 @@ async function fetchRssJobs(source: typeof jobSource.$inferSelect): Promise<JobF
     const feed = await parser.parseURL(source.url);
     return {
       sourceName: source.name,
-      listings: (feed.items ?? []).map((item) => ({
-        title: item.title || 'Untitled',
-        url: item.link || '',
-        department: item.categories?.join(', ') ?? null,
-        location: null,
-        description: item.contentSnippet?.slice(0, 10000) ?? item.summary?.slice(0, 10000) ?? null,
-        publishedAt: item.isoDate ? new Date(item.isoDate) : null,
-        isPM: isProductManagementRole(item.title || ''),
-        experienceYears: null,
-        requiresChinese: requiresChineseLanguage(item.contentSnippet ?? item.summary ?? null, null),
-        recruitType: null
-      })).filter((j) => j.url),
+      listings: (feed.items ?? [])
+        .map((item) => ({
+          title: item.title || 'Untitled',
+          url: item.link || '',
+          department: item.categories?.join(', ') ?? null,
+          location: null,
+          description:
+            item.contentSnippet?.slice(0, 10000) ?? item.summary?.slice(0, 10000) ?? null,
+          publishedAt: item.isoDate ? new Date(item.isoDate) : null,
+          isPM: isProductManagementRole(item.title || ''),
+          experienceYears: null,
+          requiresChinese: requiresChineseLanguage(
+            item.contentSnippet ?? item.summary ?? null,
+            null
+          ),
+          recruitType: null
+        }))
+        .filter((j) => j.url),
       error: null
     };
   } catch (err) {
-    return { sourceName: source.name, listings: [], error: err instanceof Error ? err.message : 'Unknown RSS error' };
+    return {
+      sourceName: source.name,
+      listings: [],
+      error: err instanceof Error ? err.message : 'Unknown RSS error'
+    };
   }
 }
 
@@ -515,7 +599,7 @@ interface SEAJobPost {
 
 function seaCityName(cityId: number): string {
   const map: Record<number, string> = {
-    25: 'Singapore',
+    25: 'Singapore'
   };
   // Indonesian city IDs all map to "Indonesia"
   const idCities = new Set([10, 9, 8, 11, 12, 13]);
@@ -545,7 +629,7 @@ function seaDepartmentName(departmentId: number): string | null {
     100017: 'Finance (MariBank)',
     100019: 'Customer Service',
     100020: "COO's Office",
-    100023: "President's Office",
+    100023: "President's Office"
   };
   return map[departmentId] ?? null;
 }
@@ -624,7 +708,9 @@ async function fetchSea(source: typeof jobSource.$inferSelect): Promise<JobFetch
         const fullDesc = [
           respText && `### Responsibilities\n${respText}`,
           reqText && `### Qualifications\n${reqText}`
-        ].filter(Boolean).join('\n\n');
+        ]
+          .filter(Boolean)
+          .join('\n\n');
         return {
           title: p.job_name,
           url: `https://career.sea.com/position/${p.job_id}`,
@@ -662,7 +748,10 @@ function shopeeSGCityName(cityId: number): string {
 async function fetchShopeeSG(source: typeof jobSource.$inferSelect): Promise<JobFetchResult> {
   try {
     const urlObj = new URL(source.url);
-    const regionIds = (urlObj.searchParams.get('region_id') ?? urlObj.searchParams.get('location'))?.split(',').filter(Boolean) ?? [];
+    const regionIds =
+      (urlObj.searchParams.get('region_id') ?? urlObj.searchParams.get('location'))
+        ?.split(',')
+        .filter(Boolean) ?? [];
     const deptIds = urlObj.searchParams.get('dept_id')?.split(',').filter(Boolean) ?? [];
     const limit = parseInt(urlObj.searchParams.get('limit') ?? '200');
 
@@ -674,13 +763,10 @@ async function fetchShopeeSG(source: typeof jobSource.$inferSelect): Promise<Job
       params.set('limit', String(pageSize));
       params.set('offset', String(offset));
 
-      const res = await fetch(
-        `https://ats.workatsea.com/ats/api/v1/user/job/list?${params}`,
-        {
-          headers: { 'User-Agent': 'Mozilla/5.0 (compatible; Produck Job Board/1.0)' },
-          signal: AbortSignal.timeout(20000)
-        }
-      );
+      const res = await fetch(`https://ats.workatsea.com/ats/api/v1/user/job/list?${params}`, {
+        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; Produck Job Board/1.0)' },
+        signal: AbortSignal.timeout(20000)
+      });
       if (!res.ok) throw new Error(`ATS API returned ${res.status}`);
       const json = await res.json();
       if (json.code !== 0) throw new Error(`ATS API error: ${json.message || json.code}`);
@@ -702,11 +788,19 @@ async function fetchShopeeSG(source: typeof jobSource.$inferSelect): Promise<Job
       }
     );
     if (!firstRes.ok) {
-      return { sourceName: source.name, listings: [], error: `ATS API returned ${firstRes.status}` };
+      return {
+        sourceName: source.name,
+        listings: [],
+        error: `ATS API returned ${firstRes.status}`
+      };
     }
     const firstJson = await firstRes.json();
     if (firstJson.code !== 0) {
-      return { sourceName: source.name, listings: [], error: `ATS API error: ${firstJson.message || firstJson.code}` };
+      return {
+        sourceName: source.name,
+        listings: [],
+        error: `ATS API error: ${firstJson.message || firstJson.code}`
+      };
     }
 
     const allPosts: SEAJobPost[] = [...(firstJson.data?.job_list ?? [])];
@@ -751,7 +845,9 @@ async function fetchShopeeSG(source: typeof jobSource.$inferSelect): Promise<Job
         const fullDesc = [
           respText && `### Responsibilities\n${respText}`,
           reqText && `### Qualifications\n${reqText}`
-        ].filter(Boolean).join('\n\n');
+        ]
+          .filter(Boolean)
+          .join('\n\n');
         return {
           title: p.job_name,
           url: `https://careers.shopee.sg/job-detail/${p.job_id}/1?channel=10001`,
@@ -804,7 +900,8 @@ async function fetchGrab(source: typeof jobSource.$inferSelect): Promise<JobFetc
       const url = block.match(/<url><!\[CDATA\[(.*?)\]\]><\/url>/)?.[1] ?? '';
       const city = block.match(/<city><!\[CDATA\[(.*?)\]\]><\/city>/)?.[1] ?? '';
       const country = block.match(/<country><!\[CDATA\[(.*?)\]\]><\/country>/)?.[1] ?? '';
-      const description = block.match(/<description><!\[CDATA\[(.*?)\]\]><\/description>/)?.[1] ?? '';
+      const description =
+        block.match(/<description><!\[CDATA\[(.*?)\]\]><\/description>/)?.[1] ?? '';
       const dateStr = block.match(/<date><!\[CDATA\[(.*?)\]\]><\/date>/)?.[1] ?? '';
       const category = block.match(/<category><!\[CDATA\[(.*?)\]\]><\/category>/)?.[1] ?? '';
       const jobType = block.match(/<jobtype><!\[CDATA\[(.*?)\]\]><\/jobtype>/)?.[1] ?? '';
@@ -815,7 +912,8 @@ async function fetchGrab(source: typeof jobSource.$inferSelect): Promise<JobFetc
       let recruitType: string | null = null;
       const jt = jobType.toLowerCase();
       if (/intern/i.test(jt) || /intern/i.test(title)) recruitType = 'intern';
-      else if (/graduate|fresh grad/i.test(jt) || /graduate|fresh grad/i.test(title)) recruitType = 'graduate';
+      else if (/graduate|fresh grad/i.test(jt) || /graduate|fresh grad/i.test(title))
+        recruitType = 'graduate';
 
       // Convert Grab HTML description — strip boilerplate, keep role content
       let desc = description
@@ -836,7 +934,9 @@ async function fetchGrab(source: typeof jobSource.$inferSelect): Promise<JobFetc
         .trim();
 
       // Drop the generic Grab boilerplate section
-      desc = desc.replace(/(?:###\s*)?About Grab and Our Workplace[\s\S]*?(?=###\s*Get to Know)/, '').trim();
+      desc = desc
+        .replace(/(?:###\s*)?About Grab and Our Workplace[\s\S]*?(?=###\s*Get to Know)/, '')
+        .trim();
 
       jobs.push({
         title,
@@ -912,12 +1012,20 @@ async function fetchWorkday(source: typeof jobSource.$inferSelect): Promise<JobF
           'Content-Type': 'application/json',
           'User-Agent': 'Mozilla/5.0 (compatible; Produck Job Board/1.0)'
         },
-        body: JSON.stringify({ limit: pageSize, offset, searchText: '', locations: locationIds, categories: [] }),
+        body: JSON.stringify({
+          limit: pageSize,
+          offset,
+          searchText: '',
+          locations: locationIds,
+          categories: []
+        }),
         signal: AbortSignal.timeout(30000)
       });
       if (!res.ok) {
         const text = await res.text().catch(() => '');
-        console.error(`[Workday: ${source.name}] page ${offset}: HTTP ${res.status} — ${text.slice(0, 300)}`);
+        console.error(
+          `[Workday: ${source.name}] page ${offset}: HTTP ${res.status} — ${text.slice(0, 300)}`
+        );
         throw new Error(`Workday API returned ${res.status}: ${text.slice(0, 200)}`);
       }
       const json = await res.json();
@@ -942,9 +1050,15 @@ async function fetchWorkday(source: typeof jobSource.$inferSelect): Promise<JobF
         const results = await Promise.allSettled(batch.map((off) => fetchPage(off)));
         for (const r of results) {
           if (r.status === 'fulfilled') {
-            if (r.value.length === 0) { done = true; break; }
+            if (r.value.length === 0) {
+              done = true;
+              break;
+            }
             allPosts.push(...r.value);
-            if (r.value.length < pageSize) { done = true; break; }
+            if (r.value.length < pageSize) {
+              done = true;
+              break;
+            }
           }
         }
       }
@@ -968,16 +1082,24 @@ async function fetchWorkday(source: typeof jobSource.$inferSelect): Promise<JobF
           // Check both locationsText and bulletFields (which often contain the country).
           const locText = p.locationsText || '';
           const combinedText = `${locText} ${(p.bulletFields || []).join(' ')}`;
-          let location: string | null = null;
+          let location: string;
           // Singapore — check bulletText for country, or known SG location/office patterns
-          if (/singapore/i.test(combinedText) ||
-              /SGP[-_]/i.test(locText) ||
-              /dbs\s*(asia|bank|marina)/i.test(locText) ||
-              /(capital\s*place|city\s*hall|technology\s*centre|treasures?\s*ctr|two\s*harbour)/i.test(locText)) {
+          if (
+            /singapore/i.test(combinedText) ||
+            /SGP[-_]/i.test(locText) ||
+            /dbs\s*(asia|bank|marina)/i.test(locText) ||
+            /(capital\s*place|city\s*hall|technology\s*centre|treasures?\s*ctr|two\s*harbour)/i.test(
+              locText
+            )
+          ) {
             location = `${locText}, Singapore`;
           }
           // Indonesia
-          else if (/indonesia|jakarta|bandung|surabaya|medan|makassar|semarang|solo|pekanbaru|pontianak|palembang|samarinda/i.test(combinedText)) {
+          else if (
+            /indonesia|jakarta|bandung|surabaya|medan|makassar|semarang|solo|pekanbaru|pontianak|palembang|samarinda/i.test(
+              combinedText
+            )
+          ) {
             location = `${locText}, Indonesia`;
           } else {
             // Not in SG or ID — skip this job
@@ -996,11 +1118,13 @@ async function fetchWorkday(source: typeof jobSource.$inferSelect): Promise<JobF
               const html = await pageRes.text();
 
               // Extract meta description
-              const metaMatch = html.match(/<meta\s+(?:name|property)="(?:description|og:description)"[^>]+content="([^"]+)"/i);
+              const metaMatch = html.match(
+                /<meta\s+(?:name|property)="(?:description|og:description)"[^>]+content="([^"]+)"/i
+              );
               if (metaMatch) {
-                let rawDesc = metaMatch[1]
+                const rawDesc = metaMatch[1]
                   .replace(/&#39;/g, "'")
-                  .replace(/&amp;amp;/g, '&')  // double-encoded in Workday meta
+                  .replace(/&amp;amp;/g, '&') // double-encoded in Workday meta
                   .replace(/&amp;/g, '&')
                   .replace(/&lt;/g, '<')
                   .replace(/&gt;/g, '>')
@@ -1019,7 +1143,10 @@ async function fetchWorkday(source: typeof jobSource.$inferSelect): Promise<JobF
                   .replace(/\b(?:Our\s+history\s+spans?\s+more\s+than\s+\d+\s+years?\.?\s*)/gi, '')
                   .replace(/\b(?:over\s+\d+\s+years?\s+of\s+history\.?\s*)/gi, '')
                   .replace(/\b(?:more\s+than\s+\d{2,}\s+years?\s+of\s+history)\b/gi, '')
-                  .replace(/\b(?:a\s+leading\s+bank\s+(?:in\s+Asia\s+)?for\s+more\s+than\s+\d+\s+years?)\b/gi, '')
+                  .replace(
+                    /\b(?:a\s+leading\s+bank\s+(?:in\s+Asia\s+)?for\s+more\s+than\s+\d+\s+years?)\b/gi,
+                    ''
+                  )
                   // UOB section headers
                   .replace(/\s*Job\s+Description\s*/i, '\n### Job Description\n')
                   .replace(/\s*Job\s+Requirements?\s*/i, '\n### Requirements\n')
@@ -1027,11 +1154,17 @@ async function fetchWorkday(source: typeof jobSource.$inferSelect): Promise<JobF
                   // DBS section headers
                   .replace(/Business Function:?\s*/i, '\n### Business Function\n')
                   .replace(/Job\s+Purpose:?\s*/i, '\n### Job Purpose\n')
-                  .replace(/Principal\s+Accountabilities:?\s*/i, '\n### Principal Accountabilities\n')
+                  .replace(
+                    /Principal\s+Accountabilities:?\s*/i,
+                    '\n### Principal Accountabilities\n'
+                  )
                   .replace(/Key\s+Accountabilities:?\s*/i, '\n### Key Accountabilities\n')
                   .replace(/(?:Key\s+)?Responsibilities:?\s*/i, '\n### Responsibilities\n')
                   .replace(/Required\s+Experience:?\s*/i, '\n### Required Experience\n')
-                  .replace(/Education\s*(?:\/\s*)?Preferred\s+Qualifications:?\s*/i, '\n### Education & Qualifications\n')
+                  .replace(
+                    /Education\s*(?:\/\s*)?Preferred\s+Qualifications:?\s*/i,
+                    '\n### Education & Qualifications\n'
+                  )
                   .replace(/(?:Candidate\s+)?Requirements:?\s*/i, '\n### Qualifications\n')
                   // Strip metadata lines
                   .replace(/\s*Apply\s+Now\s*/i, '\n')
@@ -1056,9 +1189,14 @@ async function fetchWorkday(source: typeof jobSource.$inferSelect): Promise<JobF
                 description = description.replace(
                   /(### (?:Principal Accountabilities|Key Accountabilities|Responsibilities|Required Experience|Qualifications|Education & Qualifications)\n)([\s\S]*?)(?=\n###|\nLocation|\nJob:|\nSchedule:|\n$)/gi,
                   (_, header, body) => {
-                    const items = body.split(/\.\s+(?=[A-Z])/).filter(s => s.trim());
+                    const items = body.split(/\.\s+(?=[A-Z])/).filter((s: string) => s.trim());
                     if (items.length <= 1) return header + body;
-                    return header + items.map(s => `- ${s.trim()}${s.endsWith('.') ? '' : '.'}`).join('\n');
+                    return (
+                      header +
+                      items
+                        .map((s: string) => `- ${s.trim()}${s.endsWith('.') ? '' : '.'}`)
+                        .join('\n')
+                    );
                   }
                 );
 
@@ -1071,12 +1209,15 @@ async function fetchWorkday(source: typeof jobSource.$inferSelect): Promise<JobF
                 if (schedMatch) {
                   const sched = schedMatch[1].trim().toLowerCase();
                   if (sched.includes('intern')) recruitType = 'intern';
-                  else if (sched.includes('graduate') || sched.includes('associate programme')) recruitType = 'graduate';
+                  else if (sched.includes('graduate') || sched.includes('associate programme'))
+                    recruitType = 'graduate';
                 }
               }
 
               // Also try JSON-LD
-              const ldMatch = html.match(/<script\s+type="application\/ld\+json">([^<]+)<\/script>/i);
+              const ldMatch = html.match(
+                /<script\s+type="application\/ld\+json">([^<]+)<\/script>/i
+              );
               if (ldMatch) {
                 try {
                   const ld = JSON.parse(ldMatch[1]);
@@ -1089,10 +1230,14 @@ async function fetchWorkday(source: typeof jobSource.$inferSelect): Promise<JobF
                     const dp = tryParseDate(ld.datePosted);
                     if (dp) publishedAt = dp;
                   }
-                } catch { /* skip */ }
+                } catch {
+                  /* skip */
+                }
               }
             }
-          } catch { /* page fetch failed, continue without description */ }
+          } catch {
+            /* page fetch failed, continue without description */
+          }
 
           return {
             title: p.title,
@@ -1136,8 +1281,6 @@ async function fetchWorkday(source: typeof jobSource.$inferSelect): Promise<JobF
 async function fetchWorkable(source: typeof jobSource.$inferSelect): Promise<JobFetchResult> {
   try {
     const baseUrl = source.url.replace(/\/$/, '');
-    const slug = baseUrl.split('/').pop()!; // e.g. "fundingsocieties"
-
     // 1. Get department list from the base /jobs.md page
     const indexRes = await fetch(`${baseUrl}/jobs.md`, {
       headers: { 'User-Agent': 'Mozilla/5.0 (compatible; Produck Job Board/1.0)' },
@@ -1154,7 +1297,7 @@ async function fetchWorkable(source: typeof jobSource.$inferSelect): Promise<Job
         const m = line.match(/^- (.+?) \(\d+ roles?\)/);
         if (m) deptNames.push(m[1]);
         // Sub-department: "  - Compliance & Operations (1 role)"
-        const sub = line.match(/^  - (.+?) \(\d+ roles?\)/);
+        const sub = line.match(/^ {2}- (.+?) \(\d+ roles?\)/);
         if (sub) deptNames.push(sub[1]);
       }
     }
@@ -1162,8 +1305,13 @@ async function fetchWorkable(source: typeof jobSource.$inferSelect): Promise<Job
     // 2. Query each department for jobs, deduplicate by job ID
     const seen = new Set<string>();
     interface WJob {
-      title: string; department: string; location: string;
-      type: string; posted: string; url: string; id: string;
+      title: string;
+      department: string;
+      location: string;
+      type: string;
+      posted: string;
+      url: string;
+      id: string;
     }
     const allJobs: WJob[] = [];
 
@@ -1178,7 +1326,9 @@ async function fetchWorkable(source: typeof jobSource.$inferSelect): Promise<Job
 
         // Parse markdown table rows
         // | Title | Department | Location | Type | Salary | Posted | Details |
-        const rows = md.matchAll(/^\| (.+?) \| (.+?) \| (.+?) \| (.+?) \| (.+?) \| (.+?) \| \[View\]\((.+?)\) \|$/gm);
+        const rows = md.matchAll(
+          /^\| (.+?) \| (.+?) \| (.+?) \| (.+?) \| (.+?) \| (.+?) \| \[View\]\((.+?)\) \|$/gm
+        );
         for (const r of rows) {
           const title = r[1].trim();
           const department = r[2].trim();
@@ -1192,7 +1342,9 @@ async function fetchWorkable(source: typeof jobSource.$inferSelect): Promise<Job
           seen.add(id);
           allJobs.push({ title, department, location, type, posted, url, id });
         }
-      } catch { /* skip failed department queries */ }
+      } catch {
+        /* skip failed department queries */
+      }
     }
 
     // 3. PM filter
@@ -1210,14 +1362,18 @@ async function fetchWorkable(source: typeof jobSource.$inferSelect): Promise<Job
 
           // Location: strip workplace type "(Hybrid)", "(Remote)" etc.
           const cleanLoc = j.location.replace(/\s*\([^)]*\)\s*$/, '').trim();
-          let location: string | null = null;
+          let location: string;
 
           // SG
           if (/singapore/i.test(cleanLoc)) {
             location = `${cleanLoc}, Singapore`;
           }
           // ID cities
-          else if (/jakarta|bandung|surabaya|medan|denpasar|bali|makassar|semarang|solo|pekanbaru|pontianak|palembang|samarinda/i.test(cleanLoc)) {
+          else if (
+            /jakarta|bandung|surabaya|medan|denpasar|bali|makassar|semarang|solo|pekanbaru|pontianak|palembang|samarinda/i.test(
+              cleanLoc
+            )
+          ) {
             location = `${cleanLoc}, Indonesia`;
           } else {
             return null;
@@ -1250,7 +1406,10 @@ async function fetchWorkable(source: typeof jobSource.$inferSelect): Promise<Job
 
               // Strip company boilerplate
               desc = desc
-                .replace(/\*\*Funding Societies \| Modalku\*\* is the largest[\s\S]*?(?=\n-|\n\*\*|\n\n\w)/, '')
+                .replace(
+                  /\*\*Funding Societies \| Modalku\*\* is the largest[\s\S]*?(?=\n-|\n\*\*|\n\n\w)/,
+                  ''
+                )
                 .replace(/\nHere at Funding Societies[\s\S]*?(?=\n\n\*\*|\n\n\w)/i, '')
                 .replace(/\nInterested to know more[\s\S]*$/, '')
                 .trim();
@@ -1263,7 +1422,9 @@ async function fetchWorkable(source: typeof jobSource.$inferSelect): Promise<Job
 
               return {
                 title: j.title,
-                url: j.url.startsWith('http') ? j.url.replace(/\.md$/, '') : `${baseUrl}${j.url.replace(/\.md$/, '')}`,
+                url: j.url.startsWith('http')
+                  ? j.url.replace(/\.md$/, '')
+                  : `${baseUrl}${j.url.replace(/\.md$/, '')}`,
                 department: j.department,
                 location,
                 description,
@@ -1274,11 +1435,15 @@ async function fetchWorkable(source: typeof jobSource.$inferSelect): Promise<Job
                 recruitType
               } satisfies JobListingInput;
             }
-          } catch { /* detail fetch failed */ }
+          } catch {
+            /* detail fetch failed */
+          }
 
           return {
             title: j.title,
-            url: j.url.startsWith('http') ? j.url.replace(/\.md$/, '') : `${baseUrl}${j.url.replace(/\.md$/, '')}`,
+            url: j.url.startsWith('http')
+              ? j.url.replace(/\.md$/, '')
+              : `${baseUrl}${j.url.replace(/\.md$/, '')}`,
             department: j.department,
             location,
             description,
@@ -1296,11 +1461,14 @@ async function fetchWorkable(source: typeof jobSource.$inferSelect): Promise<Job
       }
     }
 
-    console.log(`[Workable: ${source.name}] ${listings.length} PM listings from ${allJobs.length} total`);
+    console.log(
+      `[Workable: ${source.name}] ${listings.length} PM listings from ${allJobs.length} total`
+    );
     return {
       sourceName: source.name,
       listings,
-      error: listings.length === 0 && pmJobs.length > 0 ? 'PM listings filtered out (location)' : null
+      error:
+        listings.length === 0 && pmJobs.length > 0 ? 'PM listings filtered out (location)' : null
     };
   } catch (err) {
     return {
@@ -1339,15 +1507,32 @@ async function fetchMokaHR(source: typeof jobSource.$inferSelect): Promise<JobFe
     const apiBase = `${baseUrl}/api/outer/ats-apply/website`;
 
     // 2. Fetch all jobs for SG and ID locations
-    const allJobs: { id: string; title: string; deptId: number; description: string; commitment: string; createdAt: string }[] = [];
+    const allJobs: {
+      id: string;
+      title: string;
+      deptId: number;
+      description: string;
+      commitment: string;
+      createdAt: string;
+    }[] = [];
 
     for (const loc of ['Singapore', 'Indonesia']) {
       let page = 1;
       while (true) {
         const listRes = await fetch(`${apiBase}/jobs/v2`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'User-Agent': 'Mozilla/5.0 (compatible; Produck Job Board/1.0)' },
-          body: JSON.stringify({ siteId, orgId, locale: 'en-US', page, pageSize: 50, location: [loc] }),
+          headers: {
+            'Content-Type': 'application/json',
+            'User-Agent': 'Mozilla/5.0 (compatible; Produck Job Board/1.0)'
+          },
+          body: JSON.stringify({
+            siteId,
+            orgId,
+            locale: 'en-US',
+            page,
+            pageSize: 50,
+            location: [loc]
+          }),
           signal: AbortSignal.timeout(15000)
         });
         if (!listRes.ok) break;
@@ -1371,7 +1556,11 @@ async function fetchMokaHR(source: typeof jobSource.$inferSelect): Promise<JobFe
 
     // Deduplicate by job ID
     const seen = new Set<string>();
-    const unique = allJobs.filter((j) => { if (seen.has(j.id)) return false; seen.add(j.id); return true; });
+    const unique = allJobs.filter((j) => {
+      if (seen.has(j.id)) return false;
+      seen.add(j.id);
+      return true;
+    });
 
     // 3. PM filter
     const pmJobs = unique.filter((j) => isProductManagementRole(j.title));
@@ -1384,13 +1573,16 @@ async function fetchMokaHR(source: typeof jobSource.$inferSelect): Promise<JobFe
       const batch = pmJobs.slice(i, i + CONCURRENCY);
       const batchResults = await Promise.allSettled(
         batch.map(async (j) => {
-          let location: string | null = null;
+          let location: string;
           let department: string | null = null;
 
           try {
             const detailRes = await fetch(`${apiBase}/job`, {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json', 'User-Agent': 'Mozilla/5.0 (compatible; Produck Job Board/1.0)' },
+              headers: {
+                'Content-Type': 'application/json',
+                'User-Agent': 'Mozilla/5.0 (compatible; Produck Job Board/1.0)'
+              },
               body: JSON.stringify({ siteId, orgId, locale: 'en-US', jobId: j.id }),
               signal: AbortSignal.timeout(10000)
             });
@@ -1403,7 +1595,10 @@ async function fetchMokaHR(source: typeof jobSource.$inferSelect): Promise<JobFe
                 const office = d.customFields?.['100004130']?.value || '';
                 if (office.startsWith('SG-') || /singapore/i.test(office)) {
                   location = `${office.replace('SG-', '')}, Singapore`;
-                } else if (office.startsWith('ID-') || /jakarta|bandung|surabaya|indonesia/i.test(office)) {
+                } else if (
+                  office.startsWith('ID-') ||
+                  /jakarta|bandung|surabaya|indonesia/i.test(office)
+                ) {
                   location = `${office.replace('ID-', '')}, Indonesia`;
                 } else {
                   return null; // not SG/ID
@@ -1418,7 +1613,9 @@ async function fetchMokaHR(source: typeof jobSource.$inferSelect): Promise<JobFe
                 // Parse HTML description
                 let desc = d.jobDescription || '';
                 if (desc) {
-                  desc = cheerio.load(desc).text()
+                  desc = cheerio
+                    .load(desc)
+                    .text()
                     .replace(/\s{3,}/g, '\n')
                     .replace(/\n{3,}/g, '\n\n')
                     .trim();
@@ -1446,7 +1643,9 @@ async function fetchMokaHR(source: typeof jobSource.$inferSelect): Promise<JobFe
                 } satisfies JobListingInput;
               }
             }
-          } catch { /* detail fetch failed */ }
+          } catch {
+            /* detail fetch failed */
+          }
 
           return null;
         })
@@ -1457,11 +1656,14 @@ async function fetchMokaHR(source: typeof jobSource.$inferSelect): Promise<JobFe
       }
     }
 
-    console.log(`[MokaHR: ${source.name}] ${listings.length} PM listings from ${unique.length} total`);
+    console.log(
+      `[MokaHR: ${source.name}] ${listings.length} PM listings from ${unique.length} total`
+    );
     return {
       sourceName: source.name,
       listings,
-      error: listings.length === 0 && pmJobs.length > 0 ? 'PM listings filtered out (location)' : null
+      error:
+        listings.length === 0 && pmJobs.length > 0 ? 'PM listings filtered out (location)' : null
     };
   } catch (err) {
     return {
@@ -1490,13 +1692,18 @@ async function fetchOracle(source: typeof jobSource.$inferSelect): Promise<JobFe
     try {
       const finderRes = await fetch(
         `${base}/hcmRestApi/resources/11.13.18.05/recruitingCEJobRequisitions?onlyData=true&finder=findReqs;siteNumber=${siteNumber}&limit=1`,
-        { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; Produck Job Board/1.0)' }, signal: AbortSignal.timeout(10000) }
+        {
+          headers: { 'User-Agent': 'Mozilla/5.0 (compatible; Produck Job Board/1.0)' },
+          signal: AbortSignal.timeout(10000)
+        }
       );
       if (finderRes.ok) {
         const finderJson = await finderRes.json();
         expectedCount = finderJson.items?.[0]?.TotalJobsCount ?? expectedCount;
       }
-    } catch { /* keep fallback */ }
+    } catch {
+      /* keep fallback */
+    }
 
     // 2. Discover all valid job IDs by scanning the full range.
     // Oracle IDs are roughly sequential — higher = newer. Closed jobs keep
@@ -1516,13 +1723,16 @@ async function fetchOracle(source: typeof jobSource.$inferSelect): Promise<JobFe
           fetch(`${jobBase}/${id}/`, {
             headers: { 'User-Agent': 'Mozilla/5.0 (compatible; Produck Job Board/1.0)' },
             signal: AbortSignal.timeout(5000)
-          }).then(async (r) => {
-            if (!r.ok) return null;
-            const html = await r.text();
-            if (/no longer available|position (has been|is) (filled|closed)/i.test(html)) return null;
-            const titleMatch = html.match(/<meta property="og:title" content="([^"]+)"/);
-            return titleMatch ? { id, title: titleMatch[1].replace(/&amp;/g, '&') } : null;
-          }).catch(() => null)
+          })
+            .then(async (r) => {
+              if (!r.ok) return null;
+              const html = await r.text();
+              if (/no longer available|position (has been|is) (filled|closed)/i.test(html))
+                return null;
+              const titleMatch = html.match(/<meta property="og:title" content="([^"]+)"/);
+              return titleMatch ? { id, title: titleMatch[1].replace(/&amp;/g, '&') } : null;
+            })
+            .catch(() => null)
         )
       );
       let batchMisses = 0;
@@ -1534,8 +1744,11 @@ async function fetchOracle(source: typeof jobSource.$inferSelect): Promise<JobFe
           batchMisses++;
         }
       }
-      if (batchMisses >= BATCH) { consecutiveMisses += batchMisses; }
-      else { consecutiveMisses = 0; }
+      if (batchMisses >= BATCH) {
+        consecutiveMisses += batchMisses;
+      } else {
+        consecutiveMisses = 0;
+      }
       probeId += BATCH;
     }
 
@@ -1578,7 +1791,9 @@ async function fetchOracle(source: typeof jobSource.$inferSelect): Promise<JobFe
             // Description from the rich HTML field
             let description: string | null = null;
             if (item.ExternalDescriptionStr) {
-              description = cheerio.load(item.ExternalDescriptionStr).text()
+              description = cheerio
+                .load(item.ExternalDescriptionStr)
+                .text()
                 .replace(/\s{3,}/g, '\n')
                 .replace(/\n{3,}/g, '\n\n')
                 .trim();
@@ -1594,7 +1809,8 @@ async function fetchOracle(source: typeof jobSource.$inferSelect): Promise<JobFe
 
             // Published date
             const publishedAt = item.ExternalPostedStartDate
-              ? tryParseDate(item.ExternalPostedStartDate) : null;
+              ? tryParseDate(item.ExternalPostedStartDate)
+              : null;
 
             return {
               title: item.Title || j.title,
@@ -1608,7 +1824,9 @@ async function fetchOracle(source: typeof jobSource.$inferSelect): Promise<JobFe
               requiresChinese: requiresChineseLanguage(description, null),
               recruitType
             } satisfies JobListingInput;
-          } catch { return null; }
+          } catch {
+            return null;
+          }
         })
       );
 
@@ -1617,7 +1835,9 @@ async function fetchOracle(source: typeof jobSource.$inferSelect): Promise<JobFe
       }
     }
 
-    console.log(`[Oracle: ${source.name}] ${listings.length} PM listings from ${allDiscovered.length} discovered (${pmJobs.length} PM, ${expectedCount} expected open)`);
+    console.log(
+      `[Oracle: ${source.name}] ${listings.length} PM listings from ${allDiscovered.length} discovered (${pmJobs.length} PM, ${expectedCount} expected open)`
+    );
     return {
       sourceName: source.name,
       listings,
@@ -1639,8 +1859,9 @@ async function fetchOracle(source: typeof jobSource.$inferSelect): Promise<JobFe
 async function fetchLever(source: typeof jobSource.$inferSelect): Promise<JobFetchResult> {
   try {
     // Extract company slug from URL
-    const slugMatch = source.url.match(/lever\.co\/([^/\s?]+)/) ||
-                     source.url.match(/api\.lever\.co\/v0\/postings\/([^/\s?]+)/);
+    const slugMatch =
+      source.url.match(/lever\.co\/([^/\s?]+)/) ||
+      source.url.match(/api\.lever\.co\/v0\/postings\/([^/\s?]+)/);
     if (!slugMatch) throw new Error('Lever URL must contain company slug');
     const company = slugMatch[1];
 
@@ -1676,7 +1897,10 @@ async function fetchLever(source: typeof jobSource.$inferSelect): Promise<JobFet
       let desc = j.descriptionPlain || '';
       if (j.lists) {
         for (const list of j.lists) {
-          desc += `\n\n### ${list.text}\n\n${cheerio.load(list.content || '').text().trim()}`;
+          desc += `\n\n### ${list.text}\n\n${cheerio
+            .load(list.content || '')
+            .text()
+            .trim()}`;
         }
       }
       // Strip company boilerplate — nuke everything from the first boilerplate header to end
@@ -1712,11 +1936,14 @@ async function fetchLever(source: typeof jobSource.$inferSelect): Promise<JobFet
       });
     }
 
-    console.log(`[Lever: ${source.name}] ${listings.length} PM listings from ${allJobs.length} total`);
+    console.log(
+      `[Lever: ${source.name}] ${listings.length} PM listings from ${allJobs.length} total`
+    );
     return {
       sourceName: source.name,
       listings,
-      error: listings.length === 0 && pmJobs.length > 0 ? 'PM listings filtered out (location)' : null
+      error:
+        listings.length === 0 && pmJobs.length > 0 ? 'PM listings filtered out (location)' : null
     };
   } catch (err) {
     return {
@@ -1743,7 +1970,10 @@ async function fetchCatapa(source: typeof jobSource.$inferSelect): Promise<JobFe
     while (true) {
       const apiUrl = `https://api-apps.catapa.com/careerpage/${company}/jobs?page=${page}&size=50`;
       const res = await fetch(apiUrl, {
-        headers: { 'Accept': 'application/json', 'User-Agent': 'Mozilla/5.0 (compatible; Produck Job Board/1.0)' },
+        headers: {
+          Accept: 'application/json',
+          'User-Agent': 'Mozilla/5.0 (compatible; Produck Job Board/1.0)'
+        },
         signal: AbortSignal.timeout(15000)
       });
       if (!res.ok) throw new Error(`Catapa API returned ${res.status}`);
@@ -1762,7 +1992,9 @@ async function fetchCatapa(source: typeof jobSource.$inferSelect): Promise<JobFe
       // Location from nested city/state/country or fallback
       const city = j.location?.city?.name || j.location?.name || '';
       const country = j.location?.city?.state?.country?.name || 'Indonesia';
-      const location = city ? `${city}, ${country}` : `${j.location?.name || 'Jakarta'}, ${country}`;
+      const location = city
+        ? `${city}, ${country}`
+        : `${j.location?.name || 'Jakarta'}, ${country}`;
 
       // Build description from jobDetail — convert HTML to readable plain text
       const htmlToText = (html: string): string => {
@@ -1773,9 +2005,15 @@ async function fetchCatapa(source: typeof jobSource.$inferSelect): Promise<JobFe
           $(el).prepend(prefix).append('\n');
         });
         $('br').replaceWith('\n');
-        $('p,div,ol,ul,section').each((_, el) => { $(el).append('\n'); });
-        $('strong,b').each((_, el) => { $(el).prepend('**').append('**'); });
-        return $.text().replace(/\n{3,}/g, '\n\n').trim();
+        $('p,div,ol,ul,section').each((_, el) => {
+          $(el).append('\n');
+        });
+        $('strong,b').each((_, el) => {
+          $(el).prepend('**').append('**');
+        });
+        return $.text()
+          .replace(/\n{3,}/g, '\n\n')
+          .trim();
       };
 
       let desc = '';
@@ -1812,11 +2050,14 @@ async function fetchCatapa(source: typeof jobSource.$inferSelect): Promise<JobFe
       });
     }
 
-    console.log(`[Catapa: ${source.name}] ${listings.length} PM listings from ${allJobs.length} total`);
+    console.log(
+      `[Catapa: ${source.name}] ${listings.length} PM listings from ${allJobs.length} total`
+    );
     return {
       sourceName: source.name,
       listings,
-      error: listings.length === 0 && pmJobs.length > 0 ? 'PM listings filtered out (location)' : null
+      error:
+        listings.length === 0 && pmJobs.length > 0 ? 'PM listings filtered out (location)' : null
     };
   } catch (err) {
     return {
@@ -1884,7 +2125,9 @@ export async function fetchJobsFromSource(
   }
 
   const emoji = result.listings.length === 0 ? '⚠️' : '✅';
-  console.log(`${emoji} [${source.name}] ${result.listings.length} PM listings${result.error ? ' — ' + result.error : ''}`);
+  console.log(
+    `${emoji} [${source.name}] ${result.listings.length} PM listings${result.error ? ' — ' + result.error : ''}`
+  );
 
   return result;
 }

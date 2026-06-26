@@ -20,11 +20,10 @@
     Rocket,
     Search,
     Target,
-    Trash2,
-    X
+    Trash2
   } from '@lucide/svelte';
 
-  import type { FrameworkSeedInstance } from './+page.server.js';
+  import type { FrameworkPageInstance } from './+page.server.js';
   import IdeaBankEditor from '$lib/components/frameworks/IdeaBankEditor.svelte';
   import StoryMapEditor from '$lib/components/frameworks/StoryMapEditor.svelte';
   import BacklogEditor from '$lib/components/frameworks/BacklogEditor.svelte';
@@ -41,7 +40,7 @@
 
   let { data } = $props<{
     data: {
-      seededInstances: FrameworkSeedInstance[];
+      frameworkInstances: FrameworkPageInstance[];
       workspaceId: number;
       projectId: number;
       currentUser?: { displayName?: string };
@@ -331,52 +330,54 @@
       });
   }
 
-  function mergeSeededInstance(seed: FrameworkInstance, local?: FrameworkInstance) {
-    // Keep local edits when they exist; seed only fills in missing templates.
+  function mergeServerInstance(serverInstance: FrameworkInstance, local?: FrameworkInstance) {
+    // Keep local edits when they exist; server data only fills in missing templates.
     // Local values and timestamps are preserved so editing one draft
     // doesn't reset or re-stamp all the others.
-    if (!local) return seed;
-    return { ...local, updatedBy: local.updatedBy ?? seed.updatedBy };
+    if (!local) return serverInstance;
+    return { ...local, updatedBy: local.updatedBy ?? serverInstance.updatedBy };
   }
 
-  // React to project switches — re-initialize instances from seeds + localStorage
+  // React to project switches by re-initializing instances from server data + localStorage.
   $effect(() => {
-    const seeded = data.seededInstances as FrameworkInstance[];
+    const serverInstances = data.frameworkInstances as FrameworkInstance[];
     const key = storageKey;
     if (!browser) {
-      instances = seeded;
-      if (!selectedInstanceId) selectedInstanceId = seeded[0]?.id ?? null;
+      instances = serverInstances;
+      if (!selectedInstanceId) selectedInstanceId = serverInstances[0]?.id ?? null;
       initialized = true;
       return;
     }
     const raw = localStorage.getItem(key);
     if (!raw) {
-      instances = seeded;
-      if (seeded.length > 0) localStorage.setItem(key, JSON.stringify(seeded));
-      if (!selectedInstanceId) selectedInstanceId = seeded[0]?.id ?? null;
+      instances = serverInstances;
+      if (serverInstances.length > 0) localStorage.setItem(key, JSON.stringify(serverInstances));
+      if (!selectedInstanceId) selectedInstanceId = serverInstances[0]?.id ?? null;
       initialized = true;
       return;
     }
     try {
       const parsed = JSON.parse(raw) as FrameworkInstance[];
-      // Deduplicate by templateId (last wins: framework_instance overrides dedicated seed)
-      const dedupedSeeded = [...new Map(seeded.map((s) => [s.templateId, s])).values()];
-      const seededTemplates = new Set(dedupedSeeded.map((s) => s.templateId));
+      // Deduplicate by templateId (last wins: saved framework instances override derived data).
+      const dedupedServerInstances = [
+        ...new Map(serverInstances.map((s) => [s.templateId, s])).values()
+      ];
+      const serverTemplates = new Set(dedupedServerInstances.map((s) => s.templateId));
       const merged = [
-        ...dedupedSeeded.map((seed) => {
-          const local = parsed.find((p) => p.templateId === seed.templateId);
-          return local ? mergeSeededInstance(seed, local) : seed;
+        ...dedupedServerInstances.map((serverInstance) => {
+          const local = parsed.find((p) => p.templateId === serverInstance.templateId);
+          return local ? mergeServerInstance(serverInstance, local) : serverInstance;
         }),
-        ...parsed.filter((i) => templateIds.has(i.templateId) && !seededTemplates.has(i.templateId))
+        ...parsed.filter((i) => templateIds.has(i.templateId) && !serverTemplates.has(i.templateId))
       ];
       instances = merged;
       selectedInstanceId = merged[0]?.id ?? null;
       localStorage.setItem(key, JSON.stringify(merged));
     } catch {
       localStorage.removeItem(key);
-      instances = seeded;
-      if (seeded.length > 0) localStorage.setItem(key, JSON.stringify(seeded));
-      if (!selectedInstanceId) selectedInstanceId = seeded[0]?.id ?? null;
+      instances = serverInstances;
+      if (serverInstances.length > 0) localStorage.setItem(key, JSON.stringify(serverInstances));
+      if (!selectedInstanceId) selectedInstanceId = serverInstances[0]?.id ?? null;
     }
     initialized = true;
   });
@@ -471,7 +472,7 @@
         <div class="p-4">
           <EditorComponent
             instance={selectedInstance}
-            draftMode={'view'}
+            draftMode="view"
             onUpdate={handleUpdate}
             {projectId}
             bind:showHistory={showKanbanHistory}
@@ -616,7 +617,7 @@
               <div class="p-4">
                 <EditorComponent
                   instance={selectedInstance}
-                  draftMode={'view'}
+                  draftMode="view"
                   onUpdate={handleUpdate}
                   {projectId}
                   bind:showHistory={showKanbanHistory}
@@ -770,7 +771,7 @@
     <Dialog.Header>
       <Dialog.Title class="text-cork-800">Delete draft?</Dialog.Title>
       <Dialog.Description class="text-cork-500">
-        This will permanently delete <strong class="text-cork-700">"{deleteTargetTitle}"</strong>.
+        This will permanently delete <strong class="text-cork-700">{deleteTargetTitle}</strong>.
         This action cannot be undone.
       </Dialog.Description>
     </Dialog.Header>

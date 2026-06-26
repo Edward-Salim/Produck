@@ -2,23 +2,11 @@
   import type { KanbanCard, KanbanColumn } from '$lib/types/story-map.js';
   import type { FrameworkInstance } from './types.js';
   import { browser } from '$app/environment';
-  import {
-    Ban,
-    Bug,
-    ClipboardList,
-    Clock,
-    Columns3,
-    Search,
-    Sparkles,
-    Wrench,
-    X
-  } from '@lucide/svelte';
+  import { Ban, Bug, ClipboardList, Columns3, Search, Sparkles, Wrench, X } from '@lucide/svelte';
   import EmptyState from '$lib/components/ui/empty-state.svelte';
   import { SvelteSet } from 'svelte/reactivity';
 
   let {
-    instance,
-    draftMode,
     onUpdate,
     projectId,
     showHistory = $bindable(false)
@@ -29,11 +17,6 @@
     projectId?: string;
     showHistory?: boolean;
   } = $props();
-
-  // Kanban fetches from DB directly — localStorage is not involved.
-  $effect(() => {
-    draftMode;
-  });
 
   const PRIORITY = [
     { key: 'none', label: 'None', dot: '#9ca3af' },
@@ -97,8 +80,8 @@
   // ── Module-level cache so switching templates doesn't re-fetch from scratch ──
   const columnCache = new Map<string, KanbanColumn[]>();
 
-  let columns = $state<KanbanColumn[]>(columnCache.get(projectId ?? '') ?? []);
-  let loading = $state(!columnCache.has(projectId ?? ''));
+  let columns = $state<KanbanColumn[]>([]);
+  let loading = $state(false);
 
   async function loadKanban() {
     if (!columnCache.has(projectId ?? '')) {
@@ -163,10 +146,6 @@
     if (showHistory) loadHistory();
   });
 
-  function openHistory() {
-    showHistory = true;
-  }
-
   function actorInitial(name: string): string {
     return name.charAt(0).toUpperCase();
   }
@@ -223,7 +202,6 @@
 
   // ── Assignee picker ──
   let pickerCardId = $state<string | null>(null);
-  const ASSIGNEE_OPTIONS = ['Kelvin', 'Edward', ''];
 
   async function setAssignee(cardId: string, colId: string, name: string) {
     columns = columns.map((c) => {
@@ -534,14 +512,16 @@
       <span class="text-[9px] font-semibold tracking-wider text-cork-400 uppercase">Type:</span>
       {#each TYPE_KEYS as key}
         {@const active = activeTypes.has(key)}
+        {@const Icon = typeIcon(key)}
         <button
+          type="button"
           class="inline-flex cursor-pointer items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-medium transition-all {active
             ? 'bg-cork-700 text-cork-50 shadow-sm'
             : 'bg-cork-200/60 text-cork-500 hover:bg-cork-300/60 hover:text-cork-700'}"
           onclick={() => toggleType(key)}
         >
-          {#if typeIcon(key)}
-            <svelte:component this={typeIcon(key)} class="size-2.5" />
+          {#if Icon}
+            <Icon class="size-2.5" />
           {/if}
           {typeLabel(key)}
         </button>
@@ -556,7 +536,6 @@
       {/if}
       <div class="flex-1"></div>
       <!-- Sort dropdown -->
-      <!-- svelte-ignore a11y_click_events_have_key_events -->
       <div class="relative" role="listbox">
         <button
           class="inline-flex cursor-pointer items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-medium text-cork-500 hover:bg-cork-200/60 hover:text-cork-700"
@@ -565,7 +544,7 @@
           }}>Sort: {SORT_OPTIONS.find((o) => o.key === sortMode)?.label}</button
         >
         {#if sortOpen}
-          <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_noninteractive_element_interactions -->
+          <!-- svelte-ignore a11y_click_events_have_key_events -->
           <span
             class="fixed inset-0 z-10"
             role="button"
@@ -574,6 +553,7 @@
               sortOpen = false;
             }}
           ></span>
+          <!-- svelte-ignore a11y_click_events_have_key_events -->
           <div
             class="absolute top-full right-0 z-20 mt-1 rounded-lg border border-gray-200 bg-white py-1 shadow-lg"
             role="listbox"
@@ -643,6 +623,7 @@
             >
               {#each sortCards(activeTypes.size > 0 ? col.cards.filter( (c) => activeTypes.has(c.type) ) : col.cards) as card (card.id)}
                 {@const pri = priorityInfo(card.priority)}
+                {@const CardIcon = typeIcon(card.type)}
 
                 <div
                   class="relative cursor-pointer rounded-r-lg bg-white px-2.5 py-1.5 transition-all duration-200 hover:shadow-md {draggingCardId ===
@@ -651,10 +632,17 @@
                     : ''}"
                   style="box-shadow: 0 1px 3px rgba(0,0,0,.06);border-left: 3px solid {pri.dot}"
                   draggable="true"
-                  role="listitem"
+                  role="button"
+                  tabindex="0"
                   ondragstart={(e) => onDragStart(e, card.id, col.id)}
                   ondragend={onDragEnd}
                   onclick={() => toggleDescription(card.id)}
+                  onkeydown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      toggleDescription(card.id);
+                    }
+                  }}
                 >
                   <!-- Title + ID -->
                   <span class="font-mono text-[10px] text-gray-400">{card.id}</span>
@@ -686,9 +674,9 @@
                         <Ban class="size-3" />
                       </button>
                     {/if}
-                    {#if typeIcon(card.type)}
+                    {#if CardIcon}
                       <span class="shrink-0 text-gray-400" title={card.type}>
-                        <svelte:component this={typeIcon(card.type)} class="size-3" />
+                        <CardIcon class="size-3" />
                       </span>
                     {/if}
                     {#if card.storyPoints}
@@ -713,7 +701,7 @@
                       {card.assignee || 'Assign'}
                       {#if pickerCardId === card.id}
                         <!-- backdrop -->
-                        <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_noninteractive_element_interactions -->
+                        <!-- svelte-ignore a11y_click_events_have_key_events -->
                         <span
                           class="fixed inset-0 z-10"
                           role="button"
@@ -723,6 +711,7 @@
                             closePicker();
                           }}
                         ></span>
+                        <!-- svelte-ignore a11y_click_events_have_key_events -->
                         <div
                           class="absolute bottom-full left-1/2 z-20 mb-1 -translate-x-1/2 rounded-lg border border-gray-200 bg-white py-1 shadow-lg"
                           role="listbox"
@@ -787,7 +776,7 @@
 {#if blockModalCardId}
   {@const blockedCard = columns.flatMap((c) => c.cards).find((c) => c.id === blockModalCardId)}
   {@const selectedBlocker = blockableCards.find((c) => c.id === blockedByInput)}
-  <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_noninteractive_element_interactions -->
+  <!-- svelte-ignore a11y_click_events_have_key_events -->
   <span
     class="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm"
     role="button"
@@ -813,7 +802,6 @@
       <div class="mt-3 space-y-3">
         <label class="block">
           <span class="text-[10px] font-medium text-cork-500">Blocked by</span>
-          <!-- svelte-ignore a11y_click_events_have_key_events -->
           <div class="relative mt-1">
             <button
               type="button"
@@ -833,7 +821,7 @@
               {/if}
             </button>
             {#if blockDropdownOpen}
-              <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_noninteractive_element_interactions -->
+              <!-- svelte-ignore a11y_click_events_have_key_events -->
               <span
                 class="fixed inset-0 z-[60]"
                 role="button"
@@ -905,7 +893,7 @@
 
 <!-- History modal -->
 {#if showHistory}
-  <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_noninteractive_element_interactions -->
+  <!-- svelte-ignore a11y_click_events_have_key_events -->
   <span
     class="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm"
     role="button"

@@ -2,11 +2,13 @@ import { db } from '$lib/server/db/index.js';
 import { frameworkInstance } from '$lib/server/db/schema.js';
 import { asc, eq } from 'drizzle-orm';
 import { json } from '@sveltejs/kit';
+import { assertProjectAccess } from '$lib/server/access.js';
 import type { RequestHandler } from './$types.js';
 
-export const GET: RequestHandler = async ({ url }) => {
+export const GET: RequestHandler = async ({ url, locals }) => {
   const projectId = Number(url.searchParams.get('projectId'));
   if (!projectId) return json({ instances: [] });
+  await assertProjectAccess(locals, projectId);
 
   try {
     const rows = await db
@@ -41,12 +43,21 @@ export const POST: RequestHandler = async ({ request, locals }) => {
     if (!projectId || !templateId || !title) {
       return json({ error: 'Missing required fields' }, { status: 400 });
     }
+    await assertProjectAccess(locals, Number(projectId));
 
     const displayName = locals.session?.user?.displayName ?? updatedBy;
 
     // Update existing instance if id is provided
     if (id && typeof id === 'string' && id.startsWith('db-')) {
       const numericId = Number(id.slice(3));
+      const [existing] = await db
+        .select({ projectId: frameworkInstance.projectId })
+        .from(frameworkInstance)
+        .where(eq(frameworkInstance.id, numericId))
+        .limit(1);
+      if (!existing) return json({ error: 'Instance not found' }, { status: 404 });
+      await assertProjectAccess(locals, existing.projectId);
+
       const [row] = await db
         .update(frameworkInstance)
         .set({
@@ -95,6 +106,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
       }
     });
   } catch (err: any) {
+    if (err && typeof err === 'object' && 'status' in err) throw err;
     console.error('Failed to save framework instance:', err?.message ?? err);
     return json({ error: 'Failed to save instance' }, { status: 500 });
   }
@@ -110,9 +122,18 @@ export const DELETE: RequestHandler = async ({ url, locals }) => {
   if (!numericId) return json({ error: 'Invalid id' }, { status: 400 });
 
   try {
+    const [existing] = await db
+      .select({ projectId: frameworkInstance.projectId })
+      .from(frameworkInstance)
+      .where(eq(frameworkInstance.id, numericId))
+      .limit(1);
+    if (!existing) return json({ error: 'Instance not found' }, { status: 404 });
+    await assertProjectAccess(locals, existing.projectId);
+
     await db.delete(frameworkInstance).where(eq(frameworkInstance.id, numericId));
     return json({ ok: true });
   } catch (err: any) {
+    if (err && typeof err === 'object' && 'status' in err) throw err;
     console.error('Failed to delete framework instance:', err?.message ?? err);
     return json({ error: 'Failed to delete instance' }, { status: 500 });
   }

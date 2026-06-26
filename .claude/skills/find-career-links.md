@@ -15,23 +15,24 @@ Given a company name, find their career/jobs page. If it works, add the source. 
 
 ## Source Types
 
-| Type | When |
-|------|------|
-| `bytedance` | ByteDance-specific API |
-| `sea` | `career.sea.com` API (old SEA careers) |
-| `sea-sg` | `ats.workatsea.com` API (unified SEA Group: Shopee, Monee, MariBank, Garena) |
-| `grab` | Grab XML career feed |
-| `workday` | Workday CXS REST API (many banks, enterprises — DBS, UOB, OCBC) |
-| `workable` | Workable `.md` endpoints (LLM-friendly markdown API) |
-| `mokahr` | MokaHR ATS (Atome — parse `init-data` for orgId, `POST /api/outer/ats-apply/website/jobs/v2`) |
-| `oracle` | Oracle HCM Candidate Experience (OCBC Indonesia — ID scanning + OG meta tags) |
-| `lever` | Lever public REST API (`GET https://api.lever.co/v0/postings/{company}?mode=json`) |
-| `html` | Server-rendered pages (Cheerio) |
-| `rss` | RSS/Atom feeds |
+| Type        | When                                                                                          |
+| ----------- | --------------------------------------------------------------------------------------------- |
+| `bytedance` | ByteDance-specific API                                                                        |
+| `sea`       | `career.sea.com` API (old SEA careers)                                                        |
+| `sea-sg`    | `ats.workatsea.com` API (unified SEA Group: Shopee, Monee, MariBank, Garena)                  |
+| `grab`      | Grab XML career feed                                                                          |
+| `workday`   | Workday CXS REST API (many banks, enterprises — DBS, UOB, OCBC)                               |
+| `workable`  | Workable `.md` endpoints (LLM-friendly markdown API)                                          |
+| `mokahr`    | MokaHR ATS (Atome — parse `init-data` for orgId, `POST /api/outer/ats-apply/website/jobs/v2`) |
+| `oracle`    | Oracle HCM Candidate Experience (OCBC Indonesia — ID scanning + OG meta tags)                 |
+| `lever`     | Lever public REST API (`GET https://api.lever.co/v0/postings/{company}?mode=json`)            |
+| `html`      | Server-rendered pages (Cheerio)                                                               |
+| `rss`       | RSS/Atom feeds                                                                                |
 
 ## APIs We Know
 
 ### ByteDance
+
 - `POST https://jobs.bytedance.com/api/v1/public/supplier/search/job/posts`
 - Headers: `website-path: en`, `x-tt-env: boe_epam_api`
 - Body: `{ keyword, location_code_list, limit, offset }`
@@ -39,12 +40,14 @@ Given a company name, find their career/jobs page. If it works, add the source. 
 - Location codes: CT_169=Jakarta, CT_163=Singapore
 
 ### SEA Group — Old (`sea` type)
+
 - `GET https://career.sea.com/api/user/job/list`
 - Params: `city_ids` (repeated), `employment_ids` (repeated), `keyword`, `limit`, `page`
 - **Pagination broken** — page > 1 repeats. Workaround: query each city separately.
 - Detail: `https://career.sea.com/position/{job_id}` (client-side redirect, broken for hotlinks)
 
 ### SEA Group — Unified ATS (`sea-sg` type)
+
 - `GET https://ats.workatsea.com/ats/api/v1/user/job/list`
 - Params: `city_ids` (repeated), `department_ids` (repeated), `employment_ids` (repeated), `limit`, `offset`, `search_content`
 - **Pagination works** — `offset`-based, `total_count` in response. Fetch all pages.
@@ -55,22 +58,23 @@ Given a company name, find their career/jobs page. If it works, add the source. 
 
 ### City IDs (shared across both SEA APIs)
 
-| ID | Location |
-|----|----------|
-| 25 | Singapore |
+| ID                   | Location  |
+| -------------------- | --------- |
+| 25                   | Singapore |
 | 10, 9, 8, 11, 12, 13 | Indonesia |
 
 ### Department IDs
 
-| ID | Department |
-|----|-----------|
-| 11 | Product Management |
-| 6 | Engineering |
-| 1 | Business Development |
+| ID  | Department           |
+| --- | -------------------- |
+| 11  | Product Management   |
+| 6   | Engineering          |
+| 1   | Business Development |
 
 ### Employment IDs: 1-3 = Experienced, 4 = Intern
 
 ### Grab XML feed
+
 - `GET https://grab.careers/en/jobs/xml/?rss=true&country=...`
 - Each `<job>` block has CDATA fields: `<title>`, `<url>`, `<city>`, `<country>`, `<description>`, `<date>`, `<category>`, `<jobtype>`
 - Description is HTML — convert `<p><strong>` and `<h1>-<h6>` to `### Headers` for modal display.
@@ -78,6 +82,7 @@ Given a company name, find their career/jobs page. If it works, add the source. 
 - Strip "About Grab and Our Workplace…" boilerplate, accounting for `###` prefix after conversion.
 
 ### Workday CXS
+
 - `POST https://{tenant}.wd{N}.myworkdayjobs.com/wday/cxs/{tenant}/{siteId}/jobs`
 - Body: `{ limit, offset, searchText, locations: string[], categories: string[] }`
 - **Max `limit` is 20** — 400 error above that.
@@ -100,6 +105,7 @@ Given a company name, find their career/jobs page. If it works, add the source. 
 - Pagination: fetch pages in parallel batches of 5, each with 30s timeout.
 
 ### Workable
+
 - Markdown-based public API — extremely easy to parse.
 - List: `GET https://apply.workable.com/{company}/jobs.md?department=X` — returns markdown table.
 - Detail: `GET https://apply.workable.com/{company}/jobs/view/{ID}.md` — structured markdown with `**Department:**`, `**Workplace:**`, `## Description`, `## Requirements`, `## Benefits`, `## Apply`.
@@ -110,6 +116,7 @@ Given a company name, find their career/jobs page. If it works, add the source. 
 - Detail page has company boilerplate — strip per-company (e.g. Funding Societies: `**Funding Societies | Modalku** is the largest...`).
 
 ### MokaHR
+
 - SPA with hidden `<input id="init-data" type="hidden" value="{JSON}">`. Extract `org.id` and `org.siteId`.
 - List API: `POST https://{host}/api/outer/ats-apply/website/jobs/v2` with body `{ siteId, orgId, locale: "en-US", page, pageSize, location: ["Singapore"|"Indonesia"] }`.
 - **Location filter may not work** — response includes all locations. The `location` param only affects `total` count in `jobStats`.
@@ -119,6 +126,7 @@ Given a company name, find their career/jobs page. If it works, add the source. 
 - Recruit type from `commitment`: "实习" or "intern" → intern.
 
 ### Oracle HCM Candidate Experience
+
 - **Limited reliability** — can't distinguish open from closed jobs in raw HTML.
 - Job detail pages: `GET https://{host}/hcmUI/CandidateExperience/en/sites/{siteNumber}/job/{id}/` — server-rendered with OG meta tags (`og:title`, `og:description`).
 - Job IDs are roughly sequential (higher = newer). Scan IDs in batches to discover valid pages.
@@ -128,6 +136,7 @@ Given a company name, find their career/jobs page. If it works, add the source. 
 - Closed jobs self-clean via 30-day `staleCutoff`.
 
 ### Lever
+
 - **Best public API** — clean JSON, no auth, full data.
 - `GET https://api.lever.co/v0/postings/{company}?mode=json`
 - Returns array of job objects: `{ id, text (title), categories: { department, location, commitment }, country, descriptionPlain, lists: [{ text, content }], hostedUrl, applyUrl, createdAt, workplaceType }`.
@@ -138,6 +147,7 @@ Given a company name, find their career/jobs page. If it works, add the source. 
 - Strip per-company boilerplate from descriptions (e.g. GoTo: "About GoTo Group...", "About Gojek...", "About GoTo Financial...").
 
 ### Catapa
+
 - Public careerpage API — no auth needed (`credentials: "omit"`).
 - List: `GET https://api-apps.catapa.com/careerpage/{company}/jobs` — returns `{ content: [{ id, tenant, jobTitle: { name, code }, code, titleDescription, jobDetail: { description, qualifications }, location: { name, code }, jobStatus, jobType, organization: { name }, createdDate, ... }] }`.
 - Detail: `GET https://api-apps.catapa.com/careerpage/{company}/jobs/{jobId}`.
@@ -165,6 +175,7 @@ Note: "Productive" in titles (e.g. "Credit Analyst (Productive / Secured Financi
 ## Key Utilities
 
 All in `jobs.ts`:
+
 - `extractMinExperienceYears` — strips "up to N years" ceilings first, then matches range/plus/threshold patterns.
 - `inferExperienceFromTitle` — title-based fallback when description doesn't state years: SVP/Head→10, VP→7, AVP→5, Senior→4, Officer/Analyst/Manager→2, Intern/Trainee→0. Applied in dispatcher for ALL sources when `experienceYears` is null.
 - `appearsExpired` — checks description for expiration clues.
@@ -185,6 +196,7 @@ The `/api/jobs/fetch` handler snapshots existing `viewedAt` keyed by canonical j
 ## Merge Groups
 
 In `+page.svelte` `groupedSources`: merge sources by name prefix for multi-entity companies:
+
 - SEA Group: `s.type === 'sea' || s.type === 'sea-sg'`
 - OCBC Group: `/ocbc/i.test(s.name)` — merges Workday (SG) + Oracle (ID)
 

@@ -6,6 +6,7 @@ import {
   businessOutcome
 } from '$lib/server/db/schema.js';
 import { eq, asc } from 'drizzle-orm';
+import { assertProjectAccess } from '$lib/server/access.js';
 import type { PageServerLoad } from './$types.js';
 
 export interface ExperienceTouchpointData {
@@ -55,11 +56,12 @@ function deriveEmotion(
   return { label, score };
 }
 
-export const load: PageServerLoad = async ({ url, parent }) => {
+export const load: PageServerLoad = async ({ url, parent, locals }) => {
   const { projects } = await parent();
   const projectId = Number(url.searchParams.get('project')) || projects[0]?.id;
 
   if (!projectId) return { activities: [] };
+  await assertProjectAccess(locals, projectId);
 
   const phases = await db
     .select()

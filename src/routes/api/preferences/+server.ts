@@ -2,6 +2,7 @@ import { json } from '@sveltejs/kit';
 import { db } from '$lib/server/db/index.js';
 import { appUser } from '$lib/server/db/schema.js';
 import { eq } from 'drizzle-orm';
+import { assertProjectAccess, assertWorkspaceAccess } from '$lib/server/access.js';
 import type { RequestHandler } from './$types.js';
 
 export const GET: RequestHandler = async ({ locals }) => {
@@ -22,6 +23,12 @@ export const POST: RequestHandler = async ({ request, locals }) => {
   if (!authId) return json({}, { status: 401 });
 
   const body = await request.json();
+  if (body.lastWorkspaceId !== undefined && body.lastWorkspaceId !== null) {
+    await assertWorkspaceAccess(locals, Number(body.lastWorkspaceId));
+  }
+  if (body.lastProjectId !== undefined && body.lastProjectId !== null) {
+    await assertProjectAccess(locals, Number(body.lastProjectId));
+  }
 
   const [existing] = await db
     .select({ preferences: appUser.preferences })

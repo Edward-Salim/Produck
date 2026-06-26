@@ -32,7 +32,11 @@
     animation: loading-slide 1.2s ease-in-out infinite;
   }
   @keyframes loading-slide {
-    0% { transform: translateX(-100%); }
-    100% { transform: translateX(400%); }
+    0% {
+      transform: translateX(-100%);
+    }
+    100% {
+      transform: translateX(400%);
+    }
   }
 </style>

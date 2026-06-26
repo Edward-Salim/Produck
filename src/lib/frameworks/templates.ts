@@ -173,7 +173,8 @@ export const FRAMEWORK_TEMPLATES: FrameworkTemplate[] = [
       },
       { term: 'Kano', definition: 'Must-Have, Performance, or Delighter priority class.' },
       { term: 'PIC', definition: 'Person In Charge. Assign an owner to each story.' }
-    ]
+    ],
+    coverGradient: 'linear-gradient(135deg, #fdf1d8 0%, #efd8b8 50%, #ddc6a8 100%)'
   },
   {
     id: 'backlog',
@@ -193,7 +194,8 @@ export const FRAMEWORK_TEMPLATES: FrameworkTemplate[] = [
         definition: 'conditions that must be met for the story to be considered done.'
       },
       { term: 'Kano', definition: 'priority classification for the story.' }
-    ]
+    ],
+    coverGradient: 'linear-gradient(135deg, #f8ecd8 0%, #e7d4b8 50%, #d8c2a4 100%)'
   },
   {
     id: 'kanban',
@@ -232,7 +234,8 @@ export const FRAMEWORK_TEMPLATES: FrameworkTemplate[] = [
         term: 'Assignee',
         definition: 'person responsible for the card. Click the badge to assign or reassign.'
       }
-    ]
+    ],
+    coverGradient: 'linear-gradient(135deg, #f4ead8 0%, #dfcfb8 50%, #cdbca4 100%)'
   },
   {
     id: 'assumption-test',
@@ -250,6 +253,7 @@ export const FRAMEWORK_TEMPLATES: FrameworkTemplate[] = [
       { term: 'Viability', definition: 'is it good for the business?' },
       { term: 'Importance', definition: 'how critical the assumption is.' },
       { term: 'Evidence', definition: 'how much data supports or refutes it.' }
-    ]
+    ],
+    coverGradient: 'linear-gradient(135deg, #fff4dc 0%, #ecd9bd 50%, #d9c5ac 100%)'
   }
 ];

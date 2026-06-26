@@ -1,12 +1,6 @@
 <script lang="ts">
   import { tick, onMount } from 'svelte';
-  import {
-    Heart,
-    Send,
-    ArrowRight,
-    SkipForward,
-    Lightbulb
-  } from '@lucide/svelte';
+  import { Heart, Send, ArrowRight, SkipForward, Lightbulb } from '@lucide/svelte';
   import type { GameEngine } from './game-engine.svelte.js';
   import { isPunct } from './game-engine.svelte.js';
 
@@ -17,7 +11,7 @@
   onMount(() => {
     const mq = window.matchMedia('(max-width: 768px)');
     isMobile = mq.matches;
-    const handler = (e: MediaQueryListEvent) => isMobile = e.matches;
+    const handler = (e: MediaQueryListEvent) => (isMobile = e.matches);
     mq.addEventListener('change', handler);
     return () => mq.removeEventListener('change', handler);
   });
@@ -50,13 +44,10 @@
     });
   });
 
-  // ── Check answer advance timer ──
-  let advanceTimer: ReturnType<typeof setTimeout>;
-
   function doCheckAnswer() {
     engine.checkAnswer();
     if (engine.feedback === 'correct') {
-      advanceTimer = setTimeout(() => {
+      setTimeout(() => {
         engine.advancing = false;
         engine.showNextSentence();
       }, 600);
@@ -79,7 +70,9 @@
   function onSlotInput(index: number) {
     if (isComposing) return;
     if (engine.hintedSlots.has(index)) {
-      engine.userChars[index] = engine.currentSentence ? [...engine.currentSentence.hanzi][index] : '';
+      engine.userChars[index] = engine.currentSentence
+        ? [...engine.currentSentence.hanzi][index]
+        : '';
       return;
     }
     let val = engine.userChars[index];
@@ -180,7 +173,7 @@
       : 'streak-overlay-idle'}"
 >
   {#if heat === 'blaze' || heat === 'inferno'}
-    {@const count = isMobile ? (heat === 'inferno' ? 10 : 6) : (heat === 'inferno' ? 24 : 14)}
+    {@const count = isMobile ? (heat === 'inferno' ? 10 : 6) : heat === 'inferno' ? 24 : 14}
     <div
       class="particles"
       aria-hidden="true"
@@ -206,7 +199,10 @@
     <div class="flex items-center gap-1 md:gap-1.5">
       {#each Array(maxHealth) as _, i}
         {#if i < engine.health}
-          <span class="scale-100 transition-all duration-300" class:heart-gain={engine.justGainedHealth}>
+          <span
+            class="scale-100 transition-all duration-300"
+            class:heart-gain={engine.justGainedHealth}
+          >
             <Heart class="drop-shadow-red size-5 fill-red-500 text-red-500 md:size-6" />
           </span>
         {:else}
@@ -217,8 +213,13 @@
       {/each}
       {#if engine.bonusHearts > 0}
         {#each Array(engine.bonusHearts) as _}
-          <span class="scale-100 transition-all duration-300" class:heart-gain={engine.justGainedHealth}>
-            <Heart class="size-5 fill-amber-400 text-amber-400 drop-shadow-[0_0_6px_rgba(251,191,36,0.6)] md:size-6" />
+          <span
+            class="scale-100 transition-all duration-300"
+            class:heart-gain={engine.justGainedHealth}
+          >
+            <Heart
+              class="size-5 fill-amber-400 text-amber-400 drop-shadow-[0_0_6px_rgba(251,191,36,0.6)] md:size-6"
+            />
           </span>
         {/each}
       {/if}
@@ -228,8 +229,7 @@
       <div
         class="flex items-center gap-1 rounded-full bg-cork-100 px-2 py-0.5 md:gap-1.5 md:px-3 md:py-1"
       >
-        <span
-          class="text-[9px] font-medium tracking-wider text-cork-400 uppercase md:text-[10px]"
+        <span class="text-[9px] font-medium tracking-wider text-cork-400 uppercase md:text-[10px]"
           >Score</span
         >
         <span class="font-display text-sm text-cork-700 md:text-base">{engine.totalCorrect}</span>
@@ -237,11 +237,12 @@
       <div
         class="flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 md:gap-1.5 md:px-3 md:py-1"
       >
-        <span
-          class="text-[9px] font-medium tracking-wider text-amber-500 uppercase md:text-[10px]"
+        <span class="text-[9px] font-medium tracking-wider text-amber-500 uppercase md:text-[10px]"
           >Best</span
         >
-        <span class="font-display text-sm text-amber-700 md:text-base">{engine.highscore.score}</span>
+        <span class="font-display text-sm text-amber-700 md:text-base"
+          >{engine.highscore.score}</span
+        >
       </div>
     </div>
   </div>
@@ -255,9 +256,7 @@
     >
       {#if engine.feedback === null}
         {#if heat}
-          <p
-            class="streak-text mb-2 text-xs font-semibold tracking-widest uppercase md:text-sm"
-          >
+          <p class="streak-text mb-2 text-xs font-semibold tracking-widest uppercase md:text-sm">
             {engine.streak} streak
           </p>
         {/if}
@@ -284,7 +283,9 @@
                 autocomplete="off"
                 autocorrect="off"
                 spellcheck="false"
-                class="char-slot {engine.userChars[i] ? 'filled' : 'empty'} {engine.hintedSlots.has(i)
+                class="char-slot {engine.userChars[i] ? 'filled' : 'empty'} {engine.hintedSlots.has(
+                  i
+                )
                   ? 'hinted'
                   : ''}"
                 bind:value={engine.userChars[i]}
@@ -300,9 +301,7 @@
         </div>
       {:else if engine.feedback === 'correct'}
         {#if heat}
-          <p
-            class="streak-text mb-2 text-xs font-semibold tracking-widest uppercase md:text-sm"
-          >
+          <p class="streak-text mb-2 text-xs font-semibold tracking-widest uppercase md:text-sm">
             {engine.streak} streak
           </p>
         {/if}
@@ -322,9 +321,7 @@
         </div>
       {:else if engine.feedback === 'wrong'}
         {#if heat}
-          <p
-            class="streak-text mb-2 text-xs font-semibold tracking-widest uppercase md:text-sm"
-          >
+          <p class="streak-text mb-2 text-xs font-semibold tracking-widest uppercase md:text-sm">
             {engine.bestStreak} streak lost
           </p>
         {/if}
@@ -348,9 +345,7 @@
                 {@const ok = uc === correctChar}
                 <div class="char-result-stack">
                   <div class="char-slot {uc ? 'filled' : 'empty'}">
-                    <span class="char-result-char {ok ? 'char-ok' : 'char-bad'}"
-                      >{uc || ''}</span
-                    >
+                    <span class="char-result-char {ok ? 'char-ok' : 'char-bad'}">{uc || ''}</span>
                   </div>
                   {#if !ok}
                     <span class="char-result-hint">{correctChar}</span>

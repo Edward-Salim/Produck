@@ -1,6 +1,7 @@
 import { db } from '$lib/server/db/index.js';
 import { interviewSnapshot } from '$lib/server/db/schema.js';
 import { eq, desc } from 'drizzle-orm';
+import { assertProjectAccess } from '$lib/server/access.js';
 import type { PageServerLoad } from './$types.js';
 
 export interface SnapshotRow {
@@ -16,9 +17,10 @@ export interface SnapshotRow {
   transcript: string | null;
 }
 
-export const load: PageServerLoad = async ({ cookies }) => {
+export const load: PageServerLoad = async ({ cookies, locals }) => {
   const projectId = Number(cookies.get('active_project'));
   if (!projectId) return { snapshots: [] as SnapshotRow[] };
+  await assertProjectAccess(locals, projectId);
 
   const rows = await db
     .select()

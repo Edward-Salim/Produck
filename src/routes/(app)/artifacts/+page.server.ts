@@ -1,6 +1,7 @@
 import { db } from '$lib/server/db/index.js';
 import { pmBook, pmArtifact, pmMethodology, artifactPick } from '$lib/server/db/schema.js';
 import { asc, eq } from 'drizzle-orm';
+import { assertProjectAccess } from '$lib/server/access.js';
 import type { PageServerLoad } from './$types.js';
 
 export interface BookData {
@@ -38,10 +39,11 @@ export interface MethodologyData {
   figure: string | null;
 }
 
-export const load: PageServerLoad = async ({ cookies }) => {
-  try {
-    const projectId = Number(cookies.get('active_project'));
+export const load: PageServerLoad = async ({ cookies, locals }) => {
+  const projectId = Number(cookies.get('active_project'));
+  if (projectId) await assertProjectAccess(locals, projectId);
 
+  try {
     // Load books
     const books = await db.select().from(pmBook).orderBy(asc(pmBook.title));
 

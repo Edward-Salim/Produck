@@ -41,7 +41,6 @@
     CategoryRow,
     InvestmentRow,
     LedgerEntry,
-    MoneyRow,
     MonthlySummary,
     TrackerData
   } from './financial-tracker-data';
@@ -2804,63 +2803,6 @@
               <td colspan="5" class="text-center text-cork-400">No debt schedule entered yet</td>
             </tr>
           {/if}
-        </tbody>
-      </table>
-    </div>
-  </div>
-{/snippet}
-
-{#snippet CompactTable(
-  icon: typeof WalletCards,
-  title: string,
-  rows: MoneyRow[],
-  showProgress = false
-)}
-  <div class="panel">
-    {@render PanelTitle(icon, title)}
-    <div class="overflow-x-auto">
-      <table class="tracker-table">
-        <thead>
-          <tr>
-            <th>{title}</th>
-            {@render MoneyHead('Planned')}
-            {@render MoneyHead('Actual')}
-            {#if showProgress}
-              <th>Progress</th>
-            {/if}
-          </tr>
-        </thead>
-        <tbody>
-          {#each rows as row (row.label)}
-            <tr>
-              <td>{row.label}</td>
-              {@render MoneyCell(row.planned)}
-              {@render MoneyCell(row.actual)}
-              {#if showProgress}
-                <td>
-                  <div class="flex min-w-20 items-center gap-1.5">
-                    <div class="h-1.5 flex-1 rounded-full bg-cork-200">
-                      <div
-                        class="h-full rounded-full bg-blue-500"
-                        style:width={`${progress(row.actual, row.planned)}%`}
-                      ></div>
-                    </div>
-                    <span class="w-9 text-right"
-                      >{progress(row.actual, row.planned).toFixed(1)}%</span
-                    >
-                  </div>
-                </td>
-              {/if}
-            </tr>
-          {/each}
-          <tr class="total-row">
-            <td>Total</td>
-            {@render MoneyCell(total(rows, 'planned'))}
-            {@render MoneyCell(total(rows, 'actual'))}
-            {#if showProgress}
-              <td>{progress(total(rows, 'actual'), total(rows, 'planned')).toFixed(1)}%</td>
-            {/if}
-          </tr>
         </tbody>
       </table>
     </div>

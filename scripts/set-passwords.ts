@@ -36,10 +36,7 @@ const emails = ['kelvin.saputra@produck.com', 'acquaintance@produck.app'];
 async function main() {
   const hash = hashPassword('REDACTED_PASSWORD');
   for (const email of emails) {
-    const result = await db
-      .update(appUser)
-      .set({ passwordHash: hash })
-      .where(eq(appUser.email, email));
+    await db.update(appUser).set({ passwordHash: hash }).where(eq(appUser.email, email));
     console.log(`Set password for ${email}`);
   }
   await client.end();

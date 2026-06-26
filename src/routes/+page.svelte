@@ -19,8 +19,8 @@
   } from '@lucide/svelte';
 
   // Static assets & SVGs from SVGL CLI
-  import edwardAvatar from '$lib/assets/edward.jpg';
-  import logoProduck from '$lib/assets/logo-produck.png';
+  import edwardAvatar from '$lib/assets/edward.jpg?enhanced';
+  import logoProduck from '$lib/assets/logo-produck.png?enhanced';
   import linkedinSvg from '$lib/assets/tech/linkedin.svg';
   import githubSvg from '$lib/assets/tech/github_light.svg';
   import pythonSvg from '$lib/assets/tech/python.svg';
@@ -57,7 +57,7 @@
   import rasioImg from '$lib/assets/awards/award-rasio.png';
   import techfestImg from '$lib/assets/awards/award-techfest.png';
   import churnImg from '$lib/assets/projects/project-churn.png';
-  import uiCampusImg from '$lib/assets/education/ui-campus.png';
+  import uiCampusImg from '$lib/assets/education/ui-campus.png?enhanced';
   import ddp0SpeakerCertImg from '$lib/assets/speaking/ddp0-speaker-certificate.png';
   import ukmKmbuiSharingCertImg from '$lib/assets/speaking/ukm-kmbui-sharing-certificate.png';
   import ruangguruUtbkSpeakerCertImg from '$lib/assets/speaking/ruangguru-utbk-speaker-certificate.png';
@@ -895,6 +895,14 @@
     name="description"
     content="Personal portfolio and fintech workspace of Edward Salim. Information Systems at Universitas Indonesia, Automation Product Developer, and Data Science Champion."
   />
+  <meta name="robots" content="index, follow" />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Edward Salim | Portfolio & Fintech Workspace" />
+  <meta
+    property="og:description"
+    content="Personal portfolio and fintech workspace of Edward Salim. Information Systems at Universitas Indonesia, Automation Product Developer, and Data Science Champion."
+  />
+  <meta name="twitter:card" content="summary" />
 </svelte:head>
 
 <!-- Global Layout Container (Luxury Fintech Theme: Charcoal & Gold/Crimson) -->
@@ -1176,7 +1184,7 @@
       <div class="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
         <div class="flex items-center gap-3">
           <a href="/dashboard" class="group flex items-center gap-2">
-            <img
+            <enhanced:img
               src={logoProduck}
               alt="Produck Logo"
               class="size-6 object-contain transition-transform group-hover:scale-105"
@@ -1393,9 +1401,10 @@
               <div
                 class="relative rounded-2xl bg-gradient-to-tr from-amber-50 via-amber-200 to-amber-600 p-1.5 shadow-xl shadow-amber-500/10"
               >
-                <img
+                <enhanced:img
                   src={edwardAvatar}
                   alt="Edward Salim"
+                  fetchpriority="high"
                   class="size-44 rounded-xl border border-stone-900 object-cover sm:size-52 md:size-60"
                 />
 
@@ -1521,9 +1530,10 @@
           class="relative overflow-hidden rounded-2xl border-2 border-amber-600/40 bg-gradient-to-br from-[#181514] to-[#120F0E] p-6 shadow-xl md:p-8"
         >
           <div class="absolute inset-0">
-            <img
+            <enhanced:img
               src={uiCampusImg}
               alt="Universitas Indonesia campus"
+              loading="lazy"
               class="h-full w-full object-cover object-center opacity-38"
             />
             <div
@@ -1633,6 +1643,8 @@
                     <img
                       src={exp.logo}
                       alt={exp.company}
+                      loading="lazy"
+                      decoding="async"
                       class="size-full object-contain brightness-100 filter"
                     />
                   </div>
@@ -1799,6 +1811,8 @@
                           <img
                             src={att.image}
                             alt={`${item.organization} ${att.name}`}
+                            loading="lazy"
+                            decoding="async"
                             class="h-28 w-full object-cover object-center transition-transform duration-300 group-hover:scale-[1.02]"
                           />
                         </button>
@@ -1837,6 +1851,8 @@
                         <img
                           src={group.logo}
                           alt={`${group.organization} logo`}
+                          loading="lazy"
+                          decoding="async"
                           class="h-full w-full object-cover object-center"
                         />
                       {:else}
@@ -1951,6 +1967,8 @@
                         <img
                           src={group.logo}
                           alt={`${group.organization} logo`}
+                          loading="lazy"
+                          decoding="async"
                           class="h-full w-full object-cover object-center"
                         />
                       {:else}
@@ -2054,6 +2072,8 @@
                   <img
                     src={project.image}
                     alt={project.title}
+                    loading="lazy"
+                    decoding="async"
                     class="size-full object-cover transition-transform duration-500 hover:scale-105"
                   />
                 </button>
@@ -2148,7 +2168,13 @@
                 class="relative flex h-44 w-full items-center justify-center overflow-hidden bg-[#141211]"
               >
                 {#if award.image}
-                  <img src={award.image} alt={award.competition} class="size-full object-cover" />
+                  <img
+                    src={award.image}
+                    alt={award.competition}
+                    loading="lazy"
+                    decoding="async"
+                    class="size-full object-cover"
+                  />
                   <div
                     class="absolute inset-0 bg-black/0 transition-colors duration-300 group-hover:bg-black/20"
                   ></div>
@@ -2253,6 +2279,8 @@
                 <img
                   src="/covers/{book.cover}"
                   alt="{book.title} cover"
+                  loading="lazy"
+                  decoding="async"
                   class="h-full w-full rounded-sm border border-stone-800 object-cover shadow-md"
                 />
               </div>
@@ -2447,6 +2475,7 @@
       <img
         src={lightboxImage}
         alt={lightboxTitle}
+        decoding="async"
         class="mx-auto max-h-[75vh] w-auto max-w-full object-contain"
       />
     </div>

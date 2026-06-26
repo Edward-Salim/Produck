@@ -2,11 +2,13 @@ import { json } from '@sveltejs/kit';
 import { db } from '$lib/server/db/index.js';
 import { appUser } from '$lib/server/db/schema.js';
 import { eq } from 'drizzle-orm';
+import { assertWorkspaceAccess } from '$lib/server/access.js';
 import type { RequestHandler } from './$types.js';
 
 export const POST: RequestHandler = async ({ request, cookies, locals }) => {
   const { workspaceId } = await request.json();
   if (!workspaceId) return json({ error: 'Missing workspaceId' }, { status: 400 });
+  await assertWorkspaceAccess(locals, Number(workspaceId));
 
   cookies.set('active_workspace', String(workspaceId), {
     path: '/',

@@ -2,6 +2,7 @@ import { json } from '@sveltejs/kit';
 import { db } from '$lib/server/db/index.js';
 import { rssSource } from '$lib/server/db/schema.js';
 import { eq } from 'drizzle-orm';
+import { assertAdmin } from '$lib/server/access.js';
 import type { RequestHandler } from './$types.js';
 
 // List all sources (workspace-agnostic)
@@ -11,7 +12,9 @@ export const GET: RequestHandler = async () => {
 };
 
 // Add a new source
-export const POST: RequestHandler = async ({ request }) => {
+export const POST: RequestHandler = async ({ request, locals }) => {
+  await assertAdmin(locals);
+
   const body = await request.json();
   const { name, url: feedUrl, category, region } = body;
 
@@ -33,7 +36,9 @@ export const POST: RequestHandler = async ({ request }) => {
 };
 
 // Update a source (toggle enabled, edit name/url/category)
-export const PATCH: RequestHandler = async ({ request }) => {
+export const PATCH: RequestHandler = async ({ request, locals }) => {
+  await assertAdmin(locals);
+
   const body = await request.json();
   const { id, name, url: feedUrl, category, enabled } = body;
 
@@ -54,7 +59,9 @@ export const PATCH: RequestHandler = async ({ request }) => {
 };
 
 // Delete a source
-export const DELETE: RequestHandler = async ({ url }) => {
+export const DELETE: RequestHandler = async ({ url, locals }) => {
+  await assertAdmin(locals);
+
   const id = Number(url.searchParams.get('id'));
   if (!id) return json({ error: 'Missing id' }, { status: 400 });
 

@@ -1,6 +1,7 @@
 import { db } from '$lib/server/db/index.js';
 import { businessOutcome, productObjective, keyResult } from '$lib/server/db/schema.js';
 import { eq, asc } from 'drizzle-orm';
+import { assertProjectAccess } from '$lib/server/access.js';
 import type { PageServerLoad } from './$types.js';
 
 export interface KRRow {
@@ -33,9 +34,10 @@ export interface BORow {
   year: number;
 }
 
-export const load: PageServerLoad = async ({ cookies }) => {
+export const load: PageServerLoad = async ({ cookies, locals }) => {
   const projectId = Number(cookies.get('active_project'));
   if (!projectId) return { businessOutcomes: [], objectives: [], availableYears: [] };
+  await assertProjectAccess(locals, projectId);
 
   const bos = await db
     .select()

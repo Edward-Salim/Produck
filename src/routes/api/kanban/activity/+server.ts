@@ -2,6 +2,7 @@ import { db } from '$lib/server/db/index.js';
 import { kanbanActivity } from '$lib/server/db/schema.js';
 import { desc, eq } from 'drizzle-orm';
 import { json } from '@sveltejs/kit';
+import { assertProjectAccess } from '$lib/server/access.js';
 
 const COLUMN_LABELS: Record<string, string> = {
   'col-todo': 'To Do',
@@ -11,9 +12,10 @@ const COLUMN_LABELS: Record<string, string> = {
   'col-done': 'Done'
 };
 
-export async function GET({ url }) {
+export async function GET({ url, locals }) {
   const projectId = Number(url.searchParams.get('projectId'));
   if (!projectId) return json({ activities: [] });
+  await assertProjectAccess(locals, projectId);
 
   try {
     const rows = await db

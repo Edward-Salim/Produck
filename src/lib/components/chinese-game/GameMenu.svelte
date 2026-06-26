@@ -4,7 +4,11 @@
   import type { GameEngine } from './game-engine.svelte.js';
   import { levelColorConfig } from './game-engine.svelte.js';
 
-  let { engine, levelNames, levelSentenceCounts }: {
+  let {
+    engine,
+    levelNames,
+    levelSentenceCounts
+  }: {
     engine: GameEngine;
     levelNames: Record<string, string>;
     levelSentenceCounts: Record<number, number>;
@@ -20,9 +24,11 @@
   onMount(() => {
     const mq = window.matchMedia('(max-width: 768px)');
     butterflyCount = mq.matches ? 8 : 20;
-    const handler = (e: MediaQueryListEvent) => butterflyCount = e.matches ? 8 : 20;
+    const handler = (e: MediaQueryListEvent) => (butterflyCount = e.matches ? 8 : 20);
     mq.addEventListener('change', handler);
-    setTimeout(() => { hasEntered = true; }, 600);
+    setTimeout(() => {
+      hasEntered = true;
+    }, 600);
     return () => mq.removeEventListener('change', handler);
   });
 </script>
@@ -30,7 +36,7 @@
 <!-- Floating butterflies -->
 <div class="butterflies" aria-hidden="true">
   {#each Array(butterflyCount) as _, i}
-    {@const size = 0.45 + (i * 0.06) % 0.4}
+    {@const size = 0.45 + ((i * 0.06) % 0.4)}
     {@const hue = ['amber', 'gold', 'coral', 'rose', 'cream', 'ink'][i % 6]}
     <div
       class="butterfly butterfly-{i} butterfly--{hue}"
@@ -90,21 +96,27 @@
           <div class="flex flex-1 flex-col justify-center gap-3 py-6">
             <button
               type="button"
-              class="flex w-full cursor-pointer {entrance(5)} items-center justify-center rounded-lg bg-red-700 px-6 py-3 font-display text-xl text-amber-100 transition-all hover:bg-red-600 hover:shadow-md hover:shadow-red-900/30"
+              class="flex w-full cursor-pointer {entrance(
+                5
+              )} items-center justify-center rounded-lg bg-red-700 px-6 py-3 font-display text-xl text-amber-100 transition-all hover:bg-red-600 hover:shadow-md hover:shadow-red-900/30"
               onclick={() => engine.openDifficulty()}
             >
               Start Game
             </button>
             <button
               type="button"
-              class="flex w-full cursor-pointer {entrance(5)} items-center justify-center rounded-lg bg-cork-700 px-6 py-3 font-display text-xl text-cork-200 transition-all hover:bg-cork-600 hover:shadow-md"
+              class="flex w-full cursor-pointer {entrance(
+                5
+              )} items-center justify-center rounded-lg bg-cork-700 px-6 py-3 font-display text-xl text-cork-200 transition-all hover:bg-cork-600 hover:shadow-md"
               onclick={() => engine.openOptions()}
             >
               Options
             </button>
             <a
               href="/tools"
-              class="flex w-full cursor-pointer {entrance(5)} items-center justify-center rounded-lg bg-cork-700 px-6 py-3 font-display text-xl text-cork-200 transition-all hover:bg-cork-600 hover:shadow-md"
+              class="flex w-full cursor-pointer {entrance(
+                5
+              )} items-center justify-center rounded-lg bg-cork-700 px-6 py-3 font-display text-xl text-cork-200 transition-all hover:bg-cork-600 hover:shadow-md"
             >
               Back
             </a>
@@ -116,13 +128,18 @@
               >High Score</span
             >
             {#if engine.restored}
-              <span class="mx-1.5 font-display text-base text-amber-300">{engine.highscore.score}</span>
+              <span class="mx-1.5 font-display text-base text-amber-300"
+                >{engine.highscore.score}</span
+              >
               {#if engine.highscore.name}
                 <span class="text-[10px] text-amber-400/60">by {engine.highscore.name}</span>
               {/if}
             {:else}
-              <span class="mx-1.5 inline-block h-4 w-10 animate-pulse rounded bg-amber-400/20 align-middle"></span>
-              <span class="inline-block h-3 w-16 animate-pulse rounded bg-amber-400/10 align-middle"></span>
+              <span
+                class="mx-1.5 inline-block h-4 w-10 animate-pulse rounded bg-amber-400/20 align-middle"
+              ></span>
+              <span class="inline-block h-3 w-16 animate-pulse rounded bg-amber-400/10 align-middle"
+              ></span>
             {/if}
           </div>
         {:else if engine.menuScreen === 'difficulty'}
@@ -130,9 +147,8 @@
 
           <!-- Instructions -->
           <p class="mb-4 text-center text-xs leading-relaxed text-cork-300">
-            Pick levels, hit Begin. <strong class="font-semibold text-amber-400"
-              >3 hearts</strong
-            >, gain up to 5. Lose one per mistake.
+            Pick levels, hit Begin. <strong class="font-semibold text-amber-400">3 hearts</strong>,
+            gain up to 5. Lose one per mistake.
           </p>
 
           <!-- Level grid -->
@@ -143,14 +159,17 @@
               {@const isMastered = engine.isLevelMastered(level)}
               {@const total = levelSentenceCounts[level] ?? 0}
               {@const done = (engine.masteredHanzi[level] ?? []).length}
-              {@const colors =
-                levelColorConfig[Math.min(level - 1, levelColorConfig.length - 1)]}
+              {@const colors = levelColorConfig[Math.min(level - 1, levelColorConfig.length - 1)]}
               {@const isSelected = engine.selectedLevels.has(level)}
-              {@const goldText = isMastered && !isSelected ? 'text-amber-300 drop-shadow-[0_0_6px_rgba(251,191,36,0.4)]' : ''}
+              {@const goldText =
+                isMastered && !isSelected
+                  ? 'text-amber-300 drop-shadow-[0_0_6px_rgba(251,191,36,0.4)]'
+                  : ''}
               <button
                 type="button"
                 disabled={!isActive}
-                class="flex w-full cursor-pointer items-center justify-between rounded-lg border px-3 py-2 text-left transition-all {isMastered && isSelected
+                class="flex w-full cursor-pointer items-center justify-between rounded-lg border px-3 py-2 text-left transition-all {isMastered &&
+                isSelected
                   ? colors.mastered + ' gold-plated'
                   : isSelected
                     ? colors.active

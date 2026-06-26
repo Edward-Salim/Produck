@@ -5,13 +5,20 @@ export function createParser(): Parser {
     timeout: 20000,
     headers: { 'User-Agent': 'Mozilla/5.0 (compatible; Produck RSS Reader/1.0)' },
     customFields: {
-      item: [['media:content', 'media:content', { keepArray: true }], ['media:thumbnail', 'media:thumbnail', { keepArray: true }]]
+      item: [
+        ['media:content', 'media:content', { keepArray: true }],
+        ['media:thumbnail', 'media:thumbnail', { keepArray: true }]
+      ]
     }
   });
 }
 
 /** Extract the best available image from an RSS item. Pass the full HTML content as fallback. */
-export function extractImage(item: Parser.Item, articleUrl?: string | null, htmlContent?: string | null): string | null {
+export function extractImage(
+  item: Parser.Item,
+  articleUrl?: string | null,
+  htmlContent?: string | null
+): string | null {
   const baseUrl = articleUrl ? new URL(articleUrl).origin : null;
 
   function resolve(src: string): string {
@@ -19,7 +26,11 @@ export function extractImage(item: Parser.Item, articleUrl?: string | null, html
     if (src.startsWith('//')) return 'https:' + src;
     if (src.startsWith('/') && baseUrl) return baseUrl + src;
     if (baseUrl && articleUrl) {
-      try { return new URL(src, articleUrl).href; } catch { return src; }
+      try {
+        return new URL(src, articleUrl).href;
+      } catch {
+        return src;
+      }
     }
     return src;
   }
@@ -27,14 +38,16 @@ export function extractImage(item: Parser.Item, articleUrl?: string | null, html
   // 1. enclosure (most common, parsed by default)
   if (item.enclosure?.url) {
     const url = item.enclosure.url;
-    if (item.enclosure.type?.startsWith('image/') || /\.(jpg|jpeg|png|webp|gif|svg)(\?|$)/i.test(url)) {
+    if (
+      item.enclosure.type?.startsWith('image/') ||
+      /\.(jpg|jpeg|png|webp|gif|svg)(\?|$)/i.test(url)
+    ) {
       return resolve(url);
     }
   }
 
   // 2. media:thumbnail array (custom field)
-  const thumbs: { $?: { url?: string; width?: string } }[] =
-    (item as any)['media:thumbnail'] ?? [];
+  const thumbs: { $?: { url?: string; width?: string } }[] = (item as any)['media:thumbnail'] ?? [];
   if (thumbs.length > 0) {
     const sorted = [...thumbs]
       .filter((t) => t.$?.url)
@@ -47,9 +60,7 @@ export function extractImage(item: Parser.Item, articleUrl?: string | null, html
   const contents: { $?: { url?: string; medium?: string; type?: string } }[] =
     (item as any)['media:content'] ?? [];
   const image = contents.find(
-    (c) =>
-      c.$?.url &&
-      (c.$.medium === 'image' || c.$?.type?.startsWith('image/'))
+    (c) => c.$?.url && (c.$.medium === 'image' || c.$?.type?.startsWith('image/'))
   );
   if (image?.$?.url) return resolve(image.$.url);
 
@@ -76,10 +87,20 @@ export function extractImage(item: Parser.Item, articleUrl?: string | null, html
  *  within 4 seconds or has no og:image. */
 export async function scrapeOgImage(articleUrl: string): Promise<string | null> {
   // Skip known paywalled / blocked domains — scraping will never succeed
-  const domain = (() => { try { return new URL(articleUrl).hostname; } catch { return ''; } })();
+  const domain = (() => {
+    try {
+      return new URL(articleUrl).hostname;
+    } catch {
+      return '';
+    }
+  })();
   const BLOCKED = [
-    'wsj.com', 'finance.yahoo.com', 'stratechery.com',
-    'barrons.com', 'investors.com', 'discuss.grapheneos.org',
+    'wsj.com',
+    'finance.yahoo.com',
+    'stratechery.com',
+    'barrons.com',
+    'investors.com',
+    'discuss.grapheneos.org'
   ];
   if (BLOCKED.some((d) => domain === d || domain.endsWith('.' + d))) return null;
 
@@ -111,8 +132,9 @@ export async function scrapeOgImage(articleUrl: string): Promise<string | null> 
     }
     reader.cancel();
 
-    const match = html.match(/<meta\s+[^>]*property=["']og:image["'][^>]*content=["']([^"']+)["']/i)
-      ?? html.match(/<meta\s+[^>]*content=["']([^"']+)["'][^>]*property=["']og:image["']/i);
+    const match =
+      html.match(/<meta\s+[^>]*property=["']og:image["'][^>]*content=["']([^"']+)["']/i) ??
+      html.match(/<meta\s+[^>]*content=["']([^"']+)["'][^>]*property=["']og:image["']/i);
 
     if (match?.[1]) {
       let src = match[1];
@@ -137,134 +159,300 @@ interface ArticleToScreen {
 const OFF_TOPIC_PHRASES: Record<string, string[]> = {
   'CNN Indonesia Tekno': [
     // Weather / climate
-    'prakiraan cuaca', 'diguyur hujan', 'hujan lebat', 'hujan hari ini', 'hujan sabtu',
-    'hujan minggu', 'hujan senin', 'berpotensi hujan', 'musim kemarau', 'puncak kemarau',
-    'el nino', 'bmkg prediksi', 'bmkg ungkap', 'bmkg jelaskan',
-    'fenomena bun upas', 'bediding', 'dinginkan jatim', 'apa itu awan',
+    'prakiraan cuaca',
+    'diguyur hujan',
+    'hujan lebat',
+    'hujan hari ini',
+    'hujan sabtu',
+    'hujan minggu',
+    'hujan senin',
+    'berpotensi hujan',
+    'musim kemarau',
+    'puncak kemarau',
+    'el nino',
+    'bmkg prediksi',
+    'bmkg ungkap',
+    'bmkg jelaskan',
+    'fenomena bun upas',
+    'bediding',
+    'dinginkan jatim',
+    'apa itu awan',
     // Geology / disasters
-    'guncang filipina', 'gempa m', 'gempa besar', 'megathrust', 'terumbu karang',
-    'gunung meletus', 'tsunami', 'banjir bandang',
+    'guncang filipina',
+    'gempa m',
+    'gempa besar',
+    'megathrust',
+    'terumbu karang',
+    'gunung meletus',
+    'tsunami',
+    'banjir bandang',
     // Astronomy / space (not tech) — 'gerhana matahari' removed, too many
     // false positives on space-tech articles mentioning eclipses
-    'aurora australis', 'noctilucent', 'hujan meteor',
+    'aurora australis',
+    'noctilucent',
+    'hujan meteor',
     // Nature / animals
-    'kaki seribu raksasa', 'pohon raksasa', 'axolotl',
-    'debut anak', 'hewan langka',
+    'kaki seribu raksasa',
+    'pohon raksasa',
+    'axolotl',
+    'debut anak',
+    'hewan langka',
     // Climate general
-    'kiamat iklim', 'dampak perubahan iklim', 'ekosistem laut',
+    'kiamat iklim',
+    'dampak perubahan iklim',
+    'ekosistem laut',
     // Military hardware — scoped to incidents, not tech specs
     // Allow through if the title also mentions specs/tech details
-    'helikopter as', 'drone mq-9', 'ditembak jatuh iran',
+    'helikopter as',
+    'drone mq-9',
+    'ditembak jatuh iran',
     // Sports streaming
-    'siaran langsung piala', 'live streaming piala', 'nonton streaming piala',
-    'cara nonton piala',
+    'siaran langsung piala',
+    'live streaming piala',
+    'nonton streaming piala',
+    'cara nonton piala'
   ],
   'CNN Indonesia Ekonomi': [
     // Shopping / promos
-    'full day sale', 'transmart full', 'ayo belanja', 'buruan beli', 'diskon melimpah',
-    'promo mulai', 'intip barangnya',
-    'shopee vip', 'gebyar diskon',
+    'full day sale',
+    'transmart full',
+    'ayo belanja',
+    'buruan beli',
+    'diskon melimpah',
+    'promo mulai',
+    'intip barangnya',
+    'shopee vip',
+    'gebyar diskon',
     // Transport incidents
-    'layang-layang ganggu', 'perjalanan whoosh', 'mati lampu di',
-    'magang jepang', 'ka stasiun', 'avsec soetta',
+    'layang-layang ganggu',
+    'perjalanan whoosh',
+    'mati lampu di',
+    'magang jepang',
+    'ka stasiun',
+    'avsec soetta',
     // Nutrition program (MBG / Badan Gizi)
-    'mbg disetop', 'mbg selama', 'badan gizi', 'bgn bakal', 'bgn setop',
-    'waka bgn', 'penerima mbg', 'dapur mbg', 'makan bergizi', 'program mbg',
+    'mbg disetop',
+    'mbg selama',
+    'badan gizi',
+    'bgn bakal',
+    'bgn setop',
+    'waka bgn',
+    'penerima mbg',
+    'dapur mbg',
+    'makan bergizi',
+    'program mbg',
     // Protests / disputes
-    'demo mahasiswa', 'berujung ricuh', 'aksi mahasiswa', 'digusur demi',
-    'tudingan warga', 'tuntutan demo',
+    'demo mahasiswa',
+    'berujung ricuh',
+    'aksi mahasiswa',
+    'digusur demi',
+    'tudingan warga',
+    'tuntutan demo',
     // Religious / cultural
-    '1 muharram', 'masjidil haram',
+    '1 muharram',
+    'masjidil haram',
     // Diplomatic travel
-    'kunker ke',
+    'kunker ke'
   ],
   'Detik Inet': [
     // Sports
-    'messi hattrick', 'messi di piala', 'ronaldo', 'mbappe lampaui',
-    'timnas', 'pemain bintang', 'piala dunia', 'pildun', 'hattrick',
-    'top skor', 'kiper', 'suporter',
-    'tahan raksasa spanyol', 'haaland', 'yamal',
+    'messi hattrick',
+    'messi di piala',
+    'ronaldo',
+    'mbappe lampaui',
+    'timnas',
+    'pemain bintang',
+    'piala dunia',
+    'pildun',
+    'hattrick',
+    'top skor',
+    'kiper',
+    'suporter',
+    'tahan raksasa spanyol',
+    'haaland',
+    'yamal',
     'ea sports fc',
     // Shopping / promos
-    'full day sale', 'transmart full', 'diskon gede', 'diskon maksimal',
-    'shopee vip', 'kulkas polytron',
-    'mesin cuci sharp', 'ac split sharp', 'cuma harga segini',
+    'full day sale',
+    'transmart full',
+    'diskon gede',
+    'diskon maksimal',
+    'shopee vip',
+    'kulkas polytron',
+    'mesin cuci sharp',
+    'ac split sharp',
+    'cuma harga segini',
     'langganan shopee',
     // Clickbait / viral
-    'momen apes', 'kesialan', 'ngadi-ngadi', 'bikin yang lihat', 'tepok jidat',
-    'deretan desain aneh', 'deretan desain gagal', 'penampakan',
-    'tukang las', 'bendungan raksasa',
+    'momen apes',
+    'kesialan',
+    'ngadi-ngadi',
+    'bikin yang lihat',
+    'tepok jidat',
+    'deretan desain aneh',
+    'deretan desain gagal',
+    'penampakan',
+    'tukang las',
+    'bendungan raksasa',
     // Entertainment / YouTube
-    'youtuber pertama', 'mrbeast', 'tamagotchi',
+    'youtuber pertama',
+    'mrbeast',
+    'tamagotchi',
     // Gaming / esports (tournament results, not tech)
-    'kode redeem', 'fc mobile', 'mpl id', 'juara mpl', 'grand final mpl',
-    'jadwal grand final', 'daftar juara',
+    'kode redeem',
+    'fc mobile',
+    'mpl id',
+    'juara mpl',
+    'grand final mpl',
+    'jadwal grand final',
+    'daftar juara',
     // Sports streaming promos
-    'bundling streaming', 'live streaming pildun', 'nonton pildun', 'nonton piala dunia',
+    'bundling streaming',
+    'live streaming pildun',
+    'nonton pildun',
+    'nonton piala dunia',
     // Nature / animals
-    'hiu goblin', 'hewan aneh', 'orangutan', 'anjing hantu', 'kuburan',
+    'hiu goblin',
+    'hewan aneh',
+    'orangutan',
+    'anjing hantu',
+    'kuburan',
     // Weather
     'el nino sudah melanda',
     // Gossip
-    'mantan istri bill gates', 'pacari mantan putri', 'ayah elon musk',
+    'mantan istri bill gates',
+    'pacari mantan putri',
+    'ayah elon musk',
     // Religious
-    'kebenaran al qur',
+    'kebenaran al qur'
   ],
   'Ars Technica': [
-    'reader survey', 'let your voice be heard', 'tell us what you think',
-    'subscribe to', 'premium subscription', 'ars pro',
+    'reader survey',
+    'let your voice be heard',
+    'tell us what you think',
+    'subscribe to',
+    'premium subscription',
+    'ars pro'
   ],
-  'Engadget': [
+  Engadget: [
     // Gaming coverage (not tech)
-    'game fest', 'games we played', 'new game', 'game review',
-    'gta 5', 'gta 6', 'grand theft auto', 'rockstar',
-    'nintendo', 'playstation', 'xbox', 'pc game',
+    'game fest',
+    'games we played',
+    'new game',
+    'game review',
+    'gta 5',
+    'gta 6',
+    'grand theft auto',
+    'rockstar',
+    'nintendo',
+    'playstation',
+    'xbox',
+    'pc game',
     // Shopping / deals
-    'prime day', 'best deal', 'on sale', 'discount',
-    'cheaper than ever', 'price cut', 'buy now',
+    'prime day',
+    'best deal',
+    'on sale',
+    'discount',
+    'cheaper than ever',
+    'price cut',
+    'buy now'
   ],
-  'Wired': [
+  Wired: [
     // Promo codes / coupons
-    'promo code', 'coupon code', 'coupons', '% off',
-    'promo codes', 'gift cards',
+    'promo code',
+    'coupon code',
+    'coupons',
+    '% off',
+    'promo codes',
+    'gift cards',
     // Buying guides (product roundups, not tech reviews)
-    'best handheld', 'best robot', 'best office chair', 'best laptop',
-    'best mattress', 'best fan', 'best vacuum', 'best lawn',
-    'need a new', 'bright ideas', 'best gifts', 'gift guide',
-    'buying guide', 'things on sale', 'on sale this', 'deals on',
-    'early prime day', 'prime day deal',
+    'best handheld',
+    'best robot',
+    'best office chair',
+    'best laptop',
+    'best mattress',
+    'best fan',
+    'best vacuum',
+    'best lawn',
+    'need a new',
+    'bright ideas',
+    'best gifts',
+    'gift guide',
+    'buying guide',
+    'things on sale',
+    'on sale this',
+    'deals on',
+    'early prime day',
+    'prime day deal',
     // Home / lifestyle
-    'home decor', 'interior design', 'throw pillow', 'area rug',
-    'starter home', 'dream house', 'dumb house', 'future of home',
-    'what do we need from our homes', 'what do americans spend on housing',
-    'dwellings of tomorrow', 'building solutions keep things local',
-    'cookware', 'recipe for', 'how to clean',
+    'home decor',
+    'interior design',
+    'throw pillow',
+    'area rug',
+    'starter home',
+    'dream house',
+    'dumb house',
+    'future of home',
+    'what do we need from our homes',
+    'what do americans spend on housing',
+    'dwellings of tomorrow',
+    'building solutions keep things local',
+    'cookware',
+    'recipe for',
+    'how to clean',
     // Entertainment
-    'hockey show', 'tv show', 'movie review', 'what to watch',
-    'streaming guide', 'best shows', 'on netflix', 'on hbo',
-    'adult swim', 'infowars', 'reality tv', 'fishtank',
-    'tim heidecker', 'paramount refused to air',
+    'hockey show',
+    'tv show',
+    'movie review',
+    'what to watch',
+    'streaming guide',
+    'best shows',
+    'on netflix',
+    'on hbo',
+    'adult swim',
+    'infowars',
+    'reality tv',
+    'fishtank',
+    'tim heidecker',
+    'paramount refused to air',
     // Non-tech science
-    'new species', 'dinosaur', 'fossil', 'whale', 'shark',
-    'antarctica', 'climate change innovation',
+    'new species',
+    'dinosaur',
+    'fossil',
+    'whale',
+    'shark',
+    'antarctica',
+    'climate change innovation',
     // Sports
-    'athletes', 'separating sports from politics',
+    'athletes',
+    'separating sports from politics',
     // Politics
-    'reflecting pool', 'trump renovation',
+    'reflecting pool',
+    'trump renovation'
   ],
-  'ANTARA': [
-    'pertandingan', 'liga champions', 'piala dunia', 'laga',
-  ],
+  ANTARA: ['pertandingan', 'liga champions', 'piala dunia', 'laga']
 };
 
 /** Tech-context words that override a blocklist match — if a title hits a blocklist
  *  phrase but also contains one of these, let it through to AI for a nuanced decision. */
 const ALLOWLIST: Record<string, string[]> = {
   'CNN Indonesia Tekno': [
-    'spesifikasi', 'spek', 'canggih', 'roket', 'spacex', 'teknologi',
-    'ai ', 'artificial intelligence', 'software', 'hardware', 'aplikasi',
-    'chip ', 'prosesor', 'data center', 'pusat data',
-  ],
+    'spesifikasi',
+    'spek',
+    'canggih',
+    'roket',
+    'spacex',
+    'teknologi',
+    'ai ',
+    'artificial intelligence',
+    'software',
+    'hardware',
+    'aplikasi',
+    'chip ',
+    'prosesor',
+    'data center',
+    'pusat data'
+  ]
 };
 
 export function isObviouslyOffTopic(article: ArticleToScreen): boolean {
@@ -290,7 +478,9 @@ export interface ScreeningStats {
   bySource: Map<string, { total: number; kept: number }>;
 }
 
-export async function screenArticles(articles: ArticleToScreen[]): Promise<{ kept: Set<string>; stats: ScreeningStats }> {
+export async function screenArticles(
+  articles: ArticleToScreen[]
+): Promise<{ kept: Set<string>; stats: ScreeningStats }> {
   const stats: ScreeningStats = { bySource: new Map() };
 
   if (articles.length === 0) return { kept: new Set(), stats };
@@ -309,7 +499,8 @@ export async function screenArticles(articles: ArticleToScreen[]): Promise<{ kep
     if (aiQueue.length === 0 && articles.length === 1) {
       kept.add(a.title); // single article, assume on-topic
       const s = stats.bySource.get(a.sourceName) ?? { total: 0, kept: 0 };
-      s.total++; s.kept++;
+      s.total++;
+      s.kept++;
       stats.bySource.set(a.sourceName, s);
     } else {
       aiQueue.push(a);
@@ -381,11 +572,11 @@ ${articleList}
 
 Reply with TWO lines only:
 Line 1 — REJECT: comma-separated numbers of off-topic or weaker-duplicate articles to reject (or "none")
-Line 2 — DUPLICATE: semicolon-separated pairs showing which article subsumes which, e.g. "${startNum+1}>${startNum+4}; ${startNum+2}>${startNum+6}" meaning article ${startNum+1} is the better version of ${startNum+4} (so reject ${startNum+4}), and ${startNum+2} is the better version of ${startNum+6} (so reject ${startNum+6}). Or "none" if no duplicates. Always put the KEEPER first in each pair, the duplicate second.
+Line 2 — DUPLICATE: semicolon-separated pairs showing which article subsumes which, e.g. "${startNum + 1}>${startNum + 4}; ${startNum + 2}>${startNum + 6}" meaning article ${startNum + 1} is the better version of ${startNum + 4} (so reject ${startNum + 4}), and ${startNum + 2} is the better version of ${startNum + 6} (so reject ${startNum + 6}). Or "none" if no duplicates. Always put the KEEPER first in each pair, the duplicate second.
 
 Example response:
-REJECT: ${startNum+3},${startNum+8},${startNum+14}
-DUPLICATE: ${startNum+1}>${startNum+4}; ${startNum+6}>${startNum+9}`;
+REJECT: ${startNum + 3},${startNum + 8},${startNum + 14}
+DUPLICATE: ${startNum + 1}>${startNum + 4}; ${startNum + 6}>${startNum + 9}`;
 
       let text = '';
       const deepseekKey = env.DEEPSEEK_API_KEY;
@@ -425,7 +616,7 @@ DUPLICATE: ${startNum+1}>${startNum+4}; ${startNum+6}>${startNum+9}`;
           if (t.toUpperCase().startsWith('REJECT:')) {
             const nums = t.slice(7).trim();
             if (nums.toLowerCase() !== 'none') {
-              for (const n of (nums.match(/\d+/g)?.map(Number) ?? [])) br.rejectedNums.add(n);
+              for (const n of nums.match(/\d+/g)?.map(Number) ?? []) br.rejectedNums.add(n);
             }
           } else if (t.toUpperCase().startsWith('DUPLICATE:')) {
             const pairs = t.slice(10).trim();
@@ -440,8 +631,13 @@ DUPLICATE: ${startNum+1}>${startNum+4}; ${startNum+6}>${startNum+9}`;
       }
 
       // Fallback: old format (just comma-separated numbers)
-      if (br.rejectedNums.size === 0 && br.duplicateRejects.size === 0 && text && !text.toLowerCase().includes('none')) {
-        for (const n of (text.match(/\d+/g)?.map(Number) ?? [])) br.rejectedNums.add(n);
+      if (
+        br.rejectedNums.size === 0 &&
+        br.duplicateRejects.size === 0 &&
+        text &&
+        !text.toLowerCase().includes('none')
+      ) {
+        for (const n of text.match(/\d+/g)?.map(Number) ?? []) br.rejectedNums.add(n);
       }
     })
   );
@@ -485,7 +681,6 @@ async function callDeepSeek(prompt: string, apiKey: string): Promise<string> {
   return (msg?.content ?? '').trim();
 }
 
-
 export interface DayArticlesForSummary {
   title: string;
   sourceName: string;
@@ -509,7 +704,7 @@ function isInstructionEcho(text: string): boolean {
     'here are',
     'i can',
     'i will',
-    'i\'ll',
+    "i'll",
     'sure',
     'certainly',
     'global story',
@@ -517,7 +712,7 @@ function isInstructionEcho(text: string): boolean {
     'must be high-signal',
     'no markdown',
     'plain english',
-    '2-3 sentences',
+    '2-3 sentences'
   ];
   const matchCount = echoMarkers.filter((m) => lower.includes(m)).length;
   return matchCount >= 2;
@@ -536,7 +731,9 @@ function convertBold(text: string): string {
 }
 
 /** Generate a daily tech/business briefing via DeepSeek. Covers 1 global + 1 Indonesia story. */
-export async function generateDailySummary(articles: DayArticlesForSummary[]): Promise<string | null> {
+export async function generateDailySummary(
+  articles: DayArticlesForSummary[]
+): Promise<string | null> {
   if (articles.length < 1) return null;
 
   const { env } = await import('$env/dynamic/private');

@@ -1,294 +1,297 @@
 .game-container {
-    max-width: 100%;
-    min-height: 100dvh;
-    position: relative;
-    isolation: isolate;
-    padding-bottom: env(safe-area-inset-bottom, 0px);
-    padding-top: env(safe-area-inset-top, 0px);
-    padding-left: env(safe-area-inset-left, 0px);
-    padding-right: env(safe-area-inset-right, 0px);
-  }
+  max-width: 100%;
+  min-height: 100dvh;
+  position: relative;
+  isolation: isolate;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
+}
 
-  /* ── Pagoda wood panel ── */
-  .wood-panel {
-    background:
-      repeating-linear-gradient(
-        87deg,
-        transparent,
-        transparent 18px,
-        rgba(0, 0, 0, 0.04) 18px,
-        rgba(0, 0, 0, 0.04) 19px
-      ),
-      repeating-linear-gradient(
-        93deg,
-        transparent,
-        transparent 35px,
-        rgba(0, 0, 0, 0.025) 35px,
-        rgba(0, 0, 0, 0.025) 36px
-      ),
-      linear-gradient(180deg, #6d3022 0%, #5e271a 15%, #4f1f14 50%, #3d170e 85%, #5e271a 100%);
-    position: relative;
-    border: none;
-    border-radius: 0 0 6px 6px;
-  }
+/* ── Pagoda wood panel ── */
+.wood-panel {
+  background:
+    repeating-linear-gradient(
+      87deg,
+      transparent,
+      transparent 18px,
+      rgba(0, 0, 0, 0.04) 18px,
+      rgba(0, 0, 0, 0.04) 19px
+    ),
+    repeating-linear-gradient(
+      93deg,
+      transparent,
+      transparent 35px,
+      rgba(0, 0, 0, 0.025) 35px,
+      rgba(0, 0, 0, 0.025) 36px
+    ),
+    linear-gradient(180deg, #6d3022 0%, #5e271a 15%, #4f1f14 50%, #3d170e 85%, #5e271a 100%);
+  position: relative;
+  border: none;
+  border-radius: 0 0 6px 6px;
+}
 
-  /* Inner depth with pillar shadow accents */
-  .wood-panel::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    background:
-      linear-gradient(
-        90deg,
-        rgba(0, 0, 0, 0.28) 0%,
-        rgba(0, 0, 0, 0.06) 14px,
-        transparent 28px,
-        transparent calc(100% - 28px),
-        rgba(0, 0, 0, 0.06) calc(100% - 14px),
-        rgba(0, 0, 0, 0.28) 100%
-      ),
-      linear-gradient(
-        135deg,
-        rgba(255, 255, 255, 0.05) 0%,
-        transparent 40%,
-        rgba(0, 0, 0, 0.15) 100%
-      );
-    pointer-events: none;
-  }
+/* Inner depth with pillar shadow accents */
+.wood-panel::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background:
+    linear-gradient(
+      90deg,
+      rgba(0, 0, 0, 0.28) 0%,
+      rgba(0, 0, 0, 0.06) 14px,
+      transparent 28px,
+      transparent calc(100% - 28px),
+      rgba(0, 0, 0, 0.06) calc(100% - 14px),
+      rgba(0, 0, 0, 0.28) 100%
+    ),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, transparent 40%, rgba(0, 0, 0, 0.15) 100%);
+  pointer-events: none;
+}
 
-  /* ── Pagoda Roof ── */
-  .pagoda-roof {
-    position: relative;
-    height: 74px;
-    margin: 0 -16px 0 -16px;
-    overflow: visible;
-    z-index: 2;
-  }
+/* ── Pagoda Roof ── */
+.pagoda-roof {
+  position: relative;
+  height: 74px;
+  margin: 0 -16px 0 -16px;
+  overflow: visible;
+  z-index: 2;
+}
 
-  .roof-main {
-    position: absolute;
-    top: 16px;
-    left: 0;
-    right: 0;
-    height: 52px;
-  }
+.roof-main {
+  position: absolute;
+  top: 16px;
+  left: 0;
+  right: 0;
+  height: 52px;
+}
 
-  /* Sweeping roof surface with dramatic curves */
-  .roof-sweep {
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(
-      180deg,
-      #2a2218 0%,
-      #3a2e20 15%,
-      #463828 40%,
-      #3a2e20 70%,
-      #2a1f16 100%
-    );
-    clip-path: polygon(
-      0% 100%,
-      0% 80%,
-      2% 74%,
-      5% 48%,
-      10% 20%,
-      18% 6%,
-      28% 1%,
-      50% 0%,
-      72% 1%,
-      82% 6%,
-      90% 20%,
-      95% 48%,
-      98% 74%,
-      100% 80%,
-      100% 100%
-    );
-    box-shadow:
-      inset 0 1px 3px rgba(255, 255, 255, 0.04),
-      0 3px 12px rgba(0, 0, 0, 0.5);
-  }
+/* Sweeping roof surface with dramatic curves */
+.roof-sweep {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    #2a2218 0%,
+    #3a2e20 15%,
+    #463828 40%,
+    #3a2e20 70%,
+    #2a1f16 100%
+  );
+  clip-path: polygon(
+    0% 100%,
+    0% 80%,
+    2% 74%,
+    5% 48%,
+    10% 20%,
+    18% 6%,
+    28% 1%,
+    50% 0%,
+    72% 1%,
+    82% 6%,
+    90% 20%,
+    95% 48%,
+    98% 74%,
+    100% 80%,
+    100% 100%
+  );
+  box-shadow:
+    inset 0 1px 3px rgba(255, 255, 255, 0.04),
+    0 3px 12px rgba(0, 0, 0, 0.5);
+}
 
-  /* Roof tile lines */
-  .roof-sweep::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: repeating-linear-gradient(
-      0deg,
-      transparent 0px,
-      transparent 5px,
-      rgba(255, 255, 255, 0.025) 5px,
-      rgba(255, 255, 255, 0.025) 6px
-    );
-    clip-path: inherit;
-    pointer-events: none;
-  }
+/* Roof tile lines */
+.roof-sweep::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent 0px,
+    transparent 5px,
+    rgba(255, 255, 255, 0.025) 5px,
+    rgba(255, 255, 255, 0.025) 6px
+  );
+  clip-path: inherit;
+  pointer-events: none;
+}
 
-  /* Upturned flying eaves */
-  .roof-eave {
-    position: absolute;
-    bottom: -3px;
-    width: 28px;
-    height: 18px;
-    background: linear-gradient(180deg, #3a2e20 0%, #2a1f16 100%);
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
-  }
+/* Upturned flying eaves */
+.roof-eave {
+  position: absolute;
+  bottom: -3px;
+  width: 28px;
+  height: 18px;
+  background: linear-gradient(180deg, #3a2e20 0%, #2a1f16 100%);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+}
 
-  .roof-eave.left {
-    left: -6px;
-    border-radius: 0 100% 4px 0;
-    transform: rotate(-12deg);
-    transform-origin: bottom right;
-  }
+.roof-eave.left {
+  left: -6px;
+  border-radius: 0 100% 4px 0;
+  transform: rotate(-12deg);
+  transform-origin: bottom right;
+}
 
-  .roof-eave.right {
-    right: -6px;
-    border-radius: 100% 0 0 4px;
-    transform: rotate(12deg);
-    transform-origin: bottom left;
-  }
+.roof-eave.right {
+  right: -6px;
+  border-radius: 100% 0 0 4px;
+  transform: rotate(12deg);
+  transform-origin: bottom left;
+}
 
-  /* Ridge line across roof peak */
-  .roof-ridge {
-    position: absolute;
-    top: 3px;
-    left: 26%;
-    right: 26%;
-    height: 4px;
-    background: linear-gradient(180deg, #6b5a3a 0%, #4a3a28 100%);
-    border-radius: 2px;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
-  }
+/* Ridge line across roof peak */
+.roof-ridge {
+  position: absolute;
+  top: 3px;
+  left: 26%;
+  right: 26%;
+  height: 4px;
+  background: linear-gradient(180deg, #6b5a3a 0%, #4a3a28 100%);
+  border-radius: 2px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+}
 
-  /* Finial — golden jewel at roof peak */
-  .roof-finial {
-    position: absolute;
-    top: 0;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 14px;
-    height: 24px;
-    z-index: 5;
-  }
+/* Finial — golden jewel at roof peak */
+.roof-finial {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 14px;
+  height: 24px;
+  z-index: 5;
+}
 
-  .roof-finial::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 8px;
-    height: 14px;
-    background: linear-gradient(180deg, #e8c97a 0%, #c49b3c 30%, #a07828 60%, #c49b3c 100%);
-    border-radius: 50% 50% 40% 40%;
-    box-shadow:
-      0 0 8px rgba(200, 160, 60, 0.5),
-      inset 0 1px 2px rgba(255, 255, 255, 0.3);
-  }
+.roof-finial::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 8px;
+  height: 14px;
+  background: linear-gradient(180deg, #e8c97a 0%, #c49b3c 30%, #a07828 60%, #c49b3c 100%);
+  border-radius: 50% 50% 40% 40%;
+  box-shadow:
+    0 0 8px rgba(200, 160, 60, 0.5),
+    inset 0 1px 2px rgba(255, 255, 255, 0.3);
+}
 
-  .roof-finial::after {
-    content: '';
-    position: absolute;
-    bottom: 2px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 4px;
-    height: 10px;
-    background: linear-gradient(180deg, #8b7355 0%, #5c4b3a 100%);
-    border-radius: 0 0 2px 2px;
-  }
+.roof-finial::after {
+  content: '';
+  position: absolute;
+  bottom: 2px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 4px;
+  height: 10px;
+  background: linear-gradient(180deg, #8b7355 0%, #5c4b3a 100%);
+  border-radius: 0 0 2px 2px;
+}
 
-  /* ── Dougong bracket layer ── */
-  .dougong {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 12px;
-    background:
-      repeating-linear-gradient(
-        90deg,
-        #8b6914 0px,
-        #6b4f10 2px,
-        #8b6914 4px,
-        #5c3d0e 6px,
-        #8b6914 8px,
-        #6b4f10 10px,
-        #8b6914 12px
-      ),
-      linear-gradient(180deg, #7a5c1e 0%, #6b4f10 50%, #5c3d0e 100%);
-    border-top: 1px solid #9b7920;
-    border-bottom: 1px solid #4a3010;
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.08),
-      0 2px 4px rgba(0, 0, 0, 0.4);
-  }
+/* ── Dougong bracket layer ── */
+.dougong {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 12px;
+  background:
+    repeating-linear-gradient(
+      90deg,
+      #8b6914 0px,
+      #6b4f10 2px,
+      #8b6914 4px,
+      #5c3d0e 6px,
+      #8b6914 8px,
+      #6b4f10 10px,
+      #8b6914 12px
+    ),
+    linear-gradient(180deg, #7a5c1e 0%, #6b4f10 50%, #5c3d0e 100%);
+  border-top: 1px solid #9b7920;
+  border-bottom: 1px solid #4a3010;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 2px 4px rgba(0, 0, 0, 0.4);
+}
 
-  /* Toggle switch */
-  .toggle-switch {
-    position: relative;
-    width: 44px;
-    height: 24px;
-    border-radius: 12px;
-    border: none;
-    cursor: pointer;
-    transition: background 0.2s;
-    padding: 0;
-  }
+/* Toggle switch */
+.toggle-switch {
+  position: relative;
+  width: 44px;
+  height: 24px;
+  border-radius: 12px;
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s;
+  padding: 0;
+}
 
-  .toggle-switch.on {
-    background: #d4a574;
-  }
+.toggle-switch.on {
+  background: #d4a574;
+}
 
-  .toggle-switch.off {
-    background: #5c4b3a;
-  }
+.toggle-switch.off {
+  background: #5c4b3a;
+}
 
-  .toggle-knob {
-    position: absolute;
-    top: 3px;
-    left: 3px;
-    width: 18px;
-    height: 18px;
-    border-radius: 50%;
-    background: #f5f0e8;
-    transition: transform 0.2s;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-  }
+.toggle-knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #f5f0e8;
+  transition: transform 0.2s;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
 
-  .toggle-switch.on .toggle-knob {
-    transform: translateX(20px);
-  }
+.toggle-switch.on .toggle-knob {
+  transform: translateX(20px);
+}
 
-  /* ── Streak background ── */
-  .streak-overlay {
-    position: fixed;
-    inset: 0;
-    overflow: hidden;
-    z-index: 0;
-    pointer-events: none;
-    transition:
-      background 1.2s ease,
-      opacity 0.8s ease;
-  }
+/* ── Streak background ── */
+.streak-overlay {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  z-index: 0;
+  pointer-events: none;
+  transition:
+    background 1.2s ease,
+    opacity 0.8s ease;
+}
 
-  .streak-overlay-idle {
-    background: transparent;
-    opacity: 0;
-  }
+.streak-overlay-idle {
+  background: transparent;
+  opacity: 0;
+}
 
-  .streak-overlay-blaze {
-    background: linear-gradient(
-      180deg,
-      #fff7ed 0%,
-      #fed7aa 30%,
-      #fb923c 70%,
-      #fef2f2 100%
-    );
-    opacity: 0.3;
-  }
+.streak-overlay-blaze {
+  background: linear-gradient(180deg, #fff7ed 0%, #fed7aa 30%, #fb923c 70%, #fef2f2 100%);
+  opacity: 0.3;
+}
 
-  .streak-overlay-inferno {
+.streak-overlay-inferno {
+  background: linear-gradient(
+    180deg,
+    #fef2f2 0%,
+    #fecaca 25%,
+    #f87171 55%,
+    #dc2626 80%,
+    #7f1d1d 100%
+  );
+  opacity: 0.35;
+  animation: bg-flicker 0.6s ease-in-out infinite alternate;
+}
+
+@keyframes bg-flicker {
+  0% {
     background: linear-gradient(
       180deg,
       #fef2f2 0%,
@@ -297,794 +300,1123 @@
       #dc2626 80%,
       #7f1d1d 100%
     );
-    opacity: 0.35;
-    animation: bg-flicker 0.6s ease-in-out infinite alternate;
   }
-
-  @keyframes bg-flicker {
-    0% {
-      background: linear-gradient(
-        180deg,
-        #fef2f2 0%,
-        #fecaca 25%,
-        #f87171 55%,
-        #dc2626 80%,
-        #7f1d1d 100%
-      );
-    }
-    100% {
-      background: linear-gradient(
-        180deg,
-        #fef2f2 0%,
-        #fca5a5 25%,
-        #ef4444 55%,
-        #b91c1c 80%,
-        #450a0a 100%
-      );
-    }
+  100% {
+    background: linear-gradient(
+      180deg,
+      #fef2f2 0%,
+      #fca5a5 25%,
+      #ef4444 55%,
+      #b91c1c 80%,
+      #450a0a 100%
+    );
   }
+}
 
-  /* ── Floating particles ── */
-  .particles {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    z-index: 1;
+/* ── Floating particles ── */
+.particles {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.particle {
+  position: absolute;
+  bottom: -8px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #f59e0b;
+  box-shadow: 0 0 6px #f97316;
+  animation: float-up linear infinite;
+}
+
+.streak-overlay-blaze .particle {
+  background: #f97316;
+  box-shadow: 0 0 8px #ef4444;
+  width: 7px;
+  height: 7px;
+}
+
+.streak-overlay-inferno .particle {
+  background: #ef4444;
+  box-shadow:
+    0 0 10px #facc15,
+    0 0 20px #f97316;
+  width: 8px;
+  height: 8px;
+}
+
+@keyframes float-up {
+  0% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
   }
-
-  .particle {
-    position: absolute;
-    bottom: -8px;
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: #f59e0b;
-    box-shadow: 0 0 6px #f97316;
-    animation: float-up linear infinite;
+  100% {
+    transform: translateY(-100vh) scale(0);
+    opacity: 0;
   }
+}
 
-  .streak-overlay-blaze .particle {
-    background: #f97316;
-    box-shadow: 0 0 8px #ef4444;
-    width: 7px;
-    height: 7px;
+/* ── Streak fire system ── */
+
+/* Text: number-focused, only inferno gets animated gradient */
+.streak-text {
+  color: #f59e0b;
+}
+
+.streak-fire .streak-text,
+.streak-blaze .streak-text {
+  background: linear-gradient(90deg, #f59e0b, #f97316);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.streak-inferno .streak-text {
+  background: linear-gradient(90deg, #f59e0b, #ef4444, #f97316, #f59e0b);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation:
+    fire-shift 0.8s linear infinite,
+    inferno-shake 0.3s ease-in-out infinite;
+}
+
+@keyframes fire-shift {
+  0% {
+    background-position: 200% 50%;
   }
-
-  .streak-overlay-inferno .particle {
-    background: #ef4444;
-    box-shadow:
-      0 0 10px #facc15,
-      0 0 20px #f97316;
-    width: 8px;
-    height: 8px;
+  100% {
+    background-position: 0% 50%;
   }
+}
 
-  @keyframes float-up {
-    0% {
-      transform: translateY(0) scale(1);
-      opacity: 1;
-    }
-    100% {
-      transform: translateY(-100vh) scale(0);
-      opacity: 0;
-    }
+@keyframes card-correct-pop {
+  0% {
+    transform: scale(1);
+    border-color: #c4a97d;
+    box-shadow: 0 0 0 rgba(16, 185, 129, 0);
   }
-
-  /* ── Streak fire system ── */
-
-  /* Text: number-focused, only inferno gets animated gradient */
-  .streak-text {
-    color: #f59e0b;
+  30% {
+    transform: scale(1.02);
+    border-color: #10b981;
+    box-shadow: 0 0 20px rgba(16, 185, 129, 0.3);
   }
-
-  .streak-fire .streak-text,
-  .streak-blaze .streak-text {
-    background: linear-gradient(90deg, #f59e0b, #f97316);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
+  100% {
+    transform: scale(1);
+    border-color: #10b981;
+    box-shadow: 0 0 0 rgba(16, 185, 129, 0);
   }
+}
 
-  .streak-inferno .streak-text {
-    background: linear-gradient(90deg, #f59e0b, #ef4444, #f97316, #f59e0b);
-    background-size: 200% 100%;
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-    animation:
-      fire-shift 0.8s linear infinite,
-      inferno-shake 0.3s ease-in-out infinite;
+.card-correct {
+  animation: card-correct-pop 0.5s ease-out;
+  border-color: #10b981 !important;
+}
+
+/* Heart gain pulse */
+@keyframes heart-gain {
+  0% {
+    transform: scale(1);
   }
-
-  @keyframes fire-shift {
-    0% {
-      background-position: 200% 50%;
-    }
-    100% {
-      background-position: 0% 50%;
-    }
+  20% {
+    transform: scale(1.35);
   }
-
-  @keyframes card-correct-pop {
-    0% {
-      transform: scale(1);
-      border-color: #c4a97d;
-      box-shadow: 0 0 0 rgba(16, 185, 129, 0);
-    }
-    30% {
-      transform: scale(1.02);
-      border-color: #10b981;
-      box-shadow: 0 0 20px rgba(16, 185, 129, 0.3);
-    }
-    100% {
-      transform: scale(1);
-      border-color: #10b981;
-      box-shadow: 0 0 0 rgba(16, 185, 129, 0);
-    }
+  50% {
+    transform: scale(0.9);
   }
-
-  .card-correct {
-    animation: card-correct-pop 0.5s ease-out;
-    border-color: #10b981 !important;
+  75% {
+    transform: scale(1.1);
   }
-
-  /* Heart gain pulse */
-  @keyframes heart-gain {
-    0%   { transform: scale(1); }
-    20%  { transform: scale(1.35); }
-    50%  { transform: scale(0.9); }
-    75%  { transform: scale(1.1); }
-    100% { transform: scale(1); }
+  100% {
+    transform: scale(1);
   }
+}
 
-  .heart-gain {
-    animation: heart-gain 0.45s ease-out;
-  }
+.heart-gain {
+  animation: heart-gain 0.45s ease-out;
+}
 
-  /* Level 1: Warm (3-4) */
-  .streak-warm {
-    border-color: #f59e0b;
-    background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 50%, #ffd4b4 100%);
-  }
+/* Level 1: Warm (3-4) */
+.streak-warm {
+  border-color: #f59e0b;
+  background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 50%, #ffd4b4 100%);
+}
 
-  /* Level 2: Hot (5-7) */
-  .streak-hot {
-    border-color: #f97316;
-    background: linear-gradient(135deg, #fff7ed 0%, #fed7aa 50%, #fbb478 100%);
-  }
+/* Level 2: Hot (5-7) */
+.streak-hot {
+  border-color: #f97316;
+  background: linear-gradient(135deg, #fff7ed 0%, #fed7aa 50%, #fbb478 100%);
+}
 
-  /* Level 3: Fire (8-13) */
-  .streak-fire {
-    border-color: transparent;
-    background: linear-gradient(135deg, #fffbe7 0%, #fef3c7 50%, #fbeddc 100%);
+/* Level 3: Fire (8-13) */
+.streak-fire {
+  border-color: transparent;
+  background: linear-gradient(135deg, #fffbe7 0%, #fef3c7 50%, #fbeddc 100%);
+  box-shadow:
+    0 0 24px rgba(251, 191, 36, 0.2),
+    0 0 48px rgba(251, 146, 60, 0.1);
+  animation: fire-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes fire-pulse {
+  0%,
+  100% {
     box-shadow:
       0 0 24px rgba(251, 191, 36, 0.2),
       0 0 48px rgba(251, 146, 60, 0.1);
-    animation: fire-pulse 1.5s ease-in-out infinite;
+  }
+  50% {
+    box-shadow:
+      0 0 36px rgba(251, 191, 36, 0.35),
+      0 0 64px rgba(251, 146, 60, 0.18);
+  }
+}
+
+/* Level 4: Blaze (14-20) */
+.streak-blaze {
+  border-color: transparent;
+  background: linear-gradient(135deg, #fef2f2 0%, #fcd3d3 40%, #fbd3be 100%);
+  box-shadow:
+    0 0 32px rgba(239, 68, 68, 0.2),
+    0 0 64px rgba(249, 115, 22, 0.12),
+    0 0 88px rgba(251, 146, 60, 0.06);
+  animation: blaze-pulse 1s ease-in-out infinite;
+}
+
+@keyframes blaze-pulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 32px rgba(239, 68, 68, 0.2),
+      0 0 64px rgba(249, 115, 22, 0.12),
+      0 0 88px rgba(251, 146, 60, 0.06);
+  }
+  50% {
+    box-shadow:
+      0 0 44px rgba(239, 68, 68, 0.35),
+      0 0 80px rgba(249, 115, 22, 0.22),
+      0 0 104px rgba(251, 146, 60, 0.14);
+  }
+}
+
+/* Level 5: Inferno (21+) */
+.streak-inferno {
+  border-color: transparent;
+  background: linear-gradient(135deg, #fef2f2 0%, #fcc3c3 35%, #f8b496 100%);
+  box-shadow:
+    0 0 40px rgba(220, 38, 38, 0.25),
+    0 0 72px rgba(234, 88, 12, 0.15),
+    0 0 104px rgba(251, 191, 36, 0.08);
+  animation:
+    inferno-pulse 0.7s ease-in-out infinite,
+    inferno-shake 0.3s ease-in-out infinite;
+}
+
+@keyframes inferno-pulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 48px rgba(220, 38, 38, 0.3),
+      0 0 88px rgba(234, 88, 12, 0.2),
+      0 0 120px rgba(251, 191, 36, 0.12);
+  }
+  50% {
+    box-shadow:
+      0 0 72px rgba(220, 38, 38, 0.5),
+      0 0 120px rgba(234, 88, 12, 0.35),
+      0 0 160px rgba(251, 191, 36, 0.2);
+  }
+}
+
+@keyframes inferno-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-1px) rotate(-0.2deg);
+  }
+  75% {
+    transform: translateX(1px) rotate(0.2deg);
+  }
+}
+
+/* ── Pagoda roof overflow guard ── */
+.pagoda-roof {
+  max-width: calc(100% + 32px);
+  overflow: hidden;
+}
+
+/* Prevent zoom on mobile input focus */
+@media (max-width: 768px) {
+  input.char-slot {
+    font-size: 1.35rem;
+  }
+}
+
+/* ── Character slot styles ── */
+.char-slot {
+  width: 2.75rem;
+  height: 3.25rem;
+  border: none;
+  border-bottom: 2px solid #cdc3ae;
+  background: transparent;
+  text-align: center;
+  font-family: var(--font-chinese);
+  font-size: 1.75rem;
+  line-height: 1;
+  color: #3d3529;
+  caret-color: #6b5e4a;
+  outline: 2px solid transparent;
+  outline-offset: -2px;
+  --tw-ring-shadow: 0 0 0 transparent !important;
+  box-shadow: none !important;
+  transition: border-color 0.15s;
+  padding: 0 0.15rem;
+}
+
+.char-slot:focus,
+.char-slot:focus-visible {
+  border-bottom-color: #6b5e4a;
+  outline: 2px solid transparent;
+  outline-offset: -2px;
+  --tw-ring-shadow: 0 0 0 transparent !important;
+  box-shadow: none !important;
+}
+
+.char-slot.filled {
+  border-bottom-color: #6b5e4a;
+  color: #3d3529;
+}
+
+.char-slot.empty {
+  border-bottom-color: #cdc3ae;
+  color: #3d3529;
+}
+
+.char-slot.hinted {
+  border-bottom-style: dashed;
+  border-bottom-color: #c4a97d;
+  color: #b0a090;
+  cursor: default;
+  background: linear-gradient(to top, rgba(196, 169, 125, 0.12), transparent 50%);
+  caret-color: transparent;
+  pointer-events: none;
+}
+
+.drop-shadow-red {
+  filter: drop-shadow(0 0 4px rgba(239, 68, 68, 0.5));
+}
+
+.char-punct {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 3.25rem;
+  font-family: var(--font-chinese);
+  font-size: 1.5rem;
+  color: #b0a48e;
+  pointer-events: none;
+  margin: 0 -0.15rem;
+  border-bottom: none !important;
+}
+
+/* ── Character feedback (check result) ── */
+.char-result-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.char-result-stack .char-slot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: default;
+  caret-color: transparent;
+}
+
+.char-result-char {
+  font-family: var(--font-chinese);
+  font-size: inherit;
+  line-height: inherit;
+}
+
+.char-result-char.char-ok {
+  color: #059669;
+}
+
+.char-result-char.char-bad {
+  color: #dc2626;
+}
+
+.char-result-hint {
+  font-family: var(--font-chinese);
+  font-size: 1.1rem;
+  color: #3d3529;
+  line-height: 1;
+}
+
+@media (max-width: 768px) {
+  .char-slot {
+    width: 2.5rem;
+    height: 3rem;
+    font-size: 1.35rem;
+  }
+  .char-punct {
+    height: 3rem;
+    font-size: 1.15rem;
+    width: 1rem;
+  }
+  .char-result-hint {
+    font-size: 0.9rem;
+  }
+
+  /* Tone down streak shadow spread on mobile for perf */
+  .streak-fire {
+    box-shadow:
+      0 0 14px rgba(251, 191, 36, 0.15),
+      0 0 28px rgba(251, 146, 60, 0.07);
+  }
+  .streak-blaze {
+    box-shadow:
+      0 0 18px rgba(239, 68, 68, 0.15),
+      0 0 36px rgba(249, 115, 22, 0.08),
+      0 0 48px rgba(251, 146, 60, 0.04);
+  }
+  .streak-inferno {
+    box-shadow:
+      0 0 24px rgba(220, 38, 38, 0.2),
+      0 0 44px rgba(234, 88, 12, 0.1),
+      0 0 60px rgba(251, 191, 36, 0.06);
   }
 
   @keyframes fire-pulse {
     0%,
     100% {
       box-shadow:
-        0 0 24px rgba(251, 191, 36, 0.2),
-        0 0 48px rgba(251, 146, 60, 0.1);
-    }
-    50% {
-      box-shadow:
-        0 0 36px rgba(251, 191, 36, 0.35),
-        0 0 64px rgba(251, 146, 60, 0.18);
-    }
-  }
-
-  /* Level 4: Blaze (14-20) */
-  .streak-blaze {
-    border-color: transparent;
-    background: linear-gradient(135deg, #fef2f2 0%, #fcd3d3 40%, #fbd3be 100%);
-    box-shadow:
-      0 0 32px rgba(239, 68, 68, 0.2),
-      0 0 64px rgba(249, 115, 22, 0.12),
-      0 0 88px rgba(251, 146, 60, 0.06);
-    animation: blaze-pulse 1s ease-in-out infinite;
-  }
-
-  @keyframes blaze-pulse {
-    0%,
-    100% {
-      box-shadow:
-        0 0 32px rgba(239, 68, 68, 0.2),
-        0 0 64px rgba(249, 115, 22, 0.12),
-        0 0 88px rgba(251, 146, 60, 0.06);
-    }
-    50% {
-      box-shadow:
-        0 0 44px rgba(239, 68, 68, 0.35),
-        0 0 80px rgba(249, 115, 22, 0.22),
-        0 0 104px rgba(251, 146, 60, 0.14);
-    }
-  }
-
-  /* Level 5: Inferno (21+) */
-  .streak-inferno {
-    border-color: transparent;
-    background: linear-gradient(135deg, #fef2f2 0%, #fcc3c3 35%, #f8b496 100%);
-    box-shadow:
-      0 0 40px rgba(220, 38, 38, 0.25),
-      0 0 72px rgba(234, 88, 12, 0.15),
-      0 0 104px rgba(251, 191, 36, 0.08);
-    animation:
-      inferno-pulse 0.7s ease-in-out infinite,
-      inferno-shake 0.3s ease-in-out infinite;
-  }
-
-  @keyframes inferno-pulse {
-    0%,
-    100% {
-      box-shadow:
-        0 0 48px rgba(220, 38, 38, 0.3),
-        0 0 88px rgba(234, 88, 12, 0.2),
-        0 0 120px rgba(251, 191, 36, 0.12);
-    }
-    50% {
-      box-shadow:
-        0 0 72px rgba(220, 38, 38, 0.5),
-        0 0 120px rgba(234, 88, 12, 0.35),
-        0 0 160px rgba(251, 191, 36, 0.2);
-    }
-  }
-
-  @keyframes inferno-shake {
-    0%,
-    100% {
-      transform: translateX(0);
-    }
-    25% {
-      transform: translateX(-1px) rotate(-0.2deg);
-    }
-    75% {
-      transform: translateX(1px) rotate(0.2deg);
-    }
-  }
-
-  /* ── Pagoda roof overflow guard ── */
-  .pagoda-roof {
-    max-width: calc(100% + 32px);
-    overflow: hidden;
-  }
-
-  /* Prevent zoom on mobile input focus */
-  @media (max-width: 768px) {
-    input.char-slot {
-      font-size: 1.35rem;
-    }
-  }
-
-  /* ── Character slot styles ── */
-  .char-slot {
-    width: 2.75rem;
-    height: 3.25rem;
-    border: none;
-    border-bottom: 2px solid #cdc3ae;
-    background: transparent;
-    text-align: center;
-    font-family: var(--font-chinese);
-    font-size: 1.75rem;
-    line-height: 1;
-    color: #3d3529;
-    caret-color: #6b5e4a;
-    outline: 2px solid transparent;
-    outline-offset: -2px;
-    --tw-ring-shadow: 0 0 0 transparent !important;
-    box-shadow: none !important;
-    transition: border-color 0.15s;
-    padding: 0 0.15rem;
-  }
-
-  .char-slot:focus,
-  .char-slot:focus-visible {
-    border-bottom-color: #6b5e4a;
-    outline: 2px solid transparent;
-    outline-offset: -2px;
-    --tw-ring-shadow: 0 0 0 transparent !important;
-    box-shadow: none !important;
-  }
-
-  .char-slot.filled {
-    border-bottom-color: #6b5e4a;
-    color: #3d3529;
-  }
-
-  .char-slot.empty {
-    border-bottom-color: #cdc3ae;
-    color: #3d3529;
-  }
-
-  .char-slot.hinted {
-    border-bottom-style: dashed;
-    border-bottom-color: #c4a97d;
-    color: #b0a090;
-    cursor: default;
-    background: linear-gradient(to top, rgba(196, 169, 125, 0.12), transparent 50%);
-    caret-color: transparent;
-    pointer-events: none;
-  }
-
-  .drop-shadow-red {
-    filter: drop-shadow(0 0 4px rgba(239, 68, 68, 0.5));
-  }
-
-  .char-punct {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 1.25rem;
-    height: 3.25rem;
-    font-family: var(--font-chinese);
-    font-size: 1.5rem;
-    color: #b0a48e;
-    pointer-events: none;
-    margin: 0 -0.15rem;
-    border-bottom: none !important;
-  }
-
-  /* ── Character feedback (check result) ── */
-  .char-result-stack {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 6px;
-  }
-
-  .char-result-stack .char-slot {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: default;
-    caret-color: transparent;
-  }
-
-  .char-result-char {
-    font-family: var(--font-chinese);
-    font-size: inherit;
-    line-height: inherit;
-  }
-
-  .char-result-char.char-ok {
-    color: #059669;
-  }
-
-  .char-result-char.char-bad {
-    color: #dc2626;
-  }
-
-  .char-result-hint {
-    font-family: var(--font-chinese);
-    font-size: 1.1rem;
-    color: #3d3529;
-    line-height: 1;
-  }
-
-  @media (max-width: 768px) {
-    .char-slot {
-      width: 2.5rem;
-      height: 3rem;
-      font-size: 1.35rem;
-    }
-    .char-punct {
-      height: 3rem;
-      font-size: 1.15rem;
-      width: 1rem;
-    }
-    .char-result-hint {
-      font-size: 0.9rem;
-    }
-
-    /* Tone down streak shadow spread on mobile for perf */
-    .streak-fire {
-      box-shadow:
         0 0 14px rgba(251, 191, 36, 0.15),
         0 0 28px rgba(251, 146, 60, 0.07);
     }
-    .streak-blaze {
+    50% {
+      box-shadow:
+        0 0 20px rgba(251, 191, 36, 0.25),
+        0 0 38px rgba(251, 146, 60, 0.12);
+    }
+  }
+  @keyframes blaze-pulse {
+    0%,
+    100% {
       box-shadow:
         0 0 18px rgba(239, 68, 68, 0.15),
         0 0 36px rgba(249, 115, 22, 0.08),
         0 0 48px rgba(251, 146, 60, 0.04);
     }
-    .streak-inferno {
+    50% {
       box-shadow:
-        0 0 24px rgba(220, 38, 38, 0.2),
-        0 0 44px rgba(234, 88, 12, 0.1),
-        0 0 60px rgba(251, 191, 36, 0.06);
-    }
-
-    @keyframes fire-pulse {
-      0%, 100% {
-        box-shadow:
-          0 0 14px rgba(251, 191, 36, 0.15),
-          0 0 28px rgba(251, 146, 60, 0.07);
-      }
-      50% {
-        box-shadow:
-          0 0 20px rgba(251, 191, 36, 0.25),
-          0 0 38px rgba(251, 146, 60, 0.12);
-      }
-    }
-    @keyframes blaze-pulse {
-      0%, 100% {
-        box-shadow:
-          0 0 18px rgba(239, 68, 68, 0.15),
-          0 0 36px rgba(249, 115, 22, 0.08),
-          0 0 48px rgba(251, 146, 60, 0.04);
-      }
-      50% {
-        box-shadow:
-          0 0 26px rgba(239, 68, 68, 0.25),
-          0 0 46px rgba(249, 115, 22, 0.14),
-          0 0 58px rgba(251, 146, 60, 0.09);
-      }
-    }
-    @keyframes inferno-pulse {
-      0%, 100% {
-        box-shadow:
-          0 0 28px rgba(220, 38, 38, 0.22),
-          0 0 48px rgba(234, 88, 12, 0.12),
-          0 0 64px rgba(251, 191, 36, 0.08);
-      }
-      50% {
-        box-shadow:
-          0 0 40px rgba(220, 38, 38, 0.35),
-          0 0 64px rgba(234, 88, 12, 0.2),
-          0 0 88px rgba(251, 191, 36, 0.12);
-      }
+        0 0 26px rgba(239, 68, 68, 0.25),
+        0 0 46px rgba(249, 115, 22, 0.14),
+        0 0 58px rgba(251, 146, 60, 0.09);
     }
   }
-
-  /* ── Floating butterflies ── */
-  .butterflies {
-    position: fixed;
-    inset: 0;
-    pointer-events: none;
-    z-index: 0;
-    overflow: hidden;
-  }
-
-  .butterfly {
-    position: absolute;
-    width: 1em;
-    height: 1em;
-    will-change: transform;
-  }
-
-  /* Side-view inner: rotated so butterfly faces sideways */
-  .butterfly-inner {
-    position: relative;
-    width: 100%;
-    height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .butterfly-inner--0 { transform: rotate(70deg); }
-  .butterfly-inner--1 { transform: rotate(80deg); }
-  .butterfly-inner--2 { transform: rotate(60deg); }
-
-  /* ── Body ── */
-  .bf-body {
-    position: absolute;
-    width: 0.08em;
-    height: 0.55em;
-    border-radius: 40%;
-    z-index: 1;
-    background: rgba(80, 50, 25, 0.5);
-  }
-
-  /* ── Single wing (side view — one wing visible) ── */
-  .bf-wing {
-    position: absolute;
-    /* Wing extends to one side of the body */
-    left: 50%;
-    top: 50%;
-    width: 0.55em;
-    height: 0.4em;
-    margin-top: -0.2em;
-    margin-left: 0.02em;
-    /* Heart / teardrop shape */
-    border-radius: 10% 80% 15% 70%;
-    transform-origin: left center;
-    animation: wing-beat 0.38s ease-in-out infinite;
-  }
-
-  @keyframes wing-beat {
-    0%, 100% { transform: rotateY(10deg) rotate(-5deg); }
-    30%  { transform: rotateY(55deg) rotate(-2deg); }
-    60%  { transform: rotateY(15deg) rotate(-8deg); }
-  }
-
-  /* Varied beat timings */
-  .butterfly-0 .bf-wing  { animation-duration: 0.32s; }
-  .butterfly-1 .bf-wing  { animation-duration: 0.4s; }
-  .butterfly-2 .bf-wing  { animation-duration: 0.36s; }
-  .butterfly-3 .bf-wing  { animation-duration: 0.44s; }
-  .butterfly-4 .bf-wing  { animation-duration: 0.34s; }
-  .butterfly-5 .bf-wing  { animation-duration: 0.38s; }
-  .butterfly-6 .bf-wing  { animation-duration: 0.42s; }
-  .butterfly-7 .bf-wing  { animation-duration: 0.33s; }
-  .butterfly-8 .bf-wing  { animation-duration: 0.39s; }
-  .butterfly-9 .bf-wing  { animation-duration: 0.37s; }
-  .butterfly-10 .bf-wing { animation-duration: 0.41s; }
-  .butterfly-11 .bf-wing { animation-duration: 0.35s; }
-  .butterfly-12 .bf-wing { animation-duration: 0.43s; }
-  .butterfly-13 .bf-wing { animation-duration: 0.31s; }
-  .butterfly-14 .bf-wing { animation-duration: 0.38s; }
-  .butterfly-15 .bf-wing { animation-duration: 0.45s; }
-  .butterfly-16 .bf-wing { animation-duration: 0.33s; }
-  .butterfly-17 .bf-wing { animation-duration: 0.4s; }
-  .butterfly-18 .bf-wing { animation-duration: 0.36s; }
-  .butterfly-19 .bf-wing { animation-duration: 0.42s; }
-
-  /* ── Color variants ── */
-  .butterfly--amber .bf-wing {
-    background: linear-gradient(135deg, rgba(245, 158, 11, 0.55), rgba(251, 191, 36, 0.3));
-    box-shadow: 0 0 6px rgba(245, 158, 11, 0.2);
-  }
-  .butterfly--amber .bf-body { background: rgba(180, 100, 20, 0.5); }
-
-  .butterfly--gold .bf-wing {
-    background: linear-gradient(135deg, rgba(202, 160, 60, 0.5), rgba(232, 201, 122, 0.3));
-    box-shadow: 0 0 6px rgba(202, 160, 60, 0.2);
-  }
-  .butterfly--gold .bf-body { background: rgba(160, 120, 40, 0.5); }
-
-  .butterfly--coral .bf-wing {
-    background: linear-gradient(135deg, rgba(251, 146, 100, 0.5), rgba(253, 186, 156, 0.3));
-    box-shadow: 0 0 6px rgba(251, 146, 100, 0.2);
-  }
-  .butterfly--coral .bf-body { background: rgba(180, 100, 70, 0.5); }
-
-  .butterfly--rose .bf-wing {
-    background: linear-gradient(135deg, rgba(244, 114, 130, 0.45), rgba(251, 170, 160, 0.25));
-    box-shadow: 0 0 6px rgba(244, 114, 130, 0.15);
-  }
-  .butterfly--rose .bf-body { background: rgba(160, 80, 90, 0.5); }
-
-  .butterfly--cream .bf-wing {
-    background: linear-gradient(135deg, rgba(232, 215, 180, 0.5), rgba(245, 235, 210, 0.3));
-    box-shadow: 0 0 6px rgba(200, 180, 140, 0.2);
-  }
-  .butterfly--cream .bf-body { background: rgba(160, 140, 110, 0.5); }
-
-  .butterfly--ink .bf-wing {
-    background: linear-gradient(135deg, rgba(80, 60, 40, 0.45), rgba(120, 90, 60, 0.25));
-    box-shadow: 0 0 4px rgba(60, 40, 20, 0.15);
-  }
-  .butterfly--ink .bf-body { background: rgba(40, 25, 15, 0.5); }
-
-  /* ── Flight paths — horizontal wandering ── */
-  .butterfly-0  { animation: fly-0 9s linear infinite; }
-  .butterfly-1  { animation: fly-1 10s linear infinite; }
-  .butterfly-2  { animation: fly-2 8s linear infinite; }
-  .butterfly-3  { animation: fly-3 11s linear infinite; }
-  .butterfly-4  { animation: fly-4 9.5s linear infinite; }
-  .butterfly-5  { animation: fly-5 10.5s linear infinite; }
-  .butterfly-6  { animation: fly-6 8.5s linear infinite; }
-  .butterfly-7  { animation: fly-7 11.5s linear infinite; }
-  .butterfly-8  { animation: fly-8 9s linear infinite; }
-  .butterfly-9  { animation: fly-9 10s linear infinite; }
-  .butterfly-10 { animation: fly-10 8.8s linear infinite; }
-  .butterfly-11 { animation: fly-11 10.8s linear infinite; }
-  .butterfly-12 { animation: fly-12 9.2s linear infinite; }
-  .butterfly-13 { animation: fly-13 10.3s linear infinite; }
-  .butterfly-14 { animation: fly-14 8.7s linear infinite; }
-  .butterfly-15 { animation: fly-15 11.2s linear infinite; }
-  .butterfly-16 { animation: fly-16 9.8s linear infinite; }
-  .butterfly-17 { animation: fly-17 10.6s linear infinite; }
-  .butterfly-18 { animation: fly-18 8.3s linear infinite; }
-  .butterfly-19 { animation: fly-19 9.5s linear infinite; }
-
-  @keyframes fly-0 {
-    0%   { transform: translate(0, 0) rotate(2deg); }
-    20%  { transform: translate(50px, -8px) rotate(-4deg); }
-    45%  { transform: translate(-30px, 12px) rotate(6deg); }
-    70%  { transform: translate(60px, -5px) rotate(-3deg); }
-    100% { transform: translate(-40px, 8px) rotate(5deg); }
-  }
-  @keyframes fly-1 {
-    0%   { transform: translate(0, 0) rotate(-3deg); }
-    25%  { transform: translate(-45px, 10px) rotate(5deg); }
-    50%  { transform: translate(35px, -15px) rotate(-6deg); }
-    75%  { transform: translate(-55px, 8px) rotate(4deg); }
-    100% { transform: translate(40px, -10px) rotate(-2deg); }
-  }
-  @keyframes fly-2 {
-    0%   { transform: translate(0, 0) rotate(4deg); }
-    30%  { transform: translate(55px, 5px) rotate(-5deg); }
-    55%  { transform: translate(-40px, -12px) rotate(7deg); }
-    80%  { transform: translate(45px, 8px) rotate(-4deg); }
-    100% { transform: translate(-35px, -6px) rotate(3deg); }
-  }
-  @keyframes fly-3 {
-    0%   { transform: translate(0, 0) rotate(-1deg); }
-    22%  { transform: translate(-35px, -8px) rotate(4deg); }
-    48%  { transform: translate(50px, 10px) rotate(-7deg); }
-    72%  { transform: translate(-45px, -5px) rotate(5deg); }
-    100% { transform: translate(30px, 12px) rotate(-3deg); }
-  }
-  @keyframes fly-4 {
-    0%   { transform: translate(0, 0) rotate(-5deg); }
-    18%  { transform: translate(40px, 6px) rotate(6deg); }
-    42%  { transform: translate(-55px, -10px) rotate(-4deg); }
-    68%  { transform: translate(35px, 8px) rotate(7deg); }
-    100% { transform: translate(-50px, -4px) rotate(-2deg); }
-  }
-  @keyframes fly-5 {
-    0%   { transform: translate(0, 0) rotate(3deg); }
-    28%  { transform: translate(-50px, -5px) rotate(-6deg); }
-    52%  { transform: translate(30px, 14px) rotate(5deg); }
-    78%  { transform: translate(-40px, -8px) rotate(-4deg); }
-    100% { transform: translate(45px, 6px) rotate(3deg); }
-  }
-  @keyframes fly-6 {
-    0%   { transform: translate(0, 0) rotate(-2deg); }
-    23%  { transform: translate(45px, 8px) rotate(5deg); }
-    50%  { transform: translate(-35px, -10px) rotate(-5deg); }
-    73%  { transform: translate(55px, 4px) rotate(4deg); }
-    100% { transform: translate(-30px, -8px) rotate(-3deg); }
-  }
-  @keyframes fly-7 {
-    0%   { transform: translate(0, 0) rotate(1deg); }
-    20%  { transform: translate(-40px, -6px) rotate(-4deg); }
-    46%  { transform: translate(50px, 10px) rotate(6deg); }
-    70%  { transform: translate(-45px, -5px) rotate(-5deg); }
-    100% { transform: translate(35px, 8px) rotate(4deg); }
-  }
-  @keyframes fly-8 {
-    0%   { transform: translate(0, 0) rotate(-4deg); }
-    26%  { transform: translate(35px, 5px) rotate(5deg); }
-    54%  { transform: translate(-50px, -8px) rotate(-6deg); }
-    76%  { transform: translate(40px, 12px) rotate(4deg); }
-    100% { transform: translate(-45px, -6px) rotate(-3deg); }
-  }
-  @keyframes fly-9 {
-    0%   { transform: translate(0, 0) rotate(2deg); }
-    24%  { transform: translate(-55px, -4px) rotate(-5deg); }
-    50%  { transform: translate(40px, 8px) rotate(6deg); }
-    74%  { transform: translate(-35px, -10px) rotate(-4deg); }
-    100% { transform: translate(50px, 5px) rotate(3deg); }
-  }
-  @keyframes fly-10 {
-    0%   { transform: translate(0, 0) rotate(-1deg); }
-    22%  { transform: translate(45px, 10px) rotate(4deg); }
-    48%  { transform: translate(-40px, -6px) rotate(-5deg); }
-    72%  { transform: translate(55px, 4px) rotate(3deg); }
-    100% { transform: translate(-35px, -8px) rotate(-4deg); }
-  }
-  @keyframes fly-11 {
-    0%   { transform: translate(0, 0) rotate(3deg); }
-    28%  { transform: translate(-45px, -8px) rotate(-6deg); }
-    56%  { transform: translate(35px, 12px) rotate(5deg); }
-    78%  { transform: translate(-50px, -4px) rotate(-3deg); }
-    100% { transform: translate(40px, 8px) rotate(4deg); }
-  }
-
-  @keyframes fly-12 {
-    0%   { transform: translate(0, 0) rotate(-2deg); }
-    22%  { transform: translate(55px, 6px) rotate(5deg); }
-    48%  { transform: translate(-35px, -12px) rotate(-6deg); }
-    72%  { transform: translate(42px, 10px) rotate(3deg); }
-    100% { transform: translate(-48px, -5px) rotate(-4deg); }
-  }
-  @keyframes fly-13 {
-    0%   { transform: translate(0, 0) rotate(4deg); }
-    26%  { transform: translate(-48px, -6px) rotate(-5deg); }
-    54%  { transform: translate(38px, 8px) rotate(6deg); }
-    76%  { transform: translate(-42px, -10px) rotate(-3deg); }
-    100% { transform: translate(52px, 4px) rotate(5deg); }
-  }
-  @keyframes fly-14 {
-    0%   { transform: translate(0, 0) rotate(-1deg); }
-    20%  { transform: translate(42px, -10px) rotate(4deg); }
-    46%  { transform: translate(-52px, 5px) rotate(-7deg); }
-    70%  { transform: translate(30px, 8px) rotate(5deg); }
-    100% { transform: translate(-38px, -6px) rotate(-2deg); }
-  }
-  @keyframes fly-15 {
-    0%   { transform: translate(0, 0) rotate(5deg); }
-    24%  { transform: translate(-35px, 8px) rotate(-4deg); }
-    50%  { transform: translate(48px, -5px) rotate(6deg); }
-    74%  { transform: translate(-55px, -8px) rotate(-5deg); }
-    100% { transform: translate(35px, 12px) rotate(3deg); }
-  }
-  @keyframes fly-16 {
-    0%   { transform: translate(0, 0) rotate(-3deg); }
-    28%  { transform: translate(50px, -8px) rotate(6deg); }
-    52%  { transform: translate(-40px, 10px) rotate(-4deg); }
-    78%  { transform: translate(45px, -5px) rotate(7deg); }
-    100% { transform: translate(-50px, 8px) rotate(-3deg); }
-  }
-  @keyframes fly-17 {
-    0%   { transform: translate(0, 0) rotate(2deg); }
-    22%  { transform: translate(-42px, 5px) rotate(-5deg); }
-    48%  { transform: translate(55px, -10px) rotate(4deg); }
-    72%  { transform: translate(-30px, 8px) rotate(-6deg); }
-    100% { transform: translate(48px, -6px) rotate(3deg); }
-  }
-  @keyframes fly-18 {
-    0%   { transform: translate(0, 0) rotate(-4deg); }
-    26%  { transform: translate(35px, 12px) rotate(5deg); }
-    54%  { transform: translate(-48px, -5px) rotate(-3deg); }
-    76%  { transform: translate(52px, 6px) rotate(6deg); }
-    100% { transform: translate(-35px, -10px) rotate(-4deg); }
-  }
-  @keyframes fly-19 {
-    0%   { transform: translate(0, 0) rotate(1deg); }
-    24%  { transform: translate(-50px, -8px) rotate(-6deg); }
-    50%  { transform: translate(40px, 10px) rotate(5deg); }
-    76%  { transform: translate(-45px, -5px) rotate(-3deg); }
-    100% { transform: translate(55px, 8px) rotate(4deg); }
-  }
-
-  /* ── Mastered gold shimmer ── */
-  @keyframes gold-shimmer {
-    0%, 100% { box-shadow: 0 0 4px rgba(251, 191, 36, 0.3), 0 0 8px rgba(251, 191, 36, 0.1); }
-    50%      { box-shadow: 0 0 10px rgba(251, 191, 36, 0.5), 0 0 20px rgba(251, 191, 36, 0.2); }
-  }
-
-  .gold-plated {
-    animation: gold-shimmer 2s ease-in-out infinite;
-  }
-
-  /* ── Pagoda simple fade ── */
-  @keyframes menu-fade-in {
-    0% { opacity: 0; }
-    100% { opacity: 1; }
-  }
-
-  .menu-fade-in {
-    opacity: 0;
-    animation: menu-fade-in 0.4s ease-out forwards;
-  }
-
-  /* ── Menu entrance ── */
-  @keyframes menu-fade-up {
-    0% {
-      opacity: 0;
-      transform: translateY(16px);
-    }
+  @keyframes inferno-pulse {
+    0%,
     100% {
-      opacity: 1;
-      transform: translateY(0);
+      box-shadow:
+        0 0 28px rgba(220, 38, 38, 0.22),
+        0 0 48px rgba(234, 88, 12, 0.12),
+        0 0 64px rgba(251, 191, 36, 0.08);
+    }
+    50% {
+      box-shadow:
+        0 0 40px rgba(220, 38, 38, 0.35),
+        0 0 64px rgba(234, 88, 12, 0.2),
+        0 0 88px rgba(251, 191, 36, 0.12);
     }
   }
+}
 
-  .menu-entrance {
+/* ── Floating butterflies ── */
+.butterflies {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.butterfly {
+  position: absolute;
+  width: 1em;
+  height: 1em;
+  will-change: transform;
+}
+
+/* Side-view inner: rotated so butterfly faces sideways */
+.butterfly-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.butterfly-inner--0 {
+  transform: rotate(70deg);
+}
+.butterfly-inner--1 {
+  transform: rotate(80deg);
+}
+.butterfly-inner--2 {
+  transform: rotate(60deg);
+}
+
+/* ── Body ── */
+.bf-body {
+  position: absolute;
+  width: 0.08em;
+  height: 0.55em;
+  border-radius: 40%;
+  z-index: 1;
+  background: rgba(80, 50, 25, 0.5);
+}
+
+/* ── Single wing (side view — one wing visible) ── */
+.bf-wing {
+  position: absolute;
+  /* Wing extends to one side of the body */
+  left: 50%;
+  top: 50%;
+  width: 0.55em;
+  height: 0.4em;
+  margin-top: -0.2em;
+  margin-left: 0.02em;
+  /* Heart / teardrop shape */
+  border-radius: 10% 80% 15% 70%;
+  transform-origin: left center;
+  animation: wing-beat 0.38s ease-in-out infinite;
+}
+
+@keyframes wing-beat {
+  0%,
+  100% {
+    transform: rotateY(10deg) rotate(-5deg);
+  }
+  30% {
+    transform: rotateY(55deg) rotate(-2deg);
+  }
+  60% {
+    transform: rotateY(15deg) rotate(-8deg);
+  }
+}
+
+/* Varied beat timings */
+.butterfly-0 .bf-wing {
+  animation-duration: 0.32s;
+}
+.butterfly-1 .bf-wing {
+  animation-duration: 0.4s;
+}
+.butterfly-2 .bf-wing {
+  animation-duration: 0.36s;
+}
+.butterfly-3 .bf-wing {
+  animation-duration: 0.44s;
+}
+.butterfly-4 .bf-wing {
+  animation-duration: 0.34s;
+}
+.butterfly-5 .bf-wing {
+  animation-duration: 0.38s;
+}
+.butterfly-6 .bf-wing {
+  animation-duration: 0.42s;
+}
+.butterfly-7 .bf-wing {
+  animation-duration: 0.33s;
+}
+.butterfly-8 .bf-wing {
+  animation-duration: 0.39s;
+}
+.butterfly-9 .bf-wing {
+  animation-duration: 0.37s;
+}
+.butterfly-10 .bf-wing {
+  animation-duration: 0.41s;
+}
+.butterfly-11 .bf-wing {
+  animation-duration: 0.35s;
+}
+.butterfly-12 .bf-wing {
+  animation-duration: 0.43s;
+}
+.butterfly-13 .bf-wing {
+  animation-duration: 0.31s;
+}
+.butterfly-14 .bf-wing {
+  animation-duration: 0.38s;
+}
+.butterfly-15 .bf-wing {
+  animation-duration: 0.45s;
+}
+.butterfly-16 .bf-wing {
+  animation-duration: 0.33s;
+}
+.butterfly-17 .bf-wing {
+  animation-duration: 0.4s;
+}
+.butterfly-18 .bf-wing {
+  animation-duration: 0.36s;
+}
+.butterfly-19 .bf-wing {
+  animation-duration: 0.42s;
+}
+
+/* ── Color variants ── */
+.butterfly--amber .bf-wing {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.55), rgba(251, 191, 36, 0.3));
+  box-shadow: 0 0 6px rgba(245, 158, 11, 0.2);
+}
+.butterfly--amber .bf-body {
+  background: rgba(180, 100, 20, 0.5);
+}
+
+.butterfly--gold .bf-wing {
+  background: linear-gradient(135deg, rgba(202, 160, 60, 0.5), rgba(232, 201, 122, 0.3));
+  box-shadow: 0 0 6px rgba(202, 160, 60, 0.2);
+}
+.butterfly--gold .bf-body {
+  background: rgba(160, 120, 40, 0.5);
+}
+
+.butterfly--coral .bf-wing {
+  background: linear-gradient(135deg, rgba(251, 146, 100, 0.5), rgba(253, 186, 156, 0.3));
+  box-shadow: 0 0 6px rgba(251, 146, 100, 0.2);
+}
+.butterfly--coral .bf-body {
+  background: rgba(180, 100, 70, 0.5);
+}
+
+.butterfly--rose .bf-wing {
+  background: linear-gradient(135deg, rgba(244, 114, 130, 0.45), rgba(251, 170, 160, 0.25));
+  box-shadow: 0 0 6px rgba(244, 114, 130, 0.15);
+}
+.butterfly--rose .bf-body {
+  background: rgba(160, 80, 90, 0.5);
+}
+
+.butterfly--cream .bf-wing {
+  background: linear-gradient(135deg, rgba(232, 215, 180, 0.5), rgba(245, 235, 210, 0.3));
+  box-shadow: 0 0 6px rgba(200, 180, 140, 0.2);
+}
+.butterfly--cream .bf-body {
+  background: rgba(160, 140, 110, 0.5);
+}
+
+.butterfly--ink .bf-wing {
+  background: linear-gradient(135deg, rgba(80, 60, 40, 0.45), rgba(120, 90, 60, 0.25));
+  box-shadow: 0 0 4px rgba(60, 40, 20, 0.15);
+}
+.butterfly--ink .bf-body {
+  background: rgba(40, 25, 15, 0.5);
+}
+
+/* ── Flight paths — horizontal wandering ── */
+.butterfly-0 {
+  animation: fly-0 9s linear infinite;
+}
+.butterfly-1 {
+  animation: fly-1 10s linear infinite;
+}
+.butterfly-2 {
+  animation: fly-2 8s linear infinite;
+}
+.butterfly-3 {
+  animation: fly-3 11s linear infinite;
+}
+.butterfly-4 {
+  animation: fly-4 9.5s linear infinite;
+}
+.butterfly-5 {
+  animation: fly-5 10.5s linear infinite;
+}
+.butterfly-6 {
+  animation: fly-6 8.5s linear infinite;
+}
+.butterfly-7 {
+  animation: fly-7 11.5s linear infinite;
+}
+.butterfly-8 {
+  animation: fly-8 9s linear infinite;
+}
+.butterfly-9 {
+  animation: fly-9 10s linear infinite;
+}
+.butterfly-10 {
+  animation: fly-10 8.8s linear infinite;
+}
+.butterfly-11 {
+  animation: fly-11 10.8s linear infinite;
+}
+.butterfly-12 {
+  animation: fly-12 9.2s linear infinite;
+}
+.butterfly-13 {
+  animation: fly-13 10.3s linear infinite;
+}
+.butterfly-14 {
+  animation: fly-14 8.7s linear infinite;
+}
+.butterfly-15 {
+  animation: fly-15 11.2s linear infinite;
+}
+.butterfly-16 {
+  animation: fly-16 9.8s linear infinite;
+}
+.butterfly-17 {
+  animation: fly-17 10.6s linear infinite;
+}
+.butterfly-18 {
+  animation: fly-18 8.3s linear infinite;
+}
+.butterfly-19 {
+  animation: fly-19 9.5s linear infinite;
+}
+
+@keyframes fly-0 {
+  0% {
+    transform: translate(0, 0) rotate(2deg);
+  }
+  20% {
+    transform: translate(50px, -8px) rotate(-4deg);
+  }
+  45% {
+    transform: translate(-30px, 12px) rotate(6deg);
+  }
+  70% {
+    transform: translate(60px, -5px) rotate(-3deg);
+  }
+  100% {
+    transform: translate(-40px, 8px) rotate(5deg);
+  }
+}
+@keyframes fly-1 {
+  0% {
+    transform: translate(0, 0) rotate(-3deg);
+  }
+  25% {
+    transform: translate(-45px, 10px) rotate(5deg);
+  }
+  50% {
+    transform: translate(35px, -15px) rotate(-6deg);
+  }
+  75% {
+    transform: translate(-55px, 8px) rotate(4deg);
+  }
+  100% {
+    transform: translate(40px, -10px) rotate(-2deg);
+  }
+}
+@keyframes fly-2 {
+  0% {
+    transform: translate(0, 0) rotate(4deg);
+  }
+  30% {
+    transform: translate(55px, 5px) rotate(-5deg);
+  }
+  55% {
+    transform: translate(-40px, -12px) rotate(7deg);
+  }
+  80% {
+    transform: translate(45px, 8px) rotate(-4deg);
+  }
+  100% {
+    transform: translate(-35px, -6px) rotate(3deg);
+  }
+}
+@keyframes fly-3 {
+  0% {
+    transform: translate(0, 0) rotate(-1deg);
+  }
+  22% {
+    transform: translate(-35px, -8px) rotate(4deg);
+  }
+  48% {
+    transform: translate(50px, 10px) rotate(-7deg);
+  }
+  72% {
+    transform: translate(-45px, -5px) rotate(5deg);
+  }
+  100% {
+    transform: translate(30px, 12px) rotate(-3deg);
+  }
+}
+@keyframes fly-4 {
+  0% {
+    transform: translate(0, 0) rotate(-5deg);
+  }
+  18% {
+    transform: translate(40px, 6px) rotate(6deg);
+  }
+  42% {
+    transform: translate(-55px, -10px) rotate(-4deg);
+  }
+  68% {
+    transform: translate(35px, 8px) rotate(7deg);
+  }
+  100% {
+    transform: translate(-50px, -4px) rotate(-2deg);
+  }
+}
+@keyframes fly-5 {
+  0% {
+    transform: translate(0, 0) rotate(3deg);
+  }
+  28% {
+    transform: translate(-50px, -5px) rotate(-6deg);
+  }
+  52% {
+    transform: translate(30px, 14px) rotate(5deg);
+  }
+  78% {
+    transform: translate(-40px, -8px) rotate(-4deg);
+  }
+  100% {
+    transform: translate(45px, 6px) rotate(3deg);
+  }
+}
+@keyframes fly-6 {
+  0% {
+    transform: translate(0, 0) rotate(-2deg);
+  }
+  23% {
+    transform: translate(45px, 8px) rotate(5deg);
+  }
+  50% {
+    transform: translate(-35px, -10px) rotate(-5deg);
+  }
+  73% {
+    transform: translate(55px, 4px) rotate(4deg);
+  }
+  100% {
+    transform: translate(-30px, -8px) rotate(-3deg);
+  }
+}
+@keyframes fly-7 {
+  0% {
+    transform: translate(0, 0) rotate(1deg);
+  }
+  20% {
+    transform: translate(-40px, -6px) rotate(-4deg);
+  }
+  46% {
+    transform: translate(50px, 10px) rotate(6deg);
+  }
+  70% {
+    transform: translate(-45px, -5px) rotate(-5deg);
+  }
+  100% {
+    transform: translate(35px, 8px) rotate(4deg);
+  }
+}
+@keyframes fly-8 {
+  0% {
+    transform: translate(0, 0) rotate(-4deg);
+  }
+  26% {
+    transform: translate(35px, 5px) rotate(5deg);
+  }
+  54% {
+    transform: translate(-50px, -8px) rotate(-6deg);
+  }
+  76% {
+    transform: translate(40px, 12px) rotate(4deg);
+  }
+  100% {
+    transform: translate(-45px, -6px) rotate(-3deg);
+  }
+}
+@keyframes fly-9 {
+  0% {
+    transform: translate(0, 0) rotate(2deg);
+  }
+  24% {
+    transform: translate(-55px, -4px) rotate(-5deg);
+  }
+  50% {
+    transform: translate(40px, 8px) rotate(6deg);
+  }
+  74% {
+    transform: translate(-35px, -10px) rotate(-4deg);
+  }
+  100% {
+    transform: translate(50px, 5px) rotate(3deg);
+  }
+}
+@keyframes fly-10 {
+  0% {
+    transform: translate(0, 0) rotate(-1deg);
+  }
+  22% {
+    transform: translate(45px, 10px) rotate(4deg);
+  }
+  48% {
+    transform: translate(-40px, -6px) rotate(-5deg);
+  }
+  72% {
+    transform: translate(55px, 4px) rotate(3deg);
+  }
+  100% {
+    transform: translate(-35px, -8px) rotate(-4deg);
+  }
+}
+@keyframes fly-11 {
+  0% {
+    transform: translate(0, 0) rotate(3deg);
+  }
+  28% {
+    transform: translate(-45px, -8px) rotate(-6deg);
+  }
+  56% {
+    transform: translate(35px, 12px) rotate(5deg);
+  }
+  78% {
+    transform: translate(-50px, -4px) rotate(-3deg);
+  }
+  100% {
+    transform: translate(40px, 8px) rotate(4deg);
+  }
+}
+
+@keyframes fly-12 {
+  0% {
+    transform: translate(0, 0) rotate(-2deg);
+  }
+  22% {
+    transform: translate(55px, 6px) rotate(5deg);
+  }
+  48% {
+    transform: translate(-35px, -12px) rotate(-6deg);
+  }
+  72% {
+    transform: translate(42px, 10px) rotate(3deg);
+  }
+  100% {
+    transform: translate(-48px, -5px) rotate(-4deg);
+  }
+}
+@keyframes fly-13 {
+  0% {
+    transform: translate(0, 0) rotate(4deg);
+  }
+  26% {
+    transform: translate(-48px, -6px) rotate(-5deg);
+  }
+  54% {
+    transform: translate(38px, 8px) rotate(6deg);
+  }
+  76% {
+    transform: translate(-42px, -10px) rotate(-3deg);
+  }
+  100% {
+    transform: translate(52px, 4px) rotate(5deg);
+  }
+}
+@keyframes fly-14 {
+  0% {
+    transform: translate(0, 0) rotate(-1deg);
+  }
+  20% {
+    transform: translate(42px, -10px) rotate(4deg);
+  }
+  46% {
+    transform: translate(-52px, 5px) rotate(-7deg);
+  }
+  70% {
+    transform: translate(30px, 8px) rotate(5deg);
+  }
+  100% {
+    transform: translate(-38px, -6px) rotate(-2deg);
+  }
+}
+@keyframes fly-15 {
+  0% {
+    transform: translate(0, 0) rotate(5deg);
+  }
+  24% {
+    transform: translate(-35px, 8px) rotate(-4deg);
+  }
+  50% {
+    transform: translate(48px, -5px) rotate(6deg);
+  }
+  74% {
+    transform: translate(-55px, -8px) rotate(-5deg);
+  }
+  100% {
+    transform: translate(35px, 12px) rotate(3deg);
+  }
+}
+@keyframes fly-16 {
+  0% {
+    transform: translate(0, 0) rotate(-3deg);
+  }
+  28% {
+    transform: translate(50px, -8px) rotate(6deg);
+  }
+  52% {
+    transform: translate(-40px, 10px) rotate(-4deg);
+  }
+  78% {
+    transform: translate(45px, -5px) rotate(7deg);
+  }
+  100% {
+    transform: translate(-50px, 8px) rotate(-3deg);
+  }
+}
+@keyframes fly-17 {
+  0% {
+    transform: translate(0, 0) rotate(2deg);
+  }
+  22% {
+    transform: translate(-42px, 5px) rotate(-5deg);
+  }
+  48% {
+    transform: translate(55px, -10px) rotate(4deg);
+  }
+  72% {
+    transform: translate(-30px, 8px) rotate(-6deg);
+  }
+  100% {
+    transform: translate(48px, -6px) rotate(3deg);
+  }
+}
+@keyframes fly-18 {
+  0% {
+    transform: translate(0, 0) rotate(-4deg);
+  }
+  26% {
+    transform: translate(35px, 12px) rotate(5deg);
+  }
+  54% {
+    transform: translate(-48px, -5px) rotate(-3deg);
+  }
+  76% {
+    transform: translate(52px, 6px) rotate(6deg);
+  }
+  100% {
+    transform: translate(-35px, -10px) rotate(-4deg);
+  }
+}
+@keyframes fly-19 {
+  0% {
+    transform: translate(0, 0) rotate(1deg);
+  }
+  24% {
+    transform: translate(-50px, -8px) rotate(-6deg);
+  }
+  50% {
+    transform: translate(40px, 10px) rotate(5deg);
+  }
+  76% {
+    transform: translate(-45px, -5px) rotate(-3deg);
+  }
+  100% {
+    transform: translate(55px, 8px) rotate(4deg);
+  }
+}
+
+/* ── Mastered gold shimmer ── */
+@keyframes gold-shimmer {
+  0%,
+  100% {
+    box-shadow:
+      0 0 4px rgba(251, 191, 36, 0.3),
+      0 0 8px rgba(251, 191, 36, 0.1);
+  }
+  50% {
+    box-shadow:
+      0 0 10px rgba(251, 191, 36, 0.5),
+      0 0 20px rgba(251, 191, 36, 0.2);
+  }
+}
+
+.gold-plated {
+  animation: gold-shimmer 2s ease-in-out infinite;
+}
+
+/* ── Pagoda simple fade ── */
+@keyframes menu-fade-in {
+  0% {
     opacity: 0;
-    animation: menu-fade-up 0.5s ease-out forwards;
   }
-
-  .menu-entrance-1 { animation-delay: 0.05s; }
-  .menu-entrance-2 { animation-delay: 0.15s; }
-  .menu-entrance-3 { animation-delay: 0.25s; }
-  .menu-entrance-4 { animation-delay: 0.35s; }
-  .menu-entrance-5 { animation-delay: 0.45s; }
-  .menu-entrance-6 { animation-delay: 0.55s; }
-
-  /* ── Reduced motion ── */
-  @media (prefers-reduced-motion: reduce) {
-    .butterfly,
-    .particle {
-      animation-play-state: paused !important;
-    }
-    .streak-inferno {
-      animation: none !important;
-    }
-    .streak-overlay-inferno {
-      animation: none !important;
-    }
-    .menu-entrance,
-    .menu-fade-in {
-      opacity: 1;
-      animation: none !important;
-    }
+  100% {
+    opacity: 1;
   }
+}
+
+.menu-fade-in {
+  opacity: 0;
+  animation: menu-fade-in 0.4s ease-out forwards;
+}
+
+/* ── Menu entrance ── */
+@keyframes menu-fade-up {
+  0% {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.menu-entrance {
+  opacity: 0;
+  animation: menu-fade-up 0.5s ease-out forwards;
+}
+
+.menu-entrance-1 {
+  animation-delay: 0.05s;
+}
+.menu-entrance-2 {
+  animation-delay: 0.15s;
+}
+.menu-entrance-3 {
+  animation-delay: 0.25s;
+}
+.menu-entrance-4 {
+  animation-delay: 0.35s;
+}
+.menu-entrance-5 {
+  animation-delay: 0.45s;
+}
+.menu-entrance-6 {
+  animation-delay: 0.55s;
+}
+
+/* ── Reduced motion ── */
+@media (prefers-reduced-motion: reduce) {
+  .butterfly,
+  .particle {
+    animation-play-state: paused !important;
+  }
+  .streak-inferno {
+    animation: none !important;
+  }
+  .streak-overlay-inferno {
+    animation: none !important;
+  }
+  .menu-entrance,
+  .menu-fade-in {
+    opacity: 1;
+    animation: none !important;
+  }
+}

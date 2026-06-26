@@ -13,11 +13,13 @@ export const GET: RequestHandler = async () => {
   const [{ value: unscreened }] = await db
     .select({ value: count() })
     .from(rssArticle)
-    .where(and(
-      eq(rssArticle.screened, false),
-      eq(rssArticle.rejected, false),
-      gt(rssArticle.fetchedAt, cutoff)
-    ));
+    .where(
+      and(
+        eq(rssArticle.screened, false),
+        eq(rssArticle.rejected, false),
+        gt(rssArticle.fetchedAt, cutoff)
+      )
+    );
 
   const [{ value: total }] = await db
     .select({ value: count() })

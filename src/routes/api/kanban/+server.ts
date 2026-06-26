@@ -1,7 +1,8 @@
 import { db } from '$lib/server/db/index.js';
-import { kanbanCard, kanbanActivity } from '$lib/server/db/schema.js';
-import { asc, eq, max, sql } from 'drizzle-orm';
+import { kanbanCard } from '$lib/server/db/schema.js';
+import { asc, eq } from 'drizzle-orm';
 import { json } from '@sveltejs/kit';
+import { assertProjectAccess } from '$lib/server/access.js';
 import type { KanbanCard } from '$lib/types/story-map.js';
 
 const COLUMN_IDS = ['col-todo', 'col-progress', 'col-review', 'col-blocked', 'col-done'] as const;
@@ -20,10 +21,11 @@ const COLUMN_COLORS: Record<string, string> = {
   'col-done': '#d1fae5'
 };
 
-export async function GET({ url }) {
+export async function GET({ url, locals }) {
   const projectId = Number(url.searchParams.get('projectId'));
 
   if (!projectId) return json({ columns: [] });
+  await assertProjectAccess(locals, projectId);
 
   try {
     const cards = await db

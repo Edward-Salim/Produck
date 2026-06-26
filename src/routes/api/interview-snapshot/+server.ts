@@ -2,11 +2,13 @@ import { json } from '@sveltejs/kit';
 import { db } from '$lib/server/db/index.js';
 import { interviewSnapshot } from '$lib/server/db/schema.js';
 import { eq } from 'drizzle-orm';
+import { assertProjectAccess } from '$lib/server/access.js';
 import type { RequestHandler } from './$types.js';
 
-export const POST: RequestHandler = async ({ request, cookies }) => {
+export const POST: RequestHandler = async ({ request, cookies, locals }) => {
   const projectId = Number(cookies.get('active_project'));
   if (!projectId) return json({ error: 'No active project' }, { status: 400 });
+  await assertProjectAccess(locals, projectId);
 
   const body = await request.json();
   const { personName, interviewDate } = body;
@@ -31,10 +33,18 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
   return json({ ok: true, snapshot: created });
 };
 
-export const PATCH: RequestHandler = async ({ request }) => {
+export const PATCH: RequestHandler = async ({ request, locals }) => {
   const body = await request.json();
   const { id, ...updates } = body;
   if (!id) return json({ error: 'Missing id' }, { status: 400 });
+
+  const [snapshot] = await db
+    .select({ projectId: interviewSnapshot.projectId })
+    .from(interviewSnapshot)
+    .where(eq(interviewSnapshot.id, id))
+    .limit(1);
+  if (!snapshot) return json({ error: 'Snapshot not found' }, { status: 404 });
+  await assertProjectAccess(locals, snapshot.projectId);
 
   const allowed: Record<string, unknown> = {};
   if (updates.personName !== undefined) allowed.personName = updates.personName;
@@ -51,9 +61,17 @@ export const PATCH: RequestHandler = async ({ request }) => {
   return json({ ok: true });
 };
 
-export const DELETE: RequestHandler = async ({ request }) => {
+export const DELETE: RequestHandler = async ({ request, locals }) => {
   const { id } = await request.json();
   if (!id) return json({ error: 'Missing id' }, { status: 400 });
+
+  const [snapshot] = await db
+    .select({ projectId: interviewSnapshot.projectId })
+    .from(interviewSnapshot)
+    .where(eq(interviewSnapshot.id, id))
+    .limit(1);
+  if (!snapshot) return json({ error: 'Snapshot not found' }, { status: 404 });
+  await assertProjectAccess(locals, snapshot.projectId);
 
   await db.delete(interviewSnapshot).where(eq(interviewSnapshot.id, id));
   return json({ ok: true });

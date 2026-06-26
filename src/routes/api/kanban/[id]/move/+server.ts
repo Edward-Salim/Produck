@@ -2,14 +2,7 @@ import { db } from '$lib/server/db/index.js';
 import { kanbanCard, kanbanActivity } from '$lib/server/db/schema.js';
 import { eq } from 'drizzle-orm';
 import { json } from '@sveltejs/kit';
-
-const COLUMN_LABELS: Record<string, string> = {
-  'col-todo': 'To Do',
-  'col-progress': 'In Progress',
-  'col-review': 'Review',
-  'col-blocked': 'Blocked',
-  'col-done': 'Done'
-};
+import { assertProjectAccess } from '$lib/server/access.js';
 
 export async function PATCH({ params, request, locals }) {
   const cardId = Number(params.id);
@@ -22,6 +15,8 @@ export async function PATCH({ params, request, locals }) {
 
   // Fetch current state for logging
   const [card] = await db.select().from(kanbanCard).where(eq(kanbanCard.id, cardId));
+  if (!card) return json({ error: 'Card not found' }, { status: 404 });
+  await assertProjectAccess(locals, card.projectId);
   const oldColumn = card?.columnId ?? '';
 
   await db
@@ -30,7 +25,7 @@ export async function PATCH({ params, request, locals }) {
     .where(eq(kanbanCard.id, cardId));
 
   // Log activity if the column actually changed
-  if (oldColumn !== columnId && card) {
+  if (oldColumn !== columnId) {
     await db.insert(kanbanActivity).values({
       projectId: card.projectId,
       cardId: card.id,

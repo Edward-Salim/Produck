@@ -1,13 +1,6 @@
 <script lang="ts">
   import type { FrameworkInstance } from './types.js';
-  import {
-    CheckCircle2,
-    Circle,
-    Target,
-    ChevronRight,
-    ChevronsDownUp,
-    ChevronsUpDown
-  } from '@lucide/svelte';
+  import { Target, ChevronRight, ChevronsDownUp, ChevronsUpDown } from '@lucide/svelte';
   import { progressColor } from '$lib/constants/colors.js';
 
   let {

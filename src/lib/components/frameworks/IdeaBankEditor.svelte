@@ -207,6 +207,7 @@
                 : ''}"
               style="box-shadow: 0 1px 3px rgba(0,0,0,.06);"
               draggable={draftMode === 'edit'}
+              role="listitem"
               ondragstart={(e) => onDragStart(e, idea.id)}
               ondragend={onDragEnd}
             >

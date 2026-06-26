@@ -1,7 +1,7 @@
 import { json } from '@sveltejs/kit';
 import { db } from '$lib/server/db/index.js';
 import { trendSummary } from '$lib/server/db/schema.js';
-import { and, eq } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import type { RequestHandler } from './$types.js';
 
 /** Check if a briefing exists for a given date. Client polls this while

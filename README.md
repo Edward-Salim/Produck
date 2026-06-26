@@ -23,10 +23,10 @@ pnpm dev
 
 ## Scripts
 
-| Command | Description |
-|---------|-------------|
-| `pnpm dev` | Start dev server |
-| `pnpm build` | Production build |
-| `pnpm check` | Type-check + lint |
-| `pnpm db:push` | Push schema to Neon |
+| Command          | Description         |
+| ---------------- | ------------------- |
+| `pnpm dev`       | Start dev server    |
+| `pnpm build`     | Production build    |
+| `pnpm check`     | Type-check + lint   |
+| `pnpm db:push`   | Push schema to Neon |
 | `pnpm db:studio` | Open Drizzle Studio |

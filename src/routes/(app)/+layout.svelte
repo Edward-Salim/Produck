@@ -10,8 +10,6 @@
 
   let fullscreen = $derived(getFullscreen());
   import {
-    Lightbulb,
-    Target,
     Layers3,
     Wrench,
     BookOpen,

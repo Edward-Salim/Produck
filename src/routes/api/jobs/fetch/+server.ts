@@ -11,15 +11,15 @@ async function doRefresh() {
 
   // Extract canonical job ID from URL for cross-source matching
   const jobKey = (url: string) => {
-    let m = url.match(/\/job-detail\/(J\d+)/);  // ATS / Shopee SG (new format)
+    let m = url.match(/\/job-detail\/(J\d+)/); // ATS / Shopee SG (new format)
     if (m) return m[1];
-    m = url.match(/[?&]id=(J\d+)/);             // ATS / Shopee SG (old format)
+    m = url.match(/[?&]id=(J\d+)/); // ATS / Shopee SG (old format)
     if (m) return m[1];
-    m = url.match(/\/position\/(J\d+)/);        // SEA
+    m = url.match(/\/position\/(J\d+)/); // SEA
     if (m) return m[1];
-    m = url.match(/\/search\/(\d+)/);           // ByteDance
+    m = url.match(/\/search\/(\d+)/); // ByteDance
     if (m) return 'bd-' + m[1];
-    return url;                                  // fallback
+    return url; // fallback
   };
 
   // Snapshot existing viewedAt keyed by canonical job ID so it
@@ -39,9 +39,7 @@ async function doRefresh() {
   await db.delete(jobListing);
 
   // Fetch all sources in parallel
-  const results = await Promise.allSettled(
-    sources.map((source) => fetchJobsFromSource(source))
-  );
+  const results = await Promise.allSettled(sources.map((source) => fetchJobsFromSource(source)));
 
   const errors: { source: string; error: string }[] = [];
   const toInsert: (typeof jobListing.$inferInsert)[] = [];
@@ -90,20 +88,22 @@ async function doRefresh() {
 
   // Update source timestamps
   for (const source of sources) {
-    await db.update(jobSource)
-      .set({ updatedAt: new Date() })
-      .where(eq(jobSource.id, source.id));
+    await db.update(jobSource).set({ updatedAt: new Date() }).where(eq(jobSource.id, source.id));
   }
 
   return { fetched: inserted, total: toInsert.length, errors };
 }
 
 export const POST: RequestHandler = async (event) => {
-  const refreshPromise = doRefresh().then((result) => {
-    console.log(`[Refresh] done: ${result.fetched}/${result.total} jobs, ${result.errors?.length ?? 0} errors`);
-  }).catch((err) => {
-    console.error('[Refresh] failed:', err);
-  });
+  const refreshPromise = doRefresh()
+    .then((result) => {
+      console.log(
+        `[Refresh] done: ${result.fetched}/${result.total} jobs, ${result.errors?.length ?? 0} errors`
+      );
+    })
+    .catch((err) => {
+      console.error('[Refresh] failed:', err);
+    });
 
   // Keep the function alive on Netlify via waitUntil
   (event.platform as any)?.context?.waitUntil?.(refreshPromise);
