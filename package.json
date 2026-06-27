@@ -70,6 +70,7 @@
     "cheerio": "^1.2.0",
     "country-flag-icons": "^1.6.17",
     "marked": "^17.0.6",
+    "node-latex-compiler": "^1.0.5",
     "rss-parser": "^3.13.0"
   }
 }

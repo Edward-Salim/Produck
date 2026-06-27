@@ -3,15 +3,12 @@ import { env } from '$env/dynamic/private';
 import { db } from '$lib/server/db/index.js';
 import { appUser } from '$lib/server/db/schema.js';
 import { eq } from 'drizzle-orm';
-import { execFile } from 'node:child_process';
+import { compile } from 'node-latex-compiler';
 import { randomUUID } from 'node:crypto';
 import { copyFile, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { homedir, tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { promisify } from 'node:util';
 import type { RequestHandler } from './$types.js';
-
-const execFileAsync = promisify(execFile);
 
 const TIKZ_PACKAGE_PATTERN = /\\usepackage(?:\[[^\]]*\])?\{tikz\}/;
 const XCOLOR_PACKAGE_PATTERN = /\\usepackage(?:\[[^\]]*\])?\{xcolor\}/;
@@ -185,6 +182,15 @@ function appendCvToLatex(latex: string): string {
   );
 }
 
+function getLatexCompilerError(result: Awaited<ReturnType<typeof compile>>): string {
+  return (
+    result.error ||
+    result.stderr?.slice(-4000) ||
+    result.stdout?.slice(-4000) ||
+    'LaTeX compiler returned an unknown error'
+  );
+}
+
 export const POST: RequestHandler = async ({ request, locals }) => {
   const authId = locals.session?.user?.id;
   const [caller] = authId ? await db.select().from(appUser).where(eq(appUser.authId, authId)) : [];
@@ -220,15 +226,14 @@ export const POST: RequestHandler = async ({ request, locals }) => {
     await writeFile(signatureTempPath, await readPrivateSignatureImage());
     await writeFile(texPath, appendCvToLatex(source), 'utf8');
 
-    const latexArgs = ['-interaction=nonstopmode', '-halt-on-error', 'application.tex'];
-    const latexOptions = {
-      cwd: tempDir,
-      timeout: 30000,
-      maxBuffer: 1024 * 1024 * 5
-    };
-
-    await execFileAsync('pdflatex', latexArgs, latexOptions);
-    await execFileAsync('pdflatex', latexArgs, latexOptions);
+    const compilerResult = await compile({
+      texFile: texPath,
+      outputDir: tempDir,
+      outputFile: pdfPath
+    });
+    if (compilerResult.status !== 'success') {
+      throw new Error(getLatexCompilerError(compilerResult));
+    }
 
     const pdf = await readFile(pdfPath);
     const filename = `Edward_Salim_Application_${safeFilename(company)}_${safeFilename(role)}.pdf`;
