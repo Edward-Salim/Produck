@@ -5,10 +5,14 @@ import { appUser } from '$lib/server/db/schema.js';
 import { eq } from 'drizzle-orm';
 import { compile } from 'node-latex-compiler';
 import { randomUUID } from 'node:crypto';
+import { existsSync, readdirSync } from 'node:fs';
 import { copyFile, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { createRequire } from 'node:module';
 import { homedir, tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import type { RequestHandler } from './$types.js';
+
+const require = createRequire(import.meta.url);
 
 const TIKZ_PACKAGE_PATTERN = /\\usepackage(?:\[[^\]]*\])?\{tikz\}/;
 const XCOLOR_PACKAGE_PATTERN = /\\usepackage(?:\[[^\]]*\])?\{xcolor\}/;
@@ -191,6 +195,44 @@ function getLatexCompilerError(result: Awaited<ReturnType<typeof compile>>): str
   );
 }
 
+function resolveLinuxTectonicPackagePath(): string | undefined {
+  try {
+    return dirname(require.resolve('@node-latex-compiler/bin-linux-x64/package.json'));
+  } catch {
+    // Netlify can include pnpm's real package path without preserving the root symlink.
+  }
+
+  const directPath = join(process.cwd(), 'node_modules', '@node-latex-compiler', 'bin-linux-x64');
+  if (existsSync(join(directPath, 'package.json'))) return directPath;
+
+  const pnpmPath = join(process.cwd(), 'node_modules', '.pnpm');
+  if (!existsSync(pnpmPath)) return undefined;
+
+  const entry = readdirSync(pnpmPath).find((name) =>
+    name.startsWith('@node-latex-compiler+bin-linux-x64@')
+  );
+  if (!entry) return undefined;
+
+  const packagePath = join(
+    pnpmPath,
+    entry,
+    'node_modules',
+    '@node-latex-compiler',
+    'bin-linux-x64'
+  );
+  return existsSync(join(packagePath, 'package.json')) ? packagePath : undefined;
+}
+
+function resolveBundledTectonicPath(): string | undefined {
+  if (process.platform !== 'linux' || process.arch !== 'x64') return undefined;
+
+  const packagePath = resolveLinuxTectonicPackagePath();
+  if (!packagePath) return undefined;
+
+  const tectonicPath = join(packagePath, 'bin', 'tectonic');
+  return existsSync(tectonicPath) ? tectonicPath : undefined;
+}
+
 export const POST: RequestHandler = async ({ request, locals }) => {
   const authId = locals.session?.user?.id;
   const [caller] = authId ? await db.select().from(appUser).where(eq(appUser.authId, authId)) : [];
@@ -229,7 +271,8 @@ export const POST: RequestHandler = async ({ request, locals }) => {
     const compilerResult = await compile({
       texFile: texPath,
       outputDir: tempDir,
-      outputFile: pdfPath
+      outputFile: pdfPath,
+      tectonicPath: resolveBundledTectonicPath()
     });
     if (compilerResult.status !== 'success') {
       throw new Error(getLatexCompilerError(compilerResult));

@@ -16,3 +16,11 @@ allowBuilds:
   puppeteer: true
   sharp: true
 onlyBuiltDependencies: []
+
+supportedArchitectures:
+  os:
+    - current
+    - linux
+  cpu:
+    - current
+    - x64

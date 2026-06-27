@@ -171,6 +171,10 @@ importers:
       vite:
         specifier: ^7.3.5
         version: 7.3.5(@types/node@22.19.15)(jiti@1.21.7)(lightningcss@1.32.0)(tsx@4.21.0)
+    optionalDependencies:
+      '@node-latex-compiler/bin-linux-x64':
+        specifier: 1.0.5
+        version: 1.0.5
 
 packages:
 

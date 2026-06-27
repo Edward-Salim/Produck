@@ -72,5 +72,8 @@
     "marked": "^17.0.6",
     "node-latex-compiler": "^1.0.5",
     "rss-parser": "^3.13.0"
+  },
+  "optionalDependencies": {
+    "@node-latex-compiler/bin-linux-x64": "1.0.5"
   }
 }
