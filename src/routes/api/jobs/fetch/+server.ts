@@ -3,6 +3,12 @@ import { db } from '$lib/server/db/index.js';
 import { jobSource, jobListing } from '$lib/server/db/schema.js';
 import { eq, lt } from 'drizzle-orm';
 import { fetchJobsFromSource, staleCutoff } from '$lib/server/jobs.js';
+import {
+  failJobRefresh,
+  finishJobRefresh,
+  getJobRefreshStatus,
+  startJobRefresh
+} from '$lib/server/jobs-refresh-status.js';
 import type { RequestHandler } from './$types.js';
 
 async function doRefresh() {
@@ -95,18 +101,27 @@ async function doRefresh() {
 }
 
 export const POST: RequestHandler = async (event) => {
+  const currentStatus = getJobRefreshStatus();
+  if (currentStatus.running) {
+    return json({ accepted: true, running: true });
+  }
+
+  startJobRefresh();
+
   const refreshPromise = doRefresh()
     .then((result) => {
+      finishJobRefresh(result);
       console.log(
         `[Refresh] done: ${result.fetched}/${result.total} jobs, ${result.errors?.length ?? 0} errors`
       );
     })
     .catch((err) => {
+      failJobRefresh(err);
       console.error('[Refresh] failed:', err);
     });
 
   // Keep the function alive on Netlify via waitUntil
   (event.platform as any)?.context?.waitUntil?.(refreshPromise);
 
-  return json({ accepted: true });
+  return json({ accepted: true, running: true });
 };

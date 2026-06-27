@@ -1,5 +1,6 @@
 <script lang="ts">
   import { invalidateAll } from '$app/navigation';
+  import { onMount } from 'svelte';
   import * as Dialog from '$lib/components/ui/dialog/index.js';
   import {
     Briefcase,
@@ -24,7 +25,18 @@
 
   let { data } = $props();
 
+  type JobRefreshStatus = {
+    running: boolean;
+    finishedAt: string | null;
+    fetched: number | null;
+    total: number | null;
+    errors: { source: string; error: string }[];
+    message: string;
+  };
+
   let isRefreshing = $state(false);
+  let refreshStatusMessage = $state<string | null>(null);
+  let refreshWarnings = $state<{ source: string; error: string }[]>([]);
   let sourcesDialogOpen = $state(false);
   let detailJob = $state<any>(null);
   let expFilter = $state<number | null>(null); // null = all
@@ -160,26 +172,74 @@
   );
 
   let refreshError = $state<string | null>(null);
+  let refreshPollTimer: ReturnType<typeof setInterval> | null = null;
+
+  function stopRefreshPolling() {
+    if (refreshPollTimer) {
+      clearInterval(refreshPollTimer);
+      refreshPollTimer = null;
+    }
+  }
+
+  async function readRefreshStatus(): Promise<JobRefreshStatus | null> {
+    const res = await fetch('/api/jobs/fetch/status');
+    if (!res.ok) return null;
+    return res.json();
+  }
+
+  async function syncRefreshStatus(reloadOnDone = false) {
+    const status = await readRefreshStatus();
+    if (!status) return;
+
+    isRefreshing = status.running;
+    refreshWarnings = status.errors ?? [];
+
+    if (status.running) {
+      refreshStatusMessage = 'Fetching jobs…';
+      return;
+    }
+
+    stopRefreshPolling();
+
+    if (status.finishedAt && status.fetched !== null) {
+      refreshStatusMessage = `Updated ${status.fetched} jobs`;
+      if (reloadOnDone) await invalidateAll();
+    } else {
+      refreshStatusMessage = null;
+    }
+  }
+
+  function startRefreshPolling() {
+    stopRefreshPolling();
+    refreshPollTimer = setInterval(() => {
+      void syncRefreshStatus(true);
+    }, 2000);
+  }
+
+  onMount(() => {
+    void syncRefreshStatus().then(() => {
+      if (isRefreshing) startRefreshPolling();
+    });
+
+    return stopRefreshPolling;
+  });
 
   async function handleRefresh() {
     isRefreshing = true;
     refreshError = null;
+    refreshWarnings = [];
+    refreshStatusMessage = 'Fetching jobs…';
     try {
       const res = await fetch('/api/jobs/fetch', { method: 'POST' });
       if (!res.ok) throw new Error(`Server returned ${res.status}`);
-      const body = await res.json();
-      // Background refresh — wait a bit for sources to finish, then reload
-      if (body.accepted) {
-        await new Promise((r) => setTimeout(r, 8000));
-      } else if (body.errors?.length) {
-        console.warn('Fetch warnings:', body.errors);
-      }
-      await invalidateAll();
+      await res.json();
+      startRefreshPolling();
+      await syncRefreshStatus();
     } catch (err) {
+      stopRefreshPolling();
+      isRefreshing = false;
       refreshError = err instanceof Error ? err.message : 'Refresh failed';
       console.error('Refresh error:', err);
-    } finally {
-      isRefreshing = false;
     }
   }
 
@@ -226,6 +286,10 @@
     return groups;
   }
 
+  function svgDataUri(svg: string): string {
+    return `data:image/svg+xml,${encodeURIComponent(svg)}`;
+  }
+
   function timeAgo(iso: string | null): string {
     if (!iso) return '';
     const diff = Date.now() - new Date(iso).getTime();
@@ -256,7 +320,7 @@
 </header>
 
 <div class="mb-4 flex items-center gap-3 md:mb-6">
-  <div class="flex items-center gap-3">
+  <div class="flex flex-wrap items-center gap-3">
     <button
       type="button"
       onclick={markAllViewed}
@@ -277,6 +341,14 @@
     </button>
     {#if refreshError}
       <span class="text-xs text-red-500">{refreshError}</span>
+    {:else if refreshWarnings.length > 0}
+      <span class="text-xs text-amber-600">
+        Updated with {refreshWarnings.length} source warning{refreshWarnings.length === 1
+          ? ''
+          : 's'}
+      </span>
+    {:else if refreshStatusMessage}
+      <span class="text-xs text-cork-400">{refreshStatusMessage}</span>
     {/if}
     {#if data.lastFetched}
       <span class="text-xs text-cork-400">Last fetch: {timeAgo(data.lastFetched)}</span>
@@ -305,7 +377,7 @@
       ? 'bg-cork-700 text-cork-50'
       : 'border border-cork-200 bg-white text-cork-500 hover:bg-cork-50'}"
   >
-    <span class="inline-block w-3">{@html ID}</span>
+    <img src={svgDataUri(ID)} alt="" class="inline-block w-3" />
     {data.totalID}
   </button>
   <button
@@ -316,7 +388,7 @@
       ? 'bg-cork-700 text-cork-50'
       : 'border border-cork-200 bg-white text-cork-500 hover:bg-cork-50'}"
   >
-    <span class="inline-block w-3">{@html SG}</span>
+    <img src={svgDataUri(SG)} alt="" class="inline-block w-3" />
     {data.totalSG}
   </button>
 
@@ -333,7 +405,7 @@
   >
     All
   </button>
-  {#each EXP_LEVELS as level}
+  {#each EXP_LEVELS as level (level)}
     <button
       type="button"
       onclick={() => (expFilter = level)}
@@ -470,7 +542,7 @@
       <!-- Indonesia -->
       <div class="rounded-2xl border border-cork-200 bg-white/60 p-4">
         <h2 class="mb-3 flex items-center gap-1.5 text-sm font-semibold text-cork-700">
-          <span class="inline-block w-4">{@html ID}</span> Indonesia
+          <img src={svgDataUri(ID)} alt="" class="inline-block w-4" /> Indonesia
           <span class="font-normal text-cork-400">({filteredID.length})</span>
         </h2>
         {#if filteredID.length === 0}
@@ -492,7 +564,7 @@
       <!-- Singapore -->
       <div class="rounded-2xl border border-cork-200 bg-white/60 p-4">
         <h2 class="mb-3 flex items-center gap-1.5 text-sm font-semibold text-cork-700">
-          <span class="inline-block w-4">{@html SG}</span> Singapore
+          <img src={svgDataUri(SG)} alt="" class="inline-block w-4" /> Singapore
           <span class="font-normal text-cork-400">({filteredSG.length})</span>
         </h2>
         {#if filteredSG.length === 0}
@@ -534,17 +606,17 @@
 
       <div class="space-y-5">
         {#if detailJob.description}
-          {#each detailJob.description.split(/^### /m).filter(Boolean) as section}
+          {#each detailJob.description.split(/^### /m).filter(Boolean) as section, sectionIndex (`${sectionIndex}-${section}`)}
             {@const newline = section.indexOf('\n')}
             {@const heading = newline > 0 ? section.slice(0, newline) : section}
             {@const body = newline > 0 ? section.slice(newline + 1).trim() : ''}
             <div>
               <h3 class="mb-2 text-sm font-bold text-cork-800">{heading}</h3>
               <div class="text-xs leading-relaxed text-cork-600">
-                {#each parseBody(body) as group, gi}
+                {#each parseBody(body) as group, gi (`${group.type}-${gi}`)}
                   {#if group.type === 'bullet'}
                     <div class="mb-2 space-y-0.5">
-                      {#each group.items as item}
+                      {#each group.items as item, itemIndex (`${item}-${itemIndex}`)}
                         <p class="flex gap-2 {group.isSub ? 'pl-6' : ''}">
                           <span class="mt-1.5 block h-1 w-1 shrink-0 rounded-full bg-cork-400"
                           ></span>
@@ -604,7 +676,7 @@
           <img src={group.logo} alt="" class="h-7 w-7 shrink-0 rounded object-contain" />
           <div class="min-w-0 flex-1">
             <p class="text-sm font-medium text-cork-800">{group.name}</p>
-            {#each group.urls as link}
+            {#each group.urls as link (link.url)}
               <a
                 href={link.url}
                 target="_blank"
