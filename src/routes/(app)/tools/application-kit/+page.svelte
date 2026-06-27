@@ -1,5 +1,13 @@
 <script lang="ts">
-  import { ArrowLeft, Code2, Eye, LoaderCircle, RefreshCw, ScrollText } from '@lucide/svelte';
+  import {
+    ArrowLeft,
+    Code2,
+    Download,
+    Eye,
+    LoaderCircle,
+    RefreshCw,
+    ScrollText
+  } from '@lucide/svelte';
   import { onMount } from 'svelte';
   import Skeleton from '$lib/components/ui/skeleton/skeleton.svelte';
   import * as Separator from '$lib/components/ui/separator/index.js';
@@ -58,6 +66,10 @@ I would bring that same evidence-guided approach to your team. My strength is tu
   const outputText = $derived(sourceDraft);
   const generateButtonLabel = $derived(result ? 'Regenerate' : 'Generate');
   const loadingButtonLabel = $derived(result ? 'Regenerating' : 'Generating');
+  const downloadFilename = $derived.by(() => {
+    const letter = result ?? PREVIEW_PLACEHOLDER;
+    return `Edward_Salim_Application_${safeFilename(letter.company)}_${safeFilename(letter.role)}.pdf`;
+  });
   const systemPrompt = $derived(APPLICATION_COVER_LETTER_SYSTEM_PROMPT);
   const userPrompt = $derived(
     buildApplicationCoverLetterPrompt(dump.trim() || '{{APPLICATION_DUMP}}')
@@ -109,6 +121,10 @@ I would bring that same evidence-guided approach to your team. My strength is tu
     }
     previewPdfLoading = false;
     previewPdfError = null;
+  }
+
+  function safeFilename(value: string | undefined) {
+    return (value ?? 'Company').replace(/[^a-z0-9_-]+/gi, '_').replace(/^_+|_+$/g, '') || 'Company';
   }
 
   async function generateCoverLetter() {
@@ -324,8 +340,22 @@ I would bring that same evidence-guided approach to your team. My strength is tu
 
           {#if activeView !== 'prompt'}
             <div class="flex h-8 w-full items-center gap-2 sm:ml-auto sm:w-auto">
+              {#if previewPdfUrl}
+                <a
+                  href={previewPdfUrl}
+                  download={downloadFilename}
+                  aria-label="Download PDF"
+                  title="Download PDF"
+                  class="inline-flex h-8 flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-cork-300 bg-white px-3 text-xs font-medium text-cork-600 transition-colors hover:bg-cork-100 hover:text-cork-800 sm:flex-none"
+                >
+                  <Download class="size-3.5" />
+                  <span class="sm:hidden">Download</span>
+                </a>
+              {/if}
               <button
                 type="button"
+                aria-label="Compile PDF"
+                title="Compile PDF"
                 class="inline-flex h-8 flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-lg border px-3 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-60 sm:flex-none {sourceDirty
                   ? 'border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100'
                   : 'border-cork-300 bg-white text-cork-600 hover:bg-cork-100 hover:text-cork-800'}"
@@ -333,7 +363,7 @@ I would bring that same evidence-guided approach to your team. My strength is tu
                 onclick={compilePdf}
               >
                 <RefreshCw class={`size-3.5 ${previewPdfLoading ? 'animate-spin' : ''}`} />
-                Compile PDF
+                <span class="sm:hidden">Compile PDF</span>
               </button>
             </div>
           {/if}
@@ -348,7 +378,7 @@ I would bring that same evidence-guided approach to your team. My strength is tu
               </p>
             {:else if previewPdfUrl}
               <object
-                data={previewPdfUrl}
+                data={`${previewPdfUrl}#toolbar=0&navpanes=0`}
                 type="application/pdf"
                 class="h-[calc(100svh-340px)] min-h-128 w-full rounded-lg border border-cork-200 bg-white shadow-sm"
                 aria-label="Compiled application PDF preview"

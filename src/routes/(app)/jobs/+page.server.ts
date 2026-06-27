@@ -1,7 +1,6 @@
 import { db } from '$lib/server/db/index.js';
 import { jobSource, jobListing } from '$lib/server/db/schema.js';
 import { eq, desc, lt, sql } from 'drizzle-orm';
-import { fetchJobsFromSource, staleCutoff } from '$lib/server/jobs.js';
 import type { PageServerLoad } from './$types.js';
 
 // Seed default sources on first visit if table is empty
@@ -104,55 +103,8 @@ export const load: PageServerLoad = async () => {
     .where(eq(jobSource.enabled, true))
     .orderBy(jobSource.region, jobSource.name);
 
-  // One-time seed: only fetch if the DB is completely empty (first ever visit)
-  const listingCount = await db.$count(jobListing);
-  if (sources.length > 0 && listingCount === 0) {
-    const results = await Promise.allSettled(
-      sources.filter((s) => s.enabled).map((s) => fetchJobsFromSource(s))
-    );
-
-    const toInsert: (typeof jobListing.$inferInsert)[] = [];
-    for (const result of results) {
-      if (result.status !== 'fulfilled' || !result.value) {
-        if (result.status === 'rejected') {
-          console.error('Job fetch rejected:', result.reason);
-        }
-        continue;
-      }
-      const { sourceName, listings, error } = result.value;
-      if (error) console.warn(`Job fetch warning [${sourceName}]:`, error);
-      for (const job of listings) {
-        if (!job.url || !job.isPM) continue;
-        const source = sources.find((s) => s.name === sourceName);
-        if (!source) continue;
-        toInsert.push({
-          sourceId: source.id,
-          title: job.title,
-          url: job.url,
-          department: job.department,
-          location: job.location,
-          description: job.description,
-          publishedAt: job.publishedAt,
-          isPM: true,
-          experienceYears: job.experienceYears,
-          rejected: false,
-          requiresChinese: job.requiresChinese,
-          recruitType: job.recruitType
-        });
-      }
-    }
-
-    if (toInsert.length > 0) {
-      await db.insert(jobListing).values(toInsert);
-    }
-
-    for (const source of sources) {
-      await db.update(jobSource).set({ updatedAt: new Date() }).where(eq(jobSource.id, source.id));
-    }
-  }
-
   // Prune stale
-  const cutoff = staleCutoff();
+  const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
   await db.delete(jobListing).where(lt(jobListing.fetchedAt, cutoff));
 
   // Get all non-rejected listings, newest first

@@ -45,11 +45,11 @@ const PORTRAIT_TRIM_PX = 620;
 const PORTRAIT_BORDER = 0.035 * PT;
 const PORTRAIT_PADDING = 0.025 * PT;
 const PORTRAIT_FRAME_INSET = PORTRAIT_BORDER + PORTRAIT_PADDING;
-const SIGNATURE_WIDTH = 0.92 * PT;
-const SIGNATURE_Y = 105;
-const SIGNATURE_NAME_Y = 88;
+const SIGNATURE_WIDTH = 0.76 * PT;
+const SIGNATURE_LABEL_Y = 158;
+const SIGNATURE_Y = 92;
 const CONTACT_X = LETTER_X + LETTER_WIDTH - 2.42 * PT;
-const CONTACT_START_Y = 134;
+const CONTACT_START_Y = SIGNATURE_LABEL_Y;
 const BODY_FONT_SIZE = 11;
 const BODY_COMPACT_FONT_SIZE = 10;
 const BODY_LINE_HEIGHT = 14.4;
@@ -538,19 +538,20 @@ async function renderApplicationPdf(recipient: string, plainText: string): Promi
     y -= 9.4;
   }
 
+  page.drawText('Sincerely,', {
+    x: LETTER_X,
+    y: SIGNATURE_LABEL_Y,
+    size: 11,
+    font: regular,
+    color: COLORS.ink
+  });
+
   const signatureHeight = signature.height * (SIGNATURE_WIDTH / signature.width);
   page.drawImage(signature, {
     x: LETTER_X,
     y: SIGNATURE_Y,
     width: SIGNATURE_WIDTH,
     height: signatureHeight
-  });
-  page.drawText('Edward Salim, S.Kom', {
-    x: LETTER_X,
-    y: SIGNATURE_NAME_Y,
-    size: 11,
-    font: bold,
-    color: COLORS.ink
   });
 
   const contactX = CONTACT_X;
