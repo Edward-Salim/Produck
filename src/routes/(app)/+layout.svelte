@@ -1,5 +1,4 @@
 <script lang="ts">
-  import favicon from '$lib/assets/favicon.png';
   import logoProduck from '$lib/assets/logo-produck.png';
   import edwardAvatar from '$lib/assets/edward.jpg';
   import * as Sidebar from '$lib/components/ui/sidebar/index.js';
@@ -207,7 +206,6 @@
 </script>
 
 <svelte:head>
-  <link rel="icon" href={favicon} />
   <meta name="robots" content="noindex, nofollow" />
 </svelte:head>
 <svelte:window onkeydown={handleKeydown} />
