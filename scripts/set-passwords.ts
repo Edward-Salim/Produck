@@ -31,10 +31,19 @@ function hashPassword(password: string): string {
   return `${passwordHashAlgorithm}$${passwordHashIterations}$${salt}$${hash}`;
 }
 
-const emails = ['kelvin.saputra@produck.com', 'acquaintance@produck.app'];
+const emails = process.argv.slice(2);
 
 async function main() {
-  const hash = hashPassword('REDACTED_PASSWORD');
+  if (emails.length === 0) {
+    throw new Error('Pass one or more account emails to update.');
+  }
+
+  const newPassword = process.env.NEW_PASSWORD;
+  if (!newPassword) {
+    throw new Error('Set NEW_PASSWORD before updating account passwords.');
+  }
+
+  const hash = hashPassword(newPassword);
   for (const email of emails) {
     await db.update(appUser).set({ passwordHash: hash }).where(eq(appUser.email, email));
     console.log(`Set password for ${email}`);

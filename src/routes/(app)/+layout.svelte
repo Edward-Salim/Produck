@@ -21,8 +21,6 @@
     LogOut,
     EllipsisVertical,
     Shield,
-    Eye,
-    EyeOff,
     Trash2
   } from '@lucide/svelte';
   import { DropdownMenu } from 'bits-ui';
@@ -46,14 +44,6 @@
       workspaceIds: number[];
     }[]
   >([]);
-  let showPasswords = $state<Record<number, boolean>>({});
-
-  const REDACTED_CREDENTIALS: Record<string, string> = {
-    'alice@dummy.com': 'REDACTED_PASSWORD',
-    'bob@dummy.com': 'REDACTED_PASSWORD',
-    'carol@dummy.com': 'REDACTED_PASSWORD',
-    'acquaintance@produck.app': 'REDACTED_PASSWORD'
-  };
 
   async function loadAccess() {
     accessLoading = true;
@@ -588,30 +578,11 @@
           {/each}
         {:else}
           {#each accessUsers.filter((u) => u.role !== 'admin') as user (user.id)}
-            {@const pw = REDACTED_CREDENTIALS[user.email]}
             <div class="rounded-lg border border-cork-200 bg-white p-3">
               <div class="mb-2 flex items-center justify-between">
                 <div>
                   <p class="text-sm font-medium text-cork-700">{user.displayName}</p>
-                  <div class="flex items-center gap-1.5">
-                    <p class="text-[10px] text-cork-400">{user.email}</p>
-                    {#if pw}
-                      <span class="text-[10px] text-cork-300">·</span>
-                      <button
-                        type="button"
-                        class="flex cursor-pointer items-center gap-0.5 text-[10px] text-cork-300 transition-colors hover:text-cork-500"
-                        onclick={() => (showPasswords[user.id] = !showPasswords[user.id])}
-                      >
-                        {#if showPasswords[user.id]}
-                          <EyeOff class="size-2.5" />
-                          <span class="font-mono">{pw}</span>
-                        {:else}
-                          <Eye class="size-2.5" />
-                          <span>••••••</span>
-                        {/if}
-                      </button>
-                    {/if}
-                  </div>
+                  <p class="text-[10px] text-cork-400">{user.email}</p>
                 </div>
                 <span
                   class="rounded-full bg-cork-200 px-2 py-0.5 text-[10px] font-medium text-cork-600 uppercase"

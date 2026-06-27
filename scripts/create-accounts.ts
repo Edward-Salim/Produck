@@ -35,6 +35,11 @@ function hashPassword(password: string): string {
 const users = [{ email: 'felicia@produck.com', displayName: 'Felicia' }];
 
 async function main() {
+  const initialPassword = process.env.INITIAL_PASSWORD;
+  if (!initialPassword) {
+    throw new Error('Set INITIAL_PASSWORD before creating accounts.');
+  }
+
   for (const u of users) {
     const authId = crypto.randomUUID();
     const existing = await db.select().from(appUser).where(eq(appUser.email, u.email)).limit(1);
@@ -49,7 +54,7 @@ async function main() {
       email: u.email,
       displayName: u.displayName,
       role: 'member',
-      passwordHash: hashPassword('REDACTED_PASSWORD')
+      passwordHash: hashPassword(initialPassword)
     });
     console.log(`Created user: ${u.email}`);
   }
