@@ -1,3 +1,4 @@
+import { env } from '$env/dynamic/private';
 import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto';
 
 const encryptedPrefix = 'enc:v1:';
@@ -16,7 +17,7 @@ function decodeKey(value: string): Buffer {
 }
 
 function dataEncryptionKey(): Buffer {
-  const value = process.env.DATA_ENCRYPTION_KEY;
+  const value = env.DATA_ENCRYPTION_KEY ?? process.env.DATA_ENCRYPTION_KEY;
   if (!value) throw new Error('DATA_ENCRYPTION_KEY is required for sensitive data encryption.');
   return decodeKey(value);
 }

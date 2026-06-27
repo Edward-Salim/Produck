@@ -23,131 +23,6 @@ CV evidence to use selectively:
 - Fintech context: card networks, real-time payments, OJK/BI regulation, Indonesian fintech power user across DANA, GoPay, OVO, ShopeePay, Flip, Pluang, Stockbit, Bibit, mobile banking, and merchant tools.
 - Technical and data fluency: SQL, Python, TypeScript, SvelteKit, React, API design, PostgreSQL, MySQL, Tableau, Excel, A/B testing, PostHog, MoEngage, Playwright, UiPath, AI tools.`;
 
-export const LATEX_SHELL = String.raw`\documentclass[letterpaper,11pt]{article}
-
-% Design inspired by a soft framed cover-letter page.
-\usepackage[margin=0in]{geometry}
-\usepackage[T1]{fontenc}
-\usepackage[english]{babel}
-\usepackage[lf]{ebgaramond}
-\usepackage{graphicx}
-\usepackage{xcolor}
-\usepackage{tikz}
-\usepackage{tabularx}
-\usepackage{array}
-\usepackage{fontawesome5}
-\usepackage[hidelinks,colorlinks=true]{hyperref}
-\usetikzlibrary{calc}
-\input{glyphtounicode}
-
-% Page setup
-\pagestyle{empty}
-\urlstyle{same}
-\setlength{\parindent}{0pt}
-\setlength{\parskip}{1.02em}
-\setlength{\tabcolsep}{0pt}
-
-% Colors
-\definecolor{brand}{RGB}{130, 95, 55}
-\definecolor{pagebg}{RGB}{236, 229, 216}
-\definecolor{accentwash}{RGB}{205, 195, 174}
-\definecolor{panel}{RGB}{255, 255, 255}
-\definecolor{coinbase}{RGB}{151, 124, 73}
-\definecolor{coinrim}{RGB}{92, 75, 58}
-\definecolor{coinshine}{RGB}{221, 212, 194}
-\definecolor{ink}{RGB}{42, 35, 26}
-\definecolor{muted}{RGB}{107, 94, 74}
-\hypersetup{urlcolor=brand,linkcolor=brand}
-\pdfgentounicode=1
-
-\tikzset{
-  coin/.pic={
-    \fill[coinrim, opacity=0.16] (0.08,-0.08) circle (1.04);
-    \fill[coinbase, opacity=0.34] (0,0) circle (1);
-    \draw[coinrim, opacity=0.48, line width=1.6pt] (0,0) circle (0.96);
-    \draw[coinshine, opacity=0.34, line width=0.7pt] (0,0) circle (0.78);
-    \fill[pagebg, opacity=0.95] (-0.22,-0.22) rectangle (0.22,0.22);
-    \draw[coinrim, opacity=0.56, line width=0.8pt] (-0.22,-0.22) rectangle (0.22,0.22);
-    \draw[coinrim, opacity=0.28, line width=0.65pt] (-0.56,0.00) -- (-0.32,0.00);
-    \draw[coinrim, opacity=0.28, line width=0.65pt] (0.32,0.00) -- (0.56,0.00);
-    \draw[coinrim, opacity=0.28, line width=0.65pt] (0.00,0.32) -- (0.00,0.56);
-    \draw[coinrim, opacity=0.28, line width=0.65pt] (0.00,-0.32) -- (0.00,-0.56);
-  }
-}
-
-\newcommand{\contactrow}[2]{%
-  \textcolor{brand}{\makebox[0.18in][c]{\faIcon{#1}}}%
-  \hspace{0.07in}{#2}\\[0.115in]%
-}
-
-\begin{document}
-\pagecolor{pagebg}
-
-% Background and letter panel
-\begin{tikzpicture}[remember picture, overlay]
-  \fill[pagebg] (current page.south west) rectangle (current page.north east);
-  \pic[scale=2.10, rotate=-10] at ($(current page.north west)+(0.00in,-0.08in)$) {coin};
-  \pic[scale=0.56, rotate=18] at ($(current page.north west)+(1.06in,-0.58in)$) {coin};
-  \pic[scale=0.42, rotate=32] at ($(current page.north east)+(-0.92in,-0.28in)$) {coin};
-  \pic[scale=1.62, rotate=14] at ($(current page.north east)+(0.75in,-3.40in)$) {coin};
-  \pic[scale=0.52, rotate=-18] at ($(current page.north east)+(-0.26in,-2.30in)$) {coin};
-  \pic[scale=1.55, rotate=-18] at ($(current page.south west)+(0.05in,0.15in)$) {coin};
-  \pic[scale=0.50, rotate=12] at ($(current page.south west)+(1.05in,0.42in)$) {coin};
-  \pic[scale=0.48, rotate=17] at ($(current page.south east)+(-0.52in,0.44in)$) {coin};
-  \path[fill=panel, rounded corners=0.22in] ($(current page.south west)+(0.72in,0.62in)$) rectangle ($(current page.south west)+(7.78in,8.08in)$);
-\end{tikzpicture}
-
-% Header
-\vspace*{0.66in}
-\hspace*{1.70in}
-\begin{tabularx}{5.56in}{@{}m{1.52in}@{\hspace{0.38in}}X@{}}
-  {\setlength{\fboxsep}{0.025in}\setlength{\fboxrule}{0.035in}\fcolorbox{white}{white}{\includegraphics[trim=0 620 0 620, clip, width=1.48in]{Edward_Salim.jpg}}}
-  &
-  \begin{minipage}[c]{\linewidth}
-    {\fontsize{24}{28}\selectfont\bfseries\color{ink} Edward Salim, S.Kom}\\[0.07in]
-    {\normalsize\color{muted} Building Fintech and AI Products}
-  \end{minipage}
-\end{tabularx}
-
-\vspace{0.58in}
-\hspace*{1.16in}
-\begin{minipage}{6.14in}
-  \normalsize\color{ink}
-  \begin{tabularx}{\linewidth}{@{}X r@{}}
-    \begin{minipage}[t]{0.50\linewidth}
-      \textbf{To.}\\
-      RECIPIENT
-    \end{minipage}
-    &
-    \begin{minipage}[t]{0.28\linewidth}
-      \raggedleft \today
-    \end{minipage}
-  \end{tabularx}
-
-  \vspace{0.36in}
-  {
-  \setlength{\parskip}{0.13in}
-  \setlength{\baselineskip}{14.4pt}
-
-BODY\par}
-
-  \vspace{0.22in}
-  \includegraphics[width=0.92in]{ttd_edward.png}\\[-0.05in]
-  \textbf{Edward Salim, S.Kom}
-
-  \vspace{-0.58in}
-  \hfill
-  \begin{minipage}[t]{2.42in}
-    \small\color{ink}
-    \contactrow{map-marker-alt}{Jakarta, Indonesia}
-    \contactrow{envelope}{\href{mailto:CONTACT_EMAIL}{CONTACT_EMAIL}}
-    \contactrow{phone-alt}{\href{CONTACT_PHONE_URL}{CONTACT_PHONE_DISPLAY}}
-    \contactrow{linkedin}{\href{http://linkedin.com/in/edward-salim}{linkedin.com/in/edward-salim}}
-  \end{minipage}
-\end{minipage}
-
-\end{document}`;
-
 export function buildApplicationCoverLetterPrompt(input: string): string {
   return `You generate Edward Salim's tailored job application cover letters.
 
@@ -157,39 +32,35 @@ Return ONLY valid JSON with this exact shape:
   "role": "role title",
   "recipient": "Hiring Team, Company",
   "companyTag": "filesystem_safe_short_tag",
-  "plainText": "greeting and cover letter body only",
-  "latex": "full compilable LaTeX document"
+  "plainText": "greeting and cover letter body only"
 }
 
-Use this LaTeX shell and replace RECIPIENT and BODY:
-${LATEX_SHELL}
+The PDF renderer owns all layout, portrait, signature, contact details, links, and CV attachment. Generate only the recipient and cover-letter body content.
 
 Edward profile and CV context:
 ${PROFILE_CONTEXT}
 
 Writing rules:
-- Use the LaTeX shell exactly. Replace only RECIPIENT and BODY. Keep all layout, assets, colors, spacing, and contact/signature elements unchanged.
-- RECIPIENT is the inferred hiring contact, usually "Hiring Team, COMPANY". Never leave placeholders.
-- BODY is only the greeting plus 3 concise paragraphs. No closing line or typed signature because the shell already provides the signature area.
-- Write 180-245 words unless the input asks otherwise. Open with a specific market, product, customer, or operating-context insight, not "I am writing".
-- Do not restate the CV. The appended CV already contains education, internship bullets, projects, awards, language scores, and technical tools. This page should add context, judgment, motivation, and fit that the CV cannot show by itself.
-- Use at most 1 strong CV evidence point, or 2 only when both are unusually relevant. Mention an employer, project, method, tool, or metric only if it directly supports the target company's problem.
-- Prefer describing evidence as "in one product discovery project" or "through fintech operations work" instead of naming DANA, Kitabisa, Indodana, or a project. Name the employer only when the target role strongly benefits from that exact context.
-- Never structure the letter as one paragraph per past role. Avoid recap sequences like "At DANA...", "During my internship at Kitabisa...", "I bring SQL...". Do not list skills, frameworks, tools, metrics, or achievements.
-- Use evidence as a short supporting detail inside a broader argument about how Edward thinks and how he would help the target team.
-- Do not copy CV metrics such as "15+ stakeholders", "IDR 300M+", "300K+ users", "1M+ users", or "52-member team" unless the metric is the single most relevant proof for the target role. If used, use only one metric in the whole letter.
-- For motivation, infer only from Edward's pattern: interest in product work that connects users, business constraints, technical systems, fintech, AI tooling, data, operations, and implementation. Do not claim lifelong passion for a company, industry, or mission unless the user dump directly supports it.
-- Explain "why this role" through the type of work it represents. Explain "why this company" only with facts from the user dump. If company-specific facts are thin, focus on the role's problem space instead of using generic praise.
-- Fresh graduate framing is allowed, but only when it supports the role. Present it as recent, hands-on product exposure across internships and projects, not as lack of experience.
-- Mention language ability only for regional, cross-cultural, partner-facing, Chinese-company, operations, consulting, or stakeholder-heavy roles.
-- Mention scholarship, Most Outstanding Student, Duolingo score, awards, or speaking experience only for graduate programs, leadership programs, consulting, management trainee roles, or roles that explicitly value academic distinction and communication.
-- Mention immediate availability or work authorization only if the job post asks about start date, graduate hiring, relocation, or eligibility.
-- Preferred structure: paragraph 1 explains why the company or problem space matters, paragraph 2 connects Edward's product judgment to the role with one selective proof point, paragraph 3 looks forward to the contribution he would make.
-- In paragraph 3, create a natural transition to the appended CV by naming the broader pattern the CV will evidence, such as bringing structure to ambiguous work, aligning stakeholders, translating business needs into technical requirements, or moving ideas into execution. Do not write "as shown in my CV", "please see my CV", or similar attachment language.
-- Mention fintech, AI, product frameworks, rails, trust, credit, risk, payments, growth, retention, or regulation only when relevant to the pasted input and only in natural prose.
-- Do not invent company facts. Do not mention a company's mission, tagline, market position, or strategic goal unless it appears in the user dump.
-- Avoid markdown, semicolons, and prose colons. Do not use em dashes or en dashes. Use commas or periods instead. Escape LaTeX special characters.
-- The CV is appended automatically after this page. Do not generate a CV.
+- Generate only recipient and plainText content. Do not generate layout, source markup, links, signature text, contact details, or a CV.
+- recipient is the inferred hiring contact, usually "Hiring Team, COMPANY". Never leave placeholders.
+- plainText is only the greeting plus 3 concise paragraphs. The greeting should be "Dear Hiring Team," unless a specific recipient is known. Do not append the company name to the greeting.
+- Write 175-220 words unless the input asks otherwise. Prefer 2-4 sentences per paragraph. Never exceed 220 words unless the input explicitly requests a longer letter.
+- Open with whichever is sharper for the role: a specific market, product, customer, or operating-context insight, or Edward's strongest relevant fit signal. Never open with "I am writing".
+- Structure: paragraph 1 explains why the company, role, or problem space matters. Paragraph 2 connects Edward's judgment to the role with selective proof. Paragraph 3 looks forward to the contribution he would make.
+- Keep each paragraph focused on one clear point: topic sentence, compressed proof, relevance bridge. Do not add extra "also" evidence after the main proof or turn the letter into a checklist.
+- Use proof over explanation: credibility signal, action or judgment, result, then why it transfers. Use a metric only when it is the single strongest proof. Otherwise describe the result qualitatively.
+- For Edward's past work, only claim actions and outcomes stated in the profile context. Do not say recommendations were adopted, shipped, implemented, reduced, improved, or achieved unless that outcome is explicitly provided.
+- Use one primary CV evidence point. Add a second only when unusually relevant. Choose the proof closest to the role's domain, not the most impressive unrelated proof. For consulting, management trainee, strategy, operations, or leadership-program roles, you may add up to two brief supporting credibility signals if they serve one cohesive argument.
+- Do not restate the CV or write one paragraph per past role. Avoid recap sequences like "At DANA...", "During my internship at Kitabisa...", or "I bring SQL...".
+- Name DANA, Kitabisa, Indodana, a project, method, metric, award, language, availability, or work authorization only when it directly supports the target role. If naming an employer as the main proof, do not also name a separate project, award, or unrelated metric in the same letter. Never list technical tools in the letter. Use "technical fluency" or "computer science background" instead when relevant. Do not mention AI HR Interviewer or AI CV Scoring unless the target role involves HR, recruiting, or hiring tools.
+- Tailor role emphasis: for consulting or leadership programs, surface analytical problem solving, stakeholder influence, and academic or achievement credibility when relevant. For product, fintech, data, growth, or AI roles, prioritize product judgment, user or business context, technical fluency, and execution tradeoffs.
+- Explain "why this role" through the work it represents. Explain "why this company" only with facts from the user dump, such as a real conversation, recruiter name, event, office, product, market, or company fact. Do not invent mission, strategy, tagline, market-position claims, or personal claims such as having followed the company.
+- Keep the tone direct, warm, natural, and modest. Avoid grand phrases, abstract metaphors, self-congratulatory claims, generic enthusiasm, and prestige-heavy praise such as "world-class" or "industry-leading".
+- If mentioning the appended CV, keep it low-friction, such as "The projects behind this approach are detailed in the attached CV." Do not write "as shown in my CV", "please see my CV", or similar self-promotional attachment language.
+- End after the final body sentence. Do not include sign-offs such as "Sincerely", "Warm regards", or "Edward Salim".
+- Avoid markdown, semicolons, prose colons, em dashes, en dashes, and curly punctuation. Use ASCII commas, periods, and apostrophes instead.
+
+Before returning, silently verify that plainText has exactly one greeting, exactly 3 body paragraphs, no sign-off, no signature, no tool list, no off-domain AI hiring proof, no more than one primary CV proof, and no unrelated extra evidence.
 
 User dump:
 ${input}`;

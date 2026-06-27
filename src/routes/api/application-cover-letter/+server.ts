@@ -3,7 +3,6 @@ import { GoogleGenAI } from '@google/genai';
 import { env } from '$env/dynamic/private';
 import {
   APPLICATION_COVER_LETTER_SYSTEM_PROMPT,
-  LATEX_SHELL,
   buildApplicationCoverLetterPrompt
 } from '$lib/application-cover-letter-prompt.js';
 import { db } from '$lib/server/db/index.js';
@@ -29,67 +28,11 @@ function stripFences(text: string): string {
 function normalizeGeneratedPlainText(text: string): string {
   return text
     .replace(/[—–]/g, ', ')
+    .replace(/[‘’]/g, "'")
+    .replace(/[“”]/g, '"')
     .replace(/[ \t]+,/g, ',')
-    .replace(/,([^\s\n])/g, ', $1')
+    .replace(/,(\p{L})/gu, ', $1')
     .replace(/[ \t]{2,}/g, ' ');
-}
-
-function escapeLatexText(text: string): string {
-  return text.replace(/[\\{}%&$#_^~]/g, (char) => {
-    switch (char) {
-      case '\\':
-        return String.raw`\textbackslash{}`;
-      case '{':
-        return String.raw`\{`;
-      case '}':
-        return String.raw`\}`;
-      case '%':
-        return String.raw`\%`;
-      case '&':
-        return String.raw`\&`;
-      case '$':
-        return String.raw`\$`;
-      case '#':
-        return String.raw`\#`;
-      case '_':
-        return String.raw`\_`;
-      case '^':
-        return String.raw`\textasciicircum{}`;
-      case '~':
-        return String.raw`\textasciitilde{}`;
-      default:
-        return char;
-    }
-  });
-}
-
-function getApplicationPhoneDisplay(): string {
-  return env.APPLICATION_PHONE_DISPLAY?.trim() ?? 'Phone available on request';
-}
-
-function getApplicationPhoneUrl(): string {
-  return env.APPLICATION_PHONE_URL?.trim() ?? `mailto:${getApplicationEmail()}`;
-}
-
-function getApplicationEmail(): string {
-  return env.APPLICATION_EMAIL?.trim() ?? 'email@example.com';
-}
-
-function plainTextToLatexBody(text: string): string {
-  return normalizeGeneratedPlainText(text)
-    .split(/\n{2,}/)
-    .map((paragraph) => paragraph.trim().replace(/\s*\n\s*/g, ' '))
-    .filter(Boolean)
-    .map(escapeLatexText)
-    .join('\n\n');
-}
-
-function buildGeneratedLatex(recipient: string, plainText: string): string {
-  return LATEX_SHELL.replace('CONTACT_PHONE_URL', getApplicationPhoneUrl())
-    .replace('CONTACT_PHONE_DISPLAY', escapeLatexText(getApplicationPhoneDisplay()))
-    .replaceAll('CONTACT_EMAIL', escapeLatexText(getApplicationEmail()))
-    .replace('RECIPIENT', escapeLatexText(recipient.trim()))
-    .replace('BODY', plainTextToLatexBody(plainText));
 }
 
 async function generateWithDeepSeek(prompt: string): Promise<string> {
@@ -167,13 +110,14 @@ export const POST: RequestHandler = async ({ request, locals }) => {
       recipient: string;
       companyTag: string;
       plainText: string;
-      latex: string;
     };
 
     return json({
-      ...parsed,
+      company: parsed.company,
+      role: parsed.role,
+      recipient: parsed.recipient,
+      companyTag: parsed.companyTag,
       plainText: normalizeGeneratedPlainText(parsed.plainText),
-      latex: buildGeneratedLatex(parsed.recipient, parsed.plainText),
       model
     });
   } catch (err) {

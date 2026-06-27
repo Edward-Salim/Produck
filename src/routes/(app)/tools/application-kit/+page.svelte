@@ -5,7 +5,6 @@
   import * as Separator from '$lib/components/ui/separator/index.js';
   import {
     APPLICATION_COVER_LETTER_SYSTEM_PROMPT,
-    LATEX_SHELL,
     buildApplicationCoverLetterPrompt
   } from '$lib/application-cover-letter-prompt.js';
 
@@ -15,7 +14,6 @@
     recipient: string;
     companyTag: string;
     plainText: string;
-    latex: string;
   };
 
   const SAMPLE_PLACEHOLDER = `Paste everything here:
@@ -28,19 +26,6 @@
 
 The CV is appended automatically after the cover letter.`;
 
-  const PREVIEW_BODY = String.raw`Dear Hiring Manager,
-
-I am drawn to product roles where customer trust, operational reliability, and practical execution all have to meet in the same decision. That is the kind of work I have been training for through fintech, product discovery, and data-heavy projects.
-
-At DANA, I synthesized pain points from 15+ technical and non-technical stakeholders across a major backoffice system, then shaped prioritized product recommendations for operational bottlenecks. I also led discovery for AI hiring tools by mapping recruitment workflows, benchmarking competitors, and estimating cost impact.
-
-I would bring that same evidence-guided approach to your team. My strength is turning ambiguous product problems into clear user insights, scoped solutions, and measurable next steps without losing sight of business constraints.`;
-
-  const PREVIEW_LATEX = LATEX_SHELL.replace('RECIPIENT', 'Hiring Team, Company').replace(
-    'BODY',
-    PREVIEW_BODY
-  );
-
   const PREVIEW_PLACEHOLDER: GeneratedLetter = {
     company: 'Company',
     role: 'Product Manager',
@@ -48,23 +33,19 @@ I would bring that same evidence-guided approach to your team. My strength is tu
     companyTag: 'Company',
     plainText: `Dear Hiring Manager,
 
-Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer vitae justo sed arcu luctus facilisis. Proin non tortor at ipsum volutpat suscipit. Donec dignissim, nibh at pretium porta, mauris neque gravida orci, vitae finibus neque lorem at urna.
+I am drawn to product roles where customer trust, operational reliability, and practical execution all have to meet in the same decision. That is the kind of work I have been training for through fintech, product discovery, and data-heavy projects.
 
-Suspendisse potenti. Curabitur euismod metus vitae lectus fermentum, sed gravida neque tempor. Aliquam erat volutpat. Nunc at lacus vel purus congue tincidunt. Aenean faucibus, mi vitae suscipit iaculis, lacus justo commodo nisi, id viverra sem arcu id neque.
+At DANA, I synthesized pain points from technical and non-technical stakeholders across a major backoffice system, then shaped prioritized product recommendations for operational bottlenecks. I also led discovery for AI hiring tools by mapping recruitment workflows, benchmarking competitors, and estimating cost impact.
 
-Praesent commodo, risus et aliquet tincidunt, ipsum magna facilisis lorem, sed volutpat lectus mi sed libero. Maecenas non ligula vel velit sagittis porttitor. Vivamus posuere ipsum vel augue consequat, vitae interdum metus gravida.
-
-Warm regards,
-Edward Salim`,
-    latex: PREVIEW_LATEX
+I would bring that same evidence-guided approach to your team. My strength is turning ambiguous product problems into clear user insights, scoped solutions, and measurable next steps without losing sight of business constraints.`
   };
 
-  const STORAGE_KEY = 'appkit_v2';
+  const STORAGE_KEY = 'appkit_v3';
 
   let dump = $state('');
   let result = $state<GeneratedLetter | null>(null);
-  let sourceDraft = $state(PREVIEW_PLACEHOLDER.latex);
-  let activeView = $state<'preview' | 'latex' | 'prompt'>('preview');
+  let sourceDraft = $state(PREVIEW_PLACEHOLDER.plainText);
+  let activeView = $state<'preview' | 'source' | 'prompt'>('preview');
   let loading = $state(false);
   let error = $state<string | null>(null);
   let previewPdfUrl = $state<string | null>(null);
@@ -75,6 +56,8 @@ Edward Salim`,
   let sourceDirty = $state(false);
 
   const outputText = $derived(sourceDraft);
+  const generateButtonLabel = $derived(result ? 'Regenerate' : 'Generate');
+  const loadingButtonLabel = $derived(result ? 'Regenerating' : 'Generating');
   const systemPrompt = $derived(APPLICATION_COVER_LETTER_SYSTEM_PROMPT);
   const userPrompt = $derived(
     buildApplicationCoverLetterPrompt(dump.trim() || '{{APPLICATION_DUMP}}')
@@ -90,8 +73,8 @@ Edward Salim`,
         if (data.result) result = data.result as GeneratedLetter;
         if (typeof data.sourceDraft === 'string') {
           sourceDraft = data.sourceDraft;
-        } else if (data.result?.latex && typeof data.result.latex === 'string') {
-          sourceDraft = data.result.latex;
+        } else if (data.result?.plainText && typeof data.result.plainText === 'string') {
+          sourceDraft = data.result.plainText;
         }
       }
     } catch {
@@ -114,6 +97,20 @@ Edward Salim`,
     }
   });
 
+  function invalidatePreviewPdf() {
+    previewRequestId += 1;
+    if (previewRefreshTimer) {
+      clearTimeout(previewRefreshTimer);
+      previewRefreshTimer = null;
+    }
+    if (previewPdfUrl) {
+      URL.revokeObjectURL(previewPdfUrl);
+      previewPdfUrl = null;
+    }
+    previewPdfLoading = false;
+    previewPdfError = null;
+  }
+
   async function generateCoverLetter() {
     if (!dump.trim()) {
       error = 'Paste the job post or application brief first.';
@@ -122,6 +119,7 @@ Edward Salim`,
 
     loading = true;
     error = null;
+    invalidatePreviewPdf();
     try {
       const res = await fetch('/api/application-cover-letter', {
         method: 'POST',
@@ -131,10 +129,10 @@ Edward Salim`,
       const body = await res.json();
       if (!res.ok) throw new Error(body.error ?? `Server returned ${res.status}`);
       result = body as GeneratedLetter;
-      sourceDraft = result.latex;
+      sourceDraft = result.plainText;
       sourceDirty = false;
       activeView = 'preview';
-      schedulePreviewPdfRefresh();
+      schedulePreviewPdfRefresh(0);
     } catch (err) {
       error = err instanceof Error ? err.message : 'Cover letter generation failed.';
     } finally {
@@ -142,7 +140,7 @@ Edward Salim`,
     }
   }
 
-  async function refreshPreviewPdf(latex: string, company: string, role: string): Promise<boolean> {
+  async function refreshPreviewPdf(letter: GeneratedLetter, plainText: string): Promise<boolean> {
     const requestId = ++previewRequestId;
     previewPdfLoading = true;
     previewPdfError = null;
@@ -151,7 +149,12 @@ Edward Salim`,
       const res = await fetch('/api/application-cover-letter/pdf', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ latex, company, role })
+        body: JSON.stringify({
+          recipient: letter.recipient,
+          plainText,
+          company: letter.company,
+          role: letter.role
+        })
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
@@ -179,7 +182,7 @@ Edward Salim`,
 
     previewRefreshTimer = setTimeout(() => {
       const letter = result ?? PREVIEW_PLACEHOLDER;
-      void refreshPreviewPdf(outputText, letter.company, letter.role).then((compiled) => {
+      void refreshPreviewPdf(letter, outputText).then((compiled) => {
         if (compiled) sourceDirty = false;
       });
     }, delay);
@@ -194,7 +197,7 @@ Edward Salim`,
 
   async function compilePdf() {
     const letter = result ?? PREVIEW_PLACEHOLDER;
-    const compiled = await refreshPreviewPdf(outputText, letter.company, letter.role);
+    const compiled = await refreshPreviewPdf(letter, outputText);
     if (compiled) {
       sourceDirty = false;
       activeView = 'preview';
@@ -217,7 +220,7 @@ Edward Salim`,
     </a>
     <h1 class="font-display text-2xl text-cork-800 md:text-4xl">Application Kit</h1>
     <p class="mt-0.5 text-sm text-cork-500">
-      Dump a job post and notes, then generate a tailored cover letter for your existing CV
+      Generate, edit, and compile tailored cover letters with your CV
     </p>
   </header>
 
@@ -239,9 +242,9 @@ Edward Salim`,
         >
           {#if loading}
             <LoaderCircle class="size-4 animate-spin" />
-            Digesting
+            {loadingButtonLabel}
           {:else}
-            Generate
+            {generateButtonLabel}
           {/if}
         </button>
       </div>
@@ -298,10 +301,10 @@ Edward Salim`,
             <button
               type="button"
               class="flex cursor-pointer items-center justify-center gap-1.5 border-l border-cork-300 px-2.5 text-xs font-medium transition-colors sm:px-3 {activeView ===
-              'latex'
+              'source'
                 ? 'bg-cork-700 text-cork-50'
                 : 'bg-white text-cork-600 hover:bg-cork-100'}"
-              onclick={() => (activeView = 'latex')}
+              onclick={() => (activeView = 'source')}
             >
               <Code2 class="size-3.5" />
               Source
@@ -362,14 +365,14 @@ Edward Salim`,
               </div>
             {/if}
           </div>
-        {:else if activeView === 'latex'}
+        {:else if activeView === 'source'}
           <textarea
-            class="h-[calc(100svh-340px)] min-h-128 w-full resize-y rounded-lg border-cork-300 bg-cork-50 font-mono text-sm leading-relaxed text-cork-800 placeholder:text-cork-400 focus:border-cork-500 focus:ring-cork-400"
+            class="h-[calc(100svh-340px)] min-h-128 w-full resize-y rounded-lg border-cork-300 bg-cork-50 text-sm leading-relaxed text-cork-800 placeholder:text-cork-400 focus:border-cork-500 focus:ring-cork-400"
             value={sourceDraft}
             placeholder="Generated cover letter will appear here..."
             oninput={(event) => {
               sourceDraft = event.currentTarget.value;
-              if (result) result.latex = sourceDraft;
+              if (result) result.plainText = sourceDraft;
               sourceDirty = true;
               previewPdfError = null;
             }}
