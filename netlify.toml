@@ -4,9 +4,3 @@
 
 [build.environment]
   NODE_VERSION = "22"
-
-[functions]
-  included_files = [
-    "node_modules/@node-latex-compiler/bin-linux-x64/**",
-    "node_modules/.pnpm/@node-latex-compiler+bin-linux-x64@*/node_modules/@node-latex-compiler/bin-linux-x64/**"
-  ]

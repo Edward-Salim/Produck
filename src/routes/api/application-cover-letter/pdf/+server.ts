@@ -3,101 +3,50 @@ import { env } from '$env/dynamic/private';
 import { db } from '$lib/server/db/index.js';
 import { appUser } from '$lib/server/db/schema.js';
 import { eq } from 'drizzle-orm';
-import { compile } from 'node-latex-compiler';
-import { randomUUID } from 'node:crypto';
-import { existsSync, readdirSync } from 'node:fs';
-import { copyFile, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
-import { createRequire } from 'node:module';
-import { homedir, tmpdir } from 'node:os';
-import { dirname, join } from 'node:path';
+import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from 'pdf-lib';
+import { readFile } from 'node:fs/promises';
+import { homedir } from 'node:os';
+import { join } from 'node:path';
 import type { RequestHandler } from './$types.js';
 
-const require = createRequire(import.meta.url);
+const PAGE_WIDTH = 612;
+const PAGE_HEIGHT = 792;
+const PAGE_MARGIN = 72;
+const PANEL_X = 52;
+const PANEL_Y = 52;
+const PANEL_WIDTH = PAGE_WIDTH - PANEL_X * 2;
+const PANEL_HEIGHT = PAGE_HEIGHT - PANEL_Y * 2;
 
-const TIKZ_PACKAGE_PATTERN = /\\usepackage(?:\[[^\]]*\])?\{tikz\}/;
-const XCOLOR_PACKAGE_PATTERN = /\\usepackage(?:\[[^\]]*\])?\{xcolor\}/;
-const TIKZ_CALC_LIBRARY_PATTERN = /\\usetikzlibrary\{[^}]*\bcalc\b[^}]*\}/;
-const TIKZ_CALC_COORDINATE_PATTERN = /\$\([^;\r\n]+\)\$/;
+const COLORS = {
+  pageBg: rgb(236 / 255, 229 / 255, 216 / 255),
+  panel: rgb(1, 1, 1),
+  brand: rgb(130 / 255, 95 / 255, 55 / 255),
+  ink: rgb(42 / 255, 35 / 255, 26 / 255),
+  muted: rgb(107 / 255, 94 / 255, 74 / 255),
+  coin: rgb(151 / 255, 124 / 255, 73 / 255),
+  line: rgb(205 / 255, 195 / 255, 174 / 255)
+};
 
-const COIN_STYLE_DEFINITION = String.raw`\definecolor{pagebg}{RGB}{236, 229, 216}
-\definecolor{coinbase}{RGB}{151, 124, 73}
-\definecolor{coinrim}{RGB}{92, 75, 58}
-\definecolor{coinshine}{RGB}{221, 212, 194}
-
-\tikzset{
-  coin/.pic={
-    \fill[coinrim, opacity=0.16] (0.08,-0.08) circle (1.04);
-    \fill[coinbase, opacity=0.34] (0,0) circle (1);
-    \draw[coinrim, opacity=0.48, line width=1.6pt] (0,0) circle (0.96);
-    \draw[coinshine, opacity=0.34, line width=0.7pt] (0,0) circle (0.78);
-    \fill[pagebg, opacity=0.95] (-0.22,-0.22) rectangle (0.22,0.22);
-    \draw[coinrim, opacity=0.56, line width=0.8pt] (-0.22,-0.22) rectangle (0.22,0.22);
-    \draw[coinrim, opacity=0.28, line width=0.65pt] (-0.56,0.00) -- (-0.32,0.00);
-    \draw[coinrim, opacity=0.28, line width=0.65pt] (0.32,0.00) -- (0.56,0.00);
-    \draw[coinrim, opacity=0.28, line width=0.65pt] (0.00,0.32) -- (0.00,0.56);
-    \draw[coinrim, opacity=0.28, line width=0.65pt] (0.00,-0.32) -- (0.00,-0.56);
-  }
-}`;
-
-function insertBeforeDocument(document: string, snippet: string): string {
-  return document.replace('\\begin{document}', `${snippet}\n\n\\begin{document}`);
-}
-
-function insertAfterFirstMatch(document: string, pattern: RegExp, snippet: string): string {
-  return document.replace(pattern, (match) => `${match}\n${snippet}`);
-}
+type DrawTextOptions = {
+  x: number;
+  y: number;
+  maxWidth: number;
+  font: PDFFont;
+  size: number;
+  lineHeight: number;
+};
 
 function safeFilename(value: string | undefined): string {
   const cleaned = (value ?? 'Company').replace(/[^a-z0-9_-]+/gi, '_').replace(/^_+|_+$/g, '');
   return cleaned || 'Company';
 }
 
-function escapeLatexText(text: string): string {
-  return text.replace(/[\\{}%&$#_^~]/g, (char) => {
-    switch (char) {
-      case '\\':
-        return String.raw`\textbackslash{}`;
-      case '{':
-        return String.raw`\{`;
-      case '}':
-        return String.raw`\}`;
-      case '%':
-        return String.raw`\%`;
-      case '&':
-        return String.raw`\&`;
-      case '$':
-        return String.raw`\$`;
-      case '#':
-        return String.raw`\#`;
-      case '_':
-        return String.raw`\_`;
-      case '^':
-        return String.raw`\textasciicircum{}`;
-      case '~':
-        return String.raw`\textasciitilde{}`;
-      default:
-        return char;
-    }
-  });
-}
-
 function getApplicationPhoneDisplay(): string {
   return env.APPLICATION_PHONE_DISPLAY?.trim() ?? 'Phone available on request';
 }
 
-function getApplicationPhoneUrl(): string {
-  return env.APPLICATION_PHONE_URL?.trim() ?? `mailto:${getApplicationEmail()}`;
-}
-
 function getApplicationEmail(): string {
   return env.APPLICATION_EMAIL?.trim() ?? 'email@example.com';
-}
-
-function hydratePrivateContactLatex(latex: string): string {
-  return latex
-    .replaceAll('CONTACT_EMAIL', escapeLatexText(getApplicationEmail()))
-    .replaceAll('CONTACT_PHONE_URL', getApplicationPhoneUrl())
-    .replaceAll('CONTACT_PHONE_DISPLAY', escapeLatexText(getApplicationPhoneDisplay()));
 }
 
 function getSignatureImageBase64(): string | undefined {
@@ -126,111 +75,222 @@ async function readPrivateSignatureImage(): Promise<Buffer> {
   return readFile(signaturePath);
 }
 
-function normalizeCoverLetterLatex(latex: string): string {
-  let document = hydratePrivateContactLatex(latex).replace(
-    /^(\s*)\\drawcoin\{([^{}]+)\}\{([^{}]+)\}\{([^{}]+)\};?\s*$/gm,
-    '$1\\pic[scale=$3, rotate=$4] at $2 {coin};'
-  );
+function normalizeLatexText(value: string): string {
+  return value
+    .replace(/%[^\n\r]*/g, '')
+    .replace(/\\href\{[^{}]*\}\{([^{}]*)\}/g, '$1')
+    .replace(/\\textbackslash\{\}/g, '\\')
+    .replace(/\\textasciicircum\{\}/g, '^')
+    .replace(/\\textasciitilde\{\}/g, '~')
+    .replace(/\\([{}%&$#_^~])/g, '$1')
+    .replace(/\\\\(?:\[[^\]]*\])?/g, '\n')
+    .replace(/\\par\b/g, '\n\n')
+    .replace(/\\(?:textbf|textit|emph)\{([^{}]*)\}/g, '$1')
+    .replace(/\\textcolor\{[^{}]*\}\{([^{}]*)\}/g, '$1')
+    .replace(/\\[a-zA-Z]+\*?(?:\[[^\]]*\])?(?:\{[^{}]*\})?/g, '')
+    .replace(/[{}]/g, '')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n[ \t]+/g, '\n')
+    .replace(/[ \t]{2,}/g, ' ')
+    .trim();
+}
 
-  document = document.replace(
-    /^(\s*)\\(?:pic|node|draw|path)(\[[^\]]*\])?\s+(?:at\s*)?(\([^;\r\n]+\))\s*\{coin\};?\s*$/gm,
-    '$1\\pic$2 at $3 {coin};'
-  );
+function extractRecipient(latex: string): string {
+  const match = latex.match(/\\textbf\{To\.\}\s*\\\\\s*([\s\S]*?)\s*\\end\{minipage\}/);
+  const recipient = match ? normalizeLatexText(match[1]) : '';
+  return recipient || 'Hiring Team';
+}
 
-  if (document.includes('\\begin{tikzpicture}') && !TIKZ_PACKAGE_PATTERN.test(document)) {
-    document = insertBeforeDocument(document, String.raw`\usepackage{tikz}`);
-  }
+function extractBody(latex: string): string[] {
+  const match = latex.match(/\\setlength\{\\baselineskip\}\{14\.4pt\}\s*([\s\S]*?)\\par\}/);
+  const body = match ? normalizeLatexText(match[1]) : normalizeLatexText(latex);
+  const paragraphs = body
+    .split(/\n{2,}/)
+    .map((paragraph) => paragraph.replace(/\s*\n\s*/g, ' ').trim())
+    .filter(Boolean);
 
-  if (TIKZ_CALC_COORDINATE_PATTERN.test(document) && !TIKZ_CALC_LIBRARY_PATTERN.test(document)) {
-    document = TIKZ_PACKAGE_PATTERN.test(document)
-      ? insertAfterFirstMatch(document, TIKZ_PACKAGE_PATTERN, String.raw`\usetikzlibrary{calc}`)
-      : insertBeforeDocument(document, String.raw`\usetikzlibrary{calc}`);
-  }
+  return paragraphs.length > 0 ? paragraphs : ['Cover letter body was empty.'];
+}
 
-  if (document.includes('{coin};') && !document.includes('coin/.pic')) {
-    if (!XCOLOR_PACKAGE_PATTERN.test(document)) {
-      document = TIKZ_PACKAGE_PATTERN.test(document)
-        ? document.replace(
-            TIKZ_PACKAGE_PATTERN,
-            (match) => String.raw`\usepackage{xcolor}` + `\n${match}`
-          )
-        : insertBeforeDocument(document, String.raw`\usepackage{xcolor}`);
+function wrapText(text: string, font: PDFFont, size: number, maxWidth: number): string[] {
+  const words = text.split(/\s+/).filter(Boolean);
+  const lines: string[] = [];
+  let current = '';
+
+  for (const word of words) {
+    const candidate = current ? `${current} ${word}` : word;
+    if (font.widthOfTextAtSize(candidate, size) <= maxWidth) {
+      current = candidate;
+      continue;
     }
 
-    document = document.includes('\\pdfgentounicode=1')
-      ? document.replace('\\pdfgentounicode=1', `\\pdfgentounicode=1\n\n${COIN_STYLE_DEFINITION}`)
-      : insertBeforeDocument(document, COIN_STYLE_DEFINITION);
+    if (current) lines.push(current);
+    current = word;
   }
 
-  return document;
+  if (current) lines.push(current);
+  return lines;
 }
 
-function appendCvToLatex(latex: string): string {
-  let document = normalizeCoverLetterLatex(latex.trim());
+function drawWrappedText(page: PDFPage, text: string, options: DrawTextOptions): number {
+  let y = options.y;
+  const lines = wrapText(text, options.font, options.size, options.maxWidth);
 
-  if (!document.includes('\\begin{document}') || !document.includes('\\end{document}')) {
-    throw new Error('LaTeX must include \\begin{document} and \\end{document}');
+  for (const line of lines) {
+    page.drawText(line, {
+      x: options.x,
+      y,
+      size: options.size,
+      font: options.font,
+      color: COLORS.ink
+    });
+    y -= options.lineHeight;
   }
 
-  if (!document.includes('\\usepackage{pdfpages}')) {
-    document = document.replace('\\begin{document}', '\\usepackage{pdfpages}\n\n\\begin{document}');
+  return y;
+}
+
+function estimateBodyHeight(paragraphs: string[], font: PDFFont, size: number, maxWidth: number) {
+  return paragraphs.reduce((height, paragraph) => {
+    return height + wrapText(paragraph, font, size, maxWidth).length * 14 + 11;
+  }, 0);
+}
+
+function drawCoin(page: PDFPage, x: number, y: number, radius: number, opacity: number) {
+  page.drawCircle({ x, y, size: radius, color: COLORS.coin, opacity });
+  page.drawCircle({
+    x,
+    y,
+    size: radius * 0.78,
+    borderColor: COLORS.brand,
+    borderWidth: 0.8,
+    opacity: opacity + 0.12
+  });
+}
+
+async function renderApplicationPdf(latex: string): Promise<Uint8Array> {
+  const pdf = await PDFDocument.create();
+  const page = pdf.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
+  const regular = await pdf.embedFont(StandardFonts.TimesRoman);
+  const bold = await pdf.embedFont(StandardFonts.TimesRomanBold);
+  const sans = await pdf.embedFont(StandardFonts.Helvetica);
+  const sansBold = await pdf.embedFont(StandardFonts.HelveticaBold);
+
+  const cvSourcePath = join(process.cwd(), 'static', 'assets', 'Edward_Salim_CV.pdf');
+  const portraitSourcePath = join(process.cwd(), 'src', 'lib', 'assets', 'edward.jpg');
+  const [cvBytes, portraitBytes, signatureBytes] = await Promise.all([
+    readFile(cvSourcePath),
+    readFile(portraitSourcePath),
+    readPrivateSignatureImage()
+  ]);
+
+  const portrait = await pdf.embedJpg(portraitBytes);
+  const signature = await pdf.embedPng(signatureBytes);
+  const recipient = extractRecipient(latex);
+  const paragraphs = extractBody(latex);
+
+  page.drawRectangle({ x: 0, y: 0, width: PAGE_WIDTH, height: PAGE_HEIGHT, color: COLORS.pageBg });
+  drawCoin(page, 26, PAGE_HEIGHT - 18, 54, 0.22);
+  drawCoin(page, PAGE_WIDTH - 18, PAGE_HEIGHT - 210, 44, 0.2);
+  drawCoin(page, 20, 44, 42, 0.18);
+  drawCoin(page, PAGE_WIDTH - 48, 58, 22, 0.22);
+  page.drawRectangle({
+    x: PANEL_X,
+    y: PANEL_Y,
+    width: PANEL_WIDTH,
+    height: PANEL_HEIGHT,
+    color: COLORS.panel
+  });
+
+  page.drawImage(portrait, { x: PAGE_MARGIN, y: PAGE_HEIGHT - 170, width: 96, height: 96 });
+  page.drawText('Edward Salim, S.Kom', {
+    x: PAGE_MARGIN + 124,
+    y: PAGE_HEIGHT - 110,
+    size: 24,
+    font: bold,
+    color: COLORS.ink
+  });
+  page.drawText('Building Fintech and AI Products', {
+    x: PAGE_MARGIN + 124,
+    y: PAGE_HEIGHT - 132,
+    size: 11,
+    font: sans,
+    color: COLORS.muted
+  });
+
+  page.drawLine({
+    start: { x: PAGE_MARGIN, y: PAGE_HEIGHT - 196 },
+    end: { x: PAGE_WIDTH - PAGE_MARGIN, y: PAGE_HEIGHT - 196 },
+    thickness: 0.7,
+    color: COLORS.line
+  });
+
+  page.drawText('To.', {
+    x: PAGE_MARGIN,
+    y: PAGE_HEIGHT - 226,
+    size: 12,
+    font: bold,
+    color: COLORS.ink
+  });
+  drawWrappedText(page, recipient, {
+    x: PAGE_MARGIN,
+    y: PAGE_HEIGHT - 244,
+    maxWidth: 250,
+    font: regular,
+    size: 11,
+    lineHeight: 14
+  });
+
+  const date = new Intl.DateTimeFormat('en-US', { dateStyle: 'long' }).format(new Date());
+  page.drawText(date, {
+    x: PAGE_WIDTH - PAGE_MARGIN - sans.widthOfTextAtSize(date, 10),
+    y: PAGE_HEIGHT - 226,
+    size: 10,
+    font: sans,
+    color: COLORS.muted
+  });
+
+  const bodySize =
+    estimateBodyHeight(paragraphs, regular, 11.2, PANEL_WIDTH - 96) > 330 ? 10.3 : 11.2;
+  let y = PAGE_HEIGHT - 292;
+  for (const paragraph of paragraphs) {
+    y = drawWrappedText(page, paragraph, {
+      x: PAGE_MARGIN,
+      y,
+      maxWidth: PANEL_WIDTH - 96,
+      font: regular,
+      size: bodySize,
+      lineHeight: bodySize + 3
+    });
+    y -= 10;
   }
 
-  return document.replace(
-    '\\end{document}',
-    String.raw`\clearpage
-\pagecolor{white}
-\includepdf[pages=-]{Edward_Salim_CV.pdf}
+  page.drawImage(signature, { x: PAGE_MARGIN, y: 126, width: 82, height: 36 });
+  page.drawText('Edward Salim, S.Kom', {
+    x: PAGE_MARGIN,
+    y: 112,
+    size: 11,
+    font: bold,
+    color: COLORS.ink
+  });
 
-\end{document}`
-  );
-}
-
-function getLatexCompilerError(result: Awaited<ReturnType<typeof compile>>): string {
-  return (
-    result.error ||
-    result.stderr?.slice(-4000) ||
-    result.stdout?.slice(-4000) ||
-    'LaTeX compiler returned an unknown error'
-  );
-}
-
-function resolveLinuxTectonicPackagePath(): string | undefined {
-  try {
-    return dirname(require.resolve('@node-latex-compiler/bin-linux-x64/package.json'));
-  } catch {
-    // Netlify can include pnpm's real package path without preserving the root symlink.
+  const contactX = PAGE_WIDTH - PAGE_MARGIN - 170;
+  let contactY = 154;
+  for (const line of [
+    'Jakarta, Indonesia',
+    getApplicationEmail(),
+    getApplicationPhoneDisplay(),
+    'linkedin.com/in/edward-salim'
+  ]) {
+    page.drawText(line, { x: contactX, y: contactY, size: 8.8, font: sansBold, color: COLORS.ink });
+    contactY -= 15;
   }
 
-  const directPath = join(process.cwd(), 'node_modules', '@node-latex-compiler', 'bin-linux-x64');
-  if (existsSync(join(directPath, 'package.json'))) return directPath;
+  const cv = await PDFDocument.load(cvBytes);
+  const cvPages = await pdf.copyPages(cv, cv.getPageIndices());
+  for (const cvPage of cvPages) pdf.addPage(cvPage);
 
-  const pnpmPath = join(process.cwd(), 'node_modules', '.pnpm');
-  if (!existsSync(pnpmPath)) return undefined;
-
-  const entry = readdirSync(pnpmPath).find((name) =>
-    name.startsWith('@node-latex-compiler+bin-linux-x64@')
-  );
-  if (!entry) return undefined;
-
-  const packagePath = join(
-    pnpmPath,
-    entry,
-    'node_modules',
-    '@node-latex-compiler',
-    'bin-linux-x64'
-  );
-  return existsSync(join(packagePath, 'package.json')) ? packagePath : undefined;
-}
-
-function resolveBundledTectonicPath(): string | undefined {
-  if (process.platform !== 'linux' || process.arch !== 'x64') return undefined;
-
-  const packagePath = resolveLinuxTectonicPackagePath();
-  if (!packagePath) return undefined;
-
-  const tectonicPath = join(packagePath, 'bin', 'tectonic');
-  return existsSync(tectonicPath) ? tectonicPath : undefined;
+  return pdf.save();
 }
 
 export const POST: RequestHandler = async ({ request, locals }) => {
@@ -251,37 +311,11 @@ export const POST: RequestHandler = async ({ request, locals }) => {
       { status: 400 }
     );
 
-  const tempDir = join(tmpdir(), `produck-application-${randomUUID()}`);
-  const texPath = join(tempDir, 'application.tex');
-  const pdfPath = join(tempDir, 'application.pdf');
-  const logPath = join(tempDir, 'application.log');
-  const cvSourcePath = join(process.cwd(), 'static', 'assets', 'Edward_Salim_CV.pdf');
-  const cvTempPath = join(tempDir, 'Edward_Salim_CV.pdf');
-  const portraitSourcePath = join(process.cwd(), 'src', 'lib', 'assets', 'edward.jpg');
-  const portraitTempPath = join(tempDir, 'Edward_Salim.jpg');
-  const signatureTempPath = join(tempDir, 'ttd_edward.png');
-
   try {
-    await mkdir(tempDir, { recursive: true });
-    await copyFile(cvSourcePath, cvTempPath);
-    await copyFile(portraitSourcePath, portraitTempPath);
-    await writeFile(signatureTempPath, await readPrivateSignatureImage());
-    await writeFile(texPath, appendCvToLatex(source), 'utf8');
-
-    const compilerResult = await compile({
-      texFile: texPath,
-      outputDir: tempDir,
-      outputFile: pdfPath,
-      tectonicPath: resolveBundledTectonicPath()
-    });
-    if (compilerResult.status !== 'success') {
-      throw new Error(getLatexCompilerError(compilerResult));
-    }
-
-    const pdf = await readFile(pdfPath);
+    const pdf = await renderApplicationPdf(source);
     const filename = `Edward_Salim_Application_${safeFilename(company)}_${safeFilename(role)}.pdf`;
 
-    return new Response(pdf, {
+    return new Response(Buffer.from(pdf), {
       headers: {
         'Content-Type': 'application/pdf',
         'Content-Disposition': `attachment; filename="${filename}"`,
@@ -289,16 +323,13 @@ export const POST: RequestHandler = async ({ request, locals }) => {
       }
     });
   } catch (err) {
-    const log = await readFile(logPath, 'utf8').catch(() => '');
-    console.error('Application PDF compilation failed:', err, log.slice(-4000));
+    console.error('Application PDF generation failed:', err);
     return json(
       {
         error:
-          err instanceof Error ? `PDF compilation failed: ${err.message}` : 'PDF compilation failed'
+          err instanceof Error ? `PDF generation failed: ${err.message}` : 'PDF generation failed'
       },
       { status: 500 }
     );
-  } finally {
-    await rm(tempDir, { recursive: true, force: true }).catch(() => {});
   }
 };

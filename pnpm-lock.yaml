@@ -32,9 +32,9 @@ importers:
       marked:
         specifier: ^17.0.6
         version: 17.0.6
-      node-latex-compiler:
-        specifier: ^1.0.5
-        version: 1.0.5
+      pdf-lib:
+        specifier: ^1.17.1
+        version: 1.17.1
       rss-parser:
         specifier: ^3.13.0
         version: 3.13.0
@@ -171,10 +171,6 @@ importers:
       vite:
         specifier: ^7.3.5
         version: 7.3.5(@types/node@22.19.15)(jiti@1.21.7)(lightningcss@1.32.0)(tsx@4.21.0)
-    optionalDependencies:
-      '@node-latex-compiler/bin-linux-x64':
-        specifier: 1.0.5
-        version: 1.0.5
 
 packages:
 
@@ -646,26 +642,6 @@ packages:
     peerDependencies:
       svelte: ^5
 
-  '@node-latex-compiler/bin-darwin-arm64@1.0.5':
-    resolution: {integrity: sha512-3tNfSuxfgeyYNrjx+yxWiuuiCkhU4XLDNEsXTzrswzXeWnC9edl5ig4p5+IaMfwSFwGZDBHL1hbuqyGKYB2kBg==}
-    cpu: [arm64]
-    os: [darwin]
-
-  '@node-latex-compiler/bin-darwin-x64@1.0.5':
-    resolution: {integrity: sha512-A1e1tBTFDUw74aaiS40h2/QIgvqIdYEUUSO374lwzx6JVrnMeRLEebSKmWqaoDhib21qiGUe2WC+Lnfu5Wzmpg==}
-    cpu: [x64]
-    os: [darwin]
-
-  '@node-latex-compiler/bin-linux-x64@1.0.5':
-    resolution: {integrity: sha512-DyeCdSn9YY7UQs1ZDaEhNMsYTHG7LtThM0Qsy7TYxBsD/bYysMwsGeeG/11Cw5IOiz4+Zn1Qn90sdFz5o/YgVA==}
-    cpu: [x64]
-    os: [linux]
-
-  '@node-latex-compiler/bin-win32-x64@1.0.5':
-    resolution: {integrity: sha512-cxFqTjLmkkCypTvWLbJrg05xonCehXHnoEylpG5O/5vFtlxyRrSCyja0srMNzQjdA1nGrT5VTQ2I3ilWA9PFYQ==}
-    cpu: [x64]
-    os: [win32]
-
   '@nodelib/fs.scandir@2.1.5':
     resolution: {integrity: sha512-vq24Bq3ym5HEQm2NKCr3yXDwjc7vTsEThRDnkp2DK9p1uqLR+DHurm/NOTo0KG7HYHU7eppKZj3MyqYuMBf62g==}
     engines: {node: '>= 8'}
@@ -677,6 +653,12 @@ packages:
   '@nodelib/fs.walk@1.2.8':
     resolution: {integrity: sha512-oGB+UxlgWcgQkgwo8GcEGwemoTFt3FIO9ababBmaGwXIoBKZ+GTy0pP185beGg7Llih/NSHSV2XAs1lnznocSg==}
     engines: {node: '>= 8'}
+
+  '@pdf-lib/standard-fonts@1.0.0':
+    resolution: {integrity: sha512-hU30BK9IUN/su0Mn9VdlVKsWBS6GyhVfqjwl1FjZN4TxP6cCw0jP2w7V3Hf5uX7M0AZJ16vey9yE0ny7Sa59ZA==}
+
+  '@pdf-lib/upng@1.0.1':
+    resolution: {integrity: sha512-dQK2FUMQtowVP00mtIksrlZhdFXQZPC+taih1q4CvPZ5vqdxR/LKBaFg0oAfzd1GlHZXXSPdQfzQnt+ViGvEIQ==}
 
   '@polka/url@1.0.0-next.29':
     resolution: {integrity: sha512-wwQAWhWSuHaag8c4q/KN/vCoeOJYshAIvMQwD4GpSb3OiZklFfvAgmj0VCBBImRpuF/aFgIRzllXlVX93Jevww==}
@@ -2156,10 +2138,6 @@ packages:
     resolution: {integrity: sha512-dRB78srN/l6gqWulah9SrxeYnxeddIG30+GOqK/9OlLVyLg3HPnr6SqOWTWOXKRwC2eGYCkZ59NNuSgvSrpgOA==}
     engines: {node: ^12.20.0 || ^14.13.1 || >=16.0.0}
 
-  node-latex-compiler@1.0.5:
-    resolution: {integrity: sha512-KppBZZ5VwJsvIobYETruv8pW53RYU2OJmcYCDznoib8umFtQjFsVoQvqX630b6Na67I7IKOus3sxK5Uu5J1pdg==}
-    engines: {node: '>= 14.x'}
-
   normalize-path@3.0.0:
     resolution: {integrity: sha512-6eZs5Ls3WtCisHWp9S2GUy8dqkpGi4BVSz3GaqiE6ezub0512ESztXUwUB6C6IKbQkY2Pnb/mD4WYojCRwcwLA==}
     engines: {node: '>=0.10.0'}
@@ -2214,6 +2192,9 @@ packages:
     resolution: {integrity: sha512-312Id396EbJdvRONlngUx0NydfrIQ5lsYu0znKVUzVvArzEIt08V1qhtyESbGVd1FGX7UKtiFp5uwKZdM8wIuQ==}
     engines: {node: '>=8'}
 
+  pako@1.0.11:
+    resolution: {integrity: sha512-4hLB8Py4zZce5s4yd9XzopqwVv/yGNhV1Bl8NTmCq1763HeK2+EwVTv+leGeL13Dnh2wfbqowVPXCIO0z4taYw==}
+
   parse5-htmlparser2-tree-adapter@7.1.0:
     resolution: {integrity: sha512-ruw5xyKs6lrpo9x9rCZqZZnIUntICjQAd0Wsmp396Ul9lN/h+ifgVV1x1gZHi8euej6wTfpqX8j+BFQxF0NS/g==}
 
@@ -2233,6 +2214,9 @@ packages:
 
   path-parse@1.0.7:
     resolution: {integrity: sha512-LDJzPVEEEPR+y48z93A0Ed0yXb8pAByGWo/k5YYdYgpY2/2EsOsksJrq7lOHxryrVOn1ejG6oAp8ahvOIQD8sw==}
+
+  pdf-lib@1.17.1:
+    resolution: {integrity: sha512-V/mpyJAoTsN4cnP31vc0wfNA1+p20evqqnap0KLoRUN0Yk/p3wN52DOEsL4oBFcLdb76hlpKPtzJIgo67j/XLw==}
 
   picocolors@1.1.1:
     resolution: {integrity: sha512-xceH2snhtb5M9liqDsmEw56le376mTZkEX/jEb/RxNFyegNul7eNslCXP9FDj/Lcu0X8KEyMceP2ntpaHrDEVA==}
@@ -2693,6 +2677,9 @@ packages:
 
   ts-interface-checker@0.1.13:
     resolution: {integrity: sha512-Y/arvbn+rrz3JCKl9C4kVNfTfSm2/mEp5FSz5EsZSANGPSlQrpRI5M4PKF+mJnE52jOO90PnPSc3Ur3bTQw0gA==}
+
+  tslib@1.14.1:
+    resolution: {integrity: sha512-Xni35NKzjgMrwevysHTCArtLDpPvye8zV/0E4EyYn43P7/7qvQwPh9BGkHewbMulVntbigmcT7rdX3BNo9wRJg==}
 
   tslib@2.8.1:
     resolution: {integrity: sha512-oJFu94HQb+KVduSUQL7wnpmqnfmLsOA/nAh6b6EH0wCEoK0/mPeXU6c3wKDV83MkOuHPRHtSXKKU99IBazS/2w==}
@@ -3222,18 +3209,6 @@ snapshots:
     dependencies:
       svelte: 5.56.1(@typescript-eslint/types@8.58.0)
 
-  '@node-latex-compiler/bin-darwin-arm64@1.0.5':
-    optional: true
-
-  '@node-latex-compiler/bin-darwin-x64@1.0.5':
-    optional: true
-
-  '@node-latex-compiler/bin-linux-x64@1.0.5':
-    optional: true
-
-  '@node-latex-compiler/bin-win32-x64@1.0.5':
-    optional: true
-
   '@nodelib/fs.scandir@2.1.5':
     dependencies:
       '@nodelib/fs.stat': 2.0.5
@@ -3245,6 +3220,14 @@ snapshots:
     dependencies:
       '@nodelib/fs.scandir': 2.1.5
       fastq: 1.20.1
+
+  '@pdf-lib/standard-fonts@1.0.0':
+    dependencies:
+      pako: 1.0.11
+
+  '@pdf-lib/upng@1.0.1':
+    dependencies:
+      pako: 1.0.11
 
   '@polka/url@1.0.0-next.29': {}
 
@@ -4604,13 +4587,6 @@ snapshots:
       fetch-blob: 3.2.0
       formdata-polyfill: 4.0.10
 
-  node-latex-compiler@1.0.5:
-    optionalDependencies:
-      '@node-latex-compiler/bin-darwin-arm64': 1.0.5
-      '@node-latex-compiler/bin-darwin-x64': 1.0.5
-      '@node-latex-compiler/bin-linux-x64': 1.0.5
-      '@node-latex-compiler/bin-win32-x64': 1.0.5
-
   normalize-path@3.0.0: {}
 
   nth-check@2.1.1:
@@ -4671,6 +4647,8 @@ snapshots:
       '@types/retry': 0.12.0
       retry: 0.13.1
 
+  pako@1.0.11: {}
+
   parse5-htmlparser2-tree-adapter@7.1.0:
     dependencies:
       domhandler: 5.0.3
@@ -4689,6 +4667,13 @@ snapshots:
   path-key@3.1.1: {}
 
   path-parse@1.0.7: {}
+
+  pdf-lib@1.17.1:
+    dependencies:
+      '@pdf-lib/standard-fonts': 1.0.0
+      '@pdf-lib/upng': 1.0.1
+      pako: 1.0.11
+      tslib: 1.14.1
 
   picocolors@1.1.1: {}
 
@@ -5189,6 +5174,8 @@ snapshots:
       typescript: 5.9.3
 
   ts-interface-checker@0.1.13: {}
+
+  tslib@1.14.1: {}
 
   tslib@2.8.1: {}
 
