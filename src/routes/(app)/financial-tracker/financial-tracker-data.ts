@@ -20,7 +20,8 @@ export type WalletRow = {
   label: string;
   balance: number;
   minimumHold?: number;
-  accountNumber?: string;
+  accountNumberMasked?: string;
+  hasAccountNumber?: boolean;
   balanceProvided?: boolean;
   transactionsProvided?: boolean;
   note?: string;

@@ -14,6 +14,8 @@
     Check,
     ChevronDown,
     CircleDollarSign,
+    Eye,
+    EyeOff,
     GitCompareArrows,
     PiggyBank,
     RefreshCw,
@@ -728,6 +730,8 @@
   let monthlySummaries: TrackerData['monthlySummaries'] = $derived(trackerData.monthlySummaries);
   let baseWallets: TrackerData['wallets'] = $derived(trackerData.wallets);
   let walletStatusSelections = $state<Record<string, boolean>>({});
+  let revealedAccountNumbers = $state<Record<string, string>>({});
+  let revealingAccountNumbers = $state<Record<string, boolean>>({});
   let wallets: TrackerData['wallets'] = $derived(
     baseWallets.map((wallet) => {
       const selectedStatus = walletStatusSelections[wallet.label];
@@ -1364,6 +1368,41 @@
     return Boolean(wallet.balanceProvided && wallet.transactionsProvided);
   }
 
+  function walletAccountDisplay(wallet: TrackerData['wallets'][number]) {
+    return revealedAccountNumbers[wallet.label] ?? wallet.accountNumberMasked ?? '-';
+  }
+
+  async function toggleWalletAccountNumber(wallet: TrackerData['wallets'][number]) {
+    if (!wallet.hasAccountNumber) return;
+
+    if (revealedAccountNumbers[wallet.label]) {
+      const next = { ...revealedAccountNumbers };
+      delete next[wallet.label];
+      revealedAccountNumbers = next;
+      return;
+    }
+
+    revealingAccountNumbers = { ...revealingAccountNumbers, [wallet.label]: true };
+    try {
+      const response = await fetch('/api/financial-tracker/wallet-account', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ label: wallet.label })
+      });
+
+      if (!response.ok) return;
+      const result = (await response.json()) as { accountNumber?: string | null };
+      if (result.accountNumber) {
+        revealedAccountNumbers = {
+          ...revealedAccountNumbers,
+          [wallet.label]: result.accountNumber
+        };
+      }
+    } finally {
+      revealingAccountNumbers = { ...revealingAccountNumbers, [wallet.label]: false };
+    }
+  }
+
   function walletInitials(label: string) {
     return label
       .split(/\s+/)
@@ -1928,7 +1967,27 @@
                         <span>{wallet.label}</span>
                       </div>
                     </td>
-                    <td data-label="Rekening" class="mobile-hide">{wallet.accountNumber ?? '-'}</td>
+                    <td data-label="Rekening" class="mobile-hide">
+                      <div class="account-number-cell">
+                        <span class="account-number-value">{walletAccountDisplay(wallet)}</span>
+                        {#if wallet.hasAccountNumber}
+                          <button
+                            type="button"
+                            class="account-number-toggle"
+                            onclick={() => toggleWalletAccountNumber(wallet)}
+                            disabled={revealingAccountNumbers[wallet.label]}
+                            aria-label={`${revealedAccountNumbers[wallet.label] ? 'Hide' : 'Reveal'} ${wallet.label} rekening`}
+                            title={revealedAccountNumbers[wallet.label] ? 'Hide' : 'Reveal'}
+                          >
+                            {#if revealedAccountNumbers[wallet.label]}
+                              <EyeOff class="size-3" />
+                            {:else}
+                              <Eye class="size-3" />
+                            {/if}
+                          </button>
+                        {/if}
+                      </div>
+                    </td>
                     <td class="currency-col" data-label="Balance"></td>
                     <td data-label="Balance">{currency.format(wallet.balance)}</td>
                     <td class="currency-col" data-label="Min hold"></td>
@@ -3826,6 +3885,40 @@
     align-items: center;
     gap: 0.45rem;
     min-width: 7rem;
+  }
+
+  .account-number-cell {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    min-width: 6.5rem;
+  }
+
+  .account-number-value {
+    font-family: var(--font-mono, monospace);
+    font-size: 0.68rem;
+    color: var(--color-cork-600);
+  }
+
+  .account-number-toggle {
+    display: inline-flex;
+    width: 1.2rem;
+    height: 1.2rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    color: var(--color-cork-400);
+    cursor: pointer;
+  }
+
+  .account-number-toggle:hover {
+    background: rgba(31, 82, 122, 0.08);
+    color: var(--color-cork-700);
+  }
+
+  .account-number-toggle:disabled {
+    cursor: wait;
+    opacity: 0.5;
   }
 
   .wallet-logo {

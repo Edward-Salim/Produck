@@ -35,6 +35,7 @@ import {
   validRetirementAge,
   validReturnProfile
 } from '$lib/server/financial-tracker';
+import { maskSensitiveValue } from '$lib/server/sensitive-data';
 import type {
   CategoryRow,
   DebtScheduleRow,
@@ -298,7 +299,8 @@ export const load: PageServerLoad = async ({ locals }) => {
         label: row.label,
         balance: row.balance,
         minimumHold: row.minimumHold ?? undefined,
-        accountNumber: row.accountNumber ?? undefined,
+        accountNumberMasked: maskSensitiveValue(row.accountNumber) ?? undefined,
+        hasAccountNumber: Boolean(row.accountNumber),
         balanceProvided: row.balanceProvided ?? undefined,
         transactionsProvided: row.transactionsProvided ?? undefined,
         note: row.note ?? undefined
