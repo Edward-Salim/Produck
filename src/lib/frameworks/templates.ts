@@ -3,12 +3,28 @@ import {
   Columns3,
   FlaskConical,
   Lightbulb,
+  Landmark,
   MapPinned,
+  Network,
   NotebookPen,
+  Puzzle,
   Route,
   TrendingUp
 } from '@lucide/svelte';
 import type { Component } from 'svelte';
+import assumptionTestCover from '$lib/assets/framework-assumption-test-card.png';
+import epicsCover from '$lib/assets/framework-epics-card.png';
+import experienceMapCover from '$lib/assets/framework-experience-map-card.png';
+import ideaBankCover from '$lib/assets/framework-idea-bank-card.png';
+import interviewSnapshotCover from '$lib/assets/framework-interview-snapshot-card.png';
+import kanbanCover from '$lib/assets/framework-kanban-card.png';
+import outcomesCover from '$lib/assets/framework-outcomes-card-v2.png';
+import storyMapCover from '$lib/assets/framework-story-map-card.png';
+import fintechLandscapeCover from '$lib/assets/framework-fintech-landscape-card.png';
+import valuePropositionCanvasCover from '$lib/assets/framework-value-proposition-canvas-card.png';
+import leanCanvasCover from '$lib/assets/framework-lean-canvas-card.png';
+import businessModelCanvasCover from '$lib/assets/framework-business-model-canvas-card.png';
+import organogramCover from '$lib/assets/framework-organogram-card.png';
 
 export type FrameworkField = {
   id: string;
@@ -27,9 +43,116 @@ export type FrameworkTemplate = {
   instructions: string;
   terminology: { term: string; definition: string }[];
   coverGradient: string;
+  coverImage?: string;
 };
 
 export const FRAMEWORK_TEMPLATES: FrameworkTemplate[] = [
+  {
+    id: 'fintech-landscape',
+    name: 'Fintech Map',
+    category: 'Strategy',
+    description:
+      'Map fintech companies by category and region, then compare selected competitors against your project.',
+    icon: Landmark,
+    fields: [],
+    instructions:
+      'Filter companies by region and category. Select competitors from the map, then switch to compare view to review product focus, market share, growth, target audience, pricing, marketing, satisfaction, strengths, weaknesses, and key advantage against your project.',
+    terminology: [
+      { term: 'Landscape', definition: 'market map grouped by fintech category.' },
+      { term: 'Compare View', definition: 'side-by-side competitor comparison table.' },
+      { term: 'Selected Company', definition: 'company included in the comparison set.' },
+      { term: 'Key Advantage', definition: 'the clearest strategic edge of a company.' }
+    ],
+    coverGradient: 'linear-gradient(135deg, #edf7f4 0%, #d8e8df 50%, #c7d7ce 100%)',
+    coverImage: fintechLandscapeCover
+  },
+  {
+    id: 'value-proposition-canvas',
+    name: 'Value Proposition Canvas',
+    category: 'Discovery',
+    description:
+      'PPD canvas connecting customer jobs, pains, and gains with products, pain relievers, and gain creators.',
+    icon: Puzzle,
+    fields: [],
+    instructions:
+      'Start with the Customer Profile: jobs, pains, and gains. Then fill the Value Map: products and services, pain relievers, and gain creators. Compare both sides to find product-customer fit.',
+    terminology: [
+      { term: 'Customer Job', definition: 'task, need, or progress the customer wants.' },
+      { term: 'Pain', definition: 'risk, frustration, obstacle, or bad outcome.' },
+      { term: 'Gain', definition: 'desired benefit, outcome, or improvement.' },
+      { term: 'Pain Reliever', definition: 'how the offer reduces a customer pain.' },
+      { term: 'Gain Creator', definition: 'how the offer creates customer value.' },
+      { term: 'Fit', definition: 'alignment between the customer profile and value map.' }
+    ],
+    coverGradient: 'linear-gradient(135deg, #f4f8ea 0%, #e2ead2 50%, #cfddc2 100%)',
+    coverImage: valuePropositionCanvasCover
+  },
+  {
+    id: 'lean-canvas',
+    name: 'Lean Canvas',
+    category: 'Strategy',
+    description:
+      'A one-page fill-in-the-blanks business model covering problem, solution, customers, metrics, costs, and revenue.',
+    icon: Columns3,
+    fields: [],
+    instructions:
+      'Fill each box with short bullets. Start with Problem and Customer Segments, then define the Unique Value Proposition. Add the smallest Solution, Key Metrics, Channels, Cost Structure, Revenue Streams, and any Unfair Advantage. Keep every box concise enough to scan in one page.',
+    terminology: [
+      { term: 'Problem', definition: 'top customer problems worth solving.' },
+      { term: 'Customer Segment', definition: 'specific group that has the problem.' },
+      { term: 'UVP', definition: 'Unique Value Proposition: why customers should choose this.' },
+      { term: 'Solution', definition: 'smallest offer or feature set that addresses the problem.' },
+      { term: 'Key Metric', definition: 'signal that shows the model is working.' },
+      { term: 'Channel', definition: 'route to reach, acquire, or deliver value to customers.' },
+      { term: 'Unfair Advantage', definition: 'edge that competitors cannot easily copy.' }
+    ],
+    coverGradient: 'linear-gradient(135deg, #f7f1df 0%, #e5dcc8 50%, #d3c8b4 100%)',
+    coverImage: leanCanvasCover
+  },
+  {
+    id: 'business-model-canvas',
+    name: 'Business Model Canvas',
+    category: 'Strategy',
+    description:
+      'Map the full business model across partners, activities, resources, value, customers, channels, costs, and revenue.',
+    icon: Columns3,
+    fields: [],
+    instructions:
+      'Use the Business Model Canvas to describe how the organization creates, delivers, and captures value. Start with Customer Segments and Value Propositions, then connect Channels and Customer Relationships. Add Key Activities, Key Resources, Key Partners, Cost Structure, and Revenue Streams to complete the operating model.',
+    terminology: [
+      { term: 'Value Proposition', definition: 'benefit or outcome customers choose you for.' },
+      { term: 'Customer Segment', definition: 'group of people or organizations served.' },
+      { term: 'Channel', definition: 'path used to reach, sell to, or serve customers.' },
+      { term: 'Customer Relationship', definition: 'how customers are acquired and retained.' },
+      { term: 'Key Resource', definition: 'asset required to make the model work.' },
+      { term: 'Key Activity', definition: 'critical work the business must perform.' },
+      { term: 'Key Partner', definition: 'external party needed to operate or scale.' },
+      { term: 'Cost Structure', definition: 'main costs incurred by the business model.' },
+      { term: 'Revenue Stream', definition: 'how the business captures money or value.' }
+    ],
+    coverGradient: 'linear-gradient(135deg, #f2f5e8 0%, #dde6d2 50%, #cbd8bf 100%)',
+    coverImage: businessModelCanvasCover
+  },
+  {
+    id: 'organogram',
+    name: 'Organogram',
+    category: 'Strategy',
+    description:
+      'Visualize the product organization, reporting structure, responsibilities, and team ownership.',
+    icon: Network,
+    fields: [],
+    instructions:
+      'Use the Organogram to clarify who owns which parts of the product organization. Map the lead role at the top, then group teams or functions underneath. Each role should show the owner and responsibility so decision paths are easy to scan.',
+    terminology: [
+      { term: 'Organogram', definition: 'visual map of roles, teams, and reporting lines.' },
+      { term: 'Role', definition: 'position or function with a defined responsibility.' },
+      { term: 'Owner', definition: 'person or role accountable for a node.' },
+      { term: 'Reporting Line', definition: 'relationship showing accountability or escalation.' },
+      { term: 'Function', definition: 'team area such as Discovery, Delivery, or Go To Market.' }
+    ],
+    coverGradient: 'linear-gradient(135deg, #edf5ef 0%, #dbe7dc 50%, #cad8ca 100%)',
+    coverImage: organogramCover
+  },
   {
     id: 'outcomes',
     name: 'Outcomes',
@@ -49,7 +172,8 @@ export const FRAMEWORK_TEMPLATES: FrameworkTemplate[] = [
       },
       { term: 'OKR', definition: 'Objective + Key Results framework.' }
     ],
-    coverGradient: 'linear-gradient(135deg, #fdf4d8 0%, #f0e0b8 50%, #e8d4a8 100%)'
+    coverGradient: 'linear-gradient(135deg, #fdf4d8 0%, #f0e0b8 50%, #e8d4a8 100%)',
+    coverImage: outcomesCover
   },
   {
     id: 'experience-map',
@@ -69,7 +193,8 @@ export const FRAMEWORK_TEMPLATES: FrameworkTemplate[] = [
       { term: 'Gain', definition: 'positive outcome or delight.' },
       { term: 'KPI', definition: 'key performance indicator.' }
     ],
-    coverGradient: 'linear-gradient(135deg, #fdf3e0 0%, #f2e0c8 50%, #e8d4b8 100%)'
+    coverGradient: 'linear-gradient(135deg, #fdf3e0 0%, #f2e0c8 50%, #e8d4b8 100%)',
+    coverImage: experienceMapCover
   },
   {
     id: 'interview-snapshot',
@@ -90,6 +215,7 @@ export const FRAMEWORK_TEMPLATES: FrameworkTemplate[] = [
       { term: 'Opportunity', definition: 'unmet need or product gap to address.' }
     ],
     coverGradient: 'linear-gradient(135deg, #fef8ec 0%, #f4e8d4 50%, #e8dcc8 100%)',
+    coverImage: interviewSnapshotCover,
     fields: [
       {
         id: 'person',
@@ -151,7 +277,8 @@ export const FRAMEWORK_TEMPLATES: FrameworkTemplate[] = [
       { term: 'Proposer', definition: 'person who submitted the idea.' },
       { term: 'Stages', definition: 'workflow columns from raw collection to release.' }
     ],
-    coverGradient: 'linear-gradient(135deg, #fdf2d0 0%, #f5e0b0 50%, #e8d4a8 100%)'
+    coverGradient: 'linear-gradient(135deg, #fdf2d0 0%, #f5e0b0 50%, #e8d4a8 100%)',
+    coverImage: ideaBankCover
   },
   {
     id: 'story-map',
@@ -174,7 +301,8 @@ export const FRAMEWORK_TEMPLATES: FrameworkTemplate[] = [
       { term: 'Kano', definition: 'Must-Have, Performance, or Delighter priority class.' },
       { term: 'PIC', definition: 'Person In Charge. Assign an owner to each story.' }
     ],
-    coverGradient: 'linear-gradient(135deg, #fdf1d8 0%, #efd8b8 50%, #ddc6a8 100%)'
+    coverGradient: 'linear-gradient(135deg, #fdf1d8 0%, #efd8b8 50%, #ddc6a8 100%)',
+    coverImage: storyMapCover
   },
   {
     id: 'backlog',
@@ -195,7 +323,8 @@ export const FRAMEWORK_TEMPLATES: FrameworkTemplate[] = [
       },
       { term: 'Kano', definition: 'priority classification for the story.' }
     ],
-    coverGradient: 'linear-gradient(135deg, #f8ecd8 0%, #e7d4b8 50%, #d8c2a4 100%)'
+    coverGradient: 'linear-gradient(135deg, #f8ecd8 0%, #e7d4b8 50%, #d8c2a4 100%)',
+    coverImage: epicsCover
   },
   {
     id: 'kanban',
@@ -235,7 +364,8 @@ export const FRAMEWORK_TEMPLATES: FrameworkTemplate[] = [
         definition: 'person responsible for the card. Click the badge to assign or reassign.'
       }
     ],
-    coverGradient: 'linear-gradient(135deg, #f4ead8 0%, #dfcfb8 50%, #cdbca4 100%)'
+    coverGradient: 'linear-gradient(135deg, #f4ead8 0%, #dfcfb8 50%, #cdbca4 100%)',
+    coverImage: kanbanCover
   },
   {
     id: 'assumption-test',
@@ -254,6 +384,7 @@ export const FRAMEWORK_TEMPLATES: FrameworkTemplate[] = [
       { term: 'Importance', definition: 'how critical the assumption is.' },
       { term: 'Evidence', definition: 'how much data supports or refutes it.' }
     ],
-    coverGradient: 'linear-gradient(135deg, #fff4dc 0%, #ecd9bd 50%, #d9c5ac 100%)'
+    coverGradient: 'linear-gradient(135deg, #fff4dc 0%, #ecd9bd 50%, #d9c5ac 100%)',
+    coverImage: assumptionTestCover
   }
 ];

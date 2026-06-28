@@ -92,6 +92,55 @@
       "when": 1781722028954,
       "tag": "0012_gifted_machine_man",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1781722600000,
+      "tag": "0013_decouple_rss_from_workspace",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1781723200000,
+      "tag": "0014_daily_activities",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1781724400000,
+      "tag": "0015_daily_activity_levels",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1781725000000,
+      "tag": "0016_daily_activity_numeric_levels",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1782633600000,
+      "tag": "0017_more_daily_activities",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1782637200000,
+      "tag": "0018_activity_category_expansion",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1782640800000,
+      "tag": "0019_broader_daily_activity_themes",
+      "breakpoints": true
     }
   ]
 }

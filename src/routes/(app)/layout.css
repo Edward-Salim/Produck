@@ -82,3 +82,45 @@
     @apply font-sans;
   }
 }
+
+.today-wrapper {
+  animation: today-wrapper-idle 7s ease-in-out infinite;
+}
+
+.today-activity-card {
+  animation: today-activity-idle 4.8s ease-in-out infinite;
+  animation-delay: var(--idle-delay);
+}
+
+@keyframes today-wrapper-idle {
+  0%,
+  100% {
+    transform: translateY(0);
+    box-shadow: 0 1px 2px rgb(75 62 45 / 0.04);
+  }
+
+  50% {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 24px rgb(75 62 45 / 0.07);
+  }
+}
+
+@keyframes today-activity-idle {
+  0%,
+  100% {
+    transform: translateY(0);
+    box-shadow: 0 1px 2px rgb(75 62 45 / 0.05);
+  }
+
+  50% {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 18px rgb(75 62 45 / 0.09);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .today-wrapper,
+  .today-activity-card {
+    animation: none;
+  }
+}

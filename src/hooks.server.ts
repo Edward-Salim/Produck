@@ -43,5 +43,15 @@ export const handle: Handle = async ({ event, resolve }) => {
     throw redirect(303, '/login');
   }
 
-  return resolve(event);
+  const pathname = event.url.pathname.replace(/\/$/, '') || '/';
+
+  return resolve(event, {
+    preload: ({ type }) => {
+      if (pathname === '/tools/application-kit') {
+        return type === 'css';
+      }
+
+      return type === 'js' || type === 'css';
+    }
+  });
 };

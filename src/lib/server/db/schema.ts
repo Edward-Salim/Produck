@@ -249,6 +249,23 @@ export const pmMethodology = pgTable('pm_methodology', {
   figure: text('figure')
 });
 
+// ── Daily Activity Picker ─────────────────────────────
+
+export const dailyActivity = pgTable('daily_activity', {
+  id: serial('id').primaryKey(),
+  slug: text('slug').notNull().unique(),
+  category: text('category').notNull(),
+  categoryDescription: text('category_description').notNull().default(''),
+  name: text('name').notNull(),
+  detail: text('detail').notNull().default(''),
+  icon: text('icon').notNull().default('sparkles'),
+  level: integer('level').notNull().default(2),
+  enabled: boolean('enabled').notNull().default(true),
+  sortOrder: integer('sort_order').notNull().default(0),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
+});
+
 // ── Idea ──────────────────────────────────────────────
 
 export const idea = pgTable('idea', {

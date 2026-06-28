@@ -5,24 +5,39 @@
   import { invalidateAll } from '$app/navigation';
   import {
     COMPANIES,
+    getCompanyComparisonFields,
     ALL_FINTECH_CATEGORIES,
     ALL_REGIONS,
     MY_PROJECT,
     type Company,
     type FintechCategory,
     type Region
-  } from './landscape-data.js';
+  } from '$lib/fintech-landscape-data.js';
   import { STAR_COLOR } from '$lib/constants/colors.js';
+  import type { FrameworkInstance } from './types.js';
 
-  let { data } = $props();
+  let { projectId, projectName, fintechPicks = [] } = $props<{
+    instance?: FrameworkInstance;
+    draftMode?: 'edit' | 'view';
+    onUpdate?: (values: Record<string, string>, title?: string) => void;
+    projectId?: string;
+    projectName?: string;
+    showHistory?: boolean;
+    fintechPicks?: { companyId: string }[];
+  }>();
 
   // ── Views & filters ──
   let view = $state<'landscape' | 'compare'>('landscape');
   let selectedCategory = $state<FintechCategory | 'all'>('all');
   let selectedRegion = $state<Region | 'all'>('all');
+  let comparisonFields = $derived(getCompanyComparisonFields(Number(projectId)));
+  let activeProjectCompany = $derived({
+    ...MY_PROJECT,
+    name: projectName?.trim() || MY_PROJECT.name
+  });
 
   // ── Picks ──
-  let pickSet = $derived(new Set(data.picks.map((p: { companyId: string }) => p.companyId)));
+  let pickSet = $derived(new Set(fintechPicks.map((p: { companyId: string }) => p.companyId)));
 
   function isPicked(companyId: string): boolean {
     return pickSet.has(companyId);
@@ -32,7 +47,7 @@
     await fetch('/api/fintech-pick', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ companyId })
+      body: JSON.stringify({ projectId: Number(projectId), companyId })
     });
     invalidateAll();
   }
@@ -63,21 +78,16 @@
       await fetch('/api/fintech-pick', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ companyId: c.id })
+        body: JSON.stringify({ projectId: Number(projectId), companyId: c.id })
       });
     }
     invalidateAll();
   }
 </script>
 
-<svelte:head>
-  <title>Fintech Landscape | Produck</title>
-</svelte:head>
-
-<div class="flex flex-col" style="min-height: calc(100vh - 140px);">
+<div class="flex flex-col" style="min-height: calc(100vh - 220px);">
   <!-- Header -->
   <header class="mb-4">
-    <h1 class="font-display text-2xl text-cork-800 md:text-4xl">Fintech Landscape</h1>
     <div class="mt-0.5 flex items-center gap-2">
       <p class="text-sm text-cork-500">
         {filteredCompanies.length} companies{selectedRegion !== 'all'
@@ -104,7 +114,7 @@
       <div class="flex items-center gap-1">
         <button
           type="button"
-          class="shrink-0 rounded-full px-2 py-1 text-[11px] whitespace-nowrap transition-colors md:px-2.5 md:text-xs {selectedRegion ===
+          class="shrink-0 cursor-pointer rounded-full px-2 py-1 text-[11px] whitespace-nowrap transition-colors md:px-2.5 md:text-xs {selectedRegion ===
           'all'
             ? 'bg-cork-700 text-cork-50'
             : 'bg-cork-200/50 text-cork-500 hover:bg-cork-300/50'}"
@@ -115,7 +125,7 @@
         {#each ALL_REGIONS as region (region)}
           <button
             type="button"
-            class="shrink-0 rounded-full px-2 py-1 text-[11px] whitespace-nowrap transition-colors md:px-2.5 md:text-xs {selectedRegion ===
+            class="shrink-0 cursor-pointer rounded-full px-2 py-1 text-[11px] whitespace-nowrap transition-colors md:px-2.5 md:text-xs {selectedRegion ===
             region
               ? 'bg-cork-700 text-cork-50'
               : 'bg-cork-200/50 text-cork-500 hover:bg-cork-300/50'}"
@@ -137,7 +147,7 @@
         }}
       >
         <Select.Trigger
-          class="h-8 flex-1 border-cork-300 bg-cork-200/50 text-xs text-cork-700 md:w-40 md:flex-none"
+          class="h-8 flex-1 cursor-pointer border-cork-300 bg-cork-200/50 text-xs text-cork-700 md:w-40 md:flex-none"
         >
           <span class="truncate"
             >{selectedCategory === 'all' ? 'All Categories' : selectedCategory}</span
@@ -158,7 +168,7 @@
       <div class="flex h-8 shrink-0 overflow-hidden rounded-lg border border-cork-300">
         <button
           type="button"
-          class="flex items-center px-2.5 transition-colors {view === 'landscape'
+          class="flex cursor-pointer items-center px-2.5 transition-colors {view === 'landscape'
             ? 'bg-cork-700 text-cork-50'
             : 'bg-cork-200/50 text-cork-600 hover:bg-cork-300/50'}"
           onclick={() => (view = 'landscape')}
@@ -168,7 +178,7 @@
         </button>
         <button
           type="button"
-          class="flex items-center px-2.5 transition-colors {view === 'compare'
+          class="flex cursor-pointer items-center px-2.5 transition-colors {view === 'compare'
             ? 'bg-cork-700 text-cork-50'
             : 'bg-cork-200/50 text-cork-600 hover:bg-cork-300/50'}"
           onclick={() => (view = 'compare')}
@@ -248,19 +258,7 @@
       description="Select companies from the landscape view using the sword icon"
     />
   {:else}
-    {@const allCols = [MY_PROJECT, ...pickedCompanies]}
-    {@const ROWS = [
-      { key: 'focus', label: 'Product / Service' },
-      { key: 'marketShare', label: 'Market Share' },
-      { key: 'growth', label: 'Growth' },
-      { key: 'targetAudience', label: 'Target Audience' },
-      { key: 'priceStructure', label: 'Price Structure' },
-      { key: 'marketingStrategies', label: 'Marketing Strategies' },
-      { key: 'customerSatisfaction', label: 'Customer Satisfaction', isStars: true },
-      { key: 'strengths', label: 'Strengths' },
-      { key: 'weaknesses', label: 'Weaknesses' },
-      { key: 'keyAdvantage', label: 'Key Advantage' }
-    ]}
+    {@const allCols = [activeProjectCompany, ...pickedCompanies]}
 
     <div
       class="overflow-x-auto rounded-xl border border-cork-300/40 bg-cork-100 [-webkit-overflow-scrolling:touch] [scrollbar-width:none]"
@@ -296,7 +294,7 @@
               </div>
               <p class="text-sm font-bold text-cork-800">{company.name}</p>
               {#if i === 0}
-                <p class="mt-0.5 text-[9px] text-cork-500">Your Project</p>
+                <p class="mt-0.5 text-[9px] text-cork-500">Active Project</p>
               {:else}
                 <button
                   type="button"
@@ -309,7 +307,7 @@
         </div>
 
         <!-- Attribute rows -->
-        {#each ROWS as row, ri (row.key)}
+        {#each comparisonFields as row, ri (row.key)}
           <div
             class="grid border-b border-cork-600/10 {ri % 2 === 0 ? '' : 'bg-cork-400/5'}"
             style="grid-template-columns: 100px repeat({allCols.length}, 1fr);"
@@ -325,9 +323,9 @@
                   ? 'bg-cork-500/15'
                   : ''}"
               >
-                {#if (row as any).isStars}
+                {#if row.display === 'stars'}
                   <span class="text-sm tracking-wider"
-                    >{#each Array(5) as _, si}{#if si < (val ?? 0)}<span
+                    >{#each Array(5) as _, si (si)}{#if si < Number(val ?? 0)}<span
                           style="color: {STAR_COLOR};">&#x2605;</span
                         >{:else}<span class="text-cork-300">&#x2605;</span>{/if}{/each}</span
                   >

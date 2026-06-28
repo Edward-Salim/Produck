@@ -32,6 +32,11 @@
   import ExperienceMapEditor from '$lib/components/frameworks/ExperienceMapEditor.svelte';
   import InterviewSnapshotEditor from '$lib/components/frameworks/InterviewSnapshotEditor.svelte';
   import KanbanBoardEditor from '$lib/components/frameworks/KanbanBoardEditor.svelte';
+  import FintechLandscapeEditor from '$lib/components/frameworks/FintechLandscapeEditor.svelte';
+  import ValuePropositionCanvasEditor from '$lib/components/frameworks/ValuePropositionCanvasEditor.svelte';
+  import LeanCanvasEditor from '$lib/components/frameworks/LeanCanvasEditor.svelte';
+  import BusinessModelCanvasEditor from '$lib/components/frameworks/BusinessModelCanvasEditor.svelte';
+  import OrganogramEditor from '$lib/components/frameworks/OrganogramEditor.svelte';
   import type { FrameworkInstance } from '$lib/components/frameworks/types.js';
   import type { Component } from 'svelte';
   import * as Dialog from '$lib/components/ui/dialog/index.js';
@@ -43,6 +48,8 @@
       frameworkInstances: FrameworkPageInstance[];
       workspaceId: number;
       projectId: number;
+      projectName: string;
+      fintechPicks: { companyId: string }[];
       currentUser?: { displayName?: string };
     };
   }>();
@@ -52,6 +59,9 @@
     `produck_framework_instances_v1_ws_${data.workspaceId}_proj_${projectId}`
   );
   let viewStateKey = $derived(`produck_framework_view_ws_${data.workspaceId}_proj_${projectId}`);
+  let deletedTemplateIdsKey = $derived(
+    `produck_framework_deleted_templates_ws_${data.workspaceId}_proj_${projectId}`
+  );
 
   let instances = $state<FrameworkInstance[]>([]);
   let initialized = $state(false);
@@ -142,9 +152,16 @@
       draftMode: 'edit' | 'view';
       onUpdate: (values: Record<string, string>, title?: string) => void;
       projectId?: string;
+      projectName?: string;
       showHistory?: boolean;
+      fintechPicks?: { companyId: string }[];
     }>
   > = {
+    'fintech-landscape': FintechLandscapeEditor,
+    'value-proposition-canvas': ValuePropositionCanvasEditor,
+    'lean-canvas': LeanCanvasEditor,
+    'business-model-canvas': BusinessModelCanvasEditor,
+    organogram: OrganogramEditor,
     'idea-bank': IdeaBankEditor,
     'story-map': StoryMapEditor,
     backlog: BacklogEditor,
@@ -160,6 +177,26 @@
     if (browser) localStorage.setItem(storageKey, JSON.stringify(next));
   }
 
+  function getDeletedTemplateIds(): Set<string> {
+    if (!browser) return new Set();
+    try {
+      const parsed = JSON.parse(localStorage.getItem(deletedTemplateIdsKey) ?? '[]');
+      return new Set(Array.isArray(parsed) ? parsed.filter((id) => typeof id === 'string') : []);
+    } catch {
+      return new Set();
+    }
+  }
+
+  function saveDeletedTemplateIds(next: Set<string>) {
+    if (browser) localStorage.setItem(deletedTemplateIdsKey, JSON.stringify([...next]));
+  }
+
+  function clearDeletedTemplate(templateId: string) {
+    const deleted = getDeletedTemplateIds();
+    if (!deleted.delete(templateId)) return;
+    saveDeletedTemplateIds(deleted);
+  }
+
   function uniqueTitle(name: string): string {
     const existingNames = new Set(instances.map((i) => i.title));
     if (!existingNames.has(name)) return name;
@@ -169,6 +206,8 @@
   }
 
   function createInstance(template: FrameworkTemplate) {
+    clearDeletedTemplate(template.id);
+
     const emptyValues: Record<string, string> = {};
     if (template.id === 'interview-snapshot') {
       emptyValues.snapshots = JSON.stringify([
@@ -205,6 +244,41 @@
       emptyValues.assumptions = JSON.stringify([]);
     } else if (template.id === 'kanban') {
       // Kanban fetches from DB directly — localStorage values are not used
+    } else if (template.id === 'value-proposition-canvas') {
+      emptyValues.valuePropositionCanvas = JSON.stringify({
+        customerJobs: '',
+        pains: '',
+        gains: '',
+        productsServices: '',
+        painRelievers: '',
+        gainCreators: ''
+      });
+    } else if (template.id === 'lean-canvas') {
+      emptyValues.leanCanvas = JSON.stringify({
+        problem: '',
+        solution: '',
+        keyMetrics: '',
+        uniqueValueProposition: '',
+        unfairAdvantage: '',
+        channels: '',
+        customerSegments: '',
+        costStructure: '',
+        revenueStreams: ''
+      });
+    } else if (template.id === 'business-model-canvas') {
+      emptyValues.businessModelCanvas = JSON.stringify({
+        keyPartners: '',
+        keyActivities: '',
+        keyResources: '',
+        valuePropositions: '',
+        customerRelationships: '',
+        channels: '',
+        customerSegments: '',
+        costStructure: '',
+        revenueStreams: ''
+      });
+    } else if (template.id === 'organogram') {
+      emptyValues.organogram = JSON.stringify({});
     } else {
       for (const f of template.fields) emptyValues[f.id] = '';
     }
@@ -240,6 +314,15 @@
         if (res.ok) {
           const json = await res.json();
           const dbId = json.instance.id;
+          if (
+            getDeletedTemplateIds().has(template.id) ||
+            !instances.some((i) => i.id === instance.id)
+          ) {
+            fetch(`/api/framework-instances?id=${dbId}`, { method: 'DELETE' }).catch(() => {
+              /* best-effort */
+            });
+            return;
+          }
           instances = instances.map((i) => (i.id === instance.id ? { ...i, id: dbId } : i));
           if (selectedInstanceId === instance.id) selectedInstanceId = dbId;
           localStorage.setItem(storageKey, JSON.stringify(instances));
@@ -263,11 +346,22 @@
   function deleteInstance() {
     if (!deleteTargetId) return;
     const targetId = deleteTargetId;
-    const next = instances.filter((i) => i.id !== targetId);
+    const target = instances.find((i) => i.id === targetId);
+    if (!target) {
+      deleteTargetId = null;
+      return;
+    }
+
+    const deleted = getDeletedTemplateIds();
+    deleted.add(target.templateId);
+    saveDeletedTemplateIds(deleted);
+
+    const next = instances.filter((i) => i.templateId !== target.templateId);
     saveInstances(next);
     selectedInstanceId = next[0]?.id ?? null;
     view = 'templates';
     deleteTargetId = null;
+    if (browser) localStorage.removeItem(viewStateKey);
 
     // Delete from DB if it's a DB-backed instance
     if (targetId.startsWith('db-')) {
@@ -338,13 +432,36 @@
     return { ...local, updatedBy: local.updatedBy ?? serverInstance.updatedBy };
   }
 
+  function selectInstanceAfterRefresh(next: FrameworkInstance[]) {
+    if (selectedInstanceId && next.some((i) => i.id === selectedInstanceId)) {
+      return selectedInstanceId;
+    }
+
+    if (browser) {
+      try {
+        const savedView = localStorage.getItem(viewStateKey);
+        const savedInstanceId = savedView ? JSON.parse(savedView).instanceId : null;
+        if (savedInstanceId && next.some((i) => i.id === savedInstanceId)) {
+          return savedInstanceId;
+        }
+      } catch {
+        /* ignore */
+      }
+    }
+
+    return next[0]?.id ?? null;
+  }
+
   // React to project switches by re-initializing instances from server data + localStorage.
   $effect(() => {
-    const serverInstances = data.frameworkInstances as FrameworkInstance[];
+    const deletedTemplateIds = getDeletedTemplateIds();
+    const serverInstances = (data.frameworkInstances as FrameworkInstance[]).filter(
+      (instance) => !deletedTemplateIds.has(instance.templateId)
+    );
     const key = storageKey;
     if (!browser) {
       instances = serverInstances;
-      if (!selectedInstanceId) selectedInstanceId = serverInstances[0]?.id ?? null;
+      selectedInstanceId = selectInstanceAfterRefresh(serverInstances);
       initialized = true;
       return;
     }
@@ -352,12 +469,14 @@
     if (!raw) {
       instances = serverInstances;
       if (serverInstances.length > 0) localStorage.setItem(key, JSON.stringify(serverInstances));
-      if (!selectedInstanceId) selectedInstanceId = serverInstances[0]?.id ?? null;
+      selectedInstanceId = selectInstanceAfterRefresh(serverInstances);
       initialized = true;
       return;
     }
     try {
-      const parsed = JSON.parse(raw) as FrameworkInstance[];
+      const parsed = (JSON.parse(raw) as FrameworkInstance[]).filter(
+        (instance) => !deletedTemplateIds.has(instance.templateId)
+      );
       // Deduplicate by templateId (last wins: saved framework instances override derived data).
       const dedupedServerInstances = [
         ...new Map(serverInstances.map((s) => [s.templateId, s])).values()
@@ -371,13 +490,13 @@
         ...parsed.filter((i) => templateIds.has(i.templateId) && !serverTemplates.has(i.templateId))
       ];
       instances = merged;
-      selectedInstanceId = merged[0]?.id ?? null;
+      selectedInstanceId = selectInstanceAfterRefresh(merged);
       localStorage.setItem(key, JSON.stringify(merged));
     } catch {
       localStorage.removeItem(key);
       instances = serverInstances;
       if (serverInstances.length > 0) localStorage.setItem(key, JSON.stringify(serverInstances));
-      if (!selectedInstanceId) selectedInstanceId = serverInstances[0]?.id ?? null;
+      selectedInstanceId = selectInstanceAfterRefresh(serverInstances);
     }
     initialized = true;
   });
@@ -475,6 +594,8 @@
             draftMode="view"
             onUpdate={handleUpdate}
             {projectId}
+            projectName={data.projectName}
+            fintechPicks={data.fintechPicks}
             bind:showHistory={showKanbanHistory}
           />
         </div>
@@ -512,7 +633,9 @@
             </div>
           </div>
 
-          <div class="grid grid-cols-4 gap-3">
+          <div
+            class="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 [-webkit-overflow-scrolling:touch] [scrollbar-width:none] lg:mx-0 lg:grid lg:grid-cols-4 lg:overflow-visible lg:px-0 lg:pb-0 xl:grid-cols-[repeat(4,minmax(0,14rem))]"
+          >
             {#each filteredTemplates as template (template.id)}
               {@const Icon = template.icon}
               {@const CatIcon =
@@ -527,40 +650,65 @@
                         : Target}
               {@const added = existingTemplateIds.has(template.id)}
               <article
-                class="rounded-lg border border-cork-300/50 bg-cork-50/50 shadow-sm transition-all hover:shadow-md"
+                class="w-[68vw] max-w-[20rem] shrink-0 snap-start overflow-hidden rounded-lg border border-cork-300/50 bg-cork-50/50 shadow-sm transition-all hover:shadow-md sm:w-[58vw] md:w-[46vw] lg:w-auto lg:max-w-none lg:shrink"
               >
                 <!-- Header: title left, category icon right -->
-                <div class="flex items-center justify-between gap-2 px-3 py-2">
+                <div class="flex items-center justify-between gap-2 bg-[#f1ece2] px-3 py-2">
                   <h2
                     class="truncate font-display text-sm font-semibold {added
-                      ? 'text-cork-400'
+                      ? 'text-cork-700'
                       : 'text-cork-800'} pr-2"
                   >
                     {template.name}
                   </h2>
-                  <CatIcon class="size-3.5 shrink-0 {added ? 'text-cork-300' : 'text-cork-400'}" />
+                  <CatIcon class="size-3.5 shrink-0 {added ? 'text-cork-500' : 'text-cork-400'}" />
                 </div>
                 <!-- Cover: icon → + on hover -->
                 <button
                   type="button"
-                  class="group relative flex aspect-[3/2] w-full cursor-pointer items-center justify-center bg-cork-200/50 {added
-                    ? 'opacity-60'
+                  class="group relative mx-3 flex aspect-[9/5] w-[calc(100%-1.5rem)] cursor-pointer items-center justify-center overflow-hidden bg-cork-200/50 {added
+                    ? 'bg-cork-200/70'
                     : ''}"
                   onclick={() =>
                     added
                       ? openDraft(instances.find((i) => i.templateId === template.id)!.id)
                       : createInstance(template)}
                 >
-                  <Icon class="size-12 text-cork-700/70 transition-opacity group-hover:opacity-0" />
-                  <Plus
-                    class="absolute size-10 text-cork-700 opacity-0 transition-opacity group-hover:opacity-100"
-                  />
+                  {#if template.coverImage}
+                    <img
+                      src={template.coverImage}
+                      alt=""
+                      class="absolute inset-0 h-full w-full scale-[1.22] object-contain transition-transform transition-opacity {added
+                        ? 'opacity-35 grayscale-[35%]'
+                        : 'group-hover:opacity-25'}"
+                    />
+                  {:else}
+                    <Icon
+                      class="size-12 transition-opacity {added
+                        ? 'text-cork-400/60'
+                        : 'text-cork-700/70 group-hover:opacity-0'}"
+                    />
+                  {/if}
+                  {#if added}
+                    <div class="absolute inset-0 flex items-center justify-center bg-cork-100/25">
+                      <span
+                        class="flex size-10 items-center justify-center rounded-full border border-cork-400/30 bg-cork-50/80 text-cork-500 shadow-sm"
+                        aria-hidden="true"
+                      >
+                        <CheckCircle2 class="size-5" />
+                      </span>
+                    </div>
+                  {:else}
+                    <Plus
+                      class="absolute size-10 text-cork-700 opacity-0 transition-opacity group-hover:opacity-100"
+                    />
+                  {/if}
                 </button>
                 <!-- Description -->
-                <div class="px-3 pt-2 pb-3">
+                <div class="bg-[#f1ece2] px-3 pt-2 pb-3">
                   <p
                     class="line-clamp-2 text-[11px] leading-snug {added
-                      ? 'text-cork-400'
+                      ? 'text-cork-500'
                       : 'text-cork-500'}"
                   >
                     {template.description}
@@ -620,6 +768,8 @@
                   draftMode="view"
                   onUpdate={handleUpdate}
                   {projectId}
+                  projectName={data.projectName}
+                  fintechPicks={data.fintechPicks}
                   bind:showHistory={showKanbanHistory}
                 />
               </div>
@@ -820,7 +970,7 @@
             Terminology
           </h4>
           <ul class="ml-4 list-disc space-y-1">
-            {#each selectedTemplate.terminology as item}
+            {#each selectedTemplate.terminology as item (item.term)}
               <li class="text-cork-600">
                 <span class="font-medium text-cork-700">{item.term}:</span>
                 <span class="ml-1">{item.definition}</span>

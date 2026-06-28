@@ -6,11 +6,11 @@ import { assertProjectAccess } from '$lib/server/access.js';
 import type { RequestHandler } from './$types.js';
 
 export const POST: RequestHandler = async ({ request, cookies, locals }) => {
-  const projectId = Number(cookies.get('active_project'));
+  const { projectId: requestedProjectId, companyId } = await request.json();
+  const projectId = Number(requestedProjectId || cookies.get('active_project'));
   if (!projectId) return json({ error: 'No active project' }, { status: 400 });
   await assertProjectAccess(locals, projectId);
 
-  const { companyId } = await request.json();
   if (!companyId) return json({ error: 'Missing companyId' }, { status: 400 });
 
   const [existing] = await db

@@ -107,6 +107,41 @@ export interface Company {
   keyAdvantage: string;
 }
 
+export type CompanyComparisonField = {
+  key: keyof Company;
+  label: string;
+  display?: 'text' | 'stars';
+};
+
+// Edit this list to control what the compare table shows.
+export const COMPANY_COMPARISON_FIELDS: CompanyComparisonField[] = [
+  { key: 'focus', label: 'Product / Service' },
+  { key: 'marketShare', label: 'Market Share' },
+  { key: 'growth', label: 'Growth' },
+  { key: 'targetAudience', label: 'Target Audience' },
+  { key: 'priceStructure', label: 'Price Structure' },
+  { key: 'marketingStrategies', label: 'Marketing Strategies' },
+  { key: 'customerSatisfaction', label: 'Customer Satisfaction', display: 'stars' },
+  { key: 'strengths', label: 'Strengths' },
+  { key: 'weaknesses', label: 'Weaknesses' },
+  { key: 'keyAdvantage', label: 'Key Advantage' }
+];
+
+// Optional per-project overrides. Use the numeric project id as the key.
+// Example:
+// 12: [
+//   { key: 'focus', label: 'Core Offering' },
+//   { key: 'revenueModel', label: 'Business Model' },
+//   { key: 'license', label: 'License' }
+// ]
+export const PROJECT_COMPANY_COMPARISON_FIELDS: Partial<Record<number, CompanyComparisonField[]>> =
+  {};
+
+export function getCompanyComparisonFields(projectId?: number): CompanyComparisonField[] {
+  if (!projectId) return COMPANY_COMPARISON_FIELDS;
+  return PROJECT_COMPANY_COMPARISON_FIELDS[projectId] ?? COMPANY_COMPARISON_FIELDS;
+}
+
 export const ALL_FINTECH_CATEGORIES: FintechCategory[] = [
   'Digital Banks',
   'Lending',

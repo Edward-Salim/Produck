@@ -1,0 +1,4 @@
+interface:
+  display_name: "Produck Framework Card Images"
+  short_description: "Generate Produck framework card cover art"
+  default_prompt: "Use $produck-framework-card-images to create flat 2D Produck framework card cover images."

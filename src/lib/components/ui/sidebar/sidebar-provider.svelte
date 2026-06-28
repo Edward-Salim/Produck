@@ -33,9 +33,70 @@
       document.cookie = `${SIDEBAR_COOKIE_NAME}=${open}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`;
     }
   });
+
+  const SWIPE_EDGE_WIDTH = 32;
+  const SWIPE_THRESHOLD = 56;
+  const SWIPE_VERTICAL_LIMIT = 72;
+
+  let swipeStartX = 0;
+  let swipeStartY = 0;
+  let swipeLastX = 0;
+  let swipeLastY = 0;
+  let swipeMode: 'open' | 'close' | null = null;
+
+  function handleTouchStart(e: TouchEvent) {
+    if (!sidebar.isMobile || e.touches.length !== 1) return;
+
+    const touch = e.touches[0];
+    const startsAtEdge = touch.clientX <= SWIPE_EDGE_WIDTH;
+
+    if (!sidebar.openMobile && !startsAtEdge) {
+      swipeMode = null;
+      return;
+    }
+
+    swipeMode = sidebar.openMobile ? 'close' : 'open';
+    swipeStartX = touch.clientX;
+    swipeStartY = touch.clientY;
+    swipeLastX = touch.clientX;
+    swipeLastY = touch.clientY;
+  }
+
+  function handleTouchMove(e: TouchEvent) {
+    if (!swipeMode || e.touches.length !== 1) return;
+
+    const touch = e.touches[0];
+    swipeLastX = touch.clientX;
+    swipeLastY = touch.clientY;
+  }
+
+  function handleTouchEnd() {
+    if (!swipeMode) return;
+
+    const deltaX = swipeLastX - swipeStartX;
+    const deltaY = Math.abs(swipeLastY - swipeStartY);
+    const horizontalEnough = Math.abs(deltaX) >= SWIPE_THRESHOLD && Math.abs(deltaX) > deltaY * 1.25;
+    const verticalEnough = deltaY > SWIPE_VERTICAL_LIMIT && deltaY > Math.abs(deltaX);
+
+    if (!verticalEnough && horizontalEnough) {
+      if (swipeMode === 'open' && deltaX > 0) {
+        sidebar.setOpenMobile(true);
+      } else if (swipeMode === 'close' && deltaX < 0) {
+        sidebar.setOpenMobile(false);
+      }
+    }
+
+    swipeMode = null;
+  }
 </script>
 
-<svelte:window onkeydown={sidebar.handleShortcutKeydown} />
+<svelte:window
+  onkeydown={sidebar.handleShortcutKeydown}
+  ontouchstart={handleTouchStart}
+  ontouchmove={handleTouchMove}
+  ontouchend={handleTouchEnd}
+  ontouchcancel={() => (swipeMode = null)}
+/>
 
 <Tooltip.Provider delayDuration={0}>
   <div

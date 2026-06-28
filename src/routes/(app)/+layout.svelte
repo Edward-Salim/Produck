@@ -12,7 +12,6 @@
     Layers3,
     Wrench,
     BookOpen,
-    Landmark,
     WalletCards,
     GaugeCircle,
     Rss,
@@ -285,17 +284,6 @@
               <Sidebar.MenuItem>
                 <Sidebar.MenuButton
                   size="sm"
-                  isActive={page.url.pathname.startsWith('/landscape')}
-                  tooltipContent="Fintech Map"
-                >
-                  {#snippet child({ props })}
-                    <a href="/landscape" {...props}><Landmark /><span>Fintech Map</span></a>
-                  {/snippet}
-                </Sidebar.MenuButton>
-              </Sidebar.MenuItem>
-              <Sidebar.MenuItem>
-                <Sidebar.MenuButton
-                  size="sm"
                   isActive={page.url.pathname.startsWith('/trends')}
                   tooltipContent="Trends"
                 >
@@ -331,8 +319,6 @@
             </Sidebar.Menu>
           </Sidebar.GroupContent>
         </Sidebar.Group>
-
-        <Sidebar.Separator />
 
         <Sidebar.Separator />
 
