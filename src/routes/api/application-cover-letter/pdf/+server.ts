@@ -419,7 +419,11 @@ function addUriAnnotation(
   page.node.addAnnot(page.doc.context.register(annotation));
 }
 
-async function renderApplicationPdf(recipient: string, plainText: string): Promise<Uint8Array> {
+async function renderApplicationPdf(
+  recipient: string,
+  plainText: string,
+  includeCv: boolean
+): Promise<Uint8Array> {
   const pdf = await PDFDocument.create();
   const page = pdf.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
   const regular = await pdf.embedFont(StandardFonts.TimesRoman);
@@ -428,7 +432,7 @@ async function renderApplicationPdf(recipient: string, plainText: string): Promi
   const cvSourcePath = join(process.cwd(), 'static', 'assets', 'Edward_Salim_CV.pdf');
   const portraitSourcePath = join(process.cwd(), 'src', 'lib', 'assets', 'edward.jpg');
   const [cvBytes, portraitBytes, signatureBytes] = await Promise.all([
-    readFile(cvSourcePath),
+    includeCv ? readFile(cvSourcePath) : Promise.resolve(undefined),
     readFile(portraitSourcePath),
     readPrivateSignatureImage()
   ]);
@@ -584,9 +588,11 @@ async function renderApplicationPdf(recipient: string, plainText: string): Promi
     contactY -= 15;
   }
 
-  const cv = await PDFDocument.load(cvBytes);
-  const cvPages = await pdf.copyPages(cv, cv.getPageIndices());
-  for (const cvPage of cvPages) pdf.addPage(cvPage);
+  if (cvBytes) {
+    const cv = await PDFDocument.load(cvBytes);
+    const cvPages = await pdf.copyPages(cv, cv.getPageIndices());
+    for (const cvPage of cvPages) pdf.addPage(cvPage);
+  }
 
   return pdf.save();
 }
@@ -596,11 +602,18 @@ export const POST: RequestHandler = async ({ request, locals }) => {
   const [caller] = authId ? await db.select().from(appUser).where(eq(appUser.authId, authId)) : [];
   if (caller?.role !== 'admin') return json({ error: 'Forbidden' }, { status: 403 });
 
-  const { recipient, plainText, company, role } = (await request.json()) as {
+  const {
+    recipient,
+    plainText,
+    company,
+    role,
+    includeCv = true
+  } = (await request.json()) as {
     recipient?: string;
     plainText?: string;
     company?: string;
     role?: string;
+    includeCv?: boolean;
   };
   const recipientText = recipient?.trim() || 'Hiring Team';
   const bodyText = plainText?.trim();
@@ -612,8 +625,10 @@ export const POST: RequestHandler = async ({ request, locals }) => {
     );
 
   try {
-    const pdf = await renderApplicationPdf(recipientText, bodyText);
-    const filename = `Edward_Salim_Application_${safeFilename(company)}_${safeFilename(role)}.pdf`;
+    const pdf = await renderApplicationPdf(recipientText, bodyText, includeCv);
+    const filename = includeCv
+      ? `Edward_Salim_Application_${safeFilename(company)}_${safeFilename(role)}.pdf`
+      : `Edward_Salim_Cover_Letter_${safeFilename(company)}_${safeFilename(role)}.pdf`;
 
     return new Response(Buffer.from(pdf), {
       headers: {

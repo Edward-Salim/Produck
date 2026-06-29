@@ -4,6 +4,8 @@
     Code2,
     Download,
     Eye,
+    Files,
+    FileText,
     LoaderCircle,
     RefreshCw,
     ScrollText,
@@ -33,7 +35,7 @@
 - Anything you want the letter to emphasize
 - Optional brand color if known
 
-The CV is appended automatically after the cover letter.`;
+You can download only the cover letter or append the CV.`;
 
   const PREVIEW_PLACEHOLDER: GeneratedLetter = {
     company: 'Company',
@@ -63,6 +65,8 @@ I would bring that same evidence-guided approach to your team. My strength is tu
   let previewRequestId = 0;
   let previewRefreshTimer: ReturnType<typeof setTimeout> | null = null;
   let sourceDirty = $state(false);
+  let downloadMenuOpen = $state(false);
+  let downloadingPdf = $state(false);
 
   const outputText = $derived(sourceDraft);
   const generateButtonLabel = $derived(result ? 'Regenerate' : 'Generate');
@@ -70,10 +74,6 @@ I would bring that same evidence-guided approach to your team. My strength is tu
   const hasDraft = $derived(
     Boolean(dump.trim() || result || error || previewPdfError || sourceDirty)
   );
-  const downloadFilename = $derived.by(() => {
-    const letter = result ?? PREVIEW_PLACEHOLDER;
-    return `Edward_Salim_Application_${safeFilename(letter.company)}_${safeFilename(letter.role)}.pdf`;
-  });
   const systemPrompt = $derived(APPLICATION_COVER_LETTER_SYSTEM_PROMPT);
   const userPrompt = $derived(
     buildApplicationCoverLetterPrompt(dump.trim() || '{{APPLICATION_DUMP}}')
@@ -81,6 +81,13 @@ I would bring that same evidence-guided approach to your team. My strength is tu
 
   // ── Persist across refreshes ──
   onMount(() => {
+    const closeDownloadMenu = (event: MouseEvent) => {
+      if (!(event.target instanceof Element)) return;
+      if (!event.target.closest('[data-download-menu]')) downloadMenuOpen = false;
+    };
+
+    document.addEventListener('click', closeDownloadMenu);
+
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
@@ -100,6 +107,7 @@ I would bring that same evidence-guided approach to your team. My strength is tu
     schedulePreviewPdfRefresh(0);
 
     return () => {
+      document.removeEventListener('click', closeDownloadMenu);
       if (previewRefreshTimer) clearTimeout(previewRefreshTimer);
       if (previewPdfUrl) URL.revokeObjectURL(previewPdfUrl);
     };
@@ -129,6 +137,11 @@ I would bring that same evidence-guided approach to your team. My strength is tu
 
   function safeFilename(value: string | undefined) {
     return (value ?? 'Company').replace(/[^a-z0-9_-]+/gi, '_').replace(/^_+|_+$/g, '') || 'Company';
+  }
+
+  function getDownloadFilename(letter: GeneratedLetter, includeCv: boolean) {
+    const prefix = includeCv ? 'Application' : 'Cover_Letter';
+    return `Edward_Salim_${prefix}_${safeFilename(letter.company)}_${safeFilename(letter.role)}.pdf`;
   }
 
   async function generateCoverLetter() {
@@ -192,7 +205,8 @@ I would bring that same evidence-guided approach to your team. My strength is tu
           recipient: letter.recipient,
           plainText,
           company: letter.company,
-          role: letter.role
+          role: letter.role,
+          includeCv: true
         })
       });
       if (!res.ok) {
@@ -240,6 +254,45 @@ I would bring that same evidence-guided approach to your team. My strength is tu
     if (compiled) {
       sourceDirty = false;
       activeView = 'preview';
+    }
+  }
+
+  async function downloadPdf(includeCv: boolean) {
+    const letter = result ?? PREVIEW_PLACEHOLDER;
+    downloadingPdf = true;
+    downloadMenuOpen = false;
+    previewPdfError = null;
+
+    try {
+      const res = await fetch('/api/application-cover-letter/pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          recipient: letter.recipient,
+          plainText: outputText,
+          company: letter.company,
+          role: letter.role,
+          includeCv
+        })
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error ?? `Server returned ${res.status}`);
+      }
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = getDownloadFilename(letter, includeCv);
+      document.body.append(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      previewPdfError = err instanceof Error ? err.message : 'Download failed.';
+    } finally {
+      downloadingPdf = false;
     }
   }
 </script>
@@ -376,16 +429,45 @@ I would bring that same evidence-guided approach to your team. My strength is tu
           {#if activeView !== 'prompt'}
             <div class="flex h-8 w-full items-center gap-2 sm:ml-auto sm:w-auto">
               {#if previewPdfUrl}
-                <a
-                  href={previewPdfUrl}
-                  download={downloadFilename}
-                  aria-label="Download PDF"
-                  title="Download PDF"
-                  class="inline-flex h-8 flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-cork-300 bg-white px-3 text-xs font-medium text-cork-600 transition-colors hover:bg-cork-100 hover:text-cork-800 sm:flex-none"
-                >
-                  <Download class="size-3.5" />
-                  <span class="sm:hidden">Download</span>
-                </a>
+                <div class="relative flex-1 sm:flex-none" data-download-menu>
+                  <button
+                    type="button"
+                    aria-label="Download PDF"
+                    title="Download PDF"
+                    class="inline-flex h-8 w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-cork-300 bg-white px-3 text-xs font-medium text-cork-600 transition-colors hover:bg-cork-100 hover:text-cork-800 disabled:cursor-not-allowed disabled:opacity-60"
+                    disabled={downloadingPdf}
+                    onclick={() => (downloadMenuOpen = !downloadMenuOpen)}
+                  >
+                    {#if downloadingPdf}
+                      <LoaderCircle class="size-3.5 animate-spin" />
+                    {:else}
+                      <Download class="size-3.5" />
+                    {/if}
+                    <span class="sm:hidden">Download</span>
+                  </button>
+                  {#if downloadMenuOpen}
+                    <div
+                      class="absolute top-full right-0 z-10 mt-1 w-48 overflow-hidden rounded-lg border border-cork-300 bg-white py-1 text-xs font-medium text-cork-700 shadow-lg"
+                    >
+                      <button
+                        type="button"
+                        class="flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-left hover:bg-cork-100"
+                        onclick={() => downloadPdf(false)}
+                      >
+                        <FileText class="size-3.5" />
+                        Cover letter only
+                      </button>
+                      <button
+                        type="button"
+                        class="flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-left hover:bg-cork-100"
+                        onclick={() => downloadPdf(true)}
+                      >
+                        <Files class="size-3.5" />
+                        Cover letter + CV
+                      </button>
+                    </div>
+                  {/if}
+                </div>
               {/if}
               <button
                 type="button"
