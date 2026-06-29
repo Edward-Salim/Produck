@@ -1,7 +1,13 @@
 import { json } from '@sveltejs/kit';
 import { db } from '$lib/server/db/index.js';
-import { appUser, projectAccess, workspaceAccess } from '$lib/server/db/schema.js';
-import { eq, and } from 'drizzle-orm';
+import {
+  appUser,
+  project,
+  projectAccess,
+  workspace,
+  workspaceAccess
+} from '$lib/server/db/schema.js';
+import { eq, and, asc } from 'drizzle-orm';
 import type { RequestHandler } from './$types.js';
 
 async function requireAdmin(locals: App.Locals) {
@@ -14,13 +20,25 @@ async function requireAdmin(locals: App.Locals) {
 export const GET: RequestHandler = async ({ locals }) => {
   if (!(await requireAdmin(locals))) return json({ error: 'Forbidden' }, { status: 403 });
 
-  const [users, pAccess, wAccess] = await Promise.all([
+  const [users, pAccess, wAccess, projects] = await Promise.all([
     db.select().from(appUser),
     db.select().from(projectAccess),
-    db.select().from(workspaceAccess)
+    db.select().from(workspaceAccess),
+    db
+      .select({
+        id: project.id,
+        workspaceId: project.workspaceId,
+        workspaceName: workspace.name,
+        name: project.name,
+        shortName: project.shortName
+      })
+      .from(project)
+      .innerJoin(workspace, eq(project.workspaceId, workspace.id))
+      .orderBy(asc(workspace.id), asc(project.id))
   ]);
 
   return json({
+    projects,
     users: users.map((u) => ({
       id: u.id,
       authId: u.authId,

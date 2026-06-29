@@ -41,27 +41,31 @@ async function doRefresh() {
     }
   }
 
-  // Wipe old listings so every fetch gets fresh data
-  await db.delete(jobListing);
-
   // Fetch all sources in parallel
   const results = await Promise.allSettled(sources.map((source) => fetchJobsFromSource(source)));
 
   const errors: { source: string; error: string }[] = [];
   const toInsert: (typeof jobListing.$inferInsert)[] = [];
+  const replaceSourceIds = new Set<number>();
 
   for (const result of results) {
     if (result.status !== 'fulfilled' || !result.value) continue;
     const { sourceName, listings, error } = result.value;
+    const source = sources.find((s) => s.name === sourceName);
+    if (!source) continue;
 
     if (error) {
       errors.push({ source: sourceName, error });
     }
 
+    // Only replace a source when its fetch produced a trustworthy result.
+    // Failed empty fetches keep the previous rows instead of blanking the board.
+    if (!error || listings.length > 0) {
+      replaceSourceIds.add(source.id);
+    }
+
     for (const job of listings) {
       if (!job.url || !job.isPM) continue;
-      const source = sources.find((s) => s.name === sourceName);
-      if (!source) continue;
 
       toInsert.push({
         sourceId: source.id,
@@ -81,12 +85,23 @@ async function doRefresh() {
     }
   }
 
-  // Batch insert all new listings
-  let inserted = 0;
-  if (toInsert.length > 0) {
-    const result = await db.insert(jobListing).values(toInsert).returning({ id: jobListing.id });
-    inserted = result.length;
+  if (replaceSourceIds.size === 0) {
+    return { fetched: 0, total: 0, errors };
   }
+
+  // Replace only the sources that fetched successfully. This prevents a
+  // timeout or parser failure from deleting still-useful rows for other sources.
+  let inserted = 0;
+  await db.transaction(async (tx) => {
+    for (const sourceId of replaceSourceIds) {
+      await tx.delete(jobListing).where(eq(jobListing.sourceId, sourceId));
+    }
+
+    if (toInsert.length > 0) {
+      const result = await tx.insert(jobListing).values(toInsert).returning({ id: jobListing.id });
+      inserted = result.length;
+    }
+  });
 
   // Prune stale listings
   const cutoff = staleCutoff();

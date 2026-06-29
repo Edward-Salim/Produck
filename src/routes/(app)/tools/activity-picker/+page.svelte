@@ -622,7 +622,7 @@
           {@const stage = activityStage(activity)}
           <button
             type="button"
-            class="today-activity-card relative flex min-h-16 cursor-pointer items-center gap-3 rounded-lg border border-cork-300/50 bg-cork-50 px-3 py-2 text-left transition-colors hover:bg-cork-100 sm:block sm:min-h-0 sm:p-3"
+            class="today-activity-card relative flex min-h-16 w-full min-w-0 cursor-pointer items-center gap-3 overflow-hidden rounded-lg border border-cork-300/50 bg-cork-50 px-3 py-2 text-left transition-colors hover:bg-cork-100 sm:block sm:min-h-0 sm:p-3"
             style={`--idle-delay: ${index * 0.35}s`}
             onclick={() => openActivityDetail(activity)}
             transition:fly={{ y: 10, delay: index * 70, duration: 220 }}
@@ -638,13 +638,15 @@
                 <Icon class="size-4" />
               </span>
             </div>
-            <div class="min-w-0 flex-1 pt-px">
+            <div class="min-w-0 flex-1 overflow-hidden pt-px">
               <p
-                class="text-[9px] leading-3 font-semibold tracking-wide text-cork-400 uppercase sm:text-[10px]"
+                class="truncate text-[9px] leading-3 font-semibold tracking-wide text-cork-400 uppercase sm:text-[10px]"
               >
                 {activity.category}
               </p>
-              <h3 class="truncate text-[15px] leading-5 font-semibold text-cork-800 sm:text-sm">
+              <h3
+                class="line-clamp-2 text-[15px] leading-5 font-semibold [overflow-wrap:anywhere] text-cork-800 sm:text-sm"
+              >
                 {activity.name}
               </h3>
             </div>

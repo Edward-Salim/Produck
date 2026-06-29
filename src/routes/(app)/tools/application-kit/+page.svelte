@@ -6,7 +6,8 @@
     Eye,
     LoaderCircle,
     RefreshCw,
-    ScrollText
+    ScrollText,
+    Trash2
   } from '@lucide/svelte';
   import { onMount } from 'svelte';
   import Skeleton from '$lib/components/ui/skeleton/skeleton.svelte';
@@ -66,6 +67,9 @@ I would bring that same evidence-guided approach to your team. My strength is tu
   const outputText = $derived(sourceDraft);
   const generateButtonLabel = $derived(result ? 'Regenerate' : 'Generate');
   const loadingButtonLabel = $derived(result ? 'Regenerating' : 'Generating');
+  const hasDraft = $derived(
+    Boolean(dump.trim() || result || error || previewPdfError || sourceDirty)
+  );
   const downloadFilename = $derived.by(() => {
     const letter = result ?? PREVIEW_PLACEHOLDER;
     return `Edward_Salim_Application_${safeFilename(letter.company)}_${safeFilename(letter.role)}.pdf`;
@@ -154,6 +158,25 @@ I would bring that same evidence-guided approach to your team. My strength is tu
     } finally {
       loading = false;
     }
+  }
+
+  function clearApplicationKit() {
+    dump = '';
+    result = null;
+    sourceDraft = PREVIEW_PLACEHOLDER.plainText;
+    activeView = 'preview';
+    error = null;
+    previewPdfError = null;
+    sourceDirty = false;
+    invalidatePreviewPdf();
+
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+    } catch {
+      // unavailable — ignore
+    }
+
+    schedulePreviewPdfRefresh(0);
   }
 
   async function refreshPreviewPdf(letter: GeneratedLetter, plainText: string): Promise<boolean> {
@@ -250,19 +273,31 @@ I would bring that same evidence-guided approach to your team. My strength is tu
             Application dump
           </span>
         </div>
-        <button
-          type="button"
-          class="generate-button inline-flex h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-lg px-3 text-xs font-medium text-white shadow-sm transition-transform hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:scale-100"
-          disabled={loading}
-          onclick={generateCoverLetter}
-        >
-          {#if loading}
-            <LoaderCircle class="size-4 animate-spin" />
-            {loadingButtonLabel}
-          {:else}
-            {generateButtonLabel}
-          {/if}
-        </button>
+        <div class="flex shrink-0 items-center gap-2">
+          <button
+            type="button"
+            aria-label="Clear application kit"
+            title="Clear application kit"
+            class="inline-flex h-8 cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-cork-300 bg-white px-2.5 text-xs font-medium text-cork-600 transition-colors hover:bg-cork-100 hover:text-cork-800 disabled:cursor-not-allowed disabled:opacity-50"
+            disabled={loading || !hasDraft}
+            onclick={clearApplicationKit}
+          >
+            <Trash2 class="size-3.5" />
+          </button>
+          <button
+            type="button"
+            class="generate-button inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-lg px-3 text-xs font-medium text-white shadow-sm transition-transform hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:scale-100"
+            disabled={loading}
+            onclick={generateCoverLetter}
+          >
+            {#if loading}
+              <LoaderCircle class="size-4 animate-spin" />
+              {loadingButtonLabel}
+            {:else}
+              {generateButtonLabel}
+            {/if}
+          </button>
+        </div>
       </div>
 
       <textarea

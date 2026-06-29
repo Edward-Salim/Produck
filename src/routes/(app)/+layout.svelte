@@ -32,6 +32,15 @@
   // ── Access management (admin only) ──
   let accessDialogOpen = $state(false);
   let accessLoading = $state(false);
+  let accessProjects = $state<
+    {
+      id: number;
+      workspaceId: number;
+      workspaceName: string;
+      name: string;
+      shortName: string | null;
+    }[]
+  >([]);
   let accessUsers = $state<
     {
       id: number;
@@ -48,9 +57,18 @@
     const res = await fetch('/api/access');
     if (res.ok) {
       const json = await res.json();
+      accessProjects = json.projects;
       accessUsers = json.users;
     }
     accessLoading = false;
+  }
+
+  function projectsForWorkspace(workspaceId: number) {
+    return accessProjects.filter((project) => project.workspaceId === workspaceId);
+  }
+
+  function formatRole(role: string) {
+    return role ? role.charAt(0).toUpperCase() + role.slice(1).toLowerCase() : '';
   }
 
   async function toggleProjectAccess(userId: number, projectId: number, hasAccess: boolean) {
@@ -464,7 +482,7 @@
             <span class="shrink-0 text-[9px] font-bold tracking-widest text-cork-400 uppercase"
               >Q{gaugeQuarter} FY{gaugeYear}</span
             >
-            {#each gaugeKRs as kr}
+            {#each gaugeKRs as kr (kr.description)}
               {@const pct = okrProgress(kr.targetValue, kr.currentValue, kr.unit)}
               <div class="flex min-w-0 flex-1 items-center gap-1.5" title={kr.description}>
                 <span class="max-w-28 truncate text-[9px] text-cork-500">{kr.description}</span>
@@ -486,7 +504,7 @@
               >Q{gaugeQuarter} FY{gaugeYear}</span
             >
             <div class="space-y-1.5">
-              {#each gaugeKRs as kr}
+              {#each gaugeKRs as kr (kr.description)}
                 {@const pct = okrProgress(kr.targetValue, kr.currentValue, kr.unit)}
                 <div class="flex items-center gap-2">
                   <span class="min-w-0 flex-1 truncate text-[10px] text-cork-500"
@@ -563,100 +581,108 @@
         {:else}
           {#each accessUsers.filter((u) => u.role !== 'admin') as user (user.id)}
             <div class="rounded-lg border border-cork-200 bg-white p-3">
-              <div class="mb-2 flex items-center justify-between">
+              <div class="mb-2 flex items-center justify-between gap-3">
                 <div>
                   <p class="text-sm font-medium text-cork-700">{user.displayName}</p>
                   <p class="text-[10px] text-cork-400">{user.email}</p>
                 </div>
-                <span
-                  class="rounded-full bg-cork-200 px-2 py-0.5 text-[10px] font-medium text-cork-600 uppercase"
-                  >{user.role}</span
-                >
+                <div class="flex shrink-0 items-center gap-1.5">
+                  <span
+                    class="rounded-full bg-cork-200 px-2 py-0.5 text-[10px] font-medium text-cork-600"
+                    >{formatRole(user.role)}</span
+                  >
+                  <button
+                    type="button"
+                    class="flex size-7 cursor-pointer items-center justify-center rounded-md text-cork-300 transition-colors hover:bg-red-50 hover:text-red-500"
+                    aria-label={`Remove ${user.displayName}`}
+                    title="Remove account"
+                    onclick={() => {
+                      if (confirm(`Remove ${user.displayName} (${user.email})?`))
+                        deleteUser(user.id);
+                    }}
+                  >
+                    <Trash2 class="size-3.5" />
+                  </button>
+                </div>
               </div>
               <div class="space-y-2">
                 <div>
                   <p class="mb-1 text-[9px] font-semibold tracking-wider text-cork-400 uppercase">
-                    Workspaces
+                    Access Tree
                   </p>
-                  <div class="space-y-1">
+                  <div class="space-y-2">
                     {#each data.workspaces as ws (ws.id)}
                       {@const hasWsAccess = user.workspaceIds.includes(ws.id)}
-                      <button
-                        type="button"
-                        class="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-left text-xs transition-colors {hasWsAccess
-                          ? 'text-cork-700'
-                          : 'text-cork-400 hover:bg-cork-50'}"
-                        onclick={() => toggleWorkspaceAccess(user.id, ws.id, hasWsAccess)}
-                      >
-                        <span
-                          class="flex size-3.5 shrink-0 items-center justify-center rounded border transition-colors {hasWsAccess
-                            ? 'border-cork-700 bg-cork-700'
-                            : 'border-cork-300 bg-white'}"
+                      {@const workspaceProjects = projectsForWorkspace(ws.id)}
+                      <div>
+                        <button
+                          type="button"
+                          class="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-left text-xs transition-colors {hasWsAccess
+                            ? 'text-cork-700'
+                            : 'text-cork-400 hover:bg-cork-50'}"
+                          onclick={() => toggleWorkspaceAccess(user.id, ws.id, hasWsAccess)}
                         >
-                          {#if hasWsAccess}
-                            <svg class="size-2.5 text-white" viewBox="0 0 12 12" fill="none"
-                              ><path
-                                d="M2.5 6l2.5 2.5 4.5-5"
-                                stroke="currentColor"
-                                stroke-width="1.5"
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                              /></svg
-                            >
-                          {/if}
-                        </span>
-                        <span>{ws.name}</span>
-                      </button>
-                    {/each}
-                  </div>
-                </div>
-                <div>
-                  <p class="mb-1 text-[9px] font-semibold tracking-wider text-cork-400 uppercase">
-                    Projects
-                  </p>
-                  <div class="space-y-1">
-                    {#each data.projects as proj (proj.id)}
-                      {@const hasAccess = user.projectIds.includes(proj.id)}
-                      <button
-                        type="button"
-                        class="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-left text-xs transition-colors {hasAccess
-                          ? 'text-cork-700'
-                          : 'text-cork-400 hover:bg-cork-50'}"
-                        onclick={() => toggleProjectAccess(user.id, proj.id, hasAccess)}
-                      >
-                        <span
-                          class="flex size-3.5 shrink-0 items-center justify-center rounded border transition-colors {hasAccess
-                            ? 'border-cork-700 bg-cork-700'
-                            : 'border-cork-300 bg-white'}"
-                        >
-                          {#if hasAccess}
-                            <svg class="size-2.5 text-white" viewBox="0 0 12 12" fill="none"
-                              ><path
-                                d="M2.5 6l2.5 2.5 4.5-5"
-                                stroke="currentColor"
-                                stroke-width="1.5"
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                              /></svg
-                            >
-                          {/if}
-                        </span>
-                        <span>{proj.shortName ?? proj.name}</span>
-                      </button>
+                          <span
+                            class="flex size-3.5 shrink-0 items-center justify-center rounded border transition-colors {hasWsAccess
+                              ? 'border-cork-700 bg-cork-700'
+                              : 'border-cork-300 bg-white'}"
+                          >
+                            {#if hasWsAccess}
+                              <svg class="size-2.5 text-white" viewBox="0 0 12 12" fill="none"
+                                ><path
+                                  d="M2.5 6l2.5 2.5 4.5-5"
+                                  stroke="currentColor"
+                                  stroke-width="1.5"
+                                  stroke-linecap="round"
+                                  stroke-linejoin="round"
+                                /></svg
+                              >
+                            {/if}
+                          </span>
+                          <span>{ws.name}</span>
+                        </button>
+
+                        {#if workspaceProjects.length > 0}
+                          <div class="ml-3 pl-3">
+                            {#each workspaceProjects as proj, projectIndex (proj.id)}
+                              {@const hasAccess = user.projectIds.includes(proj.id)}
+                              <button
+                                type="button"
+                                class="relative flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-left text-xs transition-colors before:absolute before:top-1/2 before:-left-3 before:h-px before:w-3 before:bg-cork-200/80 after:absolute after:top-0 after:-left-3 after:w-px after:bg-cork-200/80 {projectIndex ===
+                                workspaceProjects.length - 1
+                                  ? 'after:bottom-1/2'
+                                  : 'after:bottom-0'} {hasAccess
+                                  ? 'text-cork-700'
+                                  : 'text-cork-400 hover:bg-cork-50'}"
+                                onclick={() => toggleProjectAccess(user.id, proj.id, hasAccess)}
+                              >
+                                <span
+                                  class="flex size-3.5 shrink-0 items-center justify-center rounded border transition-colors {hasAccess
+                                    ? 'border-cork-700 bg-cork-700'
+                                    : 'border-cork-300 bg-white'}"
+                                >
+                                  {#if hasAccess}
+                                    <svg class="size-2.5 text-white" viewBox="0 0 12 12" fill="none"
+                                      ><path
+                                        d="M2.5 6l2.5 2.5 4.5-5"
+                                        stroke="currentColor"
+                                        stroke-width="1.5"
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                      /></svg
+                                    >
+                                  {/if}
+                                </span>
+                                <span>{proj.shortName ?? proj.name}</span>
+                              </button>
+                            {/each}
+                          </div>
+                        {/if}
+                      </div>
                     {/each}
                   </div>
                 </div>
               </div>
-              <button
-                type="button"
-                class="mt-2 flex w-full cursor-pointer items-center justify-center gap-1.5 rounded py-1.5 text-[10px] text-cork-300 transition-colors hover:bg-red-50 hover:text-red-500"
-                onclick={() => {
-                  if (confirm(`Remove ${user.displayName} (${user.email})?`)) deleteUser(user.id);
-                }}
-              >
-                <Trash2 class="size-3" />
-                Remove account
-              </button>
             </div>
           {/each}
           {#if accessUsers.filter((u) => u.role !== 'admin').length === 0}

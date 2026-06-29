@@ -1,13 +1,22 @@
 <script lang="ts">
   import * as Dialog from '$lib/components/ui/dialog/index.js';
   import { pushState, invalidateAll } from '$app/navigation';
-  import { Rss, ExternalLink, ChevronLeft, ChevronRight } from '@lucide/svelte';
+  import {
+    Rss,
+    ExternalLink,
+    ChevronLeft,
+    ChevronRight,
+    Search,
+    X,
+    ImageOff
+  } from '@lucide/svelte';
 
   let { data } = $props();
 
   let sourcesDialogOpen = $state(false);
   let detailArticle = $state<(typeof data.articles)[number] | null>(null);
   let detailInHistory = $state(false);
+  let searchQuery = $state('');
   const DAYS_PER_WEEK = 7;
 
   // Realtime screening indicator: polls API, colors count while screening,
@@ -155,6 +164,16 @@
   const filteredBlocks = $derived(
     visibleBlocks.filter((b: (typeof data.dayBlocks)[number]) => b.dateKey === activeFilter)
   );
+  const normalizedSearch = $derived(searchQuery.trim().toLowerCase());
+  const searchResults = $derived(
+    normalizedSearch
+      ? data.articles.filter(
+          (article: (typeof data.articles)[number]) =>
+            articleDateKey(article) === activeFilter &&
+            articleMatchesSearch(article, normalizedSearch)
+        )
+      : []
+  );
 
   const briefing = $derived(data.briefings[activeFilter] ?? null);
   const briefingGenerating = $derived(
@@ -180,6 +199,31 @@
     const id = Number(target.dataset.articleId);
     const article = data.articles.find((a: (typeof data.articles)[number]) => a.id === id);
     if (article) openDetail(article);
+  }
+
+  function articleMatchesSearch(article: (typeof data.articles)[number], query: string) {
+    return [
+      article.title,
+      article.description,
+      article.sourceName,
+      article.sourceCategory,
+      article.sourceRegion
+    ]
+      .join(' ')
+      .toLowerCase()
+      .includes(query);
+  }
+
+  function articleDateKey(article: (typeof data.articles)[number]) {
+    const d = new Date(article.publishedAt ?? article.fetchedAt);
+    const wib = new Date(d.getTime() + 7 * 60 * 60 * 1000);
+    return wib.toISOString().slice(0, 10);
+  }
+
+  function formatArticleTime(iso: string | null) {
+    if (!iso) return '';
+    const [hh, mm] = iso.slice(11, 16).split(':').map(Number);
+    return `${String((hh + 7) % 24).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
   }
 
   // Detail modal: push history state so browser back closes the modal
@@ -241,7 +285,7 @@
       <div
         class="hide-scrollbar -mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1 md:mx-0 md:overflow-visible md:px-0 md:pb-0"
       >
-        {#each weekDates as d}
+        {#each weekDates as d (d.key)}
           {@const hasArticles = blockDateKeys.has(d.key)}
           <button
             type="button"
@@ -322,8 +366,105 @@
   </div>
 {/if}
 
+<div class="mb-4">
+  <label for="news-search" class="sr-only">Search news</label>
+  <div class="relative">
+    <Search
+      class="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-cork-400"
+    />
+    <input
+      id="news-search"
+      type="text"
+      role="searchbox"
+      autocomplete="off"
+      autocapitalize="off"
+      spellcheck="false"
+      bind:value={searchQuery}
+      placeholder="Search news"
+      class="h-10 w-full rounded-lg border border-cork-300 bg-white/80 pr-10 pl-9 text-sm text-cork-800 placeholder:text-cork-400 focus:border-cork-500 focus:ring-2 focus:ring-cork-300/50 focus:outline-none"
+    />
+    {#if searchQuery}
+      <button
+        type="button"
+        class="absolute top-1/2 right-2 flex size-7 -translate-y-1/2 cursor-pointer items-center justify-center rounded-md text-cork-400 transition-colors hover:bg-cork-100 hover:text-cork-700"
+        onclick={() => (searchQuery = '')}
+        aria-label="Clear search"
+      >
+        <X class="size-4" />
+      </button>
+    {/if}
+  </div>
+</div>
+
 <!-- Feed -->
-{#if filteredBlocks.length > 0}
+{#if normalizedSearch}
+  <div class="mb-5 overflow-hidden rounded-xl border border-cork-200 bg-white/80">
+    <div
+      class="flex items-center justify-between border-b border-cork-200 bg-cork-50 px-3 py-2 md:px-5 md:py-3"
+    >
+      <span class="text-xs font-semibold text-cork-700 md:text-sm">Search results</span>
+      <span class="text-[10px] font-medium text-cork-400">
+        {searchResults.length} article{searchResults.length === 1 ? '' : 's'}
+      </span>
+    </div>
+
+    {#if searchResults.length > 0}
+      <div class="divide-y divide-cork-100">
+        {#each searchResults as article (article.id)}
+          <button
+            type="button"
+            class="block w-full cursor-pointer px-3 py-2 text-left transition-colors hover:bg-cork-50/50 md:px-5 md:py-2.5"
+            onclick={() => openDetail(article)}
+          >
+            <div class="flex items-start gap-3">
+              {#if article.imageUrl}
+                <img
+                  src={article.imageUrl}
+                  alt=""
+                  class="mt-0.5 h-16 w-24 shrink-0 rounded-lg object-cover"
+                  loading="lazy"
+                />
+              {:else}
+                <div
+                  class="mt-0.5 flex h-16 w-24 shrink-0 items-center justify-center rounded-lg bg-cork-100/50"
+                >
+                  <ImageOff class="size-5 text-cork-300" />
+                </div>
+              {/if}
+              <div class="min-w-0 flex-1">
+                <p class="line-clamp-3 text-sm leading-snug font-medium text-cork-800">
+                  {article.title}
+                </p>
+                <div class="mt-1.5 flex items-center gap-1">
+                  {#if article.sourceDomain}
+                    <img
+                      src="https://www.google.com/s2/favicons?domain={article.sourceDomain}&sz=32"
+                      alt=""
+                      class="size-3.5 rounded-sm"
+                      onerror={(e) => (e.target as HTMLImageElement).remove()}
+                    />
+                  {/if}
+                  <span class="text-[10px] font-medium text-cork-400">
+                    {article.sourceName} / {article.sourceCategory}
+                  </span>
+                  {#if article.publishedAt}
+                    <span class="text-[10px] text-cork-300"
+                      >· {formatArticleTime(article.publishedAt)}</span
+                    >
+                  {/if}
+                </div>
+              </div>
+            </div>
+          </button>
+        {/each}
+      </div>
+    {:else}
+      <div class="flex flex-col items-center justify-center gap-1 py-10">
+        <p class="text-xs text-cork-400">No news matches "{searchQuery.trim()}"</p>
+      </div>
+    {/if}
+  </div>
+{:else if filteredBlocks.length > 0}
   <div
     role="button"
     tabindex="0"
