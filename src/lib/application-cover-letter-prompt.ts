@@ -65,3 +65,44 @@ Before returning, silently verify that plainText has exactly one greeting, exact
 User dump:
 ${input}`;
 }
+
+export function buildLinkedInMessagesPrompt(input: string, application: { company: string; role: string }): string {
+  return `Generate short LinkedIn outreach DM drafts for Edward Salim's job application.
+
+Return ONLY valid JSON with this exact shape:
+{
+  "messages": [
+    {
+      "label": "short label, 2-4 words",
+      "useCase": "internal use case, 3-8 words",
+      "text": "message body only"
+    }
+  ]
+}
+
+Edward profile context:
+${PROFILE_CONTEXT}
+
+Target application:
+- Company: ${application.company}
+- Role: ${application.role}
+
+Rules:
+- Generate 3 messages.
+- Keep labels concise, for example "Connection Request", "After Accepting", or "Follow Up".
+- Keep useCase terse because it is used internally only.
+- Message 1 is a LinkedIn connection request for a recruiter, hiring poster, alumni, mutual connection, or relevant company employee. It must be 300 characters or fewer.
+- Message 2 is the first message after they accept the connection. It should thank them, give a brief background signal, and ask for advice or a brief chat. Keep it 45-80 words.
+- Message 3 is a thoughtful follow-up to send 5-7 days later if they accepted but did not reply. Keep it 25-45 words.
+- Make the messages natural, direct, modest, and specific to the role.
+- Do not ask for a job immediately. Prefer advice, perspective, a brief chat, or a pointer to the right person.
+- Make it easy to help Edward by naming the target role, relevant strength, and active search context when space allows.
+- Mention a specific role, company, recruiting area, post, or shared connection from the dump when available.
+- Ask for a referral only if the dump clearly suggests a warm connection or the message is not a first touch. Do not sound entitled.
+- Do not invent a person name. Use placeholders like "Hi [Name]," when no name is available.
+- Do not include markdown, bullets inside the message text, sign-off blocks, phone, email, or URLs.
+- Avoid semicolons, em dashes, en dashes, and curly punctuation. Use ASCII punctuation only.
+
+User dump:
+${input}`;
+}

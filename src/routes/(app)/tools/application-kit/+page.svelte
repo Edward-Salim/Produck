@@ -1,23 +1,20 @@
 <script lang="ts">
   import {
     ArrowLeft,
-    Code2,
+    Copy,
     Download,
     Eye,
     Files,
+    FilePenLine,
     FileText,
     LoaderCircle,
+    MessageCircle,
     RefreshCw,
-    ScrollText,
     Trash2
   } from '@lucide/svelte';
   import { onMount } from 'svelte';
   import Skeleton from '$lib/components/ui/skeleton/skeleton.svelte';
-  import * as Separator from '$lib/components/ui/separator/index.js';
-  import {
-    APPLICATION_COVER_LETTER_SYSTEM_PROMPT,
-    buildApplicationCoverLetterPrompt
-  } from '$lib/application-cover-letter-prompt.js';
+  import { buildApplicationPdfFilename } from '$lib/application-filename.js';
 
   type GeneratedLetter = {
     company: string;
@@ -25,6 +22,21 @@
     recipient: string;
     companyTag: string;
     plainText: string;
+    model?: string;
+    linkedinMessages?: LinkedInMessage[];
+  };
+
+  type LinkedInMessage = {
+    label: string;
+    useCase: string;
+    text: string;
+  };
+
+  type ApplicationJobStatus = {
+    id: string;
+    status: 'queued' | 'running' | 'completed' | 'failed';
+    result?: GeneratedLetter | null;
+    error?: string | null;
   };
 
   const SAMPLE_PLACEHOLDER = `Paste everything here:
@@ -56,7 +68,7 @@ I would bring that same evidence-guided approach to your team. My strength is tu
   let dump = $state('');
   let result = $state<GeneratedLetter | null>(null);
   let sourceDraft = $state(PREVIEW_PLACEHOLDER.plainText);
-  let activeView = $state<'preview' | 'source' | 'prompt'>('preview');
+  let activeView = $state<'preview' | 'source' | 'messages'>('preview');
   let loading = $state(false);
   let error = $state<string | null>(null);
   let previewPdfUrl = $state<string | null>(null);
@@ -67,6 +79,9 @@ I would bring that same evidence-guided approach to your team. My strength is tu
   let sourceDirty = $state(false);
   let downloadMenuOpen = $state(false);
   let downloadingPdf = $state(false);
+  let activeJobId = $state<string | null>(null);
+  let generationRequestId = 0;
+  let copiedMessageIndex = $state<number | null>(null);
 
   const outputText = $derived(sourceDraft);
   const generateButtonLabel = $derived(result ? 'Regenerate' : 'Generate');
@@ -74,10 +89,7 @@ I would bring that same evidence-guided approach to your team. My strength is tu
   const hasDraft = $derived(
     Boolean(dump.trim() || result || error || previewPdfError || sourceDirty)
   );
-  const systemPrompt = $derived(APPLICATION_COVER_LETTER_SYSTEM_PROMPT);
-  const userPrompt = $derived(
-    buildApplicationCoverLetterPrompt(dump.trim() || '{{APPLICATION_DUMP}}')
-  );
+  const linkedinMessages = $derived(result?.linkedinMessages ?? []);
 
   // ── Persist across refreshes ──
   onMount(() => {
@@ -94,6 +106,7 @@ I would bring that same evidence-guided approach to your team. My strength is tu
         const data = JSON.parse(saved);
         if (typeof data.dump === 'string') dump = data.dump;
         if (data.result) result = data.result as GeneratedLetter;
+        if (typeof data.activeJobId === 'string') activeJobId = data.activeJobId;
         if (typeof data.sourceDraft === 'string') {
           sourceDraft = data.sourceDraft;
         } else if (data.result?.plainText && typeof data.result.plainText === 'string') {
@@ -105,6 +118,13 @@ I would bring that same evidence-guided approach to your team. My strength is tu
     }
 
     schedulePreviewPdfRefresh(0);
+    if (activeJobId && !result) {
+      loading = true;
+      void pollApplicationJob(activeJobId, ++generationRequestId).catch((err) => {
+        error = err instanceof Error ? err.message : 'Cover letter generation failed.';
+        loading = false;
+      });
+    }
 
     return () => {
       document.removeEventListener('click', closeDownloadMenu);
@@ -115,7 +135,7 @@ I would bring that same evidence-guided approach to your team. My strength is tu
 
   $effect(() => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ dump, result, sourceDraft }));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ dump, result, sourceDraft, activeJobId }));
     } catch {
       // quota exceeded or unavailable — ignore
     }
@@ -135,13 +155,70 @@ I would bring that same evidence-guided approach to your team. My strength is tu
     previewPdfError = null;
   }
 
-  function safeFilename(value: string | undefined) {
-    return (value ?? 'Company').replace(/[^a-z0-9_-]+/gi, '_').replace(/^_+|_+$/g, '') || 'Company';
+  function getDownloadFilename(letter: GeneratedLetter, includeCv: boolean) {
+    return buildApplicationPdfFilename({
+      company: letter.company,
+      role: letter.role,
+      includeCv
+    });
   }
 
-  function getDownloadFilename(letter: GeneratedLetter, includeCv: boolean) {
-    const prefix = includeCv ? 'Application' : 'Cover_Letter';
-    return `Edward_Salim_${prefix}_${safeFilename(letter.company)}_${safeFilename(letter.role)}.pdf`;
+  async function readErrorMessage(res: Response, fallback: string): Promise<string> {
+    const contentType = res.headers.get('content-type') ?? '';
+
+    if (contentType.includes('application/json')) {
+      const body = (await res.json().catch(() => null)) as { error?: unknown } | null;
+      if (typeof body?.error === 'string' && body.error.trim()) return body.error;
+    }
+
+    if (res.status === 502 || res.status === 504) {
+      return 'The server or AI provider timed out. Try again in a moment, or shorten the application dump.';
+    }
+
+    return fallback;
+  }
+
+  function delay(ms: number) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  async function copyLinkedInMessage(text: string, index: number) {
+    await navigator.clipboard.writeText(text);
+    copiedMessageIndex = index;
+    setTimeout(() => {
+      if (copiedMessageIndex === index) copiedMessageIndex = null;
+    }, 1400);
+  }
+
+  async function pollApplicationJob(jobId: string, requestId: number) {
+    for (;;) {
+      if (requestId !== generationRequestId) return;
+
+      const res = await fetch(`/api/application-cover-letter/status/${jobId}`);
+      if (!res.ok) {
+        throw new Error(await readErrorMessage(res, `Server returned ${res.status}`));
+      }
+
+      const job = (await res.json()) as ApplicationJobStatus;
+      if (requestId !== generationRequestId) return;
+
+      if (job.status === 'completed' && job.result) {
+        result = job.result;
+        sourceDraft = job.result.plainText;
+        sourceDirty = false;
+        activeJobId = null;
+        activeView = 'preview';
+        schedulePreviewPdfRefresh(0);
+        return;
+      }
+
+      if (job.status === 'failed') {
+        activeJobId = null;
+        throw new Error(job.error ?? 'Cover letter generation failed.');
+      }
+
+      await delay(1800);
+    }
   }
 
   async function generateCoverLetter() {
@@ -150,8 +227,10 @@ I would bring that same evidence-guided approach to your team. My strength is tu
       return;
     }
 
+    const requestId = ++generationRequestId;
     loading = true;
     error = null;
+    activeJobId = null;
     invalidatePreviewPdf();
     try {
       const res = await fetch('/api/application-cover-letter', {
@@ -159,23 +238,35 @@ I would bring that same evidence-guided approach to your team. My strength is tu
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ dump })
       });
-      const body = await res.json();
-      if (!res.ok) throw new Error(body.error ?? `Server returned ${res.status}`);
-      result = body as GeneratedLetter;
-      sourceDraft = result.plainText;
-      sourceDirty = false;
-      activeView = 'preview';
-      schedulePreviewPdfRefresh(0);
+      if (!res.ok) {
+        throw new Error(await readErrorMessage(res, `Server returned ${res.status}`));
+      }
+      const body = (await res.json()) as { jobId?: string } | GeneratedLetter;
+
+      if ('jobId' in body && body.jobId) {
+        activeJobId = body.jobId;
+        await pollApplicationJob(body.jobId, requestId);
+      } else {
+        result = body as GeneratedLetter;
+        sourceDraft = result.plainText;
+        sourceDirty = false;
+        activeJobId = null;
+        activeView = 'preview';
+        schedulePreviewPdfRefresh(0);
+      }
     } catch (err) {
+      if (requestId !== generationRequestId) return;
       error = err instanceof Error ? err.message : 'Cover letter generation failed.';
     } finally {
-      loading = false;
+      if (requestId === generationRequestId) loading = false;
     }
   }
 
   function clearApplicationKit() {
+    generationRequestId += 1;
     dump = '';
     result = null;
+    activeJobId = null;
     sourceDraft = PREVIEW_PLACEHOLDER.plainText;
     activeView = 'preview';
     error = null;
@@ -210,8 +301,7 @@ I would bring that same evidence-guided approach to your team. My strength is tu
         })
       });
       if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error(body.error ?? `Server returned ${res.status}`);
+        throw new Error(await readErrorMessage(res, `Server returned ${res.status}`));
       }
 
       const blob = await res.blob();
@@ -276,8 +366,7 @@ I would bring that same evidence-guided approach to your team. My strength is tu
         })
       });
       if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error(body.error ?? `Server returned ${res.status}`);
+        throw new Error(await readErrorMessage(res, `Server returned ${res.status}`));
       }
 
       const blob = await res.blob();
@@ -400,7 +489,7 @@ I would bring that same evidence-guided approach to your team. My strength is tu
               onclick={showPreview}
             >
               <Eye class="size-3.5" />
-              Preview
+              PDF
             </button>
             <button
               type="button"
@@ -410,25 +499,25 @@ I would bring that same evidence-guided approach to your team. My strength is tu
                 : 'bg-white text-cork-600 hover:bg-cork-100'}"
               onclick={() => (activeView = 'source')}
             >
-              <Code2 class="size-3.5" />
-              Source
+              <FilePenLine class="size-3.5" />
+              Letter
             </button>
             <button
               type="button"
               class="flex cursor-pointer items-center justify-center gap-1.5 border-l border-cork-300 px-2.5 text-xs font-medium transition-colors sm:px-3 {activeView ===
-              'prompt'
+              'messages'
                 ? 'bg-cork-700 text-cork-50'
                 : 'bg-white text-cork-600 hover:bg-cork-100'}"
-              onclick={() => (activeView = 'prompt')}
+              onclick={() => (activeView = 'messages')}
             >
-              <ScrollText class="size-3.5" />
-              Prompt
+              <MessageCircle class="size-3.5" />
+              LinkedIn
             </button>
           </div>
 
-          {#if activeView !== 'prompt'}
+          {#if activeView === 'preview' || activeView === 'source'}
             <div class="flex h-8 w-full items-center gap-2 sm:ml-auto sm:w-auto">
-              {#if previewPdfUrl}
+              {#if activeView === 'preview' && previewPdfUrl}
                 <div class="relative flex-1 sm:flex-none" data-download-menu>
                   <button
                     type="button"
@@ -469,19 +558,21 @@ I would bring that same evidence-guided approach to your team. My strength is tu
                   {/if}
                 </div>
               {/if}
-              <button
-                type="button"
-                aria-label="Compile PDF"
-                title="Compile PDF"
-                class="inline-flex h-8 flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-lg border px-3 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-60 sm:flex-none {sourceDirty
-                  ? 'border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100'
-                  : 'border-cork-300 bg-white text-cork-600 hover:bg-cork-100 hover:text-cork-800'}"
-                disabled={previewPdfLoading}
-                onclick={compilePdf}
-              >
-                <RefreshCw class={`size-3.5 ${previewPdfLoading ? 'animate-spin' : ''}`} />
-                <span class="sm:hidden">Compile PDF</span>
-              </button>
+              {#if activeView === 'source'}
+                <button
+                  type="button"
+                  aria-label="Compile PDF"
+                  title="Compile PDF"
+                  class="inline-flex h-8 flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-lg border px-3 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-60 sm:flex-none {sourceDirty
+                    ? 'border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100'
+                    : 'border-cork-300 bg-white text-cork-600 hover:bg-cork-100 hover:text-cork-800'}"
+                  disabled={previewPdfLoading}
+                  onclick={compilePdf}
+                >
+                  <RefreshCw class={`size-3.5 ${previewPdfLoading ? 'animate-spin' : ''}`} />
+                  <span class="sm:hidden">Compile PDF</span>
+                </button>
+              {/if}
             </div>
           {/if}
         </div>
@@ -524,26 +615,42 @@ I would bring that same evidence-guided approach to your team. My strength is tu
               previewPdfError = null;
             }}
           ></textarea>
-        {:else}
-          <!-- Prompt view -->
+        {:else if activeView === 'messages'}
           <div
-            class="prompt-scroll h-[calc(100svh-340px)] min-h-128 overflow-auto rounded-lg border border-cork-300 bg-cork-50"
+            class="h-[calc(100svh-340px)] min-h-128 overflow-auto rounded-lg border border-cork-300 bg-cork-50 p-4"
           >
-            <div class="p-4">
-              <h3 class="mb-2 text-xs font-semibold tracking-wider text-cork-400 uppercase">
-                System Prompt
-              </h3>
-              <pre
-                class="text-xs leading-relaxed whitespace-pre-wrap text-cork-700">{systemPrompt}</pre>
-            </div>
-            <Separator.Root />
-            <div class="p-4">
-              <h3 class="mb-2 text-xs font-semibold tracking-wider text-cork-400 uppercase">
-                User Prompt
-              </h3>
-              <pre
-                class="text-xs leading-relaxed whitespace-pre-wrap text-cork-700">{userPrompt}</pre>
-            </div>
+            {#if linkedinMessages.length > 0}
+              <div class="space-y-3">
+                {#each linkedinMessages as message, index (index)}
+                  <article class="rounded-lg border border-cork-200 bg-white p-4 shadow-sm">
+                    <div class="mb-3 flex items-start justify-between gap-3">
+                      <div>
+                        <h3 class="text-sm font-semibold text-cork-800">{message.label}</h3>
+                      </div>
+                      <button
+                        type="button"
+                        aria-label={`Copy ${message.label}`}
+                        title={`Copy ${message.label}`}
+                        class="inline-flex h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-lg border border-cork-300 bg-white px-2.5 text-xs font-medium text-cork-600 transition-colors hover:bg-cork-100 hover:text-cork-800"
+                        onclick={() => copyLinkedInMessage(message.text, index)}
+                      >
+                        <Copy class="size-3.5" />
+                        {copiedMessageIndex === index ? 'Copied' : 'Copy'}
+                      </button>
+                    </div>
+                    <p class="text-sm leading-relaxed whitespace-pre-wrap text-cork-800">
+                      {message.text}
+                    </p>
+                  </article>
+                {/each}
+              </div>
+            {:else}
+              <div class="flex h-full items-center justify-center text-center">
+                <p class="max-w-sm text-sm leading-relaxed text-cork-500">
+                  LinkedIn message drafts will appear here after generation.
+                </p>
+              </div>
+            {/if}
           </div>
         {/if}
       {/if}
@@ -552,37 +659,27 @@ I would bring that same evidence-guided approach to your team. My strength is tu
 </div>
 
 <style>
-  textarea,
-  pre,
-  .prompt-scroll {
+  textarea {
     scrollbar-width: thin;
     scrollbar-color: #c9b99a transparent;
   }
 
-  textarea::-webkit-scrollbar,
-  pre::-webkit-scrollbar,
-  .prompt-scroll::-webkit-scrollbar {
+  textarea::-webkit-scrollbar {
     width: 6px;
     height: 6px;
   }
 
-  textarea::-webkit-scrollbar-track,
-  pre::-webkit-scrollbar-track,
-  .prompt-scroll::-webkit-scrollbar-track {
+  textarea::-webkit-scrollbar-track {
     background: transparent;
     border-radius: 3px;
   }
 
-  textarea::-webkit-scrollbar-thumb,
-  pre::-webkit-scrollbar-thumb,
-  .prompt-scroll::-webkit-scrollbar-thumb {
+  textarea::-webkit-scrollbar-thumb {
     background: #c9b99a;
     border-radius: 3px;
   }
 
-  textarea::-webkit-scrollbar-thumb:hover,
-  pre::-webkit-scrollbar-thumb:hover,
-  .prompt-scroll::-webkit-scrollbar-thumb:hover {
+  textarea::-webkit-scrollbar-thumb:hover {
     background: #b0a080;
   }
 

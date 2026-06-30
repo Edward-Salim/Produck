@@ -141,6 +141,13 @@
       "when": 1782640800000,
       "tag": "0019_broader_daily_activity_themes",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1782816000000,
+      "tag": "0020_application_cover_letter_jobs",
+      "breakpoints": true
     }
   ]
 }

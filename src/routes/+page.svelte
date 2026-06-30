@@ -46,7 +46,7 @@
 
   // Professional Experience Logos
   import danaLogo from '$lib/assets/fintech_logos/indonesia/dana.png';
-  import kitabisaLogo from '$lib/assets/fintech_logos/indonesia/kitabisa.png';
+  import kitabisaLogo from '$lib/assets/fintech_logos/indonesia/kitabisa.jpeg';
   import indodanaLogo from '$lib/assets/fintech_logos/indonesia/indodana.png';
 
   // Lomba/Award & Project Images
@@ -58,8 +58,10 @@
   import techfestImg from '$lib/assets/awards/award-techfest.png';
   import churnImg from '$lib/assets/projects/project-churn.png';
   import uiCampusImg from '$lib/assets/education/ui-campus.png?enhanced';
+  import ddp0OpeningKeynoteAudienceImg from '$lib/assets/speaking/ddp0-opening-keynote-audience.jpeg';
   import ddp0SpeakerCertImg from '$lib/assets/speaking/ddp0-speaker-certificate.png';
   import ukmKmbuiSharingCertImg from '$lib/assets/speaking/ukm-kmbui-sharing-certificate.png';
+  import ukmKmbuiProjectWorkshopImg from '$lib/assets/speaking/ukm-kmbui-project-management-workshop.jpeg';
   import ruangguruUtbkSpeakerCertImg from '$lib/assets/speaking/ruangguru-utbk-speaker-certificate.png';
   import ddp0MentorImg from '$lib/assets/speaking/ddp0-mentor-session.png';
   import pricaiLogo from '$lib/assets/organizations/pricai-logo.png';
@@ -116,6 +118,10 @@
     }
 
     return Number.MAX_SAFE_INTEGER;
+  }
+
+  function getPeriodYear(period: string) {
+    return period.match(/\d{4}/)?.[0] ?? period;
   }
 
   function getOrganizationInitials(name: string) {
@@ -583,6 +589,7 @@
       description:
         'Opening keynote on career path exploration, tech versus non-tech trajectories, and building a continuous learning system.',
       type: 'Speaking',
+      coverImage: ddp0OpeningKeynoteAudienceImg,
       attachments: [{ name: 'Certificate', type: 'certificate', image: ddp0SpeakerCertImg }]
     },
     {
@@ -595,7 +602,7 @@
       description:
         'Project management workshop on structured execution, vision alignment, and metric-driven progress tracking.',
       type: 'Speaking',
-      attachments: []
+      attachments: [{ name: 'Workshop Session', type: 'photo', image: ukmKmbuiProjectWorkshopImg }]
     },
     {
       role: 'Speaker',
@@ -764,6 +771,16 @@
   const speakingList = volunteering
     .filter((v) => v.type === 'Speaking')
     .sort((a, b) => parsePeriodStart(a.period) - parsePeriodStart(b.period));
+  const speakingBinderPages = [
+    {
+      label: 'Left page',
+      items: speakingList.slice(0, 3).map((item, index) => ({ item, index }))
+    },
+    {
+      label: 'Right page',
+      items: speakingList.slice(3).map((item, index) => ({ item, index: index + 3 }))
+    }
+  ];
   const volunteeringList = volunteering.filter((v) => v.type !== 'Speaking');
 
   let groupedVolunteering = $derived.by(() => {
@@ -1589,7 +1606,7 @@
         </div>
       </section>
 
-      <!-- Experience Section (Interactive Digital Wallet & Credit Cards) -->
+      <!-- Experience Section (Card Wallet) -->
       <section use:reveal={{}} class="reveal-on-scroll scroll-mt-24 space-y-6" id="experience">
         <div class="flex items-center justify-between border-b border-stone-800 pb-3">
           <div class="flex items-center gap-3">
@@ -1597,232 +1614,278 @@
             <h2 class="font-outfit text-2xl font-bold tracking-tight text-white">Work History</h2>
           </div>
           <span class="font-mono text-xs text-stone-500 max-md:hidden"
-            >Toggle cards to view credentials</span
+            >Select a saved card to view details</span
           >
         </div>
 
-        <!-- Digital Credit Cards Grid -->
-        <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          {#each experiences as exp, idx (exp.company)}
-            {@const isActive = activeExperienceIndex === idx}
-            <!-- Credit Card Component -->
-            <button
-              type="button"
-              class="group h-48 w-full rounded-xl bg-gradient-to-tr {exp.cardTheme} relative flex cursor-pointer flex-col justify-between overflow-hidden border border-amber-500/20 p-5 text-left shadow-lg transition-all duration-300 hover:-translate-y-2 hover:border-amber-400/50 hover:shadow-2xl {isActive
-                ? 'scale-[1.02] ring-2 ring-amber-400'
-                : 'opacity-85'}"
-              onclick={() => (activeExperienceIndex = idx)}
+        <div class="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
+          <!-- Experience Bullets Container (Revealed like a Ledger/Receipt statement) -->
+          {#if activeExperienceIndex >= 0 && activeExperienceIndex < experiences.length}
+            {@const selectedExp = experiences[activeExperienceIndex]}
+            <div
+              class="animate-fade-in relative min-h-[560px] rounded-2xl border border-amber-500/20 bg-[#141211] p-6 shadow-xl duration-300 md:p-8"
             >
-              <!-- Card Shimmer & Holographic lines -->
+              <!-- Golden Corner Brackets -->
               <div
-                class="absolute inset-0 -translate-x-full bg-linear-to-tr from-white/0 via-white/5 to-white/0 transition-transform duration-1000 group-hover:translate-x-full"
+                class="absolute top-2 left-2 size-3.5 border-t border-l border-amber-500/40"
+              ></div>
+              <div
+                class="absolute top-2 right-2 size-3.5 border-t border-r border-amber-500/40"
+              ></div>
+              <div
+                class="absolute bottom-2 left-2 size-3.5 border-b border-l border-amber-500/40"
+              ></div>
+              <div
+                class="absolute right-2 bottom-2 size-3.5 border-r border-b border-amber-500/40"
               ></div>
 
-              <!-- Traditional Chinese cloud pattern in the red card -->
-              {#if exp.company === 'Desa Binaan UKM KMBUI'}
-                <div
-                  class="pointer-events-none absolute inset-0 bg-repeat opacity-10"
-                  style="background-image: url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2230%22 height=%2230%22 viewBox=%220 0 30 30%22><path d=%22M15 5c-2 0-3.5 1.5-3.5 3.5s1.5 3.5 3.5 3.5 3.5-1.5 3.5-3.5S17 5 15 5z%22 fill=%22%23FFF%22/></svg>');"
-                ></div>
-              {/if}
-
-              <div class="relative z-10 flex w-full items-start justify-between">
-                <div class="space-y-0.5">
-                  <span
-                    class="block text-[8px] font-black tracking-widest text-amber-300 uppercase opacity-90"
-                    >{exp.industry}</span
+              <div
+                class="border-stone-850 mb-5 flex flex-col justify-between gap-4 border-b pb-4 md:flex-row md:items-center"
+              >
+                <div>
+                  <span class="text-[9px] font-black tracking-widest text-amber-500 uppercase"
+                    >Financial Ledger Statement</span
                   >
-                  <h3 class="font-outfit text-base font-black text-white">{exp.company}</h3>
-                </div>
-
-                <!-- Card Logo or Initials -->
-                {#if exp.logo}
-                  <div
-                    class="flex size-8 items-center justify-center overflow-hidden rounded border border-white/10 bg-white/10 p-1 backdrop-blur-xs"
-                  >
-                    <img
-                      src={exp.logo}
-                      alt={exp.company}
-                      loading="lazy"
-                      decoding="async"
-                      class="size-full object-contain brightness-100 filter"
-                    />
-                  </div>
-                {:else}
-                  <div
-                    class="font-outfit flex size-8 items-center justify-center rounded border border-white/10 bg-white/10 text-sm font-black text-white"
-                  >
-                    {exp.company.charAt(0)}
-                  </div>
-                {/if}
-              </div>
-
-              <!-- Card Chip & Signal symbol -->
-              <div class="relative z-10 flex items-center gap-3 opacity-70">
-                <!-- Golden Chip -->
-                <div
-                  class="flex h-5 w-7 flex-col justify-around rounded border border-amber-600 bg-gradient-to-r from-amber-400 to-amber-300 p-0.5"
-                >
-                  <div class="h-0.5 w-full bg-amber-700/40"></div>
-                  <div class="h-0.5 w-full bg-amber-700/40"></div>
-                  <div class="h-0.5 w-full bg-amber-700/40"></div>
-                </div>
-                <!-- Contactless symbol -->
-                <svg
-                  class="size-4 rotate-90 text-stone-200/60"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2.5"
-                    d="M13 10V3L4 14h7v7l9-11h-7z"
-                  />
-                </svg>
-              </div>
-
-              <div class="relative z-10 flex w-full items-end justify-between">
-                <div class="space-y-0.5">
-                  <p
-                    class="max-w-[120px] truncate text-[9px] font-black tracking-widest text-white/80 uppercase"
-                  >
-                    {exp.role}
-                  </p>
-                  <p class="font-mono text-[8px] tracking-tight text-white/50">{exp.period}</p>
+                  <h4 class="font-outfit text-lg font-bold text-white">
+                    {selectedExp.company} &middot; {selectedExp.role}
+                  </h4>
                 </div>
                 <span
-                  class="rounded border border-white/10 bg-black/30 px-2 py-0.5 text-[9px] font-black text-amber-300 uppercase"
-                  >Credentials</span
+                  class="rounded-full border border-stone-800 bg-stone-900 px-3 py-1 font-mono text-xs font-bold tracking-wider text-stone-400 uppercase"
+                  >{selectedExp.period}</span
                 >
               </div>
-            </button>
-          {/each}
-        </div>
 
-        <!-- Experience Bullets Container (Revealed like a Ledger/Receipt statement) -->
-        {#if activeExperienceIndex >= 0 && activeExperienceIndex < experiences.length}
-          {@const selectedExp = experiences[activeExperienceIndex]}
-          <div
-            class="animate-fade-in relative mt-6 rounded-2xl border border-amber-500/20 bg-[#141211] p-6 shadow-xl duration-300 md:p-8"
-          >
-            <!-- Golden Corner Brackets -->
-            <div class="absolute top-2 left-2 size-3.5 border-t border-l border-amber-500/40"></div>
-            <div
-              class="absolute top-2 right-2 size-3.5 border-t border-r border-amber-500/40"
-            ></div>
-            <div
-              class="absolute bottom-2 left-2 size-3.5 border-b border-l border-amber-500/40"
-            ></div>
-            <div
-              class="absolute right-2 bottom-2 size-3.5 border-r border-b border-amber-500/40"
-            ></div>
-
-            <div
-              class="border-stone-850 mb-5 flex flex-col justify-between gap-4 border-b pb-4 md:flex-row md:items-center"
-            >
-              <div>
-                <span class="text-[9px] font-black tracking-widest text-amber-500 uppercase"
-                  >Financial Ledger Statement</span
-                >
-                <h4 class="font-outfit text-lg font-bold text-white">
-                  {selectedExp.company} &middot; {selectedExp.role}
-                </h4>
-              </div>
-              <span
-                class="rounded-full border border-stone-800 bg-stone-900 px-3 py-1 font-mono text-xs font-bold tracking-wider text-stone-400 uppercase"
-                >{selectedExp.period}</span
-              >
+              <ul class="list-disc space-y-4 pl-5 text-sm text-stone-300">
+                {#each selectedExp.bullets as bullet, idx (idx)}
+                  <li class="leading-relaxed">{@html bullet}</li>
+                {/each}
+              </ul>
             </div>
+          {/if}
 
-            <ul class="list-disc space-y-4 pl-5 text-sm text-stone-300">
-              {#each selectedExp.bullets as bullet, idx (idx)}
-                <li class="leading-relaxed">{@html bullet}</li>
+          <div class="relative bg-[#0b0908] p-4 shadow-2xl shadow-black/40 lg:sticky lg:top-24">
+            <div
+              class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_12%,rgba(245,158,11,0.08),transparent_26%),linear-gradient(135deg,rgba(255,255,255,0.035),transparent_38%)]"
+              aria-hidden="true"
+            ></div>
+
+            <div class="relative space-y-0">
+              {#each experiences as exp, idx (exp.company)}
+                {@const isActive = activeExperienceIndex === idx}
+                <div class="relative min-h-[82px] overflow-visible bg-black/20 p-2">
+                  <div
+                    class="pointer-events-none absolute inset-x-0 bottom-0 z-0 h-7 border-t border-amber-500/20 bg-gradient-to-b from-[#17110c]/90 to-[#090706]/98 shadow-[0_-8px_18px_rgba(0,0,0,0.35)]"
+                    aria-hidden="true"
+                  ></div>
+                  <div
+                    class="pointer-events-none absolute inset-x-4 bottom-7 z-20 h-px bg-amber-400/25"
+                    aria-hidden="true"
+                  ></div>
+
+                  <button
+                    type="button"
+                    class="group absolute inset-x-4 top-2.5 z-10 flex h-24 cursor-pointer flex-col justify-between overflow-hidden rounded-xl border border-amber-500/20 bg-gradient-to-tr {exp.cardTheme} p-2.5 text-left shadow-xl transition-all duration-300 hover:-translate-y-2 hover:border-amber-400/50 hover:shadow-2xl {isActive
+                      ? 'z-40 -translate-y-8 ring-2 ring-amber-400'
+                      : 'opacity-90'}"
+                    onclick={() => (activeExperienceIndex = idx)}
+                  >
+                    <div
+                      class="absolute inset-0 -translate-x-full bg-linear-to-tr from-white/0 via-white/5 to-white/0 transition-transform duration-1000 group-hover:translate-x-full"
+                    ></div>
+
+                    {#if exp.company === 'Desa Binaan UKM KMBUI'}
+                      <div
+                        class="pointer-events-none absolute inset-0 bg-repeat opacity-10"
+                        style="background-image: url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2230%22 height=%2230%22 viewBox=%220 0 30 30%22><path d=%22M15 5c-2 0-3.5 1.5-3.5 3.5s1.5 3.5 3.5 3.5 3.5-1.5 3.5-3.5S17 5 15 5z%22 fill=%22%23FFF%22/></svg>');"
+                      ></div>
+                    {/if}
+
+                    <div class="relative z-10 flex w-full items-start justify-between gap-3">
+                      <div class="min-w-0 space-y-0.5">
+                        <span
+                          class="block text-[8px] font-black tracking-widest text-amber-300 uppercase opacity-90"
+                          >{exp.industry}</span
+                        >
+                        <h3 class="font-outfit truncate text-xs font-black text-white">
+                          {exp.company}
+                        </h3>
+                      </div>
+
+                      {#if exp.logo}
+                        <div
+                          class="flex size-6 shrink-0 items-center justify-center overflow-hidden rounded border border-white/10 bg-white/10 p-1 backdrop-blur-xs"
+                        >
+                          <img
+                            src={exp.logo}
+                            alt={exp.company}
+                            loading="lazy"
+                            decoding="async"
+                            class="size-full object-contain brightness-100 filter"
+                          />
+                        </div>
+                      {:else}
+                        <div
+                          class="font-outfit flex size-6 shrink-0 items-center justify-center rounded border border-white/10 bg-white/10 text-xs font-black text-white"
+                        >
+                          {exp.company.charAt(0)}
+                        </div>
+                      {/if}
+                    </div>
+
+                    <div class="relative z-10 flex w-full items-end justify-between gap-3">
+                      <div class="min-w-0 space-y-0.5">
+                        <p
+                          class="truncate text-[9px] font-black tracking-widest text-white/80 uppercase"
+                        >
+                          {exp.role}
+                        </p>
+                        <p class="font-mono text-[8px] tracking-tight text-white/50">
+                          {exp.period}
+                        </p>
+                      </div>
+                      <span
+                        class="shrink-0 rounded border border-white/10 bg-black/30 px-2 py-0.5 text-[9px] font-black text-amber-300 uppercase"
+                        >Details</span
+                      >
+                    </div>
+                  </button>
+                </div>
               {/each}
-            </ul>
+            </div>
           </div>
-        {/if}
+        </div>
       </section>
 
-      <!-- Speaking Section (VIP Presenter Passes) -->
+      <!-- Speaking Section (Card Binder) -->
       <section use:reveal={{}} class="reveal-on-scroll scroll-mt-24 space-y-6" id="speaking">
         <div class="flex items-center gap-3 border-b border-stone-800 pb-3">
           <Mic class="size-6 text-amber-500" />
           <h2 class="font-outfit text-2xl font-bold tracking-tight text-white">Public Talks</h2>
         </div>
 
-        <!-- Presenter Pass list -->
-        <div class="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
-          {#each speakingList as item, idx (item.role + item.organization + item.period)}
-            <div
-              class="group relative overflow-hidden rounded-xl border border-amber-500/20 bg-gradient-to-br from-stone-900 via-stone-950/90 to-stone-900 p-3.5 shadow-md transition-all duration-300 hover:border-amber-400/50 hover:shadow-lg"
-            >
-              <!-- Shimmer effect -->
-              <div
-                class="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/2 to-transparent transition-transform duration-1000 group-hover:translate-x-full"
-              ></div>
+        <div class="relative overflow-hidden bg-[#080706] p-2 shadow-2xl shadow-black/40 lg:p-4">
+          <div
+            class="pointer-events-none absolute inset-y-4 left-1/2 z-0 hidden w-10 -translate-x-1/2 border-x border-amber-500/15 bg-gradient-to-r from-black via-[#17110a] to-black shadow-[inset_12px_0_18px_rgba(0,0,0,0.75),inset_-12px_0_18px_rgba(0,0,0,0.75)] lg:block"
+            aria-hidden="true"
+          ></div>
+          <div
+            class="pointer-events-none absolute inset-y-7 left-1/2 z-0 hidden w-px bg-amber-400/35 lg:block"
+            aria-hidden="true"
+          ></div>
 
-              <div class="relative z-10 flex h-full flex-col gap-3 text-center">
-                <div class="min-w-0 space-y-2">
-                  <div class="flex flex-wrap items-center justify-center gap-2">
-                    <span
-                      class="rounded border border-amber-500/20 bg-amber-500/8 px-2 py-0.5 text-[9px] font-black tracking-[0.18em] text-amber-400 uppercase"
-                    >
-                      Talk #{idx + 1}
-                    </span>
-                    <span class="font-mono text-[11px] text-stone-500">{item.period}</span>
-                  </div>
-                  <h3
-                    class="font-outfit text-sm font-bold text-white transition-colors group-hover:text-amber-400 sm:text-base"
-                  >
-                    {item.role}
-                  </h3>
-                  <p
-                    class="text-[10px] font-semibold tracking-[0.18em] text-amber-500/80 uppercase"
-                  >
-                    {item.organization}
+          <div class="relative z-10 grid grid-cols-1 gap-3 lg:grid-cols-2 lg:gap-10">
+            {#each speakingBinderPages as page (page.label)}
+              <div class="relative bg-[#0b0a09] p-3 sm:p-4 lg:p-5">
+                <div class="relative mb-3 flex items-center justify-between">
+                  <p class="text-[10px] font-black tracking-[0.2em] text-stone-500 uppercase">
+                    {page.label}
                   </p>
-                  <p class="text-xs leading-relaxed text-stone-400">{@html item.description}</p>
+                  <div class="flex gap-1.5">
+                    {#each Array(3) as _, ring}
+                      <span
+                        class="size-2 rounded-full border border-amber-500/25 bg-black"
+                        aria-hidden="true"
+                      ></span>
+                    {/each}
+                  </div>
                 </div>
 
-                <div
-                  class="mt-auto rounded-lg border border-amber-500/20 bg-amber-500/6 px-3 py-2.5 text-center"
-                >
-                  <p class="text-[9px] font-black tracking-[0.22em] text-stone-500 uppercase">
-                    Audience
-                  </p>
-                  <p class="font-outfit mt-1 text-lg font-black text-amber-400">
-                    {item.audience ?? item.duration}
-                  </p>
+                <div class="relative grid grid-cols-1 items-start gap-2 sm:grid-cols-2">
+                  {#each page.items as { item, index } (item.role + item.organization + item.period)}
+                    {@const proof = item.attachments?.find((att) => att.image)}
+                    {@const coverImage = item.coverImage ?? proof?.image}
+                    <article
+                      class="group relative overflow-hidden bg-white/[0.035] p-1 shadow-inner shadow-white/5 transition duration-300 hover:bg-white/[0.055]"
+                    >
+                      <button
+                        type="button"
+                        class="relative block w-full cursor-pointer overflow-hidden bg-stone-950 text-left ring-1 ring-white/10 transition group-hover:ring-amber-400/40"
+                        onclick={() => {
+                          if (proof?.image) {
+                            openLightbox(proof.image, `${item.role} @ ${item.organization}`);
+                          }
+                        }}
+                        aria-label={`Open proof for ${item.role} at ${item.organization}`}
+                      >
+                        <div class="relative aspect-[4/3] overflow-hidden">
+                          {#if coverImage}
+                            <img
+                              src={coverImage}
+                              alt={`${item.organization} ${proof?.name ?? 'cover image'}`}
+                              loading="lazy"
+                              decoding="async"
+                              class="size-full object-cover object-center opacity-90 transition duration-500 group-hover:scale-[1.025] group-hover:opacity-100"
+                            />
+                          {:else}
+                            <div
+                              class="flex size-full items-center justify-center bg-[radial-gradient(circle_at_50%_35%,rgba(245,158,11,0.16),transparent_32%),linear-gradient(135deg,#181818,#070707)]"
+                            >
+                              <Mic class="size-9 text-amber-400/70" />
+                            </div>
+                          {/if}
+                          <div
+                            class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black via-black/70 to-transparent px-2.5 pt-8 pb-2"
+                          >
+                            <p class="font-outfit truncate text-sm font-black text-amber-300">
+                              {item.audience ?? item.duration}
+                            </p>
+                          </div>
+                        </div>
 
-                  {#if item.attachments && item.attachments.length > 0}
-                    {#each item.attachments as att, attIdx (attIdx)}
-                      {#if att.image}
-                        <button
-                          type="button"
-                          class="mt-3 block w-full cursor-pointer overflow-hidden rounded-lg border border-amber-500/20 bg-stone-950/60"
-                          onclick={() =>
-                            openLightbox(
-                              att.image || '',
-                              `${item.role} @ ${item.organization} - ${att.name}`
-                            )}
+                        <div class="space-y-1.5 border-t border-stone-800 bg-black px-2.5 py-2">
+                          <div class="flex items-start justify-between gap-2">
+                            <div class="min-w-0">
+                              <p class="font-outfit truncate text-xs font-black text-white">
+                                {item.role}
+                              </p>
+                              <p
+                                class="mt-0.5 truncate text-[9px] font-bold tracking-[0.12em] text-stone-400 uppercase"
+                              >
+                                {item.organization}
+                              </p>
+                            </div>
+                            <p class="shrink-0 font-mono text-[9px] text-stone-500">
+                              {getPeriodYear(item.period)}
+                            </p>
+                          </div>
+                        </div>
+                      </button>
+                    </article>
+                  {/each}
+
+                  {#each Array(Math.max(0, 4 - page.items.length)) as _, emptyIndex}
+                    <div
+                      class="hidden overflow-hidden bg-white/[0.025] p-1 shadow-inner shadow-white/5 sm:block"
+                      aria-hidden="true"
+                    >
+                      <div class="overflow-hidden bg-stone-950/70 ring-1 ring-white/8">
+                        <div
+                          class="flex aspect-[4/3] flex-col items-center justify-center gap-2 bg-[radial-gradient(circle_at_50%_45%,rgba(245,158,11,0.06),transparent_30%),linear-gradient(135deg,rgba(255,255,255,0.025),rgba(0,0,0,0.12))]"
                         >
-                          <img
-                            src={att.image}
-                            alt={`${item.organization} ${att.name}`}
-                            loading="lazy"
-                            decoding="async"
-                            class="h-28 w-full object-cover object-center transition-transform duration-300 group-hover:scale-[1.02]"
-                          />
-                        </button>
-                      {/if}
-                    {/each}
-                  {/if}
+                          <div class="h-14 w-10 border border-dashed border-stone-800/70"></div>
+                          <p
+                            class="text-[9px] font-black tracking-[0.18em] text-stone-600 uppercase"
+                          >
+                            Open for talks
+                          </p>
+                        </div>
+                        <div class="space-y-1.5 border-t border-stone-800 bg-black px-2.5 py-2">
+                          <div class="flex items-start justify-between gap-2">
+                            <div class="min-w-0 flex-1 space-y-1.5">
+                              <div class="h-3 w-16 bg-white/[0.035]"></div>
+                              <div class="h-2 w-24 bg-white/[0.025]"></div>
+                            </div>
+                            <div class="h-2 w-7 bg-white/[0.025]"></div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  {/each}
                 </div>
               </div>
-            </div>
-          {/each}
+            {/each}
+          </div>
         </div>
       </section>
 
@@ -2482,7 +2545,6 @@
 
     <div class="mt-4 text-center select-none">
       <p class="font-outfit text-sm font-semibold text-white">{lightboxTitle}</p>
-      <p class="mt-1 text-xs text-stone-400">Click anywhere outside to close</p>
     </div>
   </div>
 {/if}

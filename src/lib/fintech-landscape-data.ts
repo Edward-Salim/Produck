@@ -30,7 +30,7 @@ import gopay from '$lib/assets/fintech_logos/indonesia/gopay.png';
 import indodana from '$lib/assets/fintech_logos/indonesia/indodana.png';
 import indodax from '$lib/assets/fintech_logos/indonesia/indodax.png';
 import jenius from '$lib/assets/fintech_logos/indonesia/jenius.png';
-import kitabisa from '$lib/assets/fintech_logos/indonesia/kitabisa.png';
+import kitabisa from '$lib/assets/fintech_logos/indonesia/kitabisa.jpeg';
 import koinworks from '$lib/assets/fintech_logos/indonesia/koinworks.png';
 import kreditpintar from '$lib/assets/fintech_logos/indonesia/kreditpintar.png';
 import kredivo from '$lib/assets/fintech_logos/indonesia/kredivo.png';

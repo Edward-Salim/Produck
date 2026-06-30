@@ -23,26 +23,34 @@
     projectName?: string;
   } = $props();
 
-  const defaultCanvas: VpcDraft = {
-    productName: projectName || 'Your Product',
-    customerName: 'Target Customer',
-    productsServices: ['Core product', 'Key feature', 'Service layer'],
-    painRelievers: ['Reduce friction', 'Remove uncertainty', 'Save time'],
-    gainCreators: ['Better outcome', 'More confidence', 'Easier workflow'],
-    customerJobs: ['Complete the job', 'Make a decision', 'Move faster'],
-    pains: ['Too much effort', 'High risk', 'Poor current solution'],
-    gains: ['Clear progress', 'Reliable result', 'Less stress'],
-    fitLines: [
-      ['Save time', 'Too much effort'],
-      ['Remove uncertainty', 'High risk'],
-      ['Better outcome', 'Reliable result']
-    ]
-  };
+  function getDefaultCanvas(name: string | undefined): VpcDraft {
+    return {
+      productName: name || 'Your Product',
+      customerName: 'Target Customer',
+      productsServices: ['Core product', 'Key feature', 'Service layer'],
+      painRelievers: ['Reduce friction', 'Remove uncertainty', 'Save time'],
+      gainCreators: ['Better outcome', 'More confidence', 'Easier workflow'],
+      customerJobs: ['Complete the job', 'Make a decision', 'Move faster'],
+      pains: ['Too much effort', 'High risk', 'Poor current solution'],
+      gains: ['Clear progress', 'Reliable result', 'Less stress'],
+      fitLines: [
+        ['Save time', 'Too much effort'],
+        ['Remove uncertainty', 'High risk'],
+        ['Better outcome', 'Reliable result']
+      ]
+    };
+  }
 
   let canvas = $derived.by(() => {
+    const defaultCanvas = getDefaultCanvas(projectName);
+
     try {
       const saved = JSON.parse(instance.values.valuePropositionCanvas ?? '{}');
-      return { ...defaultCanvas, ...saved, productName: saved.productName || projectName || 'Your Product' };
+      return {
+        ...defaultCanvas,
+        ...saved,
+        productName: saved.productName || defaultCanvas.productName
+      };
     } catch {
       return defaultCanvas;
     }
@@ -61,13 +69,19 @@
   }
 
   let productsServices = $derived(
-    normalizeItems(canvas.productsServices, defaultCanvas.productsServices)
+    normalizeItems(canvas.productsServices, getDefaultCanvas(projectName).productsServices)
   );
-  let painRelievers = $derived(normalizeItems(canvas.painRelievers, defaultCanvas.painRelievers));
-  let gainCreators = $derived(normalizeItems(canvas.gainCreators, defaultCanvas.gainCreators));
-  let customerJobs = $derived(normalizeItems(canvas.customerJobs, defaultCanvas.customerJobs));
-  let pains = $derived(normalizeItems(canvas.pains, defaultCanvas.pains));
-  let gains = $derived(normalizeItems(canvas.gains, defaultCanvas.gains));
+  let painRelievers = $derived(
+    normalizeItems(canvas.painRelievers, getDefaultCanvas(projectName).painRelievers)
+  );
+  let gainCreators = $derived(
+    normalizeItems(canvas.gainCreators, getDefaultCanvas(projectName).gainCreators)
+  );
+  let customerJobs = $derived(
+    normalizeItems(canvas.customerJobs, getDefaultCanvas(projectName).customerJobs)
+  );
+  let pains = $derived(normalizeItems(canvas.pains, getDefaultCanvas(projectName).pains));
+  let gains = $derived(normalizeItems(canvas.gains, getDefaultCanvas(projectName).gains));
 </script>
 
 <div class="overflow-hidden rounded-xl border border-cork-300/40 bg-cork-50">

@@ -676,6 +676,30 @@ export const kanbanActivity = pgTable('kanban_activity', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
 });
 
+// ── Application Cover Letter Jobs ─────────────────────
+
+export const applicationCoverLetterJob = pgTable('application_cover_letter_job', {
+  id: text('id').primaryKey(),
+  userId: integer('user_id')
+    .notNull()
+    .references(() => appUser.id, { onDelete: 'cascade' }),
+  status: text('status').notNull().default('queued'),
+  dump: text('dump').notNull(),
+  result: jsonb('result').$type<{
+    company: string;
+    role: string;
+    recipient: string;
+    companyTag: string;
+    plainText: string;
+    model: string;
+    linkedinMessages?: { label: string; useCase: string; text: string }[];
+  }>(),
+  error: text('error'),
+  model: text('model'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
+});
+
 // ── Framework Instances (user drafts) ─────────────────
 
 export const frameworkInstance = pgTable('framework_instance', {

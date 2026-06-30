@@ -2,6 +2,7 @@ import { json } from '@sveltejs/kit';
 import { env } from '$env/dynamic/private';
 import { db } from '$lib/server/db/index.js';
 import { appUser } from '$lib/server/db/schema.js';
+import { buildApplicationPdfFilename } from '$lib/application-filename.js';
 import { eq } from 'drizzle-orm';
 import { faLinkedin } from '@fortawesome/free-brands-svg-icons';
 import { faEnvelope, faMapMarkerAlt, faPhoneAlt } from '@fortawesome/free-solid-svg-icons';
@@ -87,11 +88,6 @@ type FontAwesomeIconDefinition = {
     svgPathData: string | string[]
   ];
 };
-
-function safeFilename(value: string | undefined): string {
-  const cleaned = (value ?? 'Company').replace(/[^a-z0-9_-]+/gi, '_').replace(/^_+|_+$/g, '');
-  return cleaned || 'Company';
-}
 
 function getApplicationPhoneDisplay(): string {
   return env.APPLICATION_PHONE_DISPLAY?.trim() ?? 'Phone available on request';
@@ -626,9 +622,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
   try {
     const pdf = await renderApplicationPdf(recipientText, bodyText, includeCv);
-    const filename = includeCv
-      ? `Edward_Salim_Application_${safeFilename(company)}_${safeFilename(role)}.pdf`
-      : `Edward_Salim_Cover_Letter_${safeFilename(company)}_${safeFilename(role)}.pdf`;
+    const filename = buildApplicationPdfFilename({ company, role, includeCv });
 
     return new Response(Buffer.from(pdf), {
       headers: {
