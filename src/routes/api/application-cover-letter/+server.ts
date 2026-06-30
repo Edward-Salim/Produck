@@ -5,7 +5,8 @@ import { appUser, applicationCoverLetterJob } from '$lib/server/db/schema.js';
 import { getApplicationJobSecret } from '$lib/server/application-cover-letter.js';
 import { processApplicationCoverLetterJob } from '$lib/server/application-cover-letter-jobs.js';
 import { ensureApplicationCoverLetterJobTable } from '$lib/server/application-cover-letter-schema.js';
-import { eq } from 'drizzle-orm';
+import { cleanApplicationDump } from '$lib/application-dump-cleaner.js';
+import { and, eq } from 'drizzle-orm';
 import type { RequestHandler } from './$types.js';
 
 async function triggerBackgroundJob(
@@ -45,8 +46,11 @@ export const POST: RequestHandler = async ({ request, locals, url, platform }) =
   const [caller] = authId ? await db.select().from(appUser).where(eq(appUser.authId, authId)) : [];
   if (caller?.role !== 'admin') return json({ error: 'Forbidden' }, { status: 403 });
 
-  const { dump } = (await request.json()) as { dump?: string };
-  const input = dump?.trim();
+  const { dump, replaceJobId } = (await request.json()) as {
+    dump?: string;
+    replaceJobId?: string;
+  };
+  const input = cleanApplicationDump(dump ?? '');
   if (!input)
     return json({ error: 'Paste a job post or application brief first' }, { status: 400 });
   if (input.length > 40000)
@@ -55,6 +59,16 @@ export const POST: RequestHandler = async ({ request, locals, url, platform }) =
   try {
     const jobId = crypto.randomUUID();
     await ensureApplicationCoverLetterJobTable(db);
+    if (replaceJobId) {
+      await db
+        .delete(applicationCoverLetterJob)
+        .where(
+          and(
+            eq(applicationCoverLetterJob.id, replaceJobId),
+            eq(applicationCoverLetterJob.userId, caller.id)
+          )
+        );
+    }
     await db.insert(applicationCoverLetterJob).values({
       id: jobId,
       userId: caller.id,

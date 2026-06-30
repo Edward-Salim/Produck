@@ -1,4 +1,3 @@
-import { GoogleGenAI } from '@google/genai';
 import {
   APPLICATION_COVER_LETTER_SYSTEM_PROMPT,
   buildApplicationCoverLetterPrompt,
@@ -8,7 +7,6 @@ import {
 type ApplicationEnv = {
   DEEPSEEK_API_KEY?: string;
   DEEPSEEK_MODEL?: string;
-  GEMINI_API_KEYS?: string;
 };
 
 const COVER_LETTER_PROVIDER_TIMEOUT_MS = 5 * 60 * 1000;
@@ -21,7 +19,6 @@ export type GeneratedApplicationCoverLetter = {
   companyTag: string;
   plainText: string;
   model: string;
-  linkedinMessages: LinkedInMessage[];
 };
 
 export type LinkedInMessage = {
@@ -29,13 +26,6 @@ export type LinkedInMessage = {
   useCase: string;
   text: string;
 };
-
-function getGeminiClient(env: ApplicationEnv): GoogleGenAI {
-  const keys = (env.GEMINI_API_KEYS ?? '').split(',').filter(Boolean);
-  if (keys.length === 0) throw new Error('No Gemini API keys configured');
-  const key = keys[Math.floor(Date.now() / 1000) % keys.length];
-  return new GoogleGenAI({ apiKey: key });
-}
 
 function stripFences(text: string): string {
   return text
@@ -83,7 +73,8 @@ async function generateWithDeepSeek(
           },
           { role: 'user', content: prompt }
         ],
-        temperature: 0.4
+        temperature: 0.4,
+        response_format: { type: 'json_object' }
       })
     });
   } catch (err) {
@@ -102,44 +93,6 @@ async function generateWithDeepSeek(
   const text = data?.choices?.[0]?.message?.content;
   if (typeof text !== 'string' || !text.trim()) throw new Error('DeepSeek returned empty content');
   return text;
-}
-
-async function generateWithGemini(env: ApplicationEnv, prompt: string): Promise<string> {
-  const ai = getGeminiClient(env);
-  const response = await withTimeout(
-    ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: [
-        {
-          role: 'user',
-          parts: [{ text: prompt }]
-        }
-      ]
-    }),
-    COVER_LETTER_PROVIDER_TIMEOUT_MS,
-    'Gemini generation'
-  );
-
-  return response.text ?? '';
-}
-
-function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): Promise<T> {
-  return new Promise((resolve, reject) => {
-    const timeout = setTimeout(() => {
-      reject(new Error(`${label} timed out after ${Math.round(timeoutMs / 1000)} seconds`));
-    }, timeoutMs);
-
-    promise.then(
-      (value) => {
-        clearTimeout(timeout);
-        resolve(value);
-      },
-      (err) => {
-        clearTimeout(timeout);
-        reject(err);
-      }
-    );
-  });
 }
 
 function normalizeLinkedInMessages(value: unknown): LinkedInMessage[] {
@@ -167,7 +120,86 @@ function normalizeLinkedInMessages(value: unknown): LinkedInMessage[] {
     .slice(0, 3);
 }
 
-async function generateLinkedInMessages(
+function extractJsonObject(text: string): string {
+  const raw = stripFences(text);
+  const direct = raw.trim();
+  if (direct.startsWith('{') && direct.endsWith('}')) return direct;
+
+  let start = -1;
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+
+  for (let index = 0; index < raw.length; index += 1) {
+    const char = raw[index];
+
+    if (escaped) {
+      escaped = false;
+      continue;
+    }
+
+    if (char === '\\' && inString) {
+      escaped = true;
+      continue;
+    }
+
+    if (char === '"') {
+      inString = !inString;
+      continue;
+    }
+
+    if (inString) continue;
+
+    if (char === '{') {
+      if (depth === 0) start = index;
+      depth += 1;
+    } else if (char === '}' && depth > 0) {
+      depth -= 1;
+      if (depth === 0 && start >= 0) return raw.slice(start, index + 1);
+    }
+  }
+
+  return direct;
+}
+
+function parseGeneratedJson<T>(text: string, label: string): T {
+  try {
+    return JSON.parse(extractJsonObject(text)) as T;
+  } catch (err) {
+    const detail = err instanceof Error ? err.message : 'invalid JSON';
+    throw new Error(`${label} returned malformed JSON: ${detail}`);
+  }
+}
+
+function parseCoverLetterJson(text: string) {
+  const parsed = parseGeneratedJson<{
+    company?: unknown;
+    role?: unknown;
+    recipient?: unknown;
+    companyTag?: unknown;
+    plainText?: unknown;
+  }>(text, 'Cover letter generator');
+
+  if (
+    typeof parsed.company !== 'string' ||
+    typeof parsed.role !== 'string' ||
+    typeof parsed.recipient !== 'string' ||
+    typeof parsed.companyTag !== 'string' ||
+    typeof parsed.plainText !== 'string'
+  ) {
+    throw new Error('Cover letter generator returned incomplete JSON');
+  }
+
+  return {
+    company: parsed.company.trim(),
+    role: parsed.role.trim(),
+    recipient: parsed.recipient.trim(),
+    companyTag: parsed.companyTag.trim(),
+    plainText: parsed.plainText.trim()
+  };
+}
+
+export async function generateLinkedInMessages(
   env: ApplicationEnv,
   input: string,
   application: { company: string; role: string }
@@ -179,7 +211,10 @@ async function generateLinkedInMessages(
     'deepseek-v4-flash',
     LINKEDIN_MESSAGE_TIMEOUT_MS
   );
-  const parsed = JSON.parse(stripFences(generated)) as { messages?: unknown };
+  const parsed = parseGeneratedJson<{ messages?: unknown }>(
+    generated,
+    'LinkedIn message generator'
+  );
   return normalizeLinkedInMessages(parsed.messages);
 }
 
@@ -188,35 +223,9 @@ export async function generateApplicationCoverLetter(
   input: string
 ): Promise<GeneratedApplicationCoverLetter> {
   const prompt = buildApplicationCoverLetterPrompt(input);
-  let model = env.DEEPSEEK_MODEL ?? 'deepseek-v4-flash';
-  let generated: string;
-
-  try {
-    generated = await generateWithDeepSeek(env, prompt);
-  } catch (deepseekErr) {
-    console.warn('DeepSeek cover letter generation failed, falling back to Gemini:', deepseekErr);
-    generated = await generateWithGemini(env, prompt);
-    model = 'gemini-2.5-flash';
-  }
-
-  const raw = stripFences(generated);
-  const parsed = JSON.parse(raw) as {
-    company: string;
-    role: string;
-    recipient: string;
-    companyTag: string;
-    plainText: string;
-  };
-
-  let linkedinMessages: LinkedInMessage[] = [];
-  try {
-    linkedinMessages = await generateLinkedInMessages(env, input, {
-      company: parsed.company,
-      role: parsed.role
-    });
-  } catch (err) {
-    console.warn('LinkedIn message generation failed:', err);
-  }
+  const model = env.DEEPSEEK_MODEL ?? 'deepseek-v4-flash';
+  const generated = await generateWithDeepSeek(env, prompt);
+  const parsed = parseCoverLetterJson(generated);
 
   return {
     company: parsed.company,
@@ -224,8 +233,7 @@ export async function generateApplicationCoverLetter(
     recipient: parsed.recipient,
     companyTag: parsed.companyTag,
     plainText: normalizeGeneratedPlainText(parsed.plainText),
-    model,
-    linkedinMessages
+    model
   };
 }
 

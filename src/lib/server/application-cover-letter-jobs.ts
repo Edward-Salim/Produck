@@ -1,6 +1,7 @@
 import { eq } from 'drizzle-orm';
 import {
   generateApplicationCoverLetter,
+  generateLinkedInMessages,
   type GeneratedApplicationCoverLetter
 } from './application-cover-letter.js';
 import { ensureApplicationCoverLetterJobTable } from './application-cover-letter-schema.js';
@@ -20,7 +21,8 @@ function publicResult(result: GeneratedApplicationCoverLetter) {
     companyTag: result.companyTag,
     plainText: result.plainText,
     model: result.model,
-    linkedinMessages: result.linkedinMessages
+    linkedinStatus: 'running',
+    linkedinMessages: []
   };
 }
 
@@ -58,6 +60,41 @@ export async function processApplicationCoverLetterJob(
         updatedAt: new Date()
       })
       .where(eq(applicationCoverLetterJob.id, jobId));
+
+    try {
+      const linkedinMessages = await generateLinkedInMessages(env, job.dump, {
+        company: result.company,
+        role: result.role
+      });
+
+      await database
+        .update(applicationCoverLetterJob)
+        .set({
+          result: {
+            ...savedResult,
+            linkedinStatus: 'completed',
+            linkedinMessages
+          },
+          updatedAt: new Date()
+        })
+        .where(eq(applicationCoverLetterJob.id, jobId));
+    } catch (err) {
+      const linkedinError =
+        err instanceof Error ? err.message : 'LinkedIn message generation failed';
+      console.warn('LinkedIn message generation failed:', err);
+
+      await database
+        .update(applicationCoverLetterJob)
+        .set({
+          result: {
+            ...savedResult,
+            linkedinStatus: 'failed',
+            linkedinError
+          },
+          updatedAt: new Date()
+        })
+        .where(eq(applicationCoverLetterJob.id, jobId));
+    }
 
     return savedResult;
   } catch (err) {

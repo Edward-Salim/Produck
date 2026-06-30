@@ -23,6 +23,8 @@
     companyTag: string;
     plainText: string;
     model?: string;
+    linkedinStatus?: 'running' | 'completed' | 'failed';
+    linkedinError?: string;
     linkedinMessages?: LinkedInMessage[];
   };
 
@@ -80,16 +82,22 @@ I would bring that same evidence-guided approach to your team. My strength is tu
   let downloadMenuOpen = $state(false);
   let downloadingPdf = $state(false);
   let activeJobId = $state<string | null>(null);
+  let resultJobId = $state<string | null>(null);
+  let generatedDump = $state('');
+  let mounted = false;
   let generationRequestId = 0;
   let copiedMessageIndex = $state<number | null>(null);
 
   const outputText = $derived(sourceDraft);
-  const generateButtonLabel = $derived(result ? 'Regenerate' : 'Generate');
-  const loadingButtonLabel = $derived(result ? 'Regenerating' : 'Generating');
+  const isSameGeneratedDump = $derived(Boolean(result && dump.trim() === generatedDump));
+  const generateButtonLabel = $derived(isSameGeneratedDump ? 'Regenerate' : 'Generate');
+  const loadingButtonLabel = $derived(isSameGeneratedDump ? 'Regenerating' : 'Generating');
   const hasDraft = $derived(
     Boolean(dump.trim() || result || error || previewPdfError || sourceDirty)
   );
   const linkedinMessages = $derived(result?.linkedinMessages ?? []);
+  const linkedinGenerating = $derived(result?.linkedinStatus === 'running');
+  const linkedinError = $derived(result?.linkedinError);
 
   // ── Persist across refreshes ──
   onMount(() => {
@@ -99,6 +107,7 @@ I would bring that same evidence-guided approach to your team. My strength is tu
     };
 
     document.addEventListener('click', closeDownloadMenu);
+    mounted = true;
 
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
@@ -107,6 +116,8 @@ I would bring that same evidence-guided approach to your team. My strength is tu
         if (typeof data.dump === 'string') dump = data.dump;
         if (data.result) result = data.result as GeneratedLetter;
         if (typeof data.activeJobId === 'string') activeJobId = data.activeJobId;
+        if (typeof data.resultJobId === 'string') resultJobId = data.resultJobId;
+        if (typeof data.generatedDump === 'string') generatedDump = data.generatedDump;
         if (typeof data.sourceDraft === 'string') {
           sourceDraft = data.sourceDraft;
         } else if (data.result?.plainText && typeof data.result.plainText === 'string') {
@@ -120,13 +131,20 @@ I would bring that same evidence-guided approach to your team. My strength is tu
     schedulePreviewPdfRefresh(0);
     if (activeJobId && !result) {
       loading = true;
-      void pollApplicationJob(activeJobId, ++generationRequestId).catch((err) => {
+      void pollApplicationJob(
+        activeJobId,
+        ++generationRequestId,
+        generatedDump || dump.trim()
+      ).catch((err) => {
         error = err instanceof Error ? err.message : 'Cover letter generation failed.';
         loading = false;
       });
+    } else if (activeJobId && result?.linkedinStatus === 'running') {
+      void pollLinkedInMessages(activeJobId, generationRequestId);
     }
 
     return () => {
+      mounted = false;
       document.removeEventListener('click', closeDownloadMenu);
       if (previewRefreshTimer) clearTimeout(previewRefreshTimer);
       if (previewPdfUrl) URL.revokeObjectURL(previewPdfUrl);
@@ -135,7 +153,10 @@ I would bring that same evidence-guided approach to your team. My strength is tu
 
   $effect(() => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ dump, result, sourceDraft, activeJobId }));
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({ dump, result, sourceDraft, activeJobId, resultJobId, generatedDump })
+      );
     } catch {
       // quota exceeded or unavailable — ignore
     }
@@ -190,7 +211,9 @@ I would bring that same evidence-guided approach to your team. My strength is tu
     }, 1400);
   }
 
-  async function pollApplicationJob(jobId: string, requestId: number) {
+  async function pollApplicationJob(jobId: string, requestId: number, input: string) {
+    if (!mounted) return;
+
     for (;;) {
       if (requestId !== generationRequestId) return;
 
@@ -204,11 +227,18 @@ I would bring that same evidence-guided approach to your team. My strength is tu
 
       if (job.status === 'completed' && job.result) {
         result = job.result;
+        resultJobId = job.id;
+        generatedDump = input;
         sourceDraft = job.result.plainText;
         sourceDirty = false;
-        activeJobId = null;
         activeView = 'preview';
         schedulePreviewPdfRefresh(0);
+        if (job.result.linkedinStatus === 'running') {
+          activeJobId = jobId;
+          void pollLinkedInMessages(jobId, requestId);
+        } else {
+          activeJobId = null;
+        }
         return;
       }
 
@@ -221,12 +251,42 @@ I would bring that same evidence-guided approach to your team. My strength is tu
     }
   }
 
+  async function pollLinkedInMessages(jobId: string, requestId: number) {
+    if (!mounted) return;
+
+    for (;;) {
+      if (requestId !== generationRequestId) return;
+
+      const res = await fetch(`/api/application-cover-letter/status/${jobId}`);
+      if (!res.ok) return;
+
+      const job = (await res.json()) as ApplicationJobStatus;
+      if (requestId !== generationRequestId || job.status !== 'completed' || !job.result) return;
+
+      result = {
+        ...(result ?? job.result),
+        linkedinStatus: job.result.linkedinStatus,
+        linkedinError: job.result.linkedinError,
+        linkedinMessages: job.result.linkedinMessages ?? []
+      };
+
+      if (job.result.linkedinStatus !== 'running') {
+        activeJobId = null;
+        return;
+      }
+
+      await delay(2200);
+    }
+  }
+
   async function generateCoverLetter() {
-    if (!dump.trim()) {
+    const input = dump.trim();
+    if (!input) {
       error = 'Paste the job post or application brief first.';
       return;
     }
 
+    const replaceJobId = isSameGeneratedDump ? resultJobId : null;
     const requestId = ++generationRequestId;
     loading = true;
     error = null;
@@ -236,7 +296,7 @@ I would bring that same evidence-guided approach to your team. My strength is tu
       const res = await fetch('/api/application-cover-letter', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ dump })
+        body: JSON.stringify({ dump: input, replaceJobId })
       });
       if (!res.ok) {
         throw new Error(await readErrorMessage(res, `Server returned ${res.status}`));
@@ -245,12 +305,14 @@ I would bring that same evidence-guided approach to your team. My strength is tu
 
       if ('jobId' in body && body.jobId) {
         activeJobId = body.jobId;
-        await pollApplicationJob(body.jobId, requestId);
+        await pollApplicationJob(body.jobId, requestId, input);
       } else {
         result = body as GeneratedLetter;
+        generatedDump = input;
+        resultJobId = null;
         sourceDraft = result.plainText;
         sourceDirty = false;
-        activeJobId = null;
+        activeJobId = result.linkedinStatus === 'running' ? activeJobId : null;
         activeView = 'preview';
         schedulePreviewPdfRefresh(0);
       }
@@ -267,6 +329,8 @@ I would bring that same evidence-guided approach to your team. My strength is tu
     dump = '';
     result = null;
     activeJobId = null;
+    resultJobId = null;
+    generatedDump = '';
     sourceDraft = PREVIEW_PLACEHOLDER.plainText;
     activeView = 'preview';
     error = null;
@@ -284,6 +348,8 @@ I would bring that same evidence-guided approach to your team. My strength is tu
   }
 
   async function refreshPreviewPdf(letter: GeneratedLetter, plainText: string): Promise<boolean> {
+    if (!mounted) return false;
+
     const requestId = ++previewRequestId;
     previewPdfLoading = true;
     previewPdfError = null;
@@ -321,6 +387,8 @@ I would bring that same evidence-guided approach to your team. My strength is tu
   }
 
   function schedulePreviewPdfRefresh(delay = 700) {
+    if (!mounted) return;
+
     if (previewRefreshTimer) clearTimeout(previewRefreshTimer);
 
     previewRefreshTimer = setTimeout(() => {
@@ -510,8 +578,8 @@ I would bring that same evidence-guided approach to your team. My strength is tu
                 : 'bg-white text-cork-600 hover:bg-cork-100'}"
               onclick={() => (activeView = 'messages')}
             >
-              <MessageCircle class="size-3.5" />
-              LinkedIn
+              <MessageCircle class={`size-3.5 ${linkedinGenerating ? 'animate-pulse' : ''}`} />
+              <span class={linkedinGenerating ? 'animate-pulse' : ''}>LinkedIn</span>
             </button>
           </div>
 
@@ -592,14 +660,37 @@ I would bring that same evidence-guided approach to your team. My strength is tu
                 aria-label="Compiled application PDF preview"
               ></object>
             {:else}
-              <div class="space-y-3 py-4">
-                <Skeleton class="h-5 w-40 rounded bg-cork-200!" />
-                <Skeleton class="h-4 w-full rounded bg-cork-200!" />
-                <Skeleton class="h-4 w-11/12 rounded bg-cork-200!" />
-                <Skeleton class="h-4 w-10/12 rounded bg-cork-200!" />
-                <Skeleton class="mt-2 h-4 w-full rounded bg-cork-200!" />
-                <Skeleton class="h-4 w-9/12 rounded bg-cork-200!" />
-                <Skeleton class="mt-4 h-4 w-28 rounded bg-cork-200!" />
+              <div
+                class="h-[calc(100svh-340px)] min-h-128 rounded-lg border border-cork-200 bg-white px-8 py-10 shadow-sm"
+              >
+                <div class="mx-auto max-w-2xl space-y-7">
+                  <div class="space-y-2">
+                    <Skeleton class="h-3 w-40 rounded bg-cork-200!" />
+                    <Skeleton class="h-3 w-52 rounded bg-cork-200!" />
+                    <Skeleton class="h-3 w-36 rounded bg-cork-200!" />
+                  </div>
+
+                  <Skeleton class="h-3 w-32 rounded bg-cork-200!" />
+
+                  <div class="space-y-2.5">
+                    <Skeleton class="h-3 w-full rounded bg-cork-200!" />
+                    <Skeleton class="h-3 w-11/12 rounded bg-cork-200!" />
+                    <Skeleton class="h-3 w-10/12 rounded bg-cork-200!" />
+                    <Skeleton class="h-3 w-4/5 rounded bg-cork-200!" />
+                  </div>
+
+                  <div class="space-y-2.5">
+                    <Skeleton class="h-3 w-full rounded bg-cork-200!" />
+                    <Skeleton class="h-3 w-11/12 rounded bg-cork-200!" />
+                    <Skeleton class="h-3 w-9/12 rounded bg-cork-200!" />
+                  </div>
+
+                  <div class="space-y-2.5">
+                    <Skeleton class="h-3 w-full rounded bg-cork-200!" />
+                    <Skeleton class="h-3 w-10/12 rounded bg-cork-200!" />
+                    <Skeleton class="h-3 w-7/12 rounded bg-cork-200!" />
+                  </div>
+                </div>
               </div>
             {/if}
           </div>
@@ -643,6 +734,30 @@ I would bring that same evidence-guided approach to your team. My strength is tu
                     </p>
                   </article>
                 {/each}
+              </div>
+            {:else if linkedinGenerating}
+              <div class="flex h-full items-center justify-center text-center">
+                <div class="flex flex-col items-center gap-2">
+                  <img
+                    src="/assets/produck-job.png"
+                    alt="Produck job application illustration"
+                    class="w-full max-w-44 object-contain"
+                  />
+                  <div class="relative -mt-10 text-center text-sm font-medium text-cork-600">
+                    Generating LinkedIn messages<span
+                      class="dot-cycle absolute top-0 left-full"
+                      aria-hidden="true"
+                    ></span>
+                  </div>
+                </div>
+              </div>
+            {:else if linkedinError}
+              <div class="flex h-full items-center justify-center text-center">
+                <p
+                  class="max-w-sm rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm leading-relaxed text-amber-800"
+                >
+                  {linkedinError}
+                </p>
               </div>
             {:else}
               <div class="flex h-full items-center justify-center text-center">

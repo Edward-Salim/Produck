@@ -6,6 +6,7 @@ import { ensureApplicationCoverLetterJobTable } from '$lib/server/application-co
 import type { RequestHandler } from './$types.js';
 
 const STALE_JOB_MS = 12 * 60 * 1000;
+const STALE_LINKEDIN_MS = 4 * 60 * 1000;
 
 export const GET: RequestHandler = async ({ params, locals }) => {
   const authId = locals.session?.user?.id;
@@ -55,6 +56,37 @@ export const GET: RequestHandler = async ({ params, locals }) => {
       ...job,
       status: 'failed',
       error,
+      updatedAt: new Date()
+    });
+  }
+
+  const result = job.result;
+  const isLinkedInStale =
+    job.status === 'completed' &&
+    result?.linkedinStatus === 'running' &&
+    Date.now() - updatedAt.getTime() > STALE_LINKEDIN_MS;
+
+  if (isLinkedInStale) {
+    const linkedinError = 'LinkedIn message generation timed out. Please regenerate to try again.';
+    const nextResult = {
+      ...result,
+      linkedinStatus: 'failed' as const,
+      linkedinError
+    };
+
+    await db
+      .update(applicationCoverLetterJob)
+      .set({ result: nextResult, updatedAt: new Date() })
+      .where(
+        and(
+          eq(applicationCoverLetterJob.id, params.id),
+          eq(applicationCoverLetterJob.userId, caller.id)
+        )
+      );
+
+    return json({
+      ...job,
+      result: nextResult,
       updatedAt: new Date()
     });
   }
