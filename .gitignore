@@ -25,6 +25,8 @@ Thumbs.db
 # Private local data
 *.private.ts
 *.private.json
+*.private.sql
+drizzle/private/
 src/routes/(app)/financial-tracker/financial-tracker-data.private.ts
 static/assets/ttd_edward.png
 

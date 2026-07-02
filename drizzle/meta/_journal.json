@@ -148,6 +148,27 @@
       "when": 1782816000000,
       "tag": "0020_application_cover_letter_jobs",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1783008000000,
+      "tag": "0021_financial_tracker_wallet_month_status",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1783011600000,
+      "tag": "0022_financial_tracker_wallet_month_balances",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1783015200000,
+      "tag": "0023_financial_tracker_debt_paid_dates",
+      "breakpoints": true
     }
   ]
 }

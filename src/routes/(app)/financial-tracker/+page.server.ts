@@ -14,7 +14,8 @@ import {
   financialTrackerLedgerMonth,
   financialTrackerMonthlySummary,
   financialTrackerSetting,
-  financialTrackerWallet
+  financialTrackerWallet,
+  financialTrackerWalletMonthStatus
 } from '$lib/server/db/schema';
 import { and, asc, eq } from 'drizzle-orm';
 import {
@@ -25,10 +26,8 @@ import {
   parseOptionalPercentBps,
   parseOptionalSignedMoney,
   priceScale,
-  refreshInvestmentQuotes,
   saveForecastOverride,
   saveForecastPreference,
-  saveInvestmentSnapshot,
   sharesScale,
   validForecastMode,
   validInvestmentCurrency,
@@ -60,6 +59,57 @@ type DailyInvestmentSnapshotTotal = {
   costBasis: number;
 };
 
+const accountingMonthIndexes: Record<string, number> = {
+  jan: 0,
+  feb: 1,
+  mar: 2,
+  apr: 3,
+  may: 4,
+  jun: 5,
+  jul: 6,
+  aug: 7,
+  sep: 8,
+  oct: 9,
+  nov: 10,
+  dec: 11
+};
+
+function accountingMonthEditDeadline(monthKey: string) {
+  const [monthName, yearText] = monthKey.toLowerCase().split('-');
+  const monthIndex = accountingMonthIndexes[monthName];
+  const year = Number(yearText);
+  if (monthIndex === undefined || !Number.isInteger(year)) return undefined;
+
+  return new Date(year, monthIndex + 1, 7, 23, 59, 59, 999);
+}
+
+function assertWalletMonthEditable(monthKey: string) {
+  const deadline = accountingMonthEditDeadline(monthKey);
+  if (!deadline) throw error(400, 'Wallet month is invalid.');
+  if (Date.now() > deadline.getTime()) {
+    throw error(423, 'This month is locked one week after month end.');
+  }
+}
+
+function latestDate(...dates: Array<Date | null | undefined>) {
+  return dates.reduce<Date | undefined>((latest, date) => {
+    if (!date) return latest;
+    if (!latest || date.getTime() > latest.getTime()) return date;
+    return latest;
+  }, undefined);
+}
+
+function displayBudgetUpdatedDate(date: Date | null | undefined, fallback: string) {
+  if (!date) return fallback;
+
+  return new Intl.DateTimeFormat('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    timeZone: 'Asia/Jakarta'
+  }).format(date);
+}
+
 function buildMonthlyInvestmentHistory(
   snapshots: InvestmentSnapshot[],
   investments: InvestmentRecord[]
@@ -90,16 +140,11 @@ function buildMonthlyInvestmentHistory(
   }
 
   if (investments.length > 0 && !monthlyClosings.has(investmentBaselineMonthKey)) {
-    const baselineValue = investments.reduce(
-      (sum, investment) => sum + (investment.costBasis ?? investment.balance),
-      0
-    );
-
     monthlyClosings.set(investmentBaselineMonthKey, {
       snapshotKey: investmentBaselineSnapshotKey,
       monthKey: investmentBaselineMonthKey,
-      portfolioValue: baselineValue,
-      costBasis: baselineValue
+      portfolioValue: 0,
+      costBasis: 0
     });
   }
 
@@ -139,14 +184,8 @@ export const load: PageServerLoad = async ({ locals }) => {
 
   try {
     usdIdrRate = await fetchUsdIdrRate();
-    await refreshInvestmentQuotes(ownerEmail, false, usdIdrRate);
-  } catch (quoteError) {
-    console.error('Financial tracker investment quote refresh failed.', quoteError);
-    try {
-      await saveInvestmentSnapshot(ownerEmail);
-    } catch (snapshotError) {
-      console.error('Financial tracker investment snapshot save failed.', snapshotError);
-    }
+  } catch (fxError) {
+    console.error('Financial tracker USD/IDR rate fetch failed.', fxError);
   }
 
   const [
@@ -163,7 +202,8 @@ export const load: PageServerLoad = async ({ locals }) => {
     investmentSnapshots,
     forecastPreferences,
     forecastOverrides,
-    settings
+    settings,
+    walletMonthStates
   ] = await Promise.all([
     db
       .select()
@@ -238,7 +278,11 @@ export const load: PageServerLoad = async ({ locals }) => {
     db
       .select()
       .from(financialTrackerSetting)
-      .where(eq(financialTrackerSetting.ownerEmail, ownerEmail))
+      .where(eq(financialTrackerSetting.ownerEmail, ownerEmail)),
+    db
+      .select()
+      .from(financialTrackerWalletMonthStatus)
+      .where(eq(financialTrackerWalletMonthStatus.ownerEmail, ownerEmail))
   ]);
 
   if (summaries.length === 0 && ledgerEntries.length === 0) {
@@ -259,6 +303,11 @@ export const load: PageServerLoad = async ({ locals }) => {
         actual: row.actual,
         due: row.due ?? ''
       }));
+
+  const budgetUpdatedAt = latestDate(
+    settings[0]?.updatedAt,
+    ...budgetCategories.map((row) => row.updatedAt)
+  );
 
   const detailsFor = (monthKey: string): Record<string, DetailRow[]> => {
     const details: Record<string, DetailRow[]> = {};
@@ -285,6 +334,15 @@ export const load: PageServerLoad = async ({ locals }) => {
       label: row.label,
       allocationShare: row.allocationShare
     })),
+    walletMonthStates: walletMonthStates.reduce<TrackerData['walletMonthStates']>((states, row) => {
+      states[row.monthKey] ??= {};
+      states[row.monthKey][row.walletLabel] = {
+        balance: row.balance ?? undefined,
+        minimumHold: row.minimumHold ?? undefined,
+        updated: Boolean(row.balanceProvided && row.transactionsProvided)
+      };
+      return states;
+    }, {}),
     categories: rowsFor('jun-2026', 'expense'),
     mayCategories: rowsFor('may-2026', 'expense'),
     juneCategories: rowsFor('jun-2026', 'expense'),
@@ -324,7 +382,8 @@ export const load: PageServerLoad = async ({ locals }) => {
     mayDebtSchedule: debtSchedule.map(
       (row): DebtScheduleRow => ({
         provider: row.provider,
-        due: row.due,
+        due: row.dueDate ?? row.due,
+        paid: row.paidDate ?? undefined,
         amount: row.amount,
         status: row.status as DebtScheduleRow['status']
       })
@@ -340,6 +399,7 @@ export const load: PageServerLoad = async ({ locals }) => {
         amount: row.amount,
         fromAccount: row.fromAccount ?? undefined,
         toAccount: row.toAccount ?? undefined,
+        reimbursesEntryId: row.reimbursesEntryId ?? undefined,
         paymentType: row.paymentType as LedgerEntry['paymentType']
       })
     ),
@@ -380,7 +440,7 @@ export const load: PageServerLoad = async ({ locals }) => {
         key: row.monthKey,
         label: row.label,
         period: row.period,
-        updated: row.updated,
+        updated: displayBudgetUpdatedDate(latestDate(row.updatedAt, budgetUpdatedAt), row.updated),
         rollover: {
           label: 'Rollover',
           planned: row.rolloverPlanned,
@@ -503,20 +563,6 @@ export const actions: Actions = {
 
     return { ok: true };
   },
-  refreshInvestments: async ({ locals }) => {
-    const user = locals.session?.user;
-    if (!user) throw error(401, 'Unauthorized');
-    assertFinancialTrackerAccess(user);
-
-    try {
-      await refreshInvestmentQuotes(user.email.toLowerCase(), true);
-    } catch (quoteError) {
-      console.error('Financial tracker manual investment quote refresh failed.', quoteError);
-      throw error(502, 'Investment prices could not be refreshed right now.');
-    }
-
-    return { ok: true };
-  },
   walletStatus: async ({ request, locals }) => {
     const user = locals.session?.user;
     if (!user) throw error(401, 'Unauthorized');
@@ -524,26 +570,106 @@ export const actions: Actions = {
 
     const formData = await request.formData();
     const label = String(formData.get('label') ?? '').trim();
+    const monthKey = String(formData.get('monthKey') ?? '').trim();
     const checked = String(formData.get('checked') ?? '') === 'true';
 
     if (!label) throw error(400, 'Wallet label is required.');
+    if (!monthKey || monthKey === 'all') throw error(400, 'Wallet month is required.');
+    assertWalletMonthEditable(monthKey);
 
-    const updatedRows = await db
-      .update(financialTrackerWallet)
-      .set({
-        balanceProvided: checked,
-        transactionsProvided: checked,
-        updatedAt: new Date()
-      })
+    const walletRows = await db
+      .select({ id: financialTrackerWallet.id })
+      .from(financialTrackerWallet)
       .where(
         and(
           eq(financialTrackerWallet.ownerEmail, user.email.toLowerCase()),
           eq(financialTrackerWallet.label, label)
         )
-      )
-      .returning({ id: financialTrackerWallet.id });
+      );
 
-    if (updatedRows.length === 0) throw error(404, 'Wallet not found.');
+    if (walletRows.length === 0) throw error(404, 'Wallet not found.');
+
+    await db
+      .insert(financialTrackerWalletMonthStatus)
+      .values({
+        ownerEmail: user.email.toLowerCase(),
+        monthKey,
+        walletLabel: label,
+        balanceProvided: checked,
+        transactionsProvided: checked,
+        updatedAt: new Date()
+      })
+      .onConflictDoUpdate({
+        target: [
+          financialTrackerWalletMonthStatus.ownerEmail,
+          financialTrackerWalletMonthStatus.monthKey,
+          financialTrackerWalletMonthStatus.walletLabel
+        ],
+        set: {
+          balanceProvided: checked,
+          transactionsProvided: checked,
+          updatedAt: new Date()
+        }
+      });
+
+    return { ok: true };
+  },
+  walletMonthBalance: async ({ request, locals }) => {
+    const user = locals.session?.user;
+    if (!user) throw error(401, 'Unauthorized');
+    assertFinancialTrackerAccess(user);
+
+    const formData = await request.formData();
+    const label = String(formData.get('label') ?? '').trim();
+    const monthKey = String(formData.get('monthKey') ?? '').trim();
+    const balance = parseOptionalMoney(formData.get('balance'));
+    const minimumHold = parseOptionalMoney(formData.get('minimumHold'));
+    const ownerEmail = user.email.toLowerCase();
+
+    if (!label) throw error(400, 'Wallet label is required.');
+    if (!monthKey || monthKey === 'all') throw error(400, 'Wallet month is required.');
+    assertWalletMonthEditable(monthKey);
+    if (balance === undefined || balance === null) {
+      throw error(400, 'Wallet balance must be a positive whole rupiah amount.');
+    }
+    if (minimumHold === undefined) {
+      throw error(400, 'Wallet minimum hold must be a positive whole rupiah amount.');
+    }
+
+    const walletRows = await db
+      .select({ id: financialTrackerWallet.id })
+      .from(financialTrackerWallet)
+      .where(
+        and(
+          eq(financialTrackerWallet.ownerEmail, ownerEmail),
+          eq(financialTrackerWallet.label, label)
+        )
+      );
+
+    if (walletRows.length === 0) throw error(404, 'Wallet not found.');
+
+    await db
+      .insert(financialTrackerWalletMonthStatus)
+      .values({
+        ownerEmail,
+        monthKey,
+        walletLabel: label,
+        balance,
+        minimumHold: minimumHold ?? 0,
+        updatedAt: new Date()
+      })
+      .onConflictDoUpdate({
+        target: [
+          financialTrackerWalletMonthStatus.ownerEmail,
+          financialTrackerWalletMonthStatus.monthKey,
+          financialTrackerWalletMonthStatus.walletLabel
+        ],
+        set: {
+          balance,
+          minimumHold: minimumHold ?? 0,
+          updatedAt: new Date()
+        }
+      });
 
     return { ok: true };
   },
@@ -559,6 +685,24 @@ export const actions: Actions = {
     if (!entryId) throw error(400, 'Ledger entry id is required.');
     if (!category) throw error(400, 'Category is required.');
 
+    const ownerEmail = user.email.toLowerCase();
+    const entries = await db
+      .select({
+        id: financialTrackerLedgerEntry.id,
+        monthKey: financialTrackerLedgerEntry.monthKey
+      })
+      .from(financialTrackerLedgerEntry)
+      .where(
+        and(
+          eq(financialTrackerLedgerEntry.ownerEmail, ownerEmail),
+          eq(financialTrackerLedgerEntry.entryId, entryId)
+        )
+      );
+
+    const entry = entries[0];
+    if (!entry) throw error(404, 'Ledger entry not found.');
+    assertWalletMonthEditable(entry.monthKey);
+
     const updatedRows = await db
       .update(financialTrackerLedgerEntry)
       .set({
@@ -567,13 +711,83 @@ export const actions: Actions = {
       })
       .where(
         and(
-          eq(financialTrackerLedgerEntry.ownerEmail, user.email.toLowerCase()),
+          eq(financialTrackerLedgerEntry.ownerEmail, ownerEmail),
           eq(financialTrackerLedgerEntry.entryId, entryId)
         )
       )
       .returning({ id: financialTrackerLedgerEntry.id });
 
     if (updatedRows.length === 0) throw error(404, 'Ledger entry not found.');
+
+    return { ok: true };
+  },
+  reimbursementLink: async ({ request, locals }) => {
+    const user = locals.session?.user;
+    if (!user) throw error(401, 'Unauthorized');
+    assertFinancialTrackerAccess(user);
+
+    const formData = await request.formData();
+    const entryId = String(formData.get('entryId') ?? '').trim();
+    const reimbursesEntryId = String(formData.get('reimbursesEntryId') ?? '').trim();
+
+    if (!entryId) throw error(400, 'Ledger entry id is required.');
+
+    const ownerEmail = user.email.toLowerCase();
+    const entries = await db
+      .select()
+      .from(financialTrackerLedgerEntry)
+      .where(
+        and(
+          eq(financialTrackerLedgerEntry.ownerEmail, ownerEmail),
+          eq(financialTrackerLedgerEntry.entryId, entryId)
+        )
+      );
+
+    const entry = entries[0];
+    if (!entry) throw error(404, 'Ledger entry not found.');
+    assertWalletMonthEditable(entry.monthKey);
+
+    if (entry.kind !== 'income' || entry.category !== 'Reimbursements') {
+      throw error(400, 'Only reimbursement income can be linked.');
+    }
+
+    if (reimbursesEntryId) {
+      const targetEntries = await db
+        .select({
+          id: financialTrackerLedgerEntry.id,
+          kind: financialTrackerLedgerEntry.kind,
+          monthKey: financialTrackerLedgerEntry.monthKey
+        })
+        .from(financialTrackerLedgerEntry)
+        .where(
+          and(
+            eq(financialTrackerLedgerEntry.ownerEmail, ownerEmail),
+            eq(financialTrackerLedgerEntry.entryId, reimbursesEntryId)
+          )
+        );
+
+      const targetEntry = targetEntries[0];
+      if (!targetEntry) throw error(404, 'Reimbursed transaction not found.');
+      if (targetEntry.monthKey !== entry.monthKey) {
+        throw error(400, 'Reimbursement must link to the same month.');
+      }
+      if (targetEntry.kind !== 'expense' && targetEntry.kind !== 'bill') {
+        throw error(400, 'Reimbursement must link to an expense or bill.');
+      }
+    }
+
+    await db
+      .update(financialTrackerLedgerEntry)
+      .set({
+        reimbursesEntryId: reimbursesEntryId || null,
+        updatedAt: new Date()
+      })
+      .where(
+        and(
+          eq(financialTrackerLedgerEntry.ownerEmail, ownerEmail),
+          eq(financialTrackerLedgerEntry.entryId, entryId)
+        )
+      );
 
     return { ok: true };
   },

@@ -2,6 +2,7 @@
   import { onMount, untrack } from 'svelte';
   import { MediaQuery } from 'svelte/reactivity';
   import { enhance } from '$app/forms';
+  import * as Dialog from '$lib/components/ui/dialog/index.js';
   import {
     ArrowDown,
     ArrowDownRight,
@@ -18,7 +19,6 @@
     EyeOff,
     GitCompareArrows,
     PiggyBank,
-    RefreshCw,
     ReceiptText,
     Search,
     WalletCards
@@ -50,21 +50,27 @@
   let { data } = $props<{ data: { trackerData: TrackerData | null } }>();
   const initialTrackerData = untrack(() => (data.trackerData ?? emptyTrackerData) as TrackerData);
 
-  const currency = new Intl.NumberFormat('id-ID', {
+  const rupiahCurrency = new Intl.NumberFormat('id-ID', {
     style: 'currency',
     currency: 'IDR',
     maximumFractionDigits: 0
   });
+  const currency = {
+    format: (value: number) => rupiahCurrency.format(value).replace(/\s+/g, '')
+  };
 
   const amount = new Intl.NumberFormat('id-ID', {
     maximumFractionDigits: 0
+  });
+  const shareAmount = new Intl.NumberFormat('id-ID', {
+    maximumFractionDigits: 6
   });
 
   const shortAmount = new Intl.NumberFormat('id-ID', {
     notation: 'compact',
     maximumFractionDigits: 1
   });
-  const compactCurrency = (value: number) => `Rp ${shortAmount.format(value)}`;
+  const compactCurrency = (value: number) => `Rp${shortAmount.format(value)}`;
   const forecastAmount = new Intl.NumberFormat('id-ID', {
     minimumFractionDigits: 0,
     maximumFractionDigits: 1
@@ -79,7 +85,7 @@
     if (Math.abs(value) >= 1_000) return `${forecastAmount.format(value / 1_000)}rb`;
     return amount.format(value);
   };
-  const compactForecastCurrency = (value: number) => `Rp ${compactForecastAmount(value)}`;
+  const compactForecastCurrency = (value: number) => `Rp${compactForecastAmount(value)}`;
   const compactForecastGainAmount = (value: number) => {
     if (Math.abs(value) >= 1_000_000_000)
       return `${forecastGainAmount.format(value / 1_000_000_000)}M`;
@@ -92,7 +98,10 @@
     currency: 'USD',
     maximumFractionDigits: 2
   });
-  const investmentQuoteRefreshMs = 12 * 60 * 60 * 1000;
+  const usdAmount = new Intl.NumberFormat('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
 
   type LedgerSortKey =
     | 'date'
@@ -103,6 +112,32 @@
     | 'paymentType'
     | 'amount';
   type SortDirection = 'asc' | 'desc';
+  type LedgerSortDirection = SortDirection | null;
+  type ReconciliationTermKey =
+    | 'starting-liquid'
+    | 'liquid-debits'
+    | 'liquid-credits'
+    | 'expected-ending'
+    | 'difference';
+  type ReconciliationTerm = {
+    key: ReconciliationTermKey;
+    label: string;
+    value: number;
+    operator: string;
+  };
+  type ReconciliationDetailRow = {
+    label: string;
+    amount: number;
+    meta?: string;
+    actualAmount?: number;
+    ledgerAmount?: number;
+  };
+  type LiquidPosting = {
+    entry: LedgerEntry;
+    walletLabel: string;
+    side: 'debit' | 'credit';
+    amount: number;
+  };
   type ForecastMode = 'optimistic' | 'pessimistic';
   type InvestmentCurrencyMode = 'idr' | 'usd';
   type ReturnProfileKey = 'vti' | 'sp500' | 'gold' | 'conservative';
@@ -117,6 +152,10 @@
   type WalletGroup = {
     label: string;
     wallets: string[];
+  };
+  type InvestmentGroup = {
+    label: string;
+    rows: string[];
   };
   type InvestmentForecastRow = TrackerData['investmentForecast'][number] & {
     monthlyInvestment: number;
@@ -194,6 +233,20 @@
     }
   ];
   const hiddenBudgetPerformanceCategories = new Set(['Reimbursements']);
+  const accountingMonthIndexes: Record<string, number> = {
+    jan: 0,
+    feb: 1,
+    mar: 2,
+    apr: 3,
+    may: 4,
+    jun: 5,
+    jul: 6,
+    aug: 7,
+    sep: 8,
+    oct: 9,
+    nov: 10,
+    dec: 11
+  };
   const walletGroups: WalletGroup[] = [
     {
       label: 'Cash and Banks',
@@ -206,6 +259,16 @@
     {
       label: 'Transit Cards',
       wallets: ['TapCash', 'e-Money Mandiri']
+    }
+  ];
+  const investmentGroups: InvestmentGroup[] = [
+    {
+      label: 'Pluang',
+      rows: ['Pluang RDN', 'USD Cash', 'BBCA', 'DSSA', 'BTC', 'VGT', 'LMT']
+    },
+    {
+      label: 'Stockbit',
+      rows: ['Stockbit RDN']
     }
   ];
   const walletLogos = new Map([
@@ -414,13 +477,22 @@
     return `${profile.label} (${percentNumber(profile.pessimistic)}-${percent(profile.optimistic)})`;
   }
 
-  function shortDateTime(value?: string) {
+  function shortDate(value?: string) {
     if (!value) return 'Not synced';
 
     return new Intl.DateTimeFormat('id-ID', {
-      dateStyle: 'medium',
-      timeStyle: 'short'
+      dateStyle: 'medium'
     }).format(new Date(value));
+  }
+
+  function latestInvestmentGroupDate(rows: InvestmentRow[]) {
+    return rows.reduce<string | undefined>((latest, row) => {
+      if (!row.latestPriceAt) return latest;
+      if (!latest || new Date(row.latestPriceAt).getTime() > new Date(latest).getTime()) {
+        return row.latestPriceAt;
+      }
+      return latest;
+    }, undefined);
   }
 
   function investmentGainAmount(investment: InvestmentRow) {
@@ -459,29 +531,63 @@
     return investment.balance / investment.shares;
   }
 
-  function displayedInvestmentUnitPrice(investment: InvestmentRow) {
-    if (investmentCurrencyMode === 'usd') {
-      if (investment.latestPrice !== undefined) return compactUsd.format(investment.latestPrice);
-
-      const unitPriceIdr = investmentUnitPriceIdr(investment);
-      const unitPriceUsd = unitPriceIdr === undefined ? undefined : idrToUsd(unitPriceIdr);
-      return unitPriceUsd === undefined ? undefined : compactUsd.format(unitPriceUsd);
+  function investmentAvgCostIdr(investment: InvestmentRow) {
+    if (!investment.shares || investment.shares <= 0 || investment.costBasis === undefined) {
+      return undefined;
     }
-
-    const unitPriceIdr = investmentUnitPriceIdr(investment);
-    return unitPriceIdr === undefined ? undefined : currency.format(unitPriceIdr);
+    return investment.costBasis / investment.shares;
   }
 
-  function displayedInvestmentValue(investment: InvestmentRow) {
+  function displayedInvestmentPriceAmount(value: number | undefined) {
+    if (value === undefined) return undefined;
+
+    if (investmentCurrencyMode === 'usd') {
+      const unitPriceUsd = idrToUsd(value);
+      return unitPriceUsd === undefined ? undefined : usdAmount.format(unitPriceUsd);
+    }
+
+    return amount.format(value);
+  }
+
+  function displayedInvestmentAvgCostAmount(investment: InvestmentRow) {
+    return displayedInvestmentPriceAmount(investmentAvgCostIdr(investment));
+  }
+
+  function displayedInvestmentCurrentPriceAmount(investment: InvestmentRow) {
+    if (investmentCurrencyMode === 'usd' && investment.latestPrice !== undefined) {
+      return usdAmount.format(investment.latestPrice);
+    }
+
+    return displayedInvestmentPriceAmount(investmentUnitPriceIdr(investment));
+  }
+
+  function displayedInvestmentDividendAmount(investment: InvestmentRow) {
+    if (!investment.dividendYieldBps) return undefined;
+    const dividendAmount = Math.round((investment.balance * investment.dividendYieldBps) / 10000);
+
+    if (investmentCurrencyMode === 'usd') {
+      const usdValue = idrToUsd(dividendAmount);
+      return usdValue === undefined ? undefined : usdAmount.format(usdValue);
+    }
+
+    return amount.format(dividendAmount);
+  }
+
+  function displayedInvestmentShares(investment: InvestmentRow) {
+    if (!investment.shares || investment.shares <= 0) return undefined;
+    return shareAmount.format(investment.shares);
+  }
+
+  function displayedInvestmentValueAmount(investment: InvestmentRow) {
     if (investmentCurrencyMode === 'usd') {
       const usdValue = investmentUsdValue(investment);
-      return usdValue === undefined ? '-' : compactUsd.format(usdValue);
+      return usdValue === undefined ? undefined : usdAmount.format(usdValue);
     }
 
-    return currency.format(investment.balance);
+    return amount.format(investment.balance);
   }
 
-  function displayedInvestmentGain(investment: InvestmentRow) {
+  function displayedInvestmentGainAmount(investment: InvestmentRow) {
     const gain = investmentGainAmount(investment);
     if (gain === undefined) return undefined;
 
@@ -489,10 +595,10 @@
       const usdCostBasis = investmentUsdCostBasis(investment);
       const usdValue = investmentUsdValue(investment);
       if (usdCostBasis === undefined || usdValue === undefined) return undefined;
-      return compactUsd.format(usdValue - usdCostBasis);
+      return usdAmount.format(usdValue - usdCostBasis);
     }
 
-    return currency.format(gain);
+    return amount.format(gain);
   }
 
   function displayedPortfolioValue() {
@@ -535,6 +641,25 @@
     return currency.format(value);
   }
 
+  function compactRupiah(value: number) {
+    return `Rp${amount.format(value)}`;
+  }
+
+  function previousAccountingMonthKey(monthKey: string) {
+    const [monthName, yearText] = monthKey.toLowerCase().split('-');
+    const monthIndex = accountingMonthIndexes[monthName];
+    const year = Number(yearText);
+    if (monthIndex === undefined || !Number.isInteger(year)) return undefined;
+
+    const previousIndex = monthIndex === 0 ? 11 : monthIndex - 1;
+    const previousYear = monthIndex === 0 ? year - 1 : year;
+    const previousMonth = Object.entries(accountingMonthIndexes).find(
+      ([, index]) => index === previousIndex
+    )?.[0];
+
+    return previousMonth ? `${previousMonth}-${previousYear}` : undefined;
+  }
+
   function displayedMonthLabel(monthKey: string) {
     return new Intl.DateTimeFormat('en-US', {
       month: 'short',
@@ -551,6 +676,31 @@
     }).format(new Date(value));
   }
 
+  function accountingMonthEditDeadline(monthKey: string) {
+    const [monthName, yearText] = monthKey.toLowerCase().split('-');
+    const monthIndex = accountingMonthIndexes[monthName];
+    const year = Number(yearText);
+    if (monthIndex === undefined || !Number.isInteger(year)) return undefined;
+
+    return new Date(year, monthIndex + 1, 7, 23, 59, 59, 999);
+  }
+
+  function walletMonthIsEditable(monthKey: string) {
+    const deadline = accountingMonthEditDeadline(monthKey);
+    return deadline !== undefined && Date.now() <= deadline.getTime();
+  }
+
+  function displayedAccountingDeadline(monthKey: string) {
+    const deadline = accountingMonthEditDeadline(monthKey);
+    return deadline
+      ? new Intl.DateTimeFormat('en-GB', {
+          day: 'numeric',
+          month: 'short',
+          year: 'numeric'
+        }).format(deadline)
+      : '-';
+  }
+
   function displayedMonthlyGrowth(row: TrackerData['monthlyInvestmentHistory'][number]) {
     const sign = row.monthlyGrowth >= 0 ? '+' : '';
     const suffix = row.hasPreviousMonth ? '' : ' vs initial value';
@@ -564,11 +714,6 @@
     }
 
     return compactForecastCurrency(value);
-  }
-
-  function investmentQuoteIsStale(investment: InvestmentRow) {
-    if (!investment.latestPriceAt) return true;
-    return Date.now() - new Date(investment.latestPriceAt).getTime() > investmentQuoteRefreshMs;
   }
 
   function forecastValue(row: InvestmentForecastRow | MonthlyInvestmentForecastRow) {
@@ -730,25 +875,11 @@
   let monthlySummaries: TrackerData['monthlySummaries'] = $derived(trackerData.monthlySummaries);
   let baseWallets: TrackerData['wallets'] = $derived(trackerData.wallets);
   let walletStatusSelections = $state<Record<string, boolean>>({});
+  let walletMonthBalanceSelections = $state<
+    Record<string, { balance?: number; minimumHold?: number }>
+  >({});
   let revealedAccountNumbers = $state<Record<string, string>>({});
   let revealingAccountNumbers = $state<Record<string, boolean>>({});
-  let wallets: TrackerData['wallets'] = $derived(
-    baseWallets.map((wallet) => {
-      const selectedStatus = walletStatusSelections[wallet.label];
-      if (selectedStatus === undefined) return wallet;
-
-      return {
-        ...wallet,
-        balanceProvided: selectedStatus,
-        transactionsProvided: selectedStatus
-      };
-    })
-  );
-  let totalWalletBalance = $derived(wallets.reduce((sum, row) => sum + row.balance, 0));
-  let totalWallets = $derived(
-    wallets.reduce((sum, row) => sum + Math.max(row.balance - (row.minimumHold ?? 0), 0), 0)
-  );
-  let groupedWallets = $derived(groupWalletRows(wallets));
   let totalInvestments = $derived(investments.reduce((sum, row) => sum + row.balance, 0));
   let totalInvestmentCostBasis = $derived(
     investments.reduce((sum, row) => sum + (row.costBasis ?? row.balance), 0)
@@ -771,7 +902,6 @@
       0
     )
   );
-  let investmentQuotesNeedRefresh = $derived(investments.some(investmentQuoteIsStale));
   let monthlyInvestmentHistory = $derived(trackerData.monthlyInvestmentHistory);
   let investmentHistoryChartRows = $derived.by(() => {
     return [...monthlyInvestmentHistory].slice(-6).map((row): InvestmentHistoryChartDatum => {
@@ -997,6 +1127,8 @@
     'Gift',
     'Honorarium',
     'Wallet Transfer',
+    'Investment Transfer',
+    'Investment Income',
     'Debt Payment',
     '?'
   ]);
@@ -1021,13 +1153,56 @@
   }
 
   let selectedMonth = $state('jun-2026');
+  let selectedWalletStatusMonthKey = $derived(selectedMonth);
+  let selectedWalletStatusMonthLabel = $derived(
+    monthlySummaries.find((month) => month.key === selectedWalletStatusMonthKey)?.label ??
+      selectedWalletStatusMonthKey
+  );
+  let selectedWalletMonthEditable = $derived(walletMonthIsEditable(selectedWalletStatusMonthKey));
+  let selectedWalletEditDeadline = $derived(
+    accountingMonthEditDeadline(selectedWalletStatusMonthKey)
+  );
+  let selectedWalletEditDeadlineLabel = $derived(
+    selectedWalletEditDeadline ? displayedAccountingDeadline(selectedWalletStatusMonthKey) : '-'
+  );
+  let wallets: TrackerData['wallets'] = $derived(
+    baseWallets.map((wallet) => {
+      const statusKey = walletStatusKey(selectedWalletStatusMonthKey, wallet.label);
+      const monthState =
+        trackerData.walletMonthStates[selectedWalletStatusMonthKey]?.[wallet.label];
+      const baselineMonthState = trackerData.walletMonthStates['may-2026']?.[wallet.label];
+      const selectedBalance = walletMonthBalanceSelections[statusKey];
+      const selectedStatus = walletStatusSelections[statusKey] ?? monthState?.updated ?? false;
+
+      return {
+        ...wallet,
+        balance:
+          selectedBalance?.balance ?? monthState?.balance ?? baselineMonthState?.balance ?? 0,
+        minimumHold:
+          selectedBalance?.minimumHold ??
+          monthState?.minimumHold ??
+          baselineMonthState?.minimumHold ??
+          wallet.minimumHold,
+        balanceProvided: selectedStatus,
+        transactionsProvided: selectedStatus
+      };
+    })
+  );
+  let totalWalletBalance = $derived(wallets.reduce((sum, row) => sum + row.balance, 0));
+  let totalWallets = $derived(
+    wallets.reduce((sum, row) => sum + Math.max(row.balance - (row.minimumHold ?? 0), 0), 0)
+  );
+  let liquidWalletLabels = $derived(new Set(wallets.map((wallet) => wallet.label)));
+  let groupedWallets = $derived(groupWalletRows(wallets));
   let selectedView = $state<'accounting' | 'investments'>('accounting');
   let forecastMode = $state<ForecastMode>(initialTrackerData.forecastPreferences.forecastMode);
   let investmentCurrencyMode = $state<InvestmentCurrencyMode>(
     initialTrackerData.forecastPreferences.investmentCurrency
   );
-  let investmentRefreshPending = $state(false);
+  let investmentCurrencySymbol = $derived(investmentCurrencyMode === 'usd' ? '$' : 'Rp');
   let reconciliationOpen = $state(false);
+  let reconciliationDetailOpen = $state(false);
+  let selectedReconciliationTerm = $state<ReconciliationTermKey | null>(null);
   let ledgerExpanded = $state(false);
   let forecastAssumptionsOpen = $state(false);
   const isMobile = new MediaQuery('max-width: 519px');
@@ -1058,78 +1233,31 @@
   );
   let preferencesLoaded = $state(false);
   let ledgerSortKey = $state<LedgerSortKey>('date');
-  let ledgerSortDirection = $state<SortDirection>('desc');
+  let ledgerSortDirection = $state<LedgerSortDirection>('desc');
   let ledgerCategorySelections = $state<Record<string, string>>({});
+  let ledgerReimbursementSelections = $state<Record<string, string | undefined>>({});
   let openCategoryEntryId = $state<string | null>(null);
+  let openReimbursementEntryId = $state<string | null>(null);
   let categorySearchByEntry = $state<Record<string, string>>({});
+  let reimbursementSearchByEntry = $state<Record<string, string>>({});
   let budgetShareSelections = $state<Record<string, number>>({});
   let openBudgetDescriptions = $state<Record<string, boolean>>({});
   let monthlyAllocationInput = $state(0);
   let visibleMonthlySummaries: TrackerData['monthlySummaries'] = $derived(
     monthlySummaries.map((month) => ledgerSummaryForMonth(month))
   );
-  let monthTabs = $derived([{ key: 'all', label: 'All' }, ...visibleMonthlySummaries]);
+  let monthTabs = $derived(visibleMonthlySummaries);
   let latestMonthKey = $derived(visibleMonthlySummaries[0]?.key ?? '');
-  let allMonthSummary = $derived({
-    key: 'all',
-    label: 'All',
-    period: 'All tracked months',
-    updated: visibleMonthlySummaries[0]?.updated ?? '',
-    rollover: {
-      label: 'Rollover',
-      planned: 0,
-      actual: 0,
-      variant: 'income' as const
-    },
-    income: {
-      label: 'Income',
-      planned: visibleMonthlySummaries.reduce((sum, month) => sum + month.income.planned, 0),
-      actual: visibleMonthlySummaries.reduce((sum, month) => sum + month.income.actual, 0),
-      variant: 'income' as const
-    },
-    expenses: {
-      label: 'Expenses',
-      planned: visibleMonthlySummaries.reduce((sum, month) => sum + month.expenses.planned, 0),
-      actual: visibleMonthlySummaries.reduce((sum, month) => sum + month.expenses.actual, 0),
-      variant: 'expense' as const
-    },
-    bills: {
-      label: 'Bills',
-      planned: visibleMonthlySummaries.reduce((sum, month) => sum + month.bills.planned, 0),
-      actual: visibleMonthlySummaries.reduce((sum, month) => sum + month.bills.actual, 0),
-      variant: 'expense' as const
-    },
-    savings: {
-      label: 'Savings',
-      planned: visibleMonthlySummaries.reduce((sum, month) => sum + month.savings.planned, 0),
-      actual: visibleMonthlySummaries.reduce((sum, month) => sum + month.savings.actual, 0),
-      variant: 'expense' as const
-    },
-    debt: {
-      label: 'Debt',
-      planned: visibleMonthlySummaries.reduce((sum, month) => sum + month.debt.planned, 0),
-      actual: visibleMonthlySummaries.reduce((sum, month) => sum + month.debt.actual, 0),
-      variant: 'expense' as const
-    },
-    leftover: {
-      label: 'Leftover',
-      planned: visibleMonthlySummaries.reduce((sum, month) => sum + month.leftover.planned, 0),
-      actual: totalWallets,
-      variant: 'neutral' as const
-    }
-  });
   let currentMonth = $derived(
-    selectedMonth === 'all'
-      ? allMonthSummary
-      : (visibleMonthlySummaries.find((month) => month.key === selectedMonth) ??
-          visibleMonthlySummaries[0] ??
-          emptyMonth)
+    visibleMonthlySummaries.find((month) => month.key === selectedMonth) ??
+      visibleMonthlySummaries[0] ??
+      emptyMonth
   );
-  let activeLedgerEntries: LedgerEntry[] = $derived(
-    selectedMonth === 'all' ? ledgerEntries : entriesForMonth(currentMonth.key)
-  );
+  let selectedLedgerDeadlineLabel = $derived(displayedAccountingDeadline(currentMonth.key));
+  let selectedLedgerEditable = $derived(walletMonthIsEditable(currentMonth.key));
+  let activeLedgerEntries: LedgerEntry[] = $derived(entriesForMonth(currentMonth.key));
   let budgetIncomeActual = $derived(
-    selectedMonth === 'all' || isLedgerMonth(currentMonth.key)
+    isLedgerMonth(currentMonth.key)
       ? activeLedgerEntries
           .filter((entry) => entry.kind === 'income' && entry.category !== 'Reimbursements')
           .reduce((sum, entry) => sum + entry.amount, 0)
@@ -1138,7 +1266,8 @@
   let effectiveLedgerEntries: LedgerEntry[] = $derived(
     activeLedgerEntries.map((entry) => ({
       ...entry,
-      category: ledgerCategorySelections[entry.id] ?? entry.category
+      category: ledgerCategorySelections[entry.id] ?? entry.category,
+      reimbursesEntryId: ledgerReimbursementSelections[entry.id] ?? entry.reimbursesEntryId
     }))
   );
   let sortedLedgerEntries = $derived(
@@ -1154,19 +1283,14 @@
       Boolean
     )
   );
-  let allLedgerCategories = $derived(
-    mergeRows([ledgerCategoryRows('may-2026'), ledgerCategoryRows('jun-2026')])
-  );
   let activeCategories = $derived(
-    selectedMonth === 'all'
-      ? categoryRowsFromEntries(effectiveLedgerEntries, allLedgerCategories)
-      : isLedgerMonth(currentMonth.key)
-        ? categoryRowsFromEntries(effectiveLedgerEntries, ledgerCategoryRows(currentMonth.key))
-        : currentMonth.key === 'jun-2026'
-          ? juneCategories
-          : currentMonth.key === 'may-2026'
-            ? mayCategories
-            : categories
+    isLedgerMonth(currentMonth.key)
+      ? categoryRowsFromEntries(effectiveLedgerEntries, ledgerCategoryRows(currentMonth.key))
+      : currentMonth.key === 'jun-2026'
+        ? juneCategories
+        : currentMonth.key === 'may-2026'
+          ? mayCategories
+          : categories
   );
   let activeBudgetRows: BudgetPerformanceRow[] = $derived(
     activeCategories
@@ -1187,72 +1311,69 @@
       })
   );
   let groupedBudgetRows = $derived(groupBudgetPerformanceRows(activeBudgetRows));
-  let activeExpenseRows: { actualAmount: number; paymentType: LedgerEntry['paymentType'] }[] =
-    $derived(
-      activeLedgerEntries
-        .filter((row) => row.kind === 'expense' || row.kind === 'bill')
-        .map((entry) => ({
-          actualAmount: entry.amount,
-          paymentType: entry.paymentType
-        }))
-    );
-  let cashPaidNow = $derived(
-    activeExpenseRows.reduce((sum, row) => {
-      const isPayLater = row.paymentType === 'paylater';
-      return sum + (isPayLater ? 0 : row.actualAmount);
-    }, 0)
+  let groupedInvestmentRows = $derived(groupInvestmentRows(investments));
+  let reconciliationLiquidPostings = $derived(activeLedgerEntries.flatMap(liquidPostingsForEntry));
+  let reconciliationLiquidDebits = $derived(
+    reconciliationLiquidPostings
+      .filter((posting) => posting.side === 'debit')
+      .reduce((sum, posting) => sum + posting.amount, 0)
   );
-  let passThroughReimbursementIncome = $derived(
-    activeLedgerEntries
-      .filter(
-        (entry) =>
-          entry.kind === 'income' &&
-          entry.category === 'Reimbursements' &&
-          entry.description.toLowerCase().includes('selempang')
-      )
-      .reduce((sum, entry) => sum + entry.amount, 0)
+  let reconciliationLiquidCredits = $derived(
+    reconciliationLiquidPostings
+      .filter((posting) => posting.side === 'credit')
+      .reduce((sum, posting) => sum + posting.amount, 0)
   );
-  let reconciliationCashIn = $derived(
-    Math.max(currentMonth.income.actual - passThroughReimbursementIncome, 0)
+  let startingLiquidBalance = $derived(
+    previousMonthLiquidBalance(currentMonth.key) ?? currentMonth.rollover.actual
   );
-  let startingLiquidBalance = $derived(currentMonth.rollover.actual);
   let recordedEndingLiquidBalance = $derived(
-    selectedMonth === 'all' || currentMonth.key === latestMonthKey
-      ? totalWallets
-      : currentMonth.leftover.actual
+    monthLiquidBalance(currentMonth.key) ?? currentMonth.leftover.actual
   );
   let expectedEndingBalance = $derived(
-    startingLiquidBalance +
-      reconciliationCashIn -
-      cashPaidNow -
-      currentMonth.debt.actual -
-      currentMonth.savings.actual
+    startingLiquidBalance + reconciliationLiquidDebits - reconciliationLiquidCredits
   );
-  let reconciliationFormula = $derived([
-    { label: 'Starting liquid', value: startingLiquidBalance, operator: '' },
-    { label: 'Cash in', value: reconciliationCashIn, operator: '+' },
-    { label: 'Cash expenses', value: cashPaidNow, operator: '-' },
-    { label: 'Debt paid', value: currentMonth.debt.actual, operator: '-' },
-    { label: 'Savings held', value: currentMonth.savings.actual, operator: '-' }
+  let reconciliationFormula = $derived<ReconciliationTerm[]>([
+    {
+      key: 'starting-liquid',
+      label: 'Starting liquid',
+      value: startingLiquidBalance,
+      operator: ''
+    },
+    {
+      key: 'liquid-debits',
+      label: 'Liquid debits',
+      value: reconciliationLiquidDebits,
+      operator: '+'
+    },
+    {
+      key: 'liquid-credits',
+      label: 'Liquid credits',
+      value: reconciliationLiquidCredits,
+      operator: '-'
+    }
   ]);
   let reconciliationDifference = $derived(recordedEndingLiquidBalance - expectedEndingBalance);
-
-  let actualOutflow = $derived(
-    currentMonth.expenses.actual +
-      currentMonth.bills.actual +
-      currentMonth.savings.actual +
-      currentMonth.debt.actual
+  let selectedReconciliationDetail = $derived(
+    selectedReconciliationTerm
+      ? {
+          key: selectedReconciliationTerm,
+          title: reconciliationDetailTitle(selectedReconciliationTerm),
+          value: reconciliationDetailValue(selectedReconciliationTerm),
+          rows: reconciliationDetailRows(selectedReconciliationTerm)
+        }
+      : undefined
   );
+
+  let actualOutflow = $derived(activeBudgetRows.reduce((sum, row) => sum + row.actual, 0));
 
   onMount(() => {
     const savedMonth = localStorage.getItem(selectedMonthStorageKey);
     const savedView = localStorage.getItem(selectedViewStorageKey);
 
-    if (
-      savedMonth &&
-      (savedMonth === 'all' || visibleMonthlySummaries.some((month) => month.key === savedMonth))
-    ) {
+    if (savedMonth && visibleMonthlySummaries.some((month) => month.key === savedMonth)) {
       selectedMonth = savedMonth;
+    } else if (selectedMonth === 'all') {
+      selectedMonth = latestMonthKey || visibleMonthlySummaries[0]?.key || 'jun-2026';
     }
 
     if (savedView === 'accounting' || savedView === 'investments') {
@@ -1288,6 +1409,20 @@
     return (actual / planned) * 100;
   }
 
+  function usedDisplay(actual: number, planned: number) {
+    if (planned <= 0) return actual > 0 ? 'Unplanned' : '-';
+    return `${usedPercentage(actual, planned).toFixed(0)}%`;
+  }
+
+  function usedTone(actual: number, planned: number) {
+    if (planned <= 0) return actual > 0 ? 'unplanned' : 'empty';
+
+    const used = usedPercentage(actual, planned);
+    if (used > 100) return 'over';
+    if (used >= 80) return 'watch';
+    return 'ok';
+  }
+
   function budgetCategoryDescription(label: string) {
     return budgetCategoryDescriptions.get(label) ?? 'Tracked monthly allocation category.';
   }
@@ -1307,6 +1442,30 @@
         const groupRows = group.categories
           .map((category) => rowByLabel.get(category))
           .filter((row): row is BudgetPerformanceRow => Boolean(row));
+
+        for (const row of groupRows) usedLabels.add(row.label);
+
+        return {
+          label: group.label,
+          rows: groupRows
+        };
+      })
+      .filter((group) => group.rows.length > 0);
+
+    const otherRows = rows.filter((row) => !usedLabels.has(row.label));
+    if (otherRows.length > 0) groups.push({ label: 'Other', rows: otherRows });
+
+    return groups;
+  }
+
+  function groupInvestmentRows(rows: TrackerData['investments']) {
+    const rowByLabel = new Map(rows.map((row) => [row.label, row]));
+    const usedLabels = new Set<string>();
+    const groups = investmentGroups
+      .map((group) => {
+        const groupRows = group.rows
+          .map((label) => rowByLabel.get(label))
+          .filter((row): row is TrackerData['investments'][number] => Boolean(row));
 
         for (const row of groupRows) usedLabels.add(row.label);
 
@@ -1360,12 +1519,102 @@
     return entry.fromAccount ?? '-';
   }
 
+  function accountIsLiquid(account?: string) {
+    return Boolean(account && liquidWalletLabels.has(account));
+  }
+
+  function liquidLedgerDelta(entry: LedgerEntry, walletLabel: string) {
+    let delta = 0;
+    if (entry.toAccount === walletLabel && (entry.kind === 'income' || entry.kind === 'transfer')) {
+      delta += entry.amount;
+    }
+    if (
+      entry.fromAccount === walletLabel &&
+      (entry.kind === 'expense' ||
+        entry.kind === 'bill' ||
+        entry.kind === 'debt-payment' ||
+        entry.kind === 'transfer')
+    ) {
+      delta -= entry.amount;
+    }
+    return delta;
+  }
+
+  function liquidPostingsForEntry(entry: LedgerEntry): LiquidPosting[] {
+    const postings: LiquidPosting[] = [];
+
+    if (
+      entry.toAccount &&
+      accountIsLiquid(entry.toAccount) &&
+      (entry.kind === 'income' || entry.kind === 'transfer')
+    ) {
+      postings.push({
+        entry,
+        walletLabel: entry.toAccount,
+        side: 'debit',
+        amount: entry.amount
+      });
+    }
+
+    if (
+      entry.fromAccount &&
+      accountIsLiquid(entry.fromAccount) &&
+      (entry.kind === 'expense' ||
+        entry.kind === 'bill' ||
+        entry.kind === 'debt-payment' ||
+        entry.kind === 'transfer')
+    ) {
+      postings.push({
+        entry,
+        walletLabel: entry.fromAccount,
+        side: 'credit',
+        amount: entry.amount
+      });
+    }
+
+    return postings;
+  }
+
   function walletLiquidBalance(balance: number, minimumHold = 0) {
     return Math.max(balance - minimumHold, 0);
   }
 
+  function previousMonthLiquidBalance(monthKey: string) {
+    const previousMonthKey = previousAccountingMonthKey(monthKey);
+    if (!previousMonthKey) return undefined;
+
+    return monthLiquidBalance(previousMonthKey);
+  }
+
+  function monthLiquidBalance(monthKey: string) {
+    const monthStates = trackerData.walletMonthStates[monthKey];
+    if (!monthStates) return undefined;
+
+    let hasBalance = false;
+    const balance = baseWallets.reduce((sum, wallet) => {
+      const state = monthStates[wallet.label];
+      if (state?.balance === undefined) return sum;
+
+      hasBalance = true;
+      return sum + walletLiquidBalance(state.balance, state.minimumHold ?? wallet.minimumHold ?? 0);
+    }, 0);
+
+    return hasBalance ? balance : undefined;
+  }
+
   function walletStatusComplete(wallet: TrackerData['wallets'][number]) {
     return Boolean(wallet.balanceProvided && wallet.transactionsProvided);
+  }
+
+  function walletStatusKey(monthKey: string, walletLabel: string) {
+    return `${monthKey}::${walletLabel}`;
+  }
+
+  function parseWalletMoneyInput(value: string) {
+    const digits = value.replace(/\D/g, '');
+    if (!digits) return 0;
+    const parsed = Number(digits);
+    return Number.isSafeInteger(parsed) && parsed >= 0 ? parsed : undefined;
   }
 
   function walletAccountDisplay(wallet: TrackerData['wallets'][number]) {
@@ -1413,17 +1662,50 @@
   }
 
   function submitWalletStatus(event: Event) {
+    if (!selectedWalletMonthEditable) return;
+
     const checkbox = event.currentTarget as HTMLInputElement;
     const form = checkbox.form;
     const checkedInput = form?.querySelector<HTMLInputElement>('input[name="checked"]');
     const labelInput = form?.querySelector<HTMLInputElement>('input[name="label"]');
-    if (!form || !checkedInput || !labelInput) return;
+    const monthInput = form?.querySelector<HTMLInputElement>('input[name="monthKey"]');
+    if (!form || !checkedInput || !labelInput || !monthInput) return;
 
     checkedInput.value = checkbox.checked ? 'true' : 'false';
+    monthInput.value = selectedWalletStatusMonthKey;
     walletStatusSelections = {
       ...walletStatusSelections,
-      [labelInput.value]: checkbox.checked
+      [walletStatusKey(selectedWalletStatusMonthKey, labelInput.value)]: checkbox.checked
     };
+    form.requestSubmit();
+  }
+
+  function submitWalletMonthBalance(event: Event) {
+    if (!selectedWalletMonthEditable) return;
+
+    const input = event.currentTarget as HTMLInputElement;
+    const form = input.form;
+    const labelInput = form?.querySelector<HTMLInputElement>('input[name="label"]');
+    const monthInput = form?.querySelector<HTMLInputElement>('input[name="monthKey"]');
+    const balanceInput = form?.querySelector<HTMLInputElement>('input[name="balance"]');
+    const minimumHoldInput = form?.querySelector<HTMLInputElement>('input[name="minimumHold"]');
+    if (!form || !labelInput || !monthInput || !balanceInput || !minimumHoldInput) return;
+
+    monthInput.value = selectedWalletStatusMonthKey;
+    const parsedBalance = parseWalletMoneyInput(balanceInput.value);
+    const parsedMinimumHold = parseWalletMoneyInput(minimumHoldInput.value);
+    if (parsedBalance === undefined || parsedMinimumHold === undefined) return;
+
+    const statusKey = walletStatusKey(selectedWalletStatusMonthKey, labelInput.value);
+    walletMonthBalanceSelections = {
+      ...walletMonthBalanceSelections,
+      [statusKey]: {
+        balance: parsedBalance,
+        minimumHold: parsedMinimumHold
+      }
+    };
+    balanceInput.value = amount.format(parsedBalance);
+    minimumHoldInput.value = amount.format(parsedMinimumHold);
     form.requestSubmit();
   }
 
@@ -1472,11 +1754,30 @@
     void saveForecastPreferences({ retirementAge: nextAge });
   }
 
+  function ledgerEntryEditable(entryId: string) {
+    const entry = ledgerEntries.find((row) => row.id === entryId);
+    return entry ? walletMonthIsEditable(entry.monthKey) : false;
+  }
+
   function toggleCategoryMenu(entryId: string) {
+    if (!ledgerEntryEditable(entryId)) return;
+
     openCategoryEntryId = openCategoryEntryId === entryId ? null : entryId;
     if (openCategoryEntryId === entryId) {
       categorySearchByEntry = {
         ...categorySearchByEntry,
+        [entryId]: ''
+      };
+    }
+  }
+
+  function toggleReimbursementMenu(entryId: string) {
+    if (!ledgerEntryEditable(entryId)) return;
+
+    openReimbursementEntryId = openReimbursementEntryId === entryId ? null : entryId;
+    if (openReimbursementEntryId === entryId) {
+      reimbursementSearchByEntry = {
+        ...reimbursementSearchByEntry,
         [entryId]: ''
       };
     }
@@ -1487,6 +1788,14 @@
     window.setTimeout(() => {
       if (form.contains(document.activeElement)) return;
       if (openCategoryEntryId === entryId) openCategoryEntryId = null;
+    });
+  }
+
+  function closeReimbursementMenu(event: FocusEvent, entryId: string) {
+    const form = event.currentTarget as HTMLFormElement;
+    window.setTimeout(() => {
+      if (form.contains(document.activeElement)) return;
+      if (openReimbursementEntryId === entryId) openReimbursementEntryId = null;
     });
   }
 
@@ -1509,6 +1818,8 @@
   }
 
   function chooseLedgerCategory(form: HTMLFormElement, entryId: string, category: string) {
+    if (!ledgerEntryEditable(entryId)) return;
+
     const categoryInput = form.querySelector<HTMLInputElement>('input[name="category"]');
     if (!categoryInput) return;
 
@@ -1540,6 +1851,14 @@
     return ledgerCategoryOptions.filter((category) => category.toLowerCase().includes(query));
   }
 
+  function updateReimbursementSearch(event: Event, entryId: string) {
+    const input = event.currentTarget as HTMLInputElement;
+    reimbursementSearchByEntry = {
+      ...reimbursementSearchByEntry,
+      [entryId]: input.value
+    };
+  }
+
   function submitBudgetShare(event: Event, label: string) {
     const input = event.currentTarget as HTMLInputElement;
     const nextShare = Math.min(Math.max(Math.round(input.valueAsNumber || 0), 0), 100);
@@ -1563,12 +1882,46 @@
     input.form?.requestSubmit();
   }
 
+  function chooseReimbursementTarget(form: HTMLFormElement, entryId: string, targetId: string) {
+    if (!ledgerEntryEditable(entryId)) return;
+
+    const targetInput = form.querySelector<HTMLInputElement>('input[name="reimbursesEntryId"]');
+    if (!targetInput) return;
+
+    targetInput.value = targetId;
+    ledgerReimbursementSelections = {
+      ...ledgerReimbursementSelections,
+      [entryId]: targetId || undefined
+    };
+    reimbursementSearchByEntry = {
+      ...reimbursementSearchByEntry,
+      [entryId]: ''
+    };
+    openReimbursementEntryId = null;
+    form.requestSubmit();
+  }
+
   function categoryRowsFromEntries(entries: LedgerEntry[], baseRows: CategoryRow[]) {
     const totals = new Map<string, number>();
+    const entryById = new Map(entries.map((entry) => [entry.id, entry]));
 
     for (const entry of entries) {
       if (entry.kind !== 'expense' && entry.kind !== 'bill') continue;
       totals.set(entry.category, (totals.get(entry.category) ?? 0) + entry.amount);
+    }
+
+    for (const entry of entries) {
+      if (entry.kind !== 'income' || entry.category !== 'Reimbursements') continue;
+
+      const targetEntry = entry.reimbursesEntryId
+        ? entryById.get(entry.reimbursesEntryId)
+        : undefined;
+      if (!targetEntry || (targetEntry.kind !== 'expense' && targetEntry.kind !== 'bill')) continue;
+
+      totals.set(
+        targetEntry.category,
+        Math.max((totals.get(targetEntry.category) ?? 0) - entry.amount, 0)
+      );
     }
 
     const rows = new Map<string, CategoryRow>();
@@ -1594,16 +1947,34 @@
   }
 
   function setLedgerSort(key: LedgerSortKey) {
+    const defaultDirection = key === 'date' || key === 'amount' ? 'desc' : 'asc';
+
     if (ledgerSortKey === key) {
-      ledgerSortDirection = ledgerSortDirection === 'asc' ? 'desc' : 'asc';
+      if (ledgerSortDirection === defaultDirection) {
+        ledgerSortDirection = defaultDirection === 'asc' ? 'desc' : 'asc';
+        return;
+      }
+
+      if (ledgerSortDirection !== null) {
+        ledgerSortDirection = null;
+        return;
+      }
+
+      ledgerSortDirection = defaultDirection;
       return;
     }
 
     ledgerSortKey = key;
-    ledgerSortDirection = key === 'date' || key === 'amount' ? 'desc' : 'asc';
+    ledgerSortDirection = defaultDirection;
   }
 
-  function sortLedgerEntries(entries: LedgerEntry[], key: LedgerSortKey, direction: SortDirection) {
+  function sortLedgerEntries(
+    entries: LedgerEntry[],
+    key: LedgerSortKey,
+    direction: LedgerSortDirection
+  ) {
+    if (direction === null) return entries;
+
     const modifier = direction === 'asc' ? 1 : -1;
 
     return [...entries].sort((first, second) => {
@@ -1621,6 +1992,131 @@
         }) * modifier
       );
     });
+  }
+
+  function reimbursementTargetOptions(entry: LedgerEntry) {
+    return activeLedgerEntries
+      .filter(
+        (candidate) =>
+          candidate.monthKey === entry.monthKey &&
+          candidate.id !== entry.id &&
+          (candidate.kind === 'expense' || candidate.kind === 'bill')
+      )
+      .sort((first, second) => Date.parse(first.date) - Date.parse(second.date));
+  }
+
+  function reimbursementTargetLabel(entry: LedgerEntry, targetId = entry.reimbursesEntryId) {
+    if (!targetId) return 'None';
+
+    const target = activeLedgerEntries.find((candidate) => candidate.id === targetId);
+    if (!target) return 'Linked';
+
+    return `${target.date} · Rp${amount.format(target.amount)} · ${target.description}`;
+  }
+
+  function filteredReimbursementTargetOptions(entry: LedgerEntry) {
+    const query = (reimbursementSearchByEntry[entry.id] ?? '').trim().toLowerCase();
+    const options = reimbursementTargetOptions(entry);
+    if (!query) return options;
+
+    return options.filter((option) =>
+      `${option.date} ${option.amount} ${option.description} ${option.category}`
+        .toLowerCase()
+        .includes(query)
+    );
+  }
+
+  function openReconciliationDetail(key: ReconciliationTermKey) {
+    selectedReconciliationTerm = key;
+    reconciliationDetailOpen = true;
+  }
+
+  function reconciliationDetailTitle(key: ReconciliationTermKey) {
+    if (key === 'expected-ending') return 'Expected ending';
+    if (key === 'difference') return 'Difference';
+    return reconciliationFormula.find((term) => term.key === key)?.label ?? 'Reconciliation';
+  }
+
+  function reconciliationDetailValue(key: ReconciliationTermKey) {
+    if (key === 'expected-ending') return expectedEndingBalance;
+    if (key === 'difference') return reconciliationDifference;
+    return reconciliationFormula.find((term) => term.key === key)?.value ?? 0;
+  }
+
+  function liquidPostingDetailRows(side: LiquidPosting['side']): ReconciliationDetailRow[] {
+    return reconciliationLiquidPostings
+      .filter((posting) => posting.side === side)
+      .map((posting) => ({
+        label: posting.entry.description,
+        amount: posting.amount,
+        meta: [
+          posting.entry.date,
+          posting.walletLabel,
+          posting.side === 'debit' ? 'Debit to liquid wallet' : 'Credit from liquid wallet',
+          posting.entry.category
+        ]
+          .filter(Boolean)
+          .join(' · ')
+      }));
+  }
+
+  function walletVarianceRows(): ReconciliationDetailRow[] {
+    const previousMonthKey = previousAccountingMonthKey(currentMonth.key);
+    if (!previousMonthKey) return [];
+
+    return wallets
+      .map((wallet) => {
+        const previousState = trackerData.walletMonthStates[previousMonthKey]?.[wallet.label];
+        const startingBalance = walletLiquidBalance(
+          previousState?.balance ?? 0,
+          previousState?.minimumHold ?? wallet.minimumHold ?? 0
+        );
+        const endingBalance = walletLiquidBalance(wallet.balance, wallet.minimumHold ?? 0);
+        const ledgerDelta = activeLedgerEntries.reduce(
+          (sum, entry) => sum + liquidLedgerDelta(entry, wallet.label),
+          0
+        );
+        const actualDelta = endingBalance - startingBalance;
+        const variance = actualDelta - ledgerDelta;
+
+        return {
+          label: wallet.label,
+          amount: variance,
+          actualAmount: actualDelta,
+          ledgerAmount: ledgerDelta
+        };
+      })
+      .filter((row) => row.amount !== 0)
+      .sort((first, second) => Math.abs(second.amount) - Math.abs(first.amount));
+  }
+
+  function reconciliationDetailRows(key: ReconciliationTermKey): ReconciliationDetailRow[] {
+    if (key === 'starting-liquid') {
+      const previousMonthKey = previousAccountingMonthKey(currentMonth.key);
+      const derivedFromPreviousMonth = Boolean(
+        previousMonthKey && monthLiquidBalance(previousMonthKey) !== undefined
+      );
+
+      return [
+        {
+          label: derivedFromPreviousMonth ? 'Previous month ending liquid' : 'Opening balance',
+          amount: startingLiquidBalance,
+          meta: derivedFromPreviousMonth
+            ? `Derived from ${displayedMonthLabel(previousMonthKey ?? '')} wallet balances`
+            : `Monthly summary rollover for ${currentMonth.label}`
+        }
+      ];
+    }
+
+    if (key === 'liquid-debits') return liquidPostingDetailRows('debit');
+    if (key === 'liquid-credits') return liquidPostingDetailRows('credit');
+    if (key === 'difference') return walletVarianceRows();
+
+    return reconciliationFormula.map((term) => ({
+      label: term.label,
+      amount: term.operator === '-' ? -term.value : term.value,
+      meta: term.operator || '+'
+    }));
   }
 
   function mergeRows(rowSets: CategoryRow[][]) {
@@ -1868,23 +2364,16 @@
                   {@render MoneyCell(row.planned, '', false, 'Plan')}
                   {@render MoneyCell(row.actual, '', false, 'Actual')}
                   <td data-label="Used">
-                    <div class="flex min-w-24 items-center gap-1.5">
-                      <div class="h-1.5 flex-1 rounded-full bg-cork-200">
-                        <div
-                          class="h-full rounded-full"
-                          class:bg-emerald-500={row.planned > 0 &&
-                            progress(row.actual, row.planned) < 80}
-                          class:bg-amber-500={row.planned > 0 &&
-                            progress(row.actual, row.planned) >= 80 &&
-                            progress(row.actual, row.planned) <= 100}
-                          class:bg-red-500={(row.planned <= 0 && row.actual > 0) ||
-                            progress(row.actual, row.planned) > 100}
-                          style:width={`${progress(row.actual, row.planned)}%`}
-                        ></div>
-                      </div>
-                      <span class="w-11 text-right"
-                        >{usedPercentage(row.actual, row.planned).toFixed(0)}%</span
-                      >
+                    <div class={`used-meter ${usedTone(row.actual, row.planned)}`}>
+                      {#if row.planned > 0}
+                        <div class="used-track" aria-hidden="true">
+                          <div
+                            class="used-fill"
+                            style:width={`${progress(row.actual, row.planned)}%`}
+                          ></div>
+                        </div>
+                      {/if}
+                      <span class="used-label">{usedDisplay(row.actual, row.planned)}</span>
                     </div>
                   </td>
                 </tr>
@@ -1926,7 +2415,18 @@
 
     <section class="grid gap-3 xl:grid-cols-2">
       <div class="panel">
-        {@render PanelTitle(WalletCards, 'Liquid Wallets')}
+        <div
+          class="liquid-wallet-header mb-3 flex items-center justify-between border-b border-cork-200 pb-2"
+        >
+          <h2 class="flex items-center gap-2 text-sm font-semibold text-cork-900">
+            <WalletCards class="size-4 text-cork-500" />
+            Liquid Wallets
+          </h2>
+          <div class="wallet-edit-deadline" class:locked={!selectedWalletMonthEditable}>
+            <span>Deadline</span>
+            <strong>{selectedWalletEditDeadlineLabel}</strong>
+          </div>
+        </div>
         <div class="overflow-x-auto">
           <table class="tracker-table dense wallet-table">
             <thead>
@@ -1988,13 +2488,64 @@
                         {/if}
                       </div>
                     </td>
-                    <td class="currency-col" data-label="Balance"></td>
-                    <td data-label="Balance">{currency.format(wallet.balance)}</td>
-                    <td class="currency-col" data-label="Min hold"></td>
-                    <td data-label="Min hold">{currency.format(wallet.minimumHold ?? 0)}</td>
-                    <td class="currency-col" data-label="Liquid"></td>
+                    <td class="currency-col" data-label="Balance">Rp</td>
+                    <td data-label="Balance">
+                      <form
+                        method="POST"
+                        action="?/walletMonthBalance"
+                        class="wallet-money-form"
+                        use:enhance={keepFormState}
+                      >
+                        <input type="hidden" name="label" value={wallet.label} />
+                        <input type="hidden" name="monthKey" value={selectedWalletStatusMonthKey} />
+                        <input type="hidden" name="minimumHold" value={wallet.minimumHold ?? 0} />
+                        <input
+                          class="wallet-money-input"
+                          name="balance"
+                          type="text"
+                          inputmode="numeric"
+                          value={amount.format(wallet.balance)}
+                          aria-label={`${wallet.label} ${selectedWalletStatusMonthLabel} ending balance`}
+                          disabled={!selectedWalletMonthEditable}
+                          title={selectedWalletMonthEditable
+                            ? undefined
+                            : 'Locked one week after month end'}
+                          onfocus={(event) => (event.currentTarget.value = String(wallet.balance))}
+                          onchange={submitWalletMonthBalance}
+                        />
+                      </form>
+                    </td>
+                    <td class="currency-col" data-label="Min hold">Rp</td>
+                    <td data-label="Min hold">
+                      <form
+                        method="POST"
+                        action="?/walletMonthBalance"
+                        class="wallet-money-form"
+                        use:enhance={keepFormState}
+                      >
+                        <input type="hidden" name="label" value={wallet.label} />
+                        <input type="hidden" name="monthKey" value={selectedWalletStatusMonthKey} />
+                        <input type="hidden" name="balance" value={wallet.balance} />
+                        <input
+                          class="wallet-money-input"
+                          name="minimumHold"
+                          type="text"
+                          inputmode="numeric"
+                          value={amount.format(wallet.minimumHold ?? 0)}
+                          aria-label={`${wallet.label} ${selectedWalletStatusMonthLabel} minimum hold`}
+                          disabled={!selectedWalletMonthEditable}
+                          title={selectedWalletMonthEditable
+                            ? undefined
+                            : 'Locked one week after month end'}
+                          onfocus={(event) =>
+                            (event.currentTarget.value = String(wallet.minimumHold ?? 0))}
+                          onchange={submitWalletMonthBalance}
+                        />
+                      </form>
+                    </td>
+                    <td class="currency-col" data-label="Liquid">Rp</td>
                     <td data-label="Liquid">
-                      {currency.format(walletLiquidBalance(wallet.balance, wallet.minimumHold))}
+                      {amount.format(walletLiquidBalance(wallet.balance, wallet.minimumHold))}
                     </td>
                     <td class="check-cell mobile-hide" data-label="Updated">
                       <form
@@ -2004,17 +2555,24 @@
                         use:enhance={keepFormState}
                       >
                         <input type="hidden" name="label" value={wallet.label} />
+                        <input type="hidden" name="monthKey" value={selectedWalletStatusMonthKey} />
                         <input
                           type="hidden"
                           name="checked"
                           value={walletStatusComplete(wallet) ? 'true' : 'false'}
                         />
-                        <input
-                          type="checkbox"
-                          checked={walletStatusComplete(wallet)}
-                          onchange={submitWalletStatus}
-                          aria-label={`${wallet.label} balance and monthly mutation entered`}
-                        />
+                        <label class="wallet-status-toggle">
+                          <input
+                            type="checkbox"
+                            checked={walletStatusComplete(wallet)}
+                            disabled={!selectedWalletMonthEditable}
+                            onchange={submitWalletStatus}
+                            aria-label={`${wallet.label} balance and monthly mutation entered`}
+                          />
+                          <span class="wallet-status-box" aria-hidden="true">
+                            <Check class="size-3" />
+                          </span>
+                        </label>
                       </form>
                     </td>
                   </tr>
@@ -2023,12 +2581,12 @@
               <tr class="total-row mobile-hide">
                 <td>Total</td>
                 <td></td>
-                <td class="currency-col" data-label="Balance"></td>
-                <td data-label="Balance">{currency.format(totalWalletBalance)}</td>
-                <td class="currency-col" data-label="Min hold"></td>
-                <td data-label="Min hold">{currency.format(totalWalletBalance - totalWallets)}</td>
-                <td class="currency-col" data-label="Liquid"></td>
-                <td data-label="Liquid">{currency.format(totalWallets)}</td>
+                <td class="currency-col" data-label="Balance">Rp</td>
+                <td data-label="Balance">{amount.format(totalWalletBalance)}</td>
+                <td class="currency-col" data-label="Min hold">Rp</td>
+                <td data-label="Min hold">{amount.format(totalWalletBalance - totalWallets)}</td>
+                <td class="currency-col" data-label="Liquid">Rp</td>
+                <td data-label="Liquid">{amount.format(totalWallets)}</td>
                 <td></td>
               </tr>
             </tbody>
@@ -2037,9 +2595,20 @@
       </div>
     </section>
 
-    {#if selectedMonth === 'all' || isLedgerMonth(currentMonth.key)}
+    {#if isLedgerMonth(currentMonth.key)}
       <section class="panel">
-        {@render PanelTitle(ReceiptText, 'Ledger')}
+        <div
+          class="ledger-header mb-3 flex items-center justify-between border-b border-cork-200 pb-2"
+        >
+          <h2 class="flex items-center gap-2 text-sm font-semibold text-cork-900">
+            <ReceiptText class="size-4 text-cork-500" />
+            Ledger
+          </h2>
+          <div class="wallet-edit-deadline" class:locked={!selectedLedgerEditable}>
+            <span>Deadline</span>
+            <strong>{selectedLedgerDeadlineLabel}</strong>
+          </div>
+        </div>
         <div class="overflow-x-auto">
           <table class="tracker-table dense ledger-table">
             <thead>
@@ -2060,80 +2629,200 @@
                   <td data-label="Date">{entry.date}</td>
                   {@render MoneyCell(entry.amount, '', false, 'Amount')}
                   <td data-label="Category">
-                    <form
-                      method="POST"
-                      action="?/ledgerCategory"
-                      use:enhance
-                      class="category-form"
-                      class:open={openCategoryEntryId === entry.id}
-                      onfocusout={(event) => closeCategoryMenu(event, entry.id)}
-                    >
-                      <input type="hidden" name="entryId" value={entry.id} />
-                      <input type="hidden" name="category" value={entry.category} />
-                      <button
-                        type="button"
-                        class="category-trigger"
-                        aria-haspopup="listbox"
-                        aria-expanded={openCategoryEntryId === entry.id}
-                        aria-label={`Category for ${entry.description}`}
-                        onclick={() => toggleCategoryMenu(entry.id)}
+                    <div class="ledger-category-cell">
+                      <form
+                        method="POST"
+                        action="?/ledgerCategory"
+                        use:enhance
+                        class="category-form"
+                        class:open={openCategoryEntryId === entry.id}
+                        onfocusout={(event) => closeCategoryMenu(event, entry.id)}
                       >
-                        <span>{entry.category}</span>
-                      </button>
-                      {#if openCategoryEntryId === entry.id}
-                        <div class="category-menu" role="listbox" tabindex="-1">
-                          <label class="category-search">
-                            <Search
-                              class="category-search-icon"
-                              size={14}
-                              strokeWidth={2}
-                              aria-hidden="true"
-                            />
-                            <input
-                              type="text"
-                              value={categorySearchByEntry[entry.id] ?? ''}
-                              placeholder="Search category"
-                              aria-label="Search category"
-                              oninput={(event) => updateCategorySearch(event, entry.id)}
-                              onkeydown={(event) => {
-                                if (event.key === 'Enter') event.preventDefault();
-                              }}
-                            />
-                          </label>
-                          <div class="category-options">
-                            {#each filteredLedgerCategoryOptions(entry.id) as category (category)}
-                              <button
-                                type="button"
-                                class="category-option"
-                                class:active={category === entry.category}
-                                role="option"
-                                aria-selected={category === entry.category}
-                                onclick={(event) =>
-                                  chooseLedgerCategory(
-                                    event.currentTarget.form as HTMLFormElement,
-                                    entry.id,
-                                    category
-                                  )}
-                              >
-                                <span>{category}</span>
-                                {#if category === entry.category}
-                                  <Check
-                                    class="category-check"
-                                    size={9}
-                                    strokeWidth={2}
-                                    aria-hidden="true"
-                                  />
-                                {/if}
-                              </button>
-                            {:else}
-                              <div class="category-empty">No match</div>
-                            {/each}
+                        <input type="hidden" name="entryId" value={entry.id} />
+                        <input type="hidden" name="category" value={entry.category} />
+                        <button
+                          type="button"
+                          class="category-trigger"
+                          aria-haspopup="listbox"
+                          aria-expanded={openCategoryEntryId === entry.id}
+                          aria-label={`Category for ${entry.description}`}
+                          disabled={!ledgerEntryEditable(entry.id)}
+                          title={ledgerEntryEditable(entry.id)
+                            ? undefined
+                            : 'Locked one week after month end'}
+                          onclick={() => toggleCategoryMenu(entry.id)}
+                        >
+                          <span>{entry.category}</span>
+                        </button>
+                        {#if openCategoryEntryId === entry.id}
+                          <div class="category-menu" role="listbox" tabindex="-1">
+                            <label class="category-search">
+                              <Search
+                                class="category-search-icon"
+                                size={14}
+                                strokeWidth={2}
+                                aria-hidden="true"
+                              />
+                              <input
+                                type="text"
+                                value={categorySearchByEntry[entry.id] ?? ''}
+                                placeholder="Search category"
+                                aria-label="Search category"
+                                oninput={(event) => updateCategorySearch(event, entry.id)}
+                                onkeydown={(event) => {
+                                  if (event.key === 'Enter') event.preventDefault();
+                                }}
+                              />
+                            </label>
+                            <div class="category-options">
+                              {#each filteredLedgerCategoryOptions(entry.id) as category (category)}
+                                <button
+                                  type="button"
+                                  class="category-option"
+                                  class:active={category === entry.category}
+                                  role="option"
+                                  aria-selected={category === entry.category}
+                                  onclick={(event) =>
+                                    chooseLedgerCategory(
+                                      event.currentTarget.form as HTMLFormElement,
+                                      entry.id,
+                                      category
+                                    )}
+                                >
+                                  <span>{category}</span>
+                                  {#if category === entry.category}
+                                    <Check
+                                      class="category-check"
+                                      size={9}
+                                      strokeWidth={2}
+                                      aria-hidden="true"
+                                    />
+                                  {/if}
+                                </button>
+                              {:else}
+                                <div class="category-empty">No match</div>
+                              {/each}
+                            </div>
                           </div>
-                        </div>
+                        {/if}
+                      </form>
+                      {#if entry.kind === 'income' && entry.category === 'Reimbursements'}
+                        <form
+                          method="POST"
+                          action="?/reimbursementLink"
+                          use:enhance={keepFormState}
+                          class="reimbursement-link-form"
+                          class:open={openReimbursementEntryId === entry.id}
+                          onfocusout={(event) => closeReimbursementMenu(event, entry.id)}
+                        >
+                          <input type="hidden" name="entryId" value={entry.id} />
+                          <input
+                            type="hidden"
+                            name="reimbursesEntryId"
+                            value={entry.reimbursesEntryId ?? ''}
+                          />
+                          <button
+                            type="button"
+                            class="reimbursement-trigger"
+                            aria-haspopup="listbox"
+                            aria-expanded={openReimbursementEntryId === entry.id}
+                            aria-label={`Expense offset for ${entry.description}`}
+                            disabled={!ledgerEntryEditable(entry.id)}
+                            onclick={() => toggleReimbursementMenu(entry.id)}
+                          >
+                            <span>
+                              {entry.reimbursesEntryId
+                                ? `↳ ${reimbursementTargetLabel(entry)}`
+                                : 'None'}
+                            </span>
+                          </button>
+                          {#if openReimbursementEntryId === entry.id}
+                            <div
+                              class="category-menu reimbursement-menu"
+                              role="listbox"
+                              tabindex="-1"
+                            >
+                              <label class="category-search">
+                                <Search
+                                  class="category-search-icon"
+                                  size={14}
+                                  strokeWidth={2}
+                                  aria-hidden="true"
+                                />
+                                <input
+                                  type="text"
+                                  value={reimbursementSearchByEntry[entry.id] ?? ''}
+                                  placeholder="Search expense"
+                                  aria-label="Search reimbursed expense"
+                                  oninput={(event) => updateReimbursementSearch(event, entry.id)}
+                                  onkeydown={(event) => {
+                                    if (event.key === 'Enter') event.preventDefault();
+                                  }}
+                                />
+                              </label>
+                              <div class="category-options reimbursement-options">
+                                <button
+                                  type="button"
+                                  class="category-option reimbursement-option"
+                                  class:active={!entry.reimbursesEntryId}
+                                  role="option"
+                                  aria-selected={!entry.reimbursesEntryId}
+                                  onclick={(event) =>
+                                    chooseReimbursementTarget(
+                                      event.currentTarget.form as HTMLFormElement,
+                                      entry.id,
+                                      ''
+                                    )}
+                                >
+                                  <span>None</span>
+                                  {#if !entry.reimbursesEntryId}
+                                    <Check
+                                      class="category-check"
+                                      size={9}
+                                      strokeWidth={2}
+                                      aria-hidden="true"
+                                    />
+                                  {/if}
+                                </button>
+                                {#each filteredReimbursementTargetOptions(entry) as option (option.id)}
+                                  <button
+                                    type="button"
+                                    class="category-option reimbursement-option"
+                                    class:active={option.id === entry.reimbursesEntryId}
+                                    role="option"
+                                    aria-selected={option.id === entry.reimbursesEntryId}
+                                    onclick={(event) =>
+                                      chooseReimbursementTarget(
+                                        event.currentTarget.form as HTMLFormElement,
+                                        entry.id,
+                                        option.id
+                                      )}
+                                  >
+                                    <span>{reimbursementTargetLabel(entry, option.id)}</span>
+                                    {#if option.id === entry.reimbursesEntryId}
+                                      <Check
+                                        class="category-check"
+                                        size={9}
+                                        strokeWidth={2}
+                                        aria-hidden="true"
+                                      />
+                                    {/if}
+                                  </button>
+                                {:else}
+                                  <div class="category-empty">No match</div>
+                                {/each}
+                              </div>
+                            </div>
+                          {/if}
+                        </form>
                       {/if}
-                    </form>
+                    </div>
                   </td>
-                  <td data-label="Description">{entry.description}</td>
+                  <td data-label="Description">
+                    <div class="ledger-description-cell">
+                      <span>{entry.description}</span>
+                    </div>
+                  </td>
                   <td data-label="Account" class="mobile-hide">{ledgerAccount(entry)}</td>
                   <td data-label="Payment" class="mobile-hide">{entry.paymentType}</td>
                   <td data-label="Kind" class="mobile-hide">{entry.kind}</td>
@@ -2162,37 +2851,17 @@
         <div
           class="forecast-panel-header investment-panel-header mb-3 flex items-center justify-between gap-2 border-b border-cork-200 pb-2"
         >
-          <h2
-            class="investment-panel-title flex items-center gap-2 text-sm font-semibold text-cork-900"
-          >
-            <PiggyBank class="size-4 text-cork-500" />
-            Long-Term Investments
-          </h2>
+          <div class="investment-title-stack">
+            <h2
+              class="investment-panel-title flex items-center gap-2 text-sm font-semibold text-cork-900"
+            >
+              <PiggyBank class="size-4 text-cork-500" />
+              Long-Term Investments
+            </h2>
+            <span class="investment-panel-note">Excluded from liquid wallet balance</span>
+          </div>
           <div class="flex items-center gap-1.5">
             <span class="investment-fx-rate">{displayedUsdIdrRate()}</span>
-            <form
-              method="POST"
-              action="?/refreshInvestments"
-              use:enhance={() => {
-                investmentRefreshPending = true;
-
-                return async ({ update }) => {
-                  await update();
-                  investmentRefreshPending = false;
-                };
-              }}
-            >
-              <button
-                type="submit"
-                class="panel-icon-button investment-refresh-button"
-                class:attention={investmentQuotesNeedRefresh}
-                class:spinning={investmentRefreshPending}
-                disabled={investmentRefreshPending}
-                title="Refresh prices"
-              >
-                <RefreshCw class="size-3.5" />
-              </button>
-            </form>
             <div class="investment-currency-switch" role="group" aria-label="Investment currency">
               <button
                 type="button"
@@ -2222,62 +2891,97 @@
             <thead>
               <tr>
                 <th>Ticker</th>
+                <th>Shares</th>
+                <th class="currency-col"></th>
+                <th>Avg Cost</th>
+                <th class="currency-col"></th>
+                <th>Current Price</th>
                 <th>Div. Yield</th>
+                <th class="currency-col"></th>
+                <th>Est. Dividend</th>
                 <th>Change</th>
+                <th class="currency-col"></th>
                 <th>Gain</th>
+                <th class="currency-col"></th>
                 <th>Value</th>
               </tr>
             </thead>
             <tbody>
-              {#each investments as investment (investment.label)}
-                <tr
-                  class:up={investment.direction === 'up'}
-                  class:down={investment.direction === 'down'}
-                >
-                  <td data-label="Ticker">
-                    <span class="investment-ticker">{investment.label}</span>
-                    <span class="investment-meta">
-                      {#if displayedInvestmentUnitPrice(investment)}
-                        {displayedInvestmentUnitPrice(investment)} · {shortDateTime(
-                          investment.latestPriceAt
-                        )}
-                      {:else}
-                        {shortDateTime(investment.latestPriceAt)}
-                      {/if}
-                    </span>
-                  </td>
-                  <td data-label="Div. Yield">
-                    {#if investment.dividendYieldBps}
-                      <span class="investment-div-yield"
-                        >{(investment.dividendYieldBps / 100).toFixed(2)}%</span
-                      >
-                      <span class="investment-div-amount"
-                        >{currency.format(
-                          Math.round((investment.balance * investment.dividendYieldBps) / 10000)
-                        )}/yr</span
-                      >
-                    {:else}
-                      <span class="text-cork-300">-</span>
-                    {/if}
-                  </td>
-                  <td
-                    data-label="Change"
-                    class:up={investment.direction === 'up'}
-                    class:down={investment.direction === 'down'}
-                  >
-                    {investment.change}
-                  </td>
-                  <td
-                    data-label="Gain"
-                    class:up={investment.direction === 'up'}
-                    class:down={investment.direction === 'down'}
-                  >
-                    {displayedInvestmentGain(investment) ?? '-'}
-                  </td>
-                  <td data-label="Value" class="font-medium text-cork-900">
-                    {displayedInvestmentValue(investment)}
+              {#each groupedInvestmentRows as group (group.label)}
+                <tr class="investment-group-row">
+                  <td colspan="14">
+                    <span>{group.label}</span>
+                    <span>{shortDate(latestInvestmentGroupDate(group.rows))}</span>
                   </td>
                 </tr>
+                {#each group.rows as investment (investment.label)}
+                  <tr
+                    class="investment-child-row"
+                    class:up={investment.direction === 'up'}
+                    class:down={investment.direction === 'down'}
+                  >
+                    <td data-label="Ticker">
+                      <span class="investment-ticker">{investment.label}</span>
+                    </td>
+                    <td data-label="Shares">
+                      {displayedInvestmentShares(investment) ?? '-'}
+                    </td>
+                    <td class="currency-col" data-label="Avg Cost">
+                      {displayedInvestmentAvgCostAmount(investment) ? investmentCurrencySymbol : ''}
+                    </td>
+                    <td data-label="Avg Cost">
+                      {displayedInvestmentAvgCostAmount(investment) ?? '-'}
+                    </td>
+                    <td class="currency-col" data-label="Current Price">
+                      {displayedInvestmentCurrentPriceAmount(investment)
+                        ? investmentCurrencySymbol
+                        : ''}
+                    </td>
+                    <td data-label="Current Price">
+                      {displayedInvestmentCurrentPriceAmount(investment) ?? '-'}
+                    </td>
+                    <td data-label="Div. Yield">
+                      {#if investment.dividendYieldBps}
+                        <span class="investment-div-yield"
+                          >{(investment.dividendYieldBps / 100).toFixed(2)}%</span
+                        >
+                      {:else}
+                        <span class="text-cork-300">-</span>
+                      {/if}
+                    </td>
+                    <td class="currency-col" data-label="Est. Dividend">
+                      {displayedInvestmentDividendAmount(investment)
+                        ? investmentCurrencySymbol
+                        : ''}
+                    </td>
+                    <td data-label="Est. Dividend">
+                      {displayedInvestmentDividendAmount(investment) ?? '-'}
+                    </td>
+                    <td
+                      data-label="Change"
+                      class:up={investment.direction === 'up'}
+                      class:down={investment.direction === 'down'}
+                    >
+                      {investment.change}
+                    </td>
+                    <td class="currency-col" data-label="Gain">
+                      {displayedInvestmentGainAmount(investment) ? investmentCurrencySymbol : ''}
+                    </td>
+                    <td
+                      data-label="Gain"
+                      class:up={investment.direction === 'up'}
+                      class:down={investment.direction === 'down'}
+                    >
+                      {displayedInvestmentGainAmount(investment) ?? '-'}
+                    </td>
+                    <td class="currency-col" data-label="Value">
+                      {displayedInvestmentValueAmount(investment) ? investmentCurrencySymbol : ''}
+                    </td>
+                    <td data-label="Value" class="font-medium text-cork-900">
+                      {displayedInvestmentValueAmount(investment) ?? '-'}
+                    </td>
+                  </tr>
+                {/each}
               {/each}
             </tbody>
           </table>
@@ -2314,7 +3018,6 @@
             </div>
           {/if}
         </div>
-        <p class="text-[10px] text-cork-400">Excluded from liquid wallet balance.</p>
         <div class="investment-history">
           <div class="investment-history-title">
             <span>Monthly Growth</span>
@@ -2750,12 +3453,12 @@
     <button
       type="button"
       class="sort-button"
-      class:active={ledgerSortKey === key}
+      class:active={ledgerSortKey === key && ledgerSortDirection !== null}
       aria-label={`Sort ledger by ${label}`}
       onclick={() => setLedgerSort(key)}
     >
       <span>{label.toUpperCase()}</span>
-      {#if ledgerSortKey === key}
+      {#if ledgerSortKey === key && ledgerSortDirection !== null}
         {#if ledgerSortDirection === 'asc'}
           <ArrowUp class="size-3" />
         {:else}
@@ -2773,7 +3476,7 @@
     <div class="mb-3 flex items-center justify-between border-b border-cork-200 pb-2">
       <button
         type="button"
-        class="flex items-center gap-2 text-sm font-semibold text-cork-900"
+        class="reconciliation-toggle flex items-center gap-2 text-sm font-semibold text-cork-900"
         onclick={() => (reconciliationOpen = !reconciliationOpen)}
         aria-expanded={reconciliationOpen}
       >
@@ -2793,22 +3496,32 @@
           {#if index > 0}
             <span class="formula-operator">{term.operator}</span>
           {/if}
-          <div class="formula-term">
+          <button
+            type="button"
+            class="formula-term formula-term-button"
+            onclick={() => openReconciliationDetail(term.key)}
+            aria-label={`Show ${term.label} details`}
+          >
             <div class="formula-amount">
               <span class="formula-amount-full">{currency.format(term.value)}</span>
               <span class="formula-amount-compact">{compactCurrency(term.value)}</span>
             </div>
             <div class="formula-label">{term.label}</div>
-          </div>
+          </button>
         {/each}
         <span class="formula-operator">=</span>
-        <div class="formula-term formula-result">
+        <button
+          type="button"
+          class="formula-term formula-term-button formula-result"
+          onclick={() => openReconciliationDetail('expected-ending')}
+          aria-label="Show expected ending details"
+        >
           <div class="formula-amount">
             <span class="formula-amount-full">{currency.format(expectedEndingBalance)}</span>
             <span class="formula-amount-compact">{compactCurrency(expectedEndingBalance)}</span>
           </div>
           <div class="formula-label">Expected ending</div>
-        </div>
+        </button>
       </div>
 
       <div class="reconciliation-compare">
@@ -2816,7 +3529,12 @@
           <span>Recorded ending</span>
           <strong>{currency.format(recordedEndingLiquidBalance)}</strong>
         </div>
-        <div class="compare-item difference-item">
+        <button
+          type="button"
+          class="compare-item difference-item difference-button"
+          onclick={() => openReconciliationDetail('difference')}
+          aria-label="Show difference details"
+        >
           <span>Difference</span>
           <strong
             class="difference-value"
@@ -2824,7 +3542,7 @@
             class:balanced={reconciliationDifference === 0}
             >{currency.format(reconciliationDifference)}</strong
           >
-        </div>
+        </button>
       </div>
     {/if}
   </div>
@@ -2839,17 +3557,19 @@
           <tr>
             <th>Provider</th>
             <th>Due</th>
+            <th>Paid</th>
             {@render MoneyHead('Amount')}
             <th>Status</th>
           </tr>
         </thead>
         <tbody>
-          {#each debtSchedule as debt (`${debt.provider}-${debt.due}-${debt.amount}-${debt.status}`)}
+          {#each debtSchedule as debt (`${debt.provider}-${debt.due}-${debt.paid ?? ''}-${debt.amount}-${debt.status}`)}
             <tr>
               <td>{debt.provider}</td>
               <td data-label="Due">{debt.due}</td>
-              <td class="currency-col" data-label="Amount"></td>
-              <td data-label="Amount">{currency.format(debt.amount)}</td>
+              <td data-label="Paid">{debt.paid ?? '-'}</td>
+              <td class="currency-col" data-label="Amount">Rp</td>
+              <td data-label="Amount">{amount.format(debt.amount)}</td>
               <td data-label="Status">
                 <span class="debt-status" class:paid={debt.status === 'paid'}>
                   {debt.status}
@@ -2859,7 +3579,7 @@
           {/each}
           {#if debtSchedule.length === 0}
             <tr>
-              <td colspan="5" class="text-center text-cork-400">No debt schedule entered yet</td>
+              <td colspan="6" class="text-center text-cork-400">No debt schedule entered yet</td>
             </tr>
           {/if}
         </tbody>
@@ -2867,6 +3587,85 @@
     </div>
   </div>
 {/snippet}
+
+<Dialog.Root bind:open={reconciliationDetailOpen}>
+  <Dialog.Content
+    class="max-w-[calc(100%-2rem)] border-cork-300 bg-cork-50 text-cork-800 sm:max-w-2xl"
+  >
+    {#if selectedReconciliationDetail}
+      <Dialog.Header>
+        <Dialog.Title class="text-cork-900">{selectedReconciliationDetail.title}</Dialog.Title>
+        <Dialog.Description class="text-cork-500">
+          {currentMonth.label} ·
+          <span class="reconciliation-detail-value">
+            {compactRupiah(selectedReconciliationDetail.value)}
+          </span>
+        </Dialog.Description>
+      </Dialog.Header>
+
+      <div class="reconciliation-detail">
+        <table class="reconciliation-detail-table">
+          {#if selectedReconciliationDetail.key === 'difference'}
+            <thead>
+              <tr>
+                <th>Wallet</th>
+                <th class="currency-col">Currency</th>
+                <th>Actual</th>
+                <th>Ledger</th>
+                <th>Difference</th>
+              </tr>
+            </thead>
+            <tbody>
+              {#each selectedReconciliationDetail.rows as row, index (`${row.label}-${row.amount}-${index}`)}
+                <tr>
+                  <td>
+                    <span class="detail-label">{row.label}</span>
+                  </td>
+                  <td class="currency-col">Rp</td>
+                  <td>{amount.format(row.actualAmount ?? 0)}</td>
+                  <td>{amount.format(row.ledgerAmount ?? 0)}</td>
+                  <td class:negative-amount={row.amount < 0}>{amount.format(row.amount)}</td>
+                </tr>
+              {/each}
+              {#if selectedReconciliationDetail.rows.length === 0}
+                <tr>
+                  <td colspan="5" class="empty-detail">No wallet variance for this term</td>
+                </tr>
+              {/if}
+            </tbody>
+          {:else}
+            <thead>
+              <tr>
+                <th>Source</th>
+                <th class="currency-col">Currency</th>
+                <th>Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              {#each selectedReconciliationDetail.rows as row, index (`${row.label}-${row.amount}-${index}`)}
+                <tr>
+                  <td>
+                    <span class="detail-label">{row.label}</span>
+                    {#if row.meta}
+                      <span class="detail-meta">{row.meta}</span>
+                    {/if}
+                  </td>
+                  <td class="currency-col">Rp</td>
+                  <td>{amount.format(row.amount)}</td>
+                </tr>
+              {/each}
+              {#if selectedReconciliationDetail.rows.length === 0}
+                <tr>
+                  <td colspan="3" class="empty-detail">No source rows for this term</td>
+                </tr>
+              {/if}
+            </tbody>
+          {/if}
+        </table>
+      </div>
+    {/if}
+  </Dialog.Content>
+</Dialog.Root>
 
 <style>
   .panel {
@@ -2896,13 +3695,13 @@
 
   .metric-label {
     margin-top: 0.22rem;
-    font-size: 0.64rem;
+    font-size: 0.6rem;
     color: var(--color-cork-500);
   }
 
   .metric-value {
     margin-top: 0;
-    font-size: 0.92rem;
+    font-size: 0.9rem;
     font-weight: 700;
   }
 
@@ -2918,7 +3717,7 @@
   }
 
   .month-tab span {
-    font-size: 0.72rem;
+    font-size: 0.7rem;
     font-weight: 700;
   }
 
@@ -2932,7 +3731,7 @@
     flex: 1;
     border-radius: 6px;
     padding: 0.25rem 0.45rem;
-    font-size: 0.68rem;
+    font-size: 0.7rem;
     font-weight: 700;
     color: var(--color-cork-600);
     cursor: pointer;
@@ -2952,11 +3751,19 @@
     display: none;
   }
 
+  .reconciliation-toggle {
+    cursor: pointer;
+  }
+
+  .reconciliation-toggle:hover {
+    color: #1f527a;
+  }
+
   .reconciliation-formula {
     display: grid;
     grid-template-columns:
       max-content max-content max-content max-content max-content max-content max-content
-      max-content max-content max-content max-content;
+      max-content max-content max-content max-content max-content max-content;
     align-items: end;
     column-gap: 0.56rem;
     width: max-content;
@@ -2970,8 +3777,27 @@
     min-width: 0;
   }
 
+  .formula-term-button {
+    display: block;
+    border-radius: 6px;
+    padding: 0.12rem 0.16rem;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .formula-term-button:hover,
+  .formula-term-button:focus-visible {
+    background: rgba(31, 82, 122, 0.06);
+    outline: none;
+  }
+
+  .formula-term-button:hover .formula-label,
+  .formula-term-button:focus-visible .formula-label {
+    color: #1f527a;
+  }
+
   .formula-amount {
-    font-size: 0.76rem;
+    font-size: 0.8rem;
     font-weight: 800;
     color: var(--color-cork-900);
     line-height: 1.1;
@@ -2986,7 +3812,7 @@
     margin-top: 0.08rem;
     overflow: hidden;
     text-overflow: ellipsis;
-    font-size: 0.56rem;
+    font-size: 0.6rem;
     color: var(--color-cork-500);
     line-height: 1.15;
     white-space: nowrap;
@@ -2996,7 +3822,7 @@
     align-self: start;
     line-height: 1.1;
     color: #1f527a;
-    font-size: 0.76rem;
+    font-size: 0.8rem;
     font-weight: 800;
   }
 
@@ -3021,7 +3847,7 @@
     display: flex;
     align-items: center;
     gap: 0.45rem;
-    font-size: 0.64rem;
+    font-size: 0.6rem;
   }
 
   .reconciliation-compare span {
@@ -3040,6 +3866,28 @@
     padding-left: 1.25rem;
   }
 
+  .difference-button {
+    border: 0;
+    background: transparent;
+    padding: 0;
+    color: inherit;
+    font-size: 0.6rem;
+    font-family: inherit;
+    cursor: pointer;
+  }
+
+  .difference-button:hover .difference-value,
+  .difference-button:focus-visible .difference-value {
+    text-decoration: underline;
+    text-underline-offset: 0.14rem;
+  }
+
+  .difference-button:focus-visible {
+    border-radius: 5px;
+    outline: 2px solid rgba(31, 82, 122, 0.18);
+    outline-offset: 2px;
+  }
+
   .reconciliation-compare .difference-value {
     color: #b45309;
   }
@@ -3050,6 +3898,112 @@
 
   .reconciliation-compare .difference-value.balanced {
     color: #15803d;
+  }
+
+  .reconciliation-detail {
+    max-height: min(28rem, 62vh);
+    overflow: auto;
+    border: 1px solid rgba(31, 82, 122, 0.14);
+    border-radius: 8px;
+    scrollbar-color: rgba(31, 82, 122, 0.42) rgba(31, 82, 122, 0.06);
+    scrollbar-width: thin;
+  }
+
+  .reconciliation-detail::-webkit-scrollbar {
+    width: 0.48rem;
+    height: 0.48rem;
+  }
+
+  .reconciliation-detail::-webkit-scrollbar-track {
+    background: rgba(31, 82, 122, 0.06);
+  }
+
+  .reconciliation-detail::-webkit-scrollbar-thumb {
+    border: 2px solid transparent;
+    border-radius: 999px;
+    background: rgba(31, 82, 122, 0.42);
+    background-clip: padding-box;
+  }
+
+  .reconciliation-detail::-webkit-scrollbar-thumb:hover {
+    background: rgba(31, 82, 122, 0.62);
+    background-clip: padding-box;
+  }
+
+  .reconciliation-detail-value {
+    display: inline-flex;
+    border-radius: 5px;
+    background: rgba(31, 82, 122, 0.08);
+    padding: 0.04rem 0.28rem;
+    color: var(--color-cork-900);
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .reconciliation-detail-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.7rem;
+  }
+
+  .reconciliation-detail-table th,
+  .reconciliation-detail-table td {
+    border-bottom: 1px solid rgba(31, 82, 122, 0.1);
+    padding: 0.42rem 0.55rem;
+    text-align: right;
+    vertical-align: top;
+  }
+
+  .reconciliation-detail-table th {
+    position: sticky;
+    top: 0;
+    background: #e6eefc;
+    color: #1f527a;
+    font-size: 0.6rem;
+    font-weight: 800;
+    text-transform: uppercase;
+  }
+
+  .reconciliation-detail-table th:first-child,
+  .reconciliation-detail-table td:first-child {
+    text-align: left;
+  }
+
+  .reconciliation-detail-table .currency-col {
+    width: 4.2rem;
+    text-align: center;
+  }
+
+  .reconciliation-detail-table td.currency-col {
+    color: var(--color-cork-500);
+  }
+
+  .reconciliation-detail-table .negative-amount {
+    color: #b91c1c;
+    font-weight: 700;
+  }
+
+  .detail-label,
+  .detail-meta {
+    display: block;
+    white-space: normal;
+  }
+
+  .detail-label {
+    color: var(--color-cork-900);
+    font-weight: 700;
+  }
+
+  .detail-meta {
+    margin-top: 0.1rem;
+    color: var(--color-cork-500);
+    font-size: 0.6rem;
+  }
+
+  .empty-detail {
+    padding: 1rem;
+    color: var(--color-cork-400);
+    text-align: center !important;
   }
 
   .debt-detail-table tbody tr {
@@ -3086,7 +4040,7 @@
     }
 
     .formula-amount {
-      font-size: 0.68rem;
+      font-size: 0.7rem;
     }
 
     .formula-amount-full {
@@ -3099,11 +4053,11 @@
 
     .formula-operator {
       align-self: center;
-      font-size: 0.68rem;
+      font-size: 0.7rem;
     }
 
     .formula-label {
-      font-size: 0.52rem;
+      font-size: 0.6rem;
     }
 
     .reconciliation-compare {
@@ -3183,7 +4137,7 @@
       content: attr(data-label);
       flex: 0 0 auto;
       color: var(--color-cork-400);
-      font-size: 0.58rem;
+      font-size: 0.6rem;
       font-weight: 700;
       text-align: left;
       text-transform: uppercase;
@@ -3203,7 +4157,7 @@
       display: block;
       border: 0;
       padding: 0.3rem 0.5rem;
-      background: color-mix(in oklab, #1f527a 12%, white);
+      background: color-mix(in oklab, #1f527a 12%, white) !important;
     }
 
     .wallet-child-row td:first-child {
@@ -3238,12 +4192,12 @@
     /* Touch targets — bump to usable size */
     .month-tab {
       padding: 0.5rem 0.8rem;
-      font-size: 0.78rem;
+      font-size: 0.7rem;
     }
 
     .view-tab {
       padding: 0.45rem 0.65rem;
-      font-size: 0.74rem;
+      font-size: 0.7rem;
     }
 
     .budget-category-name {
@@ -3251,9 +4205,9 @@
       min-height: 1.65rem;
     }
 
-    .check-cell input {
-      height: 1.1rem;
-      width: 1.1rem;
+    .wallet-status-box {
+      width: 1.35rem;
+      height: 1.35rem;
     }
 
     /* Scroll affordance — show subtle scrollbars so users know content is scrollable */
@@ -3330,7 +4284,7 @@
       content: attr(data-label);
       flex: 0 0 auto;
       color: var(--color-cork-400);
-      font-size: 0.58rem;
+      font-size: 0.6rem;
       font-weight: 700;
       text-align: left;
       text-transform: uppercase;
@@ -3349,7 +4303,7 @@
       display: block;
       border: 0;
       padding: 0.3rem 0.5rem;
-      background: color-mix(in oklab, #1f527a 12%, white);
+      background: color-mix(in oklab, #1f527a 12%, white) !important;
     }
 
     .budget-table .budget-child-row td:first-child {
@@ -3394,9 +4348,19 @@
       display: none;
     }
 
-    /* Budget card — tighter progress bar */
-    .budget-table td :global(.flex-1.rounded-full) {
-      height: 0.22rem;
+    .budget-table .used-meter {
+      grid-template-columns: minmax(4rem, 1fr) 3.2rem;
+      min-width: 7.6rem;
+    }
+
+    .budget-table .used-track {
+      height: 0.28rem;
+    }
+
+    .budget-table .used-meter.empty,
+    .budget-table .used-meter.unplanned {
+      grid-template-columns: 1fr;
+      min-width: 0;
     }
 
     /* Ledger table card layout */
@@ -3452,7 +4416,7 @@
       content: attr(data-label);
       flex: 0 0 auto;
       color: rgba(31, 82, 122, 0.55);
-      font-size: 0.58rem;
+      font-size: 0.6rem;
       font-weight: 700;
       text-align: left;
       text-transform: uppercase;
@@ -3468,7 +4432,8 @@
     }
 
     /* Let the category dropdown escape the card boundary (mobile only) */
-    .ledger-table tr:has(.category-form.open) {
+    .ledger-table tr:has(.category-form.open),
+    .ledger-table tr:has(.reimbursement-link-form.open) {
       overflow: visible;
       z-index: 80;
     }
@@ -3525,13 +4490,13 @@
   .tracker-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 0.68rem;
+    font-size: 0.6rem;
   }
 
   .tracker-table th {
     background: #1f527a;
     color: white;
-    font-size: 0.56rem;
+    font-size: 0.6rem;
     font-weight: 700;
     text-transform: uppercase;
   }
@@ -3581,12 +4546,172 @@
   }
 
   .budget-category-desc {
-    font-size: 0.58rem;
+    font-size: 0.6rem;
     line-height: 1.2;
     color: var(--color-cork-500);
   }
 
+  .ledger-description-cell {
+    display: flex;
+    max-width: 24rem;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.24rem;
+    margin-left: auto;
+    text-align: right;
+    white-space: normal;
+  }
+
+  .ledger-description-cell > span {
+    line-height: 1.25;
+  }
+
+  .ledger-category-cell {
+    display: inline-flex;
+    width: 11.6rem;
+    max-width: 100%;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.12rem;
+  }
+
+  .reimbursement-link-form {
+    position: relative;
+    width: 100%;
+    overflow: visible;
+  }
+
+  .reimbursement-link-form.open {
+    z-index: 90;
+  }
+
+  .reimbursement-trigger {
+    display: inline-flex;
+    width: 100%;
+    min-width: 0;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    background: transparent;
+    padding: 0.04rem 0.34rem;
+    color: var(--color-cork-500);
+    font: inherit;
+    font-size: 0.6rem;
+    font-weight: 600;
+    line-height: 1.2;
+    outline: none;
+    text-align: right;
+    cursor: pointer;
+  }
+
+  .reimbursement-trigger span {
+    width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .reimbursement-trigger:hover {
+    border-color: rgba(31, 82, 122, 0.14);
+    background: rgba(255, 255, 255, 0.5);
+    color: var(--color-cork-700);
+  }
+
+  .reimbursement-trigger:focus,
+  .reimbursement-trigger[aria-expanded='true'] {
+    border-color: #1f527a;
+    background: rgba(255, 255, 255, 0.72);
+    color: var(--color-cork-700);
+    box-shadow: 0 0 0 2px rgba(31, 82, 122, 0.12);
+  }
+
+  .reimbursement-trigger:disabled {
+    border-color: transparent;
+    background: transparent;
+    color: var(--color-cork-400);
+    cursor: not-allowed;
+  }
+
+  .reimbursement-menu {
+    right: 0;
+    left: auto;
+    width: min(22rem, 80vw);
+  }
+
+  .reimbursement-options {
+    max-height: 13.6rem;
+  }
+
+  .reimbursement-option span {
+    text-align: left;
+  }
+
+  .used-meter {
+    display: grid;
+    grid-template-columns: minmax(5rem, 1fr) 3.4rem;
+    align-items: center;
+    gap: 0.45rem;
+    min-width: 8.8rem;
+  }
+
+  .used-track {
+    height: 0.38rem;
+    overflow: hidden;
+    border-radius: 999px;
+    background: rgba(120, 104, 72, 0.18);
+  }
+
+  .used-fill {
+    height: 100%;
+    max-width: 100%;
+    border-radius: inherit;
+    background: #10b981;
+  }
+
+  .used-meter.watch .used-fill {
+    background: #f59e0b;
+  }
+
+  .used-meter.over .used-fill {
+    background: #f97316;
+  }
+
+  .used-label {
+    justify-self: end;
+    color: var(--color-cork-700);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .used-meter.watch .used-label {
+    color: #9a5a00;
+    font-weight: 700;
+  }
+
+  .used-meter.over .used-label {
+    color: #b45309;
+    font-weight: 700;
+  }
+
+  .used-meter.empty {
+    grid-template-columns: 1fr;
+    min-width: 3.4rem;
+  }
+
+  .used-meter.empty .used-label {
+    color: var(--color-cork-400);
+  }
+
+  .used-meter.unplanned {
+    grid-template-columns: 1fr;
+    min-width: 5.4rem;
+  }
+
+  .used-meter.unplanned .used-label {
+    color: #b91c1c;
+    font-weight: 700;
+  }
+
   .allocation-input,
+  .wallet-money-input,
   .share-input {
     border: 1px solid transparent;
     border-radius: 4px;
@@ -3616,12 +4741,14 @@
   }
 
   .allocation-input:hover,
+  .wallet-money-input:hover,
   .share-input:hover {
     border-color: rgba(31, 82, 122, 0.16);
     background: rgba(255, 255, 255, 0.68);
   }
 
   .allocation-input:focus,
+  .wallet-money-input:focus,
   .share-input:focus {
     border-color: #1f527a;
     background: white;
@@ -3630,6 +4757,8 @@
 
   .allocation-input::-webkit-outer-spin-button,
   .allocation-input::-webkit-inner-spin-button,
+  .wallet-money-input::-webkit-outer-spin-button,
+  .wallet-money-input::-webkit-inner-spin-button,
   .share-input::-webkit-outer-spin-button,
   .share-input::-webkit-inner-spin-button {
     margin: 0;
@@ -3642,8 +4771,58 @@
     border: 0;
     background: transparent;
     text-align: left;
-    font-size: 0.62rem;
+    font-size: 0.6rem;
     line-height: 1.25;
+  }
+
+  .wallet-money-form {
+    display: inline-flex;
+    justify-content: flex-end;
+    width: 100%;
+  }
+
+  .wallet-money-input {
+    width: 6rem;
+    padding: 0.08rem 0.24rem;
+    border-color: rgba(31, 82, 122, 0.22);
+    background: rgba(255, 255, 255, 0.78);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.76);
+    font-weight: 400;
+    text-align: right;
+    font-size: 0.6rem;
+    line-height: 1.35;
+  }
+
+  .wallet-money-input:disabled {
+    border-color: rgba(31, 82, 122, 0.1);
+    background: rgba(31, 82, 122, 0.04);
+    box-shadow: none;
+    color: var(--color-cork-500);
+    cursor: not-allowed;
+  }
+
+  .wallet-edit-deadline {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.32rem;
+    color: #1f527a;
+    font-size: 0.6rem;
+    white-space: nowrap;
+  }
+
+  .wallet-edit-deadline span {
+    color: var(--color-cork-400);
+    font-size: 0.6rem;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+
+  .wallet-edit-deadline strong {
+    font-weight: 700;
+  }
+
+  .wallet-edit-deadline.locked {
+    color: var(--color-cork-500);
   }
 
   .allocation-header-item {
@@ -3666,7 +4845,7 @@
     padding: 0.03rem 0.16rem;
     text-align: right;
     color: #1f527a;
-    font-size: 0.62rem;
+    font-size: 0.6rem;
     line-height: 1.2;
   }
 
@@ -3708,6 +4887,14 @@
     overflow: visible;
   }
 
+  .ledger-table td[data-label='Category'] {
+    text-align: right;
+  }
+
+  .ledger-table td[data-label='Category'] .category-form {
+    margin-left: auto;
+  }
+
   .category-form.open {
     z-index: 80;
   }
@@ -3717,13 +4904,13 @@
     width: 100%;
     min-width: 0;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-end;
     gap: 0.3rem;
     border: 1px solid rgba(31, 82, 122, 0.1);
-    border-radius: 6px;
+    border-radius: 4px;
     background: linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(255, 255, 255, 0.46));
     padding: 0.09rem 0.42rem;
-    text-align: left;
+    text-align: right;
     color: var(--color-cork-800);
     font: inherit;
     font-weight: 500;
@@ -3750,6 +4937,13 @@
     box-shadow:
       inset 0 0 0 1px rgba(31, 82, 122, 0.08),
       0 0 0 2px rgba(31, 82, 122, 0.12);
+  }
+
+  .category-trigger:disabled {
+    border-color: rgba(31, 82, 122, 0.08);
+    background: rgba(31, 82, 122, 0.04);
+    color: var(--color-cork-500);
+    cursor: not-allowed;
   }
 
   .category-menu {
@@ -3869,7 +5063,7 @@
   .category-empty {
     padding: 0.42rem;
     color: var(--color-cork-400);
-    font-size: 0.62rem;
+    font-size: 0.6rem;
     text-align: center;
   }
 
@@ -3889,14 +5083,18 @@
 
   .account-number-cell {
     display: inline-flex;
+    width: 100%;
+    min-width: 0;
     align-items: center;
+    justify-content: flex-end;
     gap: 0.35rem;
-    min-width: 6.5rem;
   }
 
   .account-number-value {
     font-family: var(--font-mono, monospace);
-    font-size: 0.68rem;
+    font-size: 0.6rem;
+    line-height: 1.35;
+    text-align: right;
     color: var(--color-cork-600);
   }
 
@@ -3935,7 +5133,7 @@
     justify-content: center;
     background: rgba(31, 82, 122, 0.1);
     color: #1f527a;
-    font-size: 0.56rem;
+    font-size: 0.6rem;
     font-weight: 700;
   }
 
@@ -3951,20 +5149,86 @@
     text-align: center;
   }
 
-  .check-cell input {
-    height: 0.82rem;
-    width: 0.82rem;
-    accent-color: #1f527a;
-    vertical-align: middle;
-  }
-
   .wallet-status-form {
     display: flex;
     justify-content: center;
   }
 
-  .wallet-status-form input {
+  .wallet-status-toggle {
+    display: inline-flex;
+    position: relative;
+    align-items: center;
+    justify-content: center;
     cursor: pointer;
+  }
+
+  .wallet-status-toggle input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .wallet-status-box {
+    display: inline-flex;
+    width: 1.15rem;
+    height: 1.15rem;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(31, 82, 122, 0.32);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.78);
+    color: transparent;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.86);
+    transition:
+      border-color 120ms ease,
+      background-color 120ms ease,
+      color 120ms ease,
+      box-shadow 120ms ease,
+      transform 120ms ease;
+  }
+
+  .wallet-status-toggle:hover .wallet-status-box {
+    border-color: #1f527a;
+    background: rgba(31, 82, 122, 0.08);
+  }
+
+  .wallet-status-toggle input:focus-visible + .wallet-status-box {
+    box-shadow:
+      0 0 0 2px rgba(31, 82, 122, 0.14),
+      inset 0 1px 0 rgba(255, 255, 255, 0.86);
+  }
+
+  .wallet-status-toggle input:checked + .wallet-status-box {
+    border-color: #1f527a;
+    background: #1f527a;
+    color: white;
+    box-shadow: 0 3px 8px rgba(31, 82, 122, 0.2);
+  }
+
+  .wallet-status-toggle:active .wallet-status-box {
+    transform: scale(0.94);
+  }
+
+  .wallet-status-toggle:has(input:disabled) {
+    cursor: not-allowed;
+  }
+
+  .wallet-status-toggle:has(input:disabled) .wallet-status-box {
+    border-color: rgba(31, 82, 122, 0.14);
+    background: rgba(31, 82, 122, 0.04);
+    box-shadow: none;
+    opacity: 0.7;
+  }
+
+  .wallet-status-toggle input:checked:disabled + .wallet-status-box {
+    border-color: rgba(31, 82, 122, 0.28);
+    background: rgba(31, 82, 122, 0.42);
+    color: white;
   }
 
   .tracker-table tbody tr:nth-child(odd) {
@@ -3976,14 +5240,15 @@
   }
 
   .budget-table .budget-group-row {
-    background: color-mix(in oklab, #1f527a 12%, white);
+    background: color-mix(in oklab, #1f527a 12%, white) !important;
     color: #1f527a;
-    font-size: 0.58rem;
+    font-size: 0.6rem;
     font-weight: 800;
     text-transform: uppercase;
   }
 
   .budget-table .budget-group-row td {
+    background: color-mix(in oklab, #1f527a 12%, white) !important;
     padding-top: 0.24rem;
     padding-bottom: 0.2rem;
     text-align: left;
@@ -4013,17 +5278,23 @@
   }
 
   .wallet-group-row {
-    background: color-mix(in oklab, #1f527a 12%, white);
+    background: color-mix(in oklab, #1f527a 12%, white) !important;
     color: #1f527a;
-    font-size: 0.58rem;
+    font-size: 0.6rem;
     font-weight: 800;
     text-transform: uppercase;
   }
 
   .wallet-group-row td {
+    background: color-mix(in oklab, #1f527a 12%, white) !important;
     padding-top: 0.24rem;
     padding-bottom: 0.2rem;
     text-align: left;
+  }
+
+  .wallet-table .total-row,
+  .wallet-table .total-row td {
+    background: rgba(157, 188, 240, 0.38) !important;
   }
 
   .wallet-child-row td:first-child {
@@ -4075,6 +5346,19 @@
     white-space: nowrap;
   }
 
+  .investment-title-stack {
+    display: grid;
+    gap: 0.08rem;
+    min-width: 0;
+  }
+
+  .investment-panel-note {
+    color: var(--color-cork-400);
+    font-size: 0.6rem;
+    font-weight: 500;
+    line-height: 1.15;
+  }
+
   .investment-panel-header {
     align-items: center;
   }
@@ -4097,7 +5381,7 @@
     border-radius: 5px;
     padding: 0.16rem 0.42rem;
     color: var(--color-cork-600);
-    font-size: 0.62rem;
+    font-size: 0.6rem;
     font-weight: 700;
     cursor: pointer;
   }
@@ -4126,7 +5410,7 @@
     gap: 0.42rem 0.72rem;
     min-width: 0;
     text-align: right;
-    font-size: 0.625rem;
+    font-size: 0.6rem;
   }
 
   .forecast-assumption-inline,
@@ -4252,64 +5536,63 @@
     stroke-width: 2;
   }
 
-  .panel-icon-button {
-    display: inline-flex;
-    width: 1.92rem;
-    height: 1.92rem;
-    align-items: center;
-    justify-content: center;
-    color: var(--color-cork-600);
-    cursor: pointer;
-  }
-
-  .panel-icon-button:hover,
-  .panel-icon-button.active {
-    color: #1f527a;
-  }
-
-  .panel-icon-button.attention {
-    color: #b45309;
-  }
-
-  .panel-icon-button.spinning :global(svg) {
-    animation: icon-spin 0.8s linear infinite;
-  }
-
-  .panel-icon-button:disabled {
-    cursor: default;
-    opacity: 0.78;
-  }
-
-  @keyframes icon-spin {
-    to {
-      transform: rotate(360deg);
-    }
-  }
-
   .investment-ticker {
     display: block;
     color: var(--color-cork-900);
     font-weight: 800;
-    font-size: 0.72rem;
+    font-size: 0.7rem;
   }
 
-  .investment-meta {
-    display: block;
-    color: var(--color-cork-400);
+  .investment-group-row {
+    background: color-mix(in oklab, #1f527a 12%, white) !important;
+    color: #1f527a;
     font-size: 0.6rem;
-    margin-top: 0.08rem;
+    font-weight: 800;
+    text-transform: uppercase;
+  }
+
+  .investment-group-row td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding-top: 0.24rem;
+    padding-bottom: 0.2rem;
+    text-align: left;
+  }
+
+  .investment-group-row td span:last-child {
+    color: color-mix(in oklab, #1f527a 68%, white);
+    font-size: 0.6rem;
+    font-weight: 700;
+    text-transform: none;
+  }
+
+  .investment-child-row td:first-child {
+    padding-left: 1.05rem;
+  }
+
+  .investment-child-row .investment-ticker {
+    position: relative;
+  }
+
+  .investment-child-row .investment-ticker::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: -0.48rem;
+    width: 0.24rem;
+    border-top: 1px solid rgba(31, 82, 122, 0.28);
+    transform: translateY(-50%);
+  }
+
+  .investment-table tbody tr:not(.investment-group-row) {
+    background: transparent;
   }
 
   .investment-div-yield {
     font-weight: 700;
     color: var(--color-cork-800);
-  }
-
-  .investment-div-amount {
-    display: block;
-    color: var(--color-cork-400);
-    font-size: 0.6rem;
-    margin-top: 0.04rem;
   }
 
   .investment-dividend-note {
@@ -4339,7 +5622,7 @@
     max-width: 11rem;
     overflow: hidden;
     color: var(--color-cork-500);
-    font-size: 0.62rem;
+    font-size: 0.6rem;
     font-weight: 700;
     text-align: right;
     text-overflow: ellipsis;
@@ -4359,7 +5642,7 @@
     justify-content: space-between;
     gap: 0.75rem;
     color: var(--color-cork-500);
-    font-size: 0.66rem;
+    font-size: 0.6rem;
   }
 
   .investment-summary-row strong {
@@ -4373,7 +5656,7 @@
   }
 
   .investment-summary-row.primary strong {
-    font-size: 0.86rem;
+    font-size: 0.9rem;
   }
 
   .investment-summary-gain {
@@ -4408,13 +5691,13 @@
     justify-content: space-between;
     gap: 0.75rem;
     color: var(--color-cork-900);
-    font-size: 0.68rem;
+    font-size: 0.7rem;
     font-weight: 800;
   }
 
   .investment-history-title span:last-child {
     color: var(--color-cork-400);
-    font-size: 0.58rem;
+    font-size: 0.6rem;
     font-weight: 700;
   }
 
@@ -4454,7 +5737,7 @@
 
   :global(.investment-history-axis-label) {
     fill: var(--color-cork-400);
-    font-size: 0.58rem;
+    font-size: 0.6rem;
     font-weight: 800;
   }
 
@@ -4484,7 +5767,7 @@
     gap: 0.16rem;
     min-width: 9.4rem;
     color: var(--color-cork-500);
-    font-size: 0.62rem;
+    font-size: 0.6rem;
     line-height: 1.2;
   }
 
@@ -4495,7 +5778,7 @@
 
   .investment-history-tooltip strong {
     color: var(--color-cork-900);
-    font-size: 0.78rem;
+    font-size: 0.8rem;
     font-weight: 800;
   }
 
@@ -4517,7 +5800,7 @@
     border-radius: 6px;
     padding: 0.6rem;
     color: var(--color-cork-400);
-    font-size: 0.62rem;
+    font-size: 0.6rem;
     text-align: center;
   }
 
@@ -4545,6 +5828,22 @@
       border-left: 2.5px solid rgba(31, 82, 122, 0.18);
       background: #fffdf9;
       box-shadow: 0 1px 3px rgba(31, 82, 122, 0.04);
+    }
+
+    .investment-table .investment-group-row {
+      border: 0;
+      border-radius: 0;
+      box-shadow: none;
+    }
+
+    .investment-table .investment-group-row td {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      border: 0;
+      padding: 0.24rem 0.55rem 0.2rem;
+      text-align: left;
     }
 
     .investment-table tr.up {
@@ -4579,7 +5878,7 @@
       border-bottom: 0;
       padding-top: 0.38rem;
       padding-bottom: 0.4rem;
-      font-size: 0.76rem;
+      font-size: 0.8rem;
       font-weight: 800;
       color: var(--color-cork-900);
       background: rgba(31, 82, 122, 0.025);
@@ -4589,18 +5888,10 @@
       content: attr(data-label);
       flex: 0 0 auto;
       color: var(--color-cork-400);
-      font-size: 0.58rem;
+      font-size: 0.6rem;
       font-weight: 700;
       text-align: left;
       text-transform: uppercase;
-    }
-
-    .investment-table .investment-div-amount {
-      font-size: 0.62rem;
-    }
-
-    .investment-table .investment-meta {
-      font-size: 0.62rem;
     }
 
     /* Investment panel header - wrap controls on narrow screens */
@@ -4666,7 +5957,7 @@
     border-radius: 4px;
     background: rgba(255, 255, 255, 0.54);
     color: var(--color-cork-900);
-    font-size: 0.62rem;
+    font-size: 0.6rem;
     font-weight: 500;
     line-height: 1;
     outline: none;
@@ -4713,7 +6004,7 @@
     align-items: center;
     gap: 0.12rem;
     color: var(--color-cork-500);
-    font-size: 0.62rem;
+    font-size: 0.6rem;
     font-weight: 700;
   }
 
@@ -4732,7 +6023,7 @@
     justify-content: flex-end;
     padding: 0 0.28rem;
     color: var(--color-cork-500);
-    font-size: 0.62rem;
+    font-size: 0.6rem;
     font-weight: 700;
   }
 
@@ -4792,7 +6083,7 @@
   }
 
   .tracker-table.dense {
-    font-size: 0.64rem;
+    font-size: 0.6rem;
   }
 
   .tracker-table.dense th,

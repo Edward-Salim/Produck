@@ -468,9 +468,7 @@ I would bring that same evidence-guided approach to your team. My strength is tu
       <ArrowLeft class="size-3" />Tools
     </a>
     <h1 class="font-display text-2xl text-cork-800 md:text-4xl">Application Kit</h1>
-    <p class="mt-0.5 text-sm text-cork-500">
-      Generate, edit, and compile tailored cover letters with your CV
-    </p>
+    <p class="mt-0.5 text-sm text-cork-500">Create tailored letters, PDFs, and outreach drafts</p>
   </header>
 
   <!-- ── Two-column layout ── -->
@@ -762,7 +760,7 @@ I would bring that same evidence-guided approach to your team. My strength is tu
             {:else}
               <div class="flex h-full items-center justify-center text-center">
                 <p class="max-w-sm text-sm leading-relaxed text-cork-500">
-                  LinkedIn message drafts will appear here after generation.
+                  No outreach drafts yet
                 </p>
               </div>
             {/if}

@@ -27,6 +27,14 @@ export type WalletRow = {
   note?: string;
 };
 
+export type WalletMonthState = {
+  balance?: number;
+  minimumHold?: number;
+  updated: boolean;
+};
+
+export type WalletMonthStates = Record<string, Record<string, WalletMonthState>>;
+
 export type InvestmentRow = {
   label: string;
   ticker?: string;
@@ -71,6 +79,7 @@ export type ForecastOverrideRow = {
 export type DebtScheduleRow = {
   provider: string;
   due: string;
+  paid?: string;
   amount: number;
   status: 'paid' | 'due-now' | 'upcoming';
 };
@@ -110,6 +119,7 @@ export type LedgerEntry = {
   amount: number;
   fromAccount?: string;
   toAccount?: string;
+  reimbursesEntryId?: string;
   paymentType: 'cash' | 'paylater' | 'transfer';
 };
 
@@ -117,6 +127,7 @@ export type TrackerData = {
   usdIdrRate?: number;
   monthlyAllocation: number;
   budgetCategoryOptions: BudgetCategoryOption[];
+  walletMonthStates: WalletMonthStates;
   categories: CategoryRow[];
   mayCategories: CategoryRow[];
   juneCategories: CategoryRow[];
@@ -145,6 +156,7 @@ export const emptyTrackerData: TrackerData = {
   usdIdrRate: undefined,
   monthlyAllocation: 0,
   budgetCategoryOptions: [],
+  walletMonthStates: {},
   categories: [],
   mayCategories: [],
   juneCategories: [],

@@ -6,7 +6,8 @@ import {
   boolean,
   jsonb,
   timestamp,
-  bigint
+  bigint,
+  uniqueIndex
 } from 'drizzle-orm/pg-core';
 import { relations, sql } from 'drizzle-orm';
 
@@ -943,6 +944,28 @@ export const financialTrackerWallet = pgTable('financial_tracker_wallet', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
 });
 
+export const financialTrackerWalletMonthStatus = pgTable(
+  'financial_tracker_wallet_month_status',
+  {
+    id: serial('id').primaryKey(),
+    ownerEmail: text('owner_email').notNull(),
+    monthKey: text('month_key').notNull(),
+    walletLabel: text('wallet_label').notNull(),
+    balance: money('balance'),
+    minimumHold: money('minimum_hold'),
+    balanceProvided: boolean('balance_provided').notNull().default(false),
+    transactionsProvided: boolean('transactions_provided').notNull().default(false),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    uniqueIndex('financial_tracker_wallet_month_status_unique').on(
+      table.ownerEmail,
+      table.monthKey,
+      table.walletLabel
+    )
+  ]
+);
+
 export const financialTrackerInvestment = pgTable('financial_tracker_investment', {
   id: serial('id').primaryKey(),
   ownerEmail: text('owner_email').notNull(),
@@ -982,6 +1005,8 @@ export const financialTrackerDebtSchedule = pgTable('financial_tracker_debt_sche
   ownerEmail: text('owner_email').notNull(),
   provider: text('provider').notNull(),
   due: text('due').notNull(),
+  dueDate: text('due_date'),
+  paidDate: text('paid_date'),
   amount: money('amount').notNull(),
   status: text('status').notNull(),
   sortOrder: integer('sort_order').notNull().default(0),
@@ -1008,6 +1033,7 @@ export const financialTrackerLedgerEntry = pgTable('financial_tracker_ledger_ent
   amount: money('amount').notNull(),
   fromAccount: text('from_account'),
   toAccount: text('to_account'),
+  reimbursesEntryId: text('reimburses_entry_id'),
   paymentType: text('payment_type').notNull(),
   sortOrder: integer('sort_order').notNull().default(0),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
