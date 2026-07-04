@@ -189,8 +189,12 @@
     const params = new URLSearchParams(window.location.search);
     const requestedLevel = Number(params.get('level'));
     const nextLevel = levels.includes(requestedLevel) ? requestedLevel : 1;
-    const forceNext = shouldForceNextStory(nextLevel);
+    const forceFromUrl = params.get('new') === '1' || params.get('force') === '1';
+    const forceNext = forceFromUrl || shouldForceNextStory(nextLevel);
     level = nextLevel;
+    if (forceFromUrl) {
+      window.history.replaceState(null, '', `/tools/chinese-game/reading?level=${nextLevel}`);
+    }
     if (forceNext || !restoreReadingState(nextLevel)) {
       generateReading(nextLevel, forceNext);
     }

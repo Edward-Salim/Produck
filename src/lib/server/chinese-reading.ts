@@ -39,6 +39,7 @@ type VocabGuard = {
 
 export const CHINESE_READING_LEVELS = new Set([1, 2, 3, 4, 5, 6, 7]);
 export const CHINESE_READING_MODEL = 'deepseek-v4-flash';
+const DEEPSEEK_PROVIDER_TIMEOUT_MS = 120 * 1000;
 const PINYIN_SPLIT_RE = /[\s，。？、！；：,.?!;:]+/;
 const HANZI_RE = /[\u3400-\u9fff]/u;
 const PINYIN_INITIALS = [
@@ -472,16 +473,32 @@ async function generateWithDeepSeek(env: ChineseReadingEnv, prompt: string) {
   const key = env.DEEPSEEK_API_KEY;
   if (!key) throw new Error('No DeepSeek API key configured');
 
-  const response = await fetch('https://api.deepseek.com/chat/completions', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
-    body: JSON.stringify({
-      model: env.DEEPSEEK_MODEL ?? CHINESE_READING_MODEL,
-      messages: [{ role: 'user', content: prompt }],
-      temperature: 0.4,
-      response_format: { type: 'json_object' }
-    })
-  });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), DEEPSEEK_PROVIDER_TIMEOUT_MS);
+
+  let response: Response;
+  try {
+    response = await fetch('https://api.deepseek.com/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
+      signal: controller.signal,
+      body: JSON.stringify({
+        model: env.DEEPSEEK_MODEL ?? CHINESE_READING_MODEL,
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.4,
+        response_format: { type: 'json_object' }
+      })
+    });
+  } catch (err) {
+    if (err instanceof Error && err.name === 'AbortError') {
+      throw new Error(
+        `DeepSeek generation timed out after ${Math.round(DEEPSEEK_PROVIDER_TIMEOUT_MS / 1000)} seconds`
+      );
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeout);
+  }
 
   if (!response.ok) {
     throw new Error(`DeepSeek API ${response.status}: ${await response.text().catch(() => '')}`);

@@ -5,7 +5,7 @@ import { db } from '$lib/server/db/index.js';
 import { appUser, chineseReadingJob } from '$lib/server/db/schema.js';
 import type { RequestHandler } from './$types.js';
 
-const STALE_JOB_MS = 14 * 60 * 1000;
+const STALE_JOB_MS = 5 * 60 * 1000;
 
 export const GET: RequestHandler = async ({ params, locals }) => {
   const authId = locals.session?.user?.id;

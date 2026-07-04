@@ -293,7 +293,7 @@
             </button>
             <a
               class="flex flex-1 cursor-pointer items-center justify-center rounded-lg bg-red-700 px-6 py-2.5 font-display text-lg text-amber-100 transition-all hover:bg-red-600 hover:shadow-md hover:shadow-red-900/30"
-              href={`/tools/chinese-game/reading?level=${engine.selectedReadingLevel}`}
+              href={`/tools/chinese-game/reading?level=${engine.selectedReadingLevel}&new=1`}
             >
               Begin
             </a>
