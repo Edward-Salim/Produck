@@ -9,7 +9,7 @@ Phone number is injected privately into generated PDFs.
 linkedin.com/in/edward-salim
 
 CV evidence to use selectively:
-- Fresh Computer Science graduate from Universitas Indonesia, Information Systems concentration, expected Jul 2026, GPA 3.57/4.00.
+- Fresh Computer Science graduate from Universitas Indonesia, Information Systems concentration, graduated Jul 2026, GPA 3.59/4.00.
 - 2nd Place Most Outstanding Student of Faculty of Computer Science 2025 and full tuition scholarship from the Indonesian Ministry of Education and Culture.
 - Legally authorized to work in Indonesia, available immediately, and open to Jakarta/Banten area opportunities.
 - Languages: Indonesian native, Hokkien native, English professional fluency with Duolingo English Test 140/160, Mandarin HSK 2.

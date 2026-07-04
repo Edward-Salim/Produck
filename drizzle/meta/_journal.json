@@ -169,6 +169,13 @@
       "when": 1783015200000,
       "tag": "0023_financial_tracker_debt_paid_dates",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1783120000000,
+      "tag": "0024_chinese_reading_story_cache",
+      "breakpoints": true
     }
   ]
 }

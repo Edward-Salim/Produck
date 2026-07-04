@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { RotateCcw } from '@lucide/svelte';
+  import { Home, RotateCcw } from '@lucide/svelte';
   import type { GameEngine } from './game-engine.svelte.js';
 
   let { engine }: { engine: GameEngine } = $props();
@@ -7,7 +7,7 @@
 
 <!-- ── GAME OVER SCREEN ── -->
 <div
-  class="mx-auto flex min-h-[calc(100dvh-10rem)] max-w-lg flex-col items-center justify-center px-4 pb-8"
+  class="mx-auto flex min-h-[calc(100dvh-10rem)] max-w-lg flex-col items-center justify-center px-4"
 >
   <div class="mb-6 text-center">
     <div class="mb-2 text-4xl md:text-5xl">💀</div>
@@ -19,23 +19,35 @@
       Personal Best: <span class="font-outfit italic">{engine.highscore.score}</span>
     </p>
   </div>
+</div>
 
-  <!-- Action buttons -->
-  <div class="flex flex-wrap justify-center gap-2 md:gap-3">
+<div class="fixed right-0 bottom-4 left-0 z-30 flex justify-center px-4 md:left-8">
+  <div
+    class="flex items-center justify-center gap-2 rounded-xl border border-cork-200/60 bg-cork-50/85 p-2 shadow-lg shadow-cork-900/10 backdrop-blur md:gap-3"
+  >
+    <span
+      class="inline-flex items-center px-1 text-[11px] font-semibold tracking-wider text-cork-400 uppercase"
+    >
+      HSK {engine.currentLevel}
+    </span>
+
     <button
       type="button"
-      class="flex cursor-pointer items-center justify-center rounded-xl border border-cork-300/50 bg-cork-50/80 p-2.5 text-cork-700 transition-all hover:bg-cork-200/50"
+      class="flex size-10 cursor-pointer items-center justify-center rounded-lg border border-cork-200/50 bg-cork-100 p-2 text-cork-600 shadow-sm transition-all hover:border-cork-300/50 hover:bg-cork-200 hover:shadow"
       onclick={() => engine.beginGame()}
       aria-label="Try Again"
+      title="Try Again"
     >
-      <RotateCcw class="size-5" />
+      <RotateCcw class="size-4" />
     </button>
     <button
       type="button"
-      class="flex cursor-pointer items-center gap-2 rounded-xl border border-cork-300/50 bg-cork-50/80 px-6 py-2.5 font-display text-lg text-cork-700 transition-all hover:bg-cork-200/50"
+      class="flex size-10 cursor-pointer items-center justify-center rounded-lg border border-cork-200/50 bg-cork-100 p-2 text-cork-600 shadow-sm transition-all hover:border-cork-300/50 hover:bg-cork-200 hover:shadow"
       onclick={() => engine.goToMenu()}
+      aria-label="Back to menu"
+      title="Back to menu"
     >
-      Back to Menu
+      <Home class="size-4" />
     </button>
   </div>
 </div>

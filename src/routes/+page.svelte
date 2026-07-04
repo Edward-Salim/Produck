@@ -2,6 +2,7 @@
   import { onMount, onDestroy } from 'svelte';
   import { goto } from '$app/navigation';
   import { reveal } from '$lib/actions/reveal';
+  import { getLastAppPagePath } from '$lib/client/last-app-page.js';
   import {
     GraduationCap,
     Briefcase,
@@ -21,6 +22,7 @@
   // Static assets & SVGs from SVGL CLI
   import edwardAvatar from '$lib/assets/edward.jpg?enhanced';
   import logoProduck from '$lib/assets/logo-produck.png?enhanced';
+  import logoProduckIcon from '$lib/assets/logo-produck.png';
   import linkedinSvg from '$lib/assets/tech/linkedin.svg';
   import githubSvg from '$lib/assets/tech/github_light.svg';
   import pythonSvg from '$lib/assets/tech/python.svg';
@@ -48,6 +50,7 @@
   import danaLogo from '$lib/assets/fintech_logos/indonesia/dana.png';
   import kitabisaLogo from '$lib/assets/fintech_logos/indonesia/kitabisa.jpeg';
   import indodanaLogo from '$lib/assets/fintech_logos/indonesia/indodana.png';
+  import desaBinaanLogo from '$lib/assets/desa-binaan-logo.png';
 
   // Lomba/Award & Project Images
   import datathonImg from '$lib/assets/awards/award-datathon.png';
@@ -57,6 +60,10 @@
   import rasioImg from '$lib/assets/awards/award-rasio.png';
   import techfestImg from '$lib/assets/awards/award-techfest.png';
   import churnImg from '$lib/assets/projects/project-churn.png';
+  import investikaIcon from '$lib/assets/projects/logo-investika.png';
+  import kowlIcon from '$lib/assets/projects/logo-kowl.png';
+  import kwinIcon from '$lib/assets/projects/logo-kwin.png';
+  import wsmIcon from '$lib/assets/projects/logo-wsm.svg';
   import uiCampusImg from '$lib/assets/education/ui-campus.png?enhanced';
   import ddp0OpeningKeynoteAudienceImg from '$lib/assets/speaking/ddp0-opening-keynote-audience.jpeg';
   import ddp0SpeakerCertImg from '$lib/assets/speaking/ddp0-speaker-certificate.png';
@@ -154,7 +161,7 @@
   const roles = [
     'Fintech Automation Engineer',
     'Data Science Champion',
-    'Information Systems at UI',
+    'Information Systems Graduate',
     'Product Discovery Builder'
   ];
 
@@ -219,6 +226,11 @@
 
   // Typing effect & lightbox keyboard shortcut on mount
   onMount(() => {
+    if (data.currentUser && sessionStorage.getItem('produck_show_landing') !== '1') {
+      goto(getLastAppPagePath() ?? '/dashboard', { replaceState: true });
+      return;
+    }
+
     let timer: any;
     const tick = () => {
       const fullTxt = roles[currentRoleIndex];
@@ -267,10 +279,10 @@
   // Quick stats computed from CV details (Fintech & Wealth themes)
   const stats = [
     {
-      value: '3.57',
+      value: '3.59',
       label: 'GPA at UI',
-      detail: 'Information Systems',
-      positive: '+3.57%',
+      detail: 'Information Systems Graduate',
+      positive: 'Graduated',
       icon: GraduationCap
     },
     {
@@ -341,27 +353,17 @@
     ChatGPT: openaiSvg
   };
 
-  const projectTechIconMap: Record<string, string> = {
-    SvelteKit: svelteSvg,
-    'Next.js': nextjsSvg,
-    Django: djangoSvg,
-    PostgreSQL: postgresqlSvg,
-    Python: pythonSvg
+  type BulletPart = {
+    text: string;
+    strong?: boolean;
   };
 
-  function getProjectTechAbbreviation(tech: string) {
-    const abbreviations: Record<string, string> = {
-      'Drizzle ORM': 'DRZ',
-      Bun: 'BUN',
-      'Tailwind CSS': 'TW',
-      FastAPI: 'FA',
-      'LLM Agent APIs': 'LLM',
-      Pandas: 'PD',
-      'Scikit-learn': 'SK',
-      Tableau: 'TB'
-    };
+  function bulletText(text: string): BulletPart {
+    return { text };
+  }
 
-    return abbreviations[tech] ?? tech.slice(0, 3).toUpperCase();
+  function bulletStrong(text: string): BulletPart {
+    return { text, strong: true };
   }
 
   // Professional experiences lists
@@ -374,8 +376,22 @@
       period: 'Jul 2025 - Jan 2026',
       cardTheme: 'from-[#0086E6] via-[#005FA3] to-[#003866]',
       bullets: [
-        "Synthesized operational bottlenecks from <strong>15+ cross-functional stakeholders</strong> across DANA's <strong>largest backoffice system</strong>, proposing prioritized product solutions.",
-        'Led <strong>product discovery</strong> for AI recruitment features (CV Scoring & HR Video bot), delivering cost and benchmarking models to project reduction in hiring cycle times from <strong>1 month to 3 weeks</strong>.'
+        [
+          bulletText('Synthesized operational bottlenecks from '),
+          bulletStrong('15+ cross-functional stakeholders'),
+          bulletText(" across DANA's "),
+          bulletStrong('largest backoffice system'),
+          bulletText(', proposing prioritized product solutions.')
+        ],
+        [
+          bulletText('Led '),
+          bulletStrong('product discovery'),
+          bulletText(
+            ' for AI recruitment features (CV Scoring & HR Video bot), delivering cost and benchmarking models to project reduction in hiring cycle times from '
+          ),
+          bulletStrong('1 month to 3 weeks'),
+          bulletText('.')
+        ]
       ]
     },
     {
@@ -386,8 +402,20 @@
       period: 'Feb 2025 - May 2025',
       cardTheme: 'from-[#0F9E98] via-[#0A6D69] to-[#05423F]',
       bullets: [
-        'Led cost-benefit analysis and proof-of-concept for an in-house QA management system, identifying <strong>IDR 300M+ in cost optimization</strong> for engineering leadership.',
-        'Automated <strong>50+ API test cases</strong> using a schema validation approach, cutting boilerplate code and strengthening QA coverage across 5+ core repositories.'
+        [
+          bulletText(
+            'Led cost-benefit analysis and proof-of-concept for an in-house QA management system, identifying '
+          ),
+          bulletStrong('IDR 300M+ in cost optimization'),
+          bulletText(' for engineering leadership.')
+        ],
+        [
+          bulletText('Automated '),
+          bulletStrong('50+ API test cases'),
+          bulletText(
+            ' using a schema validation approach, cutting boilerplate code and strengthening QA coverage across 5+ core repositories.'
+          )
+        ]
       ]
     },
     {
@@ -398,19 +426,37 @@
       period: 'Jul 2024 - Sep 2024',
       cardTheme: 'from-[#0D9488] via-[#0F766E] to-[#115E59]',
       bullets: [
-        'Optimized campaign outcomes using <strong>A/B testing</strong> and user segmentation, boosting active CRM engagement across a base of <strong>300K+ users</strong>.',
-        "Managed cross-functional execution of Indodana's official rebrand announcement microsite and notifications sent to <strong>1M+ users</strong>."
+        [
+          bulletText('Optimized campaign outcomes using '),
+          bulletStrong('A/B testing'),
+          bulletText(' and user segmentation, boosting active CRM engagement across a base of '),
+          bulletStrong('300K+ users'),
+          bulletText('.')
+        ],
+        [
+          bulletText(
+            "Managed cross-functional execution of Indodana's official rebrand announcement microsite and notifications sent to "
+          ),
+          bulletStrong('1M+ users'),
+          bulletText('.')
+        ]
       ]
     },
     {
       company: 'Desa Binaan UKM KMBUI',
-      logo: null,
+      logo: desaBinaanLogo,
       industry: 'Community Development & Finance',
       role: 'Project Officer / Head of Finance',
       period: 'May 2024 - Dec 2024',
       cardTheme: 'from-[#B91C1C] via-[#851010] to-[#580505]',
       bullets: [
-        'Managed financial planning and fundraising of <strong>IDR 70M+ (3x YoY increase)</strong>, established community koperasi model, and launched rural web hub seputarkrecek.com.'
+        [
+          bulletText('Managed financial planning and fundraising of '),
+          bulletStrong('IDR 70M+ (3x YoY increase)'),
+          bulletText(
+            ', established community koperasi model, and launched rural web hub seputarkrecek.com.'
+          )
+        ]
       ]
     }
   ];
@@ -422,29 +468,83 @@
     {
       title: 'Produck',
       tag: 'You are here',
+      icon: 'PD',
+      iconImage: logoProduckIcon,
+      logoScale: 1,
       category: 'product',
+      href: 'https://produck.fun/',
       description:
-        'A personal productivity and product management workspace. Integrates user-journey mapping, OKR tracking, background removal tools, fintech tracking, and AI-assisted workflows.',
-      tech: ['SvelteKit', 'PostgreSQL', 'Drizzle ORM', 'Bun', 'Tailwind CSS'],
+        'Personal website and daily life workspace spanning PM artifacts, OKRs, story maps, fintech research, job tracking, finance tracking, RSS trend summaries, and AI-assisted application workflows.',
+      tech: ['SvelteKit', 'PostgreSQL', 'Drizzle ORM', 'Bun'],
       isSelf: true,
       image: null
     },
     {
       title: 'K-Owl',
       tag: 'Thesis Project',
+      icon: 'KO',
+      iconImage: kowlIcon,
+      logoScale: 1.08,
       category: 'product',
+      href: 'https://kowl-fe-147377990525.asia-southeast2.run.app/',
       description:
-        'An AI-powered Learning Management System (LMS) engineered alongside faculty advisors to streamline student evaluation, automate grading feedback, and personalize course discovery paths.',
+        'Undergraduate thesis project and AI-supported learning platform turning K-W-L reflections, pre-post tests, and progress signals into a structured classroom learning loop.',
       tech: ['Next.js', 'Django', 'PostgreSQL', 'FastAPI', 'LLM Agent APIs'],
+      isSelf: false,
+      image: null
+    },
+    {
+      title: 'Investika',
+      tag: 'Discovery Portal',
+      icon: 'IV',
+      iconImage: investikaIcon,
+      logoScale: 1.35,
+      category: 'product',
+      href: 'https://investika-portal.netlify.app/',
+      description:
+        'Investment discovery portal for comparing Indonesian opportunities across regions, sectors, and languages with AI search, map-based exploration, authentication, and saved research flows.',
+      tech: ['AI Search', 'Maps', 'Auth', 'Saved Flows'],
+      isSelf: false,
+      image: null
+    },
+    {
+      title: 'K-Win',
+      tag: 'Portfolio Platform',
+      icon: 'KW',
+      iconImage: kwinIcon,
+      logoScale: 1.02,
+      category: 'product',
+      href: 'https://rekam-147377990525.asia-southeast2.run.app/',
+      description:
+        'Student competition portfolio platform for uploading, browsing, and sharing verified achievement records, with protected PDF access and direct creator contact flows.',
+      tech: ['Portfolio', 'PDF Access', 'Auth', 'Contact Flow'],
+      isSelf: false,
+      image: null
+    },
+    {
+      title: 'WSM',
+      tag: 'Media Archive',
+      icon: 'WS',
+      iconImage: wsmIcon,
+      logoScale: 0.82,
+      category: 'product',
+      href: 'https://wangsiumek.netlify.app/',
+      description:
+        'Media archive for browsing synced Google Photos content through tags, lazy image and video viewing, music playback, and local media management.',
+      tech: ['Google Photos', 'Tags', 'Lazy Media', 'Music'],
       isSelf: false,
       image: null
     },
     {
       title: 'Customer Churn Analysis',
       tag: 'Data Project',
+      icon: 'CH',
+      iconImage: null,
+      logoScale: 1,
       category: 'data',
+      href: null,
       description:
-        'Telecom subscriber churn forecasting model and interactive executive Tableau dashboard detailing customer churn indicators and proposing high-impact retention strategies.',
+        'Tableau dashboard identifying telecom churn patterns and retention opportunities from customer behavior, contract, and service usage data.',
       tech: ['Python', 'Pandas', 'Scikit-learn', 'Tableau'],
       isSelf: false,
       image: churnImg
@@ -562,11 +662,17 @@
 
   function getBookshelfCoverClass(title: string) {
     const customWidths: Record<string, string> = {
-      'The PAYTECH Book': 'w-48',
-      'The Very Hungry Caterpillar': 'w-48'
+      'The PAYTECH Book': 'w-32 sm:w-48',
+      'The Very Hungry Caterpillar': 'w-32 sm:w-48'
     };
 
-    return customWidths[title] ?? 'w-24';
+    return customWidths[title] ?? 'w-20 sm:w-24';
+  }
+
+  function chunkBookshelfBooks<T>(books: T[], size = 3) {
+    return Array.from({ length: Math.ceil(books.length / size) }, (_, index) =>
+      books.slice(index * size, index * size + size)
+    );
   }
 
   let activeBookshelfCollection = $state('product');
@@ -576,6 +682,7 @@
         ?.books ?? [])
     ].sort((a, b) => a.title.localeCompare(b.title))
   );
+  let activeBookshelfGroups = $derived(chunkBookshelfBooks(activeBookshelfBooks, 3));
 
   // Volunteering & Leadership list
   const volunteering = [
@@ -879,29 +986,25 @@
       name: 'English',
       flag: '🇬🇧',
       rating: 5,
-      detail: 'Professional Fluency',
-      desc: 'Duolingo Test: 140/160 (IELTS 7.5 equivalent)'
+      desc: 'Professional fluency with Duolingo 140/160, equivalent to IELTS 7.5.'
     },
     {
       name: 'Indonesian',
       flag: '🇮🇩',
       rating: 5,
-      detail: 'Native',
-      desc: 'Mother tongue, formal instruction'
+      desc: 'Native mother tongue used in formal instruction.'
     },
     {
       name: 'Hokkien',
       flag: '🇨🇳',
       rating: 5,
-      detail: 'Native (Spoken)',
-      desc: 'Ancestral spoken dialect, daily use'
+      desc: 'Native spoken ancestral dialect used daily.'
     },
     {
       name: 'Mandarin',
       flag: '🇨🇳',
       rating: 2,
-      detail: 'Elementary (HSK 2)',
-      desc: 'Basic writing, basic conversation'
+      desc: 'Elementary HSK 2 with basic writing and conversation.'
     }
   ];
 </script>
@@ -1235,7 +1338,7 @@
     <!-- Hero Section -->
     <section
       use:reveal={{ distance: 18 }}
-      class="reveal-on-scroll relative overflow-hidden px-6 pt-12 pb-8 md:pt-16 md:pb-12"
+      class="reveal-on-scroll relative overflow-hidden px-5 pt-8 pb-8 sm:px-6 md:pt-16 md:pb-12"
     >
       <!-- Red & Gold Ambient glow circles -->
       <div
@@ -1246,24 +1349,24 @@
       ></div>
 
       <div class="mx-auto max-w-5xl">
-        <div class="grid grid-cols-1 gap-x-12 gap-y-8 md:grid-cols-12 md:items-start">
+        <div class="grid grid-cols-1 gap-x-12 gap-y-6 md:grid-cols-12 md:items-start">
           <!-- Intro text (Bio & Contacts) -->
           <div
-            class="order-2 space-y-6 text-center md:order-1 md:col-span-7 md:row-span-2 md:text-left"
+            class="order-2 space-y-5 text-center md:order-1 md:col-span-7 md:row-span-2 md:space-y-6 md:text-left"
           >
-            <div class="space-y-3">
+            <div class="space-y-2.5 md:space-y-3">
               <h1
-                class="font-outfit text-4xl font-extrabold tracking-tight text-white sm:text-5xl md:text-6xl"
+                class="font-outfit flex flex-col items-center gap-1 text-4xl leading-tight font-extrabold tracking-tight text-white sm:text-5xl md:block md:text-6xl"
               >
                 Edward Salim <span
-                  class="font-chinese ml-3 text-3xl font-medium tracking-normal text-amber-500"
+                  class="font-chinese text-3xl leading-none font-medium tracking-normal whitespace-nowrap text-amber-500 md:ml-3 md:text-4xl"
                   >林明星</span
                 >
               </h1>
 
               <!-- Headline rotater / typing effect in Gold -->
               <div
-                class="font-chinese h-auto min-h-[4.5rem] pb-1 text-xl leading-snug font-bold text-amber-400 sm:min-h-[3.5rem] sm:text-2xl md:min-h-[2.5rem] md:text-3xl md:whitespace-nowrap"
+                class="font-outfit min-h-7 pb-1 text-base leading-snug font-bold tracking-wide text-amber-400 sm:text-xl md:min-h-10 md:text-3xl md:whitespace-nowrap"
               >
                 <span>{currentRoleText}</span>
                 <span class="ml-0.5 inline-block h-6 w-0.5 animate-pulse bg-amber-400 align-middle"
@@ -1272,14 +1375,14 @@
             </div>
 
             <p class="font-outfit text-sm leading-relaxed text-stone-400 sm:text-base md:max-w-lg">
-              Engineering robust financial pipelines, automated backoffice infrastructure, and
-              predictive intelligence models. Ex-Intern at DANA, Indodana & Kitabisa.
+              Hi, I’m Edward. I’m into product, fintech, and building useful things from messy
+              ideas. Future Minister of Communication and Digital Affairs, maybe.
             </p>
 
             <!-- Red Envelope (Hongbao) Contact Links -->
             <div class="pt-2">
               <span
-                class="mb-3 block text-center text-[10px] font-black tracking-widest text-red-500 uppercase md:text-left"
+                class="mb-3 block text-center text-xs font-black tracking-widest text-red-500 uppercase md:text-left"
                 >CONTACT</span
               >
               <div class="grid w-full max-w-xl grid-cols-2 gap-4 sm:grid-cols-4">
@@ -1295,7 +1398,7 @@
                     class="absolute top-0 left-0 z-20 flex h-11 w-full origin-top items-center justify-center rounded-b-[40%] border-b border-amber-500/40 bg-red-700 shadow-xs transition-all duration-300 group-hover:[transform:rotateX(180deg)]"
                   >
                     <div
-                      class="flex size-5 items-center justify-center rounded-full border border-amber-600 bg-gradient-to-tr from-amber-500 to-amber-300 text-[9px] font-black text-amber-950"
+                      class="flex size-5 items-center justify-center rounded-full border border-amber-600 bg-gradient-to-tr from-amber-500 to-amber-300 text-xs font-black text-amber-950"
                     >
                       福
                     </div>
@@ -1305,10 +1408,10 @@
                     class="absolute inset-x-2 top-6 bottom-2 z-10 flex translate-y-6 flex-col items-center justify-center rounded-lg border border-amber-400/40 bg-gradient-to-b from-amber-50 to-amber-100 p-2 text-center transition-all duration-300 group-hover:translate-y-0"
                   >
                     <FileText class="size-4.5 text-amber-950" />
-                    <span class="mt-1 text-[9px] font-black tracking-wider text-amber-950 uppercase"
+                    <span class="mt-1 text-xs font-black tracking-wider text-amber-950 uppercase"
                       >Resume</span
                     >
-                    <span class="w-full truncate text-[8px] font-medium text-amber-800"
+                    <span class="w-full truncate text-xs font-medium text-amber-800"
                       >Download CV</span
                     >
                   </div>
@@ -1325,7 +1428,7 @@
                     class="absolute top-0 left-0 z-20 flex h-11 w-full origin-top items-center justify-center rounded-b-[40%] border-b border-amber-500/40 bg-red-700 shadow-xs transition-all duration-300 group-hover:[transform:rotateX(180deg)]"
                   >
                     <div
-                      class="flex size-5 items-center justify-center rounded-full border border-amber-600 bg-gradient-to-tr from-amber-500 to-amber-300 text-[9px] font-black text-amber-950"
+                      class="flex size-5 items-center justify-center rounded-full border border-amber-600 bg-gradient-to-tr from-amber-500 to-amber-300 text-xs font-black text-amber-950"
                     >
                       禄
                     </div>
@@ -1335,10 +1438,10 @@
                     class="absolute inset-x-2 top-6 bottom-2 z-10 flex translate-y-6 flex-col items-center justify-center rounded-lg border border-amber-400/40 bg-gradient-to-b from-amber-50 to-amber-100 p-2 text-center transition-all duration-300 group-hover:translate-y-0"
                   >
                     <img src={linkedinSvg} alt="LinkedIn" class="size-4.5 object-contain" />
-                    <span class="mt-1 text-[9px] font-black tracking-wider text-amber-950 uppercase"
+                    <span class="mt-1 text-xs font-black tracking-wider text-amber-950 uppercase"
                       >LinkedIn</span
                     >
-                    <span class="w-full truncate text-[8px] font-medium text-amber-800"
+                    <span class="w-full truncate text-xs font-medium text-amber-800"
                       >edward-salim</span
                     >
                   </div>
@@ -1355,7 +1458,7 @@
                     class="absolute top-0 left-0 z-20 flex h-11 w-full origin-top items-center justify-center rounded-b-[40%] border-b border-amber-500/40 bg-red-700 shadow-xs transition-all duration-300 group-hover:[transform:rotateX(180deg)]"
                   >
                     <div
-                      class="flex size-5 items-center justify-center rounded-full border border-amber-600 bg-gradient-to-tr from-amber-500 to-amber-300 text-[9px] font-black text-amber-950"
+                      class="flex size-5 items-center justify-center rounded-full border border-amber-600 bg-gradient-to-tr from-amber-500 to-amber-300 text-xs font-black text-amber-950"
                     >
                       寿
                     </div>
@@ -1365,10 +1468,10 @@
                     class="absolute inset-x-2 top-6 bottom-2 z-10 flex translate-y-6 flex-col items-center justify-center rounded-lg border border-amber-400/40 bg-gradient-to-b from-amber-50 to-amber-100 p-2 text-center transition-all duration-300 group-hover:translate-y-0"
                   >
                     <img src={githubSvg} alt="GitHub" class="size-4.5 object-contain" />
-                    <span class="mt-1 text-[9px] font-black tracking-wider text-amber-950 uppercase"
+                    <span class="mt-1 text-xs font-black tracking-wider text-amber-950 uppercase"
                       >GitHub</span
                     >
-                    <span class="w-full truncate text-[8px] font-medium text-amber-800"
+                    <span class="w-full truncate text-xs font-medium text-amber-800"
                       >Edward-Salim</span
                     >
                   </div>
@@ -1385,7 +1488,7 @@
                     class="absolute top-0 left-0 z-20 flex h-11 w-full origin-top items-center justify-center rounded-b-[40%] border-b border-amber-500/40 bg-red-700 shadow-xs transition-all duration-300 group-hover:[transform:rotateX(180deg)]"
                   >
                     <div
-                      class="flex size-5 items-center justify-center rounded-full border border-amber-600 bg-gradient-to-tr from-amber-500 to-amber-300 text-[9px] font-black text-amber-950"
+                      class="flex size-5 items-center justify-center rounded-full border border-amber-600 bg-gradient-to-tr from-amber-500 to-amber-300 text-xs font-black text-amber-950"
                     >
                       喜
                     </div>
@@ -1395,10 +1498,10 @@
                     class="absolute inset-x-2 top-6 bottom-2 z-10 flex translate-y-6 flex-col items-center justify-center rounded-lg border border-amber-400/40 bg-gradient-to-b from-amber-50 to-amber-100 p-2 text-center transition-all duration-300 group-hover:translate-y-0"
                   >
                     <img src={instagramSvg} alt="Instagram" class="size-4.5 object-contain" />
-                    <span class="mt-1 text-[9px] font-black tracking-wider text-amber-950 uppercase"
+                    <span class="mt-1 text-xs font-black tracking-wider text-amber-950 uppercase"
                       >Instagram</span
                     >
-                    <span class="w-full truncate text-[8px] font-medium text-amber-800"
+                    <span class="w-full truncate text-xs font-medium text-amber-800"
                       >@edwardsalimm</span
                     >
                   </div>
@@ -1422,7 +1525,7 @@
                   src={edwardAvatar}
                   alt="Edward Salim"
                   fetchpriority="high"
-                  class="size-44 rounded-xl border border-stone-900 object-cover sm:size-52 md:size-60"
+                  class="size-40 rounded-xl border border-stone-900 object-cover sm:size-52 md:size-60"
                 />
 
                 <!-- Traditional Ornaments on Photo Corners -->
@@ -1441,12 +1544,12 @@
 
                 <!-- Decorative ancient coins overlapping photo -->
                 <div
-                  class="absolute -top-3 -left-3 flex size-7 items-center justify-center rounded-full border border-amber-600 bg-amber-500 text-[10px] font-black text-amber-950 shadow-lg"
+                  class="absolute -top-3 -left-3 flex size-7 items-center justify-center rounded-full border border-amber-600 bg-amber-500 text-xs font-black text-amber-950 shadow-lg"
                 >
                   福
                 </div>
                 <div
-                  class="absolute -right-3 -bottom-3 flex size-7 items-center justify-center rounded-full border border-amber-600 bg-amber-500 text-[10px] font-black text-amber-950 shadow-lg"
+                  class="absolute -right-3 -bottom-3 flex size-7 items-center justify-center rounded-full border border-amber-600 bg-amber-500 text-xs font-black text-amber-950 shadow-lg"
                 >
                   禄
                 </div>
@@ -1456,7 +1559,7 @@
         </div>
 
         <!-- Quick Stats Dashboard (Styled as Gold Bullion Boxes) -->
-        <div class="mt-12 grid grid-cols-2 gap-4 sm:grid-cols-4">
+        <div class="mt-10 grid grid-cols-2 gap-3 sm:grid-cols-4 md:mt-12 md:gap-4">
           {#each stats as stat, idx (stat.label)}
             {@const StatIcon = stat.icon}
             <div
@@ -1476,7 +1579,7 @@
                 <StatIcon class="size-8 shrink-0 text-amber-400/25" />
               </div>
 
-              <p class="mt-2 text-[10px] font-black tracking-widest text-stone-400 uppercase">
+              <p class="mt-2 text-xs font-black tracking-widest text-stone-400 uppercase">
                 {stat.label}
               </p>
               <p class="mt-0.5 text-xs leading-snug text-stone-500">{stat.detail}</p>
@@ -1579,8 +1682,7 @@
               </h3>
               <p class="text-sm font-semibold text-amber-400">B.Comp.Sc. in Information Systems</p>
               <p class="text-sm text-stone-400">
-                GPA: <span class="font-bold text-stone-200">3.57 / 4.00</span> &middot; 8th Semester (Final
-                Year)
+                GPA: <span class="font-bold text-stone-200">3.59 / 4.00</span> &middot; Graduated
               </p>
 
               <ul class="mt-4 list-disc space-y-2.5 pl-5 text-xs text-stone-400 md:max-w-none">
@@ -1606,148 +1708,244 @@
         </div>
       </section>
 
-      <!-- Experience Section (Card Wallet) -->
+      <!-- Experience Section (Bill and Cards) -->
       <section use:reveal={{}} class="reveal-on-scroll scroll-mt-24 space-y-6" id="experience">
         <div class="flex items-center justify-between border-b border-stone-800 pb-3">
           <div class="flex items-center gap-3">
             <Briefcase class="size-6 text-amber-500" />
             <h2 class="font-outfit text-2xl font-bold tracking-tight text-white">Work History</h2>
           </div>
-          <span class="font-mono text-xs text-stone-500 max-md:hidden"
-            >Select a saved card to view details</span
-          >
         </div>
 
-        <div class="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
-          <!-- Experience Bullets Container (Revealed like a Ledger/Receipt statement) -->
+        <div class="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_390px] lg:items-start">
+          <!-- Experience Bullets Container (Bill statement) -->
           {#if activeExperienceIndex >= 0 && activeExperienceIndex < experiences.length}
             {@const selectedExp = experiences[activeExperienceIndex]}
-            <div
-              class="animate-fade-in relative min-h-[560px] rounded-2xl border border-amber-500/20 bg-[#141211] p-6 shadow-xl duration-300 md:p-8"
+            <article
+              class="bill-paper animate-fade-in relative min-h-[560px] overflow-hidden rounded-sm p-5 text-stone-950 duration-300 sm:p-6 md:p-8"
             >
-              <!-- Golden Corner Brackets -->
-              <div
-                class="absolute top-2 left-2 size-3.5 border-t border-l border-amber-500/40"
-              ></div>
-              <div
-                class="absolute top-2 right-2 size-3.5 border-t border-r border-amber-500/40"
-              ></div>
-              <div
-                class="absolute bottom-2 left-2 size-3.5 border-b border-l border-amber-500/40"
-              ></div>
-              <div
-                class="absolute right-2 bottom-2 size-3.5 border-r border-b border-amber-500/40"
-              ></div>
-
-              <div
-                class="border-stone-850 mb-5 flex flex-col justify-between gap-4 border-b pb-4 md:flex-row md:items-center"
-              >
-                <div>
-                  <span class="text-[9px] font-black tracking-widest text-amber-500 uppercase"
-                    >Financial Ledger Statement</span
-                  >
-                  <h4 class="font-outfit text-lg font-bold text-white">
-                    {selectedExp.company} &middot; {selectedExp.role}
-                  </h4>
-                </div>
-                <span
-                  class="rounded-full border border-stone-800 bg-stone-900 px-3 py-1 font-mono text-xs font-bold tracking-wider text-stone-400 uppercase"
-                  >{selectedExp.period}</span
+              <div class="relative z-10 space-y-6">
+                <div
+                  class="flex flex-col gap-5 border-b border-stone-950 pb-5 sm:flex-row sm:items-start sm:justify-between"
                 >
-              </div>
+                  <div class="space-y-2">
+                    <span class="text-xs font-black tracking-[0.22em] text-stone-950 uppercase"
+                      >Experience Bill</span
+                    >
+                    <div>
+                      <h4 class="font-outfit text-2xl leading-tight font-black text-stone-950">
+                        {selectedExp.company}
+                      </h4>
+                      <p class="mt-1 max-w-xl text-sm font-bold text-stone-700">
+                        {selectedExp.role}
+                      </p>
+                    </div>
+                  </div>
 
-              <ul class="list-disc space-y-4 pl-5 text-sm text-stone-300">
-                {#each selectedExp.bullets as bullet, idx (idx)}
-                  <li class="leading-relaxed">{@html bullet}</li>
-                {/each}
-              </ul>
-            </div>
+                  <div
+                    class="min-w-34 border border-stone-950 bg-white px-3 py-2 text-right text-stone-950"
+                  >
+                    <p class="font-mono text-xs font-black tracking-widest uppercase opacity-70">
+                      Bill No.
+                    </p>
+                    <p class="font-mono text-lg font-black">
+                      WH-{String(activeExperienceIndex + 1).padStart(3, '0')}
+                    </p>
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-1 gap-3 text-xs sm:grid-cols-3">
+                  <div class="border border-stone-950/30 bg-white p-3">
+                    <p
+                      class="font-mono text-xs font-black tracking-widest text-stone-500 uppercase"
+                    >
+                      Billed To
+                    </p>
+                    <p class="mt-1 font-bold text-stone-950">{selectedExp.company}</p>
+                  </div>
+                  <div class="border border-stone-950/30 bg-white p-3">
+                    <p
+                      class="font-mono text-xs font-black tracking-widest text-stone-500 uppercase"
+                    >
+                      Period
+                    </p>
+                    <p class="mt-1 font-bold text-stone-950">{selectedExp.period}</p>
+                  </div>
+                  <div class="border border-stone-950/30 bg-white p-3">
+                    <p
+                      class="font-mono text-xs font-black tracking-widest text-stone-500 uppercase"
+                    >
+                      Category
+                    </p>
+                    <p class="mt-1 font-bold text-stone-950">{selectedExp.industry}</p>
+                  </div>
+                </div>
+
+                <div class="overflow-hidden border-y-2 border-dashed border-stone-950/55">
+                  <div
+                    class="hidden grid-cols-[72px_minmax(0,1fr)_82px] border-b border-stone-950/40 bg-stone-950 px-3 py-2 font-mono text-xs font-black tracking-widest text-white uppercase sm:grid"
+                  >
+                    <span>Item</span>
+                    <span>Description</span>
+                    <span class="text-right">Amount</span>
+                  </div>
+
+                  {#each selectedExp.bullets as bullet, idx (idx)}
+                    <div
+                      class="grid grid-cols-1 gap-2 border-b border-stone-950/20 px-3 py-4 text-sm last:border-b-0 sm:grid-cols-[72px_minmax(0,1fr)_82px] sm:gap-4"
+                    >
+                      <div
+                        class="font-mono text-xs font-black tracking-widest text-stone-500 uppercase"
+                      >
+                        Line {idx + 1}
+                      </div>
+                      <p class="bill-line-copy leading-relaxed text-stone-800">
+                        {#each bullet as part, partIdx (partIdx)}
+                          {#if part.strong}
+                            <strong>{part.text}</strong>
+                          {:else}
+                            {part.text}
+                          {/if}
+                        {/each}
+                      </p>
+                      <div class="font-mono text-xs font-black text-stone-950 sm:text-right">
+                        Impact
+                      </div>
+                    </div>
+                  {/each}
+                </div>
+
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-[minmax(0,1fr)_240px]">
+                  <div class="space-y-2 text-xs leading-relaxed text-stone-600">
+                    <p
+                      class="font-mono text-xs font-black tracking-widest text-stone-500 uppercase"
+                    >
+                      Notes
+                    </p>
+                    <p>
+                      Statement generated from selected saved work card. Line items summarize the
+                      delivered scope and measurable outcomes.
+                    </p>
+                  </div>
+
+                  <div class="border border-stone-950 bg-white p-4">
+                    <div
+                      class="flex items-center justify-between border-b border-stone-950/25 pb-2 text-xs"
+                    >
+                      <span class="font-mono font-black tracking-widest text-stone-500 uppercase"
+                        >Subtotal</span
+                      >
+                      <span class="font-bold">{selectedExp.bullets.length} line items</span>
+                    </div>
+                    <div class="mt-3 flex items-end justify-between gap-3">
+                      <span
+                        class="font-mono text-xs font-black tracking-widest text-stone-500 uppercase"
+                        >Balance Due</span
+                      >
+                      <span class="font-outfit text-2xl font-black text-stone-950">Delivered</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </article>
           {/if}
 
-          <div class="relative bg-[#0b0908] p-4 shadow-2xl shadow-black/40 lg:sticky lg:top-24">
-            <div
-              class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_12%,rgba(245,158,11,0.08),transparent_26%),linear-gradient(135deg,rgba(255,255,255,0.035),transparent_38%)]"
-              aria-hidden="true"
-            ></div>
-
-            <div class="relative space-y-0">
+          <div class="relative overflow-visible px-1 pt-3 pb-8 lg:sticky lg:top-24">
+            <div class="relative">
               {#each experiences as exp, idx (exp.company)}
                 {@const isActive = activeExperienceIndex === idx}
-                <div class="relative min-h-[82px] overflow-visible bg-black/20 p-2">
-                  <div
-                    class="pointer-events-none absolute inset-x-0 bottom-0 z-0 h-7 border-t border-amber-500/20 bg-gradient-to-b from-[#17110c]/90 to-[#090706]/98 shadow-[0_-8px_18px_rgba(0,0,0,0.35)]"
-                    aria-hidden="true"
-                  ></div>
-                  <div
-                    class="pointer-events-none absolute inset-x-4 bottom-7 z-20 h-px bg-amber-400/25"
-                    aria-hidden="true"
-                  ></div>
-
+                <div
+                  class="experience-card-sleeve relative transition duration-300"
+                  style="margin-top: {idx === 0 ? '0' : '-1.45rem'}; z-index: {isActive
+                    ? experiences.length + 4
+                    : experiences.length - idx}; transform: translateX({isActive
+                    ? '0.7rem'
+                    : idx % 2 === 0
+                      ? '-0.2rem'
+                      : '0.15rem'}) rotate({isActive
+                    ? '0deg'
+                    : idx % 2 === 0
+                      ? '-1.2deg'
+                      : '1deg'});"
+                >
                   <button
                     type="button"
-                    class="group absolute inset-x-4 top-2.5 z-10 flex h-24 cursor-pointer flex-col justify-between overflow-hidden rounded-xl border border-amber-500/20 bg-gradient-to-tr {exp.cardTheme} p-2.5 text-left shadow-xl transition-all duration-300 hover:-translate-y-2 hover:border-amber-400/50 hover:shadow-2xl {isActive
-                      ? 'z-40 -translate-y-8 ring-2 ring-amber-400'
+                    class="group relative flex min-h-34 w-[calc(100%-0.7rem)] cursor-pointer flex-col justify-between overflow-hidden rounded-xl border border-white/15 bg-gradient-to-tr {exp.cardTheme} p-4 text-left shadow-[0_18px_32px_rgba(0,0,0,0.38)] transition duration-300 hover:-translate-y-1 hover:border-amber-300/70 focus:ring-2 focus:ring-amber-300 focus:outline-none {isActive
+                      ? 'ring-2 ring-amber-300'
                       : 'opacity-90'}"
+                    aria-pressed={isActive}
                     onclick={() => (activeExperienceIndex = idx)}
                   >
                     <div
-                      class="absolute inset-0 -translate-x-full bg-linear-to-tr from-white/0 via-white/5 to-white/0 transition-transform duration-1000 group-hover:translate-x-full"
+                      class="absolute inset-0 -translate-x-full bg-linear-to-tr from-white/0 via-white/10 to-white/0 transition-transform duration-1000 group-hover:translate-x-full"
+                    ></div>
+                    <div
+                      class="absolute top-4 left-4 grid h-7 w-9 grid-cols-2 gap-px rounded-md border border-yellow-200/35 bg-yellow-300/80 p-1 shadow-inner"
+                      aria-hidden="true"
+                    >
+                      <span class="rounded-[2px] bg-yellow-700/35"></span>
+                      <span class="rounded-[2px] bg-yellow-700/25"></span>
+                      <span class="rounded-[2px] bg-yellow-700/25"></span>
+                      <span class="rounded-[2px] bg-yellow-700/35"></span>
+                    </div>
+                    <div
+                      class="absolute -right-10 -bottom-12 size-32 rounded-full border border-white/15"
+                      aria-hidden="true"
                     ></div>
 
-                    {#if exp.company === 'Desa Binaan UKM KMBUI'}
-                      <div
-                        class="pointer-events-none absolute inset-0 bg-repeat opacity-10"
-                        style="background-image: url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2230%22 height=%2230%22 viewBox=%220 0 30 30%22><path d=%22M15 5c-2 0-3.5 1.5-3.5 3.5s1.5 3.5 3.5 3.5 3.5-1.5 3.5-3.5S17 5 15 5z%22 fill=%22%23FFF%22/></svg>');"
-                      ></div>
-                    {/if}
-
-                    <div class="relative z-10 flex w-full items-start justify-between gap-3">
-                      <div class="min-w-0 space-y-0.5">
-                        <span
-                          class="block text-[8px] font-black tracking-widest text-amber-300 uppercase opacity-90"
-                          >{exp.industry}</span
+                    <div class="relative z-10 flex items-start justify-between gap-3 pl-12">
+                      <div class="min-w-0">
+                        <p
+                          class="font-mono text-xs font-black tracking-[0.2em] text-white/65 uppercase"
                         >
-                        <h3 class="font-outfit truncate text-xs font-black text-white">
+                          Work Card {String(idx + 1).padStart(2, '0')}
+                        </p>
+                        <h3
+                          class="font-outfit mt-1 truncate text-base leading-tight font-black text-white"
+                        >
                           {exp.company}
                         </h3>
                       </div>
 
                       {#if exp.logo}
-                        <div
-                          class="flex size-6 shrink-0 items-center justify-center overflow-hidden rounded border border-white/10 bg-white/10 p-1 backdrop-blur-xs"
-                        >
-                          <img
-                            src={exp.logo}
-                            alt={exp.company}
-                            loading="lazy"
-                            decoding="async"
-                            class="size-full object-contain brightness-100 filter"
-                          />
-                        </div>
+                        <img
+                          src={exp.logo}
+                          alt={exp.company}
+                          loading="lazy"
+                          decoding="async"
+                          class="size-9 shrink-0 object-contain drop-shadow-[0_2px_5px_rgba(0,0,0,0.35)]"
+                        />
                       {:else}
                         <div
-                          class="font-outfit flex size-6 shrink-0 items-center justify-center rounded border border-white/10 bg-white/10 text-xs font-black text-white"
+                          class="font-outfit flex size-8 shrink-0 items-center justify-center rounded-md border border-white/15 bg-white/15 text-sm font-black text-white"
                         >
                           {exp.company.charAt(0)}
                         </div>
                       {/if}
                     </div>
 
-                    <div class="relative z-10 flex w-full items-end justify-between gap-3">
-                      <div class="min-w-0 space-y-0.5">
-                        <p
-                          class="truncate text-[9px] font-black tracking-widest text-white/80 uppercase"
-                        >
-                          {exp.role}
-                        </p>
-                        <p class="font-mono text-[8px] tracking-tight text-white/50">
-                          {exp.period}
-                        </p>
-                      </div>
-                      <span
-                        class="shrink-0 rounded border border-white/10 bg-black/30 px-2 py-0.5 text-[9px] font-black text-amber-300 uppercase"
-                        >Details</span
+                    <div class="relative z-10 mt-6 space-y-3">
+                      <p
+                        class="text-xs leading-snug font-black tracking-widest text-amber-200 uppercase"
                       >
+                        {exp.industry}
+                      </p>
+                      <div class="flex items-end justify-between gap-3">
+                        <div class="min-w-0">
+                          <p
+                            class="truncate text-xs font-black tracking-wider text-white/85 uppercase"
+                          >
+                            {exp.role}
+                          </p>
+                          <p class="mt-1 font-mono text-xs tracking-tight text-white/60">
+                            {exp.period}
+                          </p>
+                        </div>
+                        <span
+                          class="shrink-0 rounded border border-white/10 bg-black/25 px-2 py-1 text-xs font-black text-amber-200 uppercase"
+                          >{isActive ? 'In bill' : 'View'}</span
+                        >
+                      </div>
                     </div>
                   </button>
                 </div>
@@ -1778,7 +1976,7 @@
             {#each speakingBinderPages as page (page.label)}
               <div class="relative bg-[#0b0a09] p-3 sm:p-4 lg:p-5">
                 <div class="relative mb-3 flex items-center justify-between">
-                  <p class="text-[10px] font-black tracking-[0.2em] text-stone-500 uppercase">
+                  <p class="text-xs font-black tracking-[0.2em] text-stone-500 uppercase">
                     {page.label}
                   </p>
                   <div class="flex gap-1.5">
@@ -1840,12 +2038,12 @@
                                 {item.role}
                               </p>
                               <p
-                                class="mt-0.5 truncate text-[9px] font-bold tracking-[0.12em] text-stone-400 uppercase"
+                                class="mt-0.5 truncate text-xs font-bold tracking-[0.12em] text-stone-400 uppercase"
                               >
                                 {item.organization}
                               </p>
                             </div>
-                            <p class="shrink-0 font-mono text-[9px] text-stone-500">
+                            <p class="shrink-0 font-mono text-xs text-stone-500">
                               {getPeriodYear(item.period)}
                             </p>
                           </div>
@@ -1864,9 +2062,7 @@
                           class="flex aspect-[4/3] flex-col items-center justify-center gap-2 bg-[radial-gradient(circle_at_50%_45%,rgba(245,158,11,0.06),transparent_30%),linear-gradient(135deg,rgba(255,255,255,0.025),rgba(0,0,0,0.12))]"
                         >
                           <div class="h-14 w-10 border border-dashed border-stone-800/70"></div>
-                          <p
-                            class="text-[9px] font-black tracking-[0.18em] text-stone-600 uppercase"
-                          >
+                          <p class="text-xs font-black tracking-[0.18em] text-stone-600 uppercase">
                             Open for talks
                           </p>
                         </div>
@@ -1932,7 +2128,7 @@
                       </h3>
                       {#if group.commonCategory}
                         <p
-                          class="text-[10px] font-semibold tracking-[0.18em] text-red-300/95 uppercase"
+                          class="text-xs font-semibold tracking-[0.18em] text-red-300/95 uppercase"
                         >
                           {group.commonCategory}
                         </p>
@@ -1948,7 +2144,7 @@
                         <div class="flex items-start justify-between gap-2">
                           {#if !group.commonCategory}
                             <span
-                              class="rounded border border-red-700/45 bg-red-950/80 px-2 py-0.5 text-[8px] font-black tracking-widest text-red-300 uppercase"
+                              class="rounded border border-red-700/45 bg-red-950/80 px-2 py-0.5 text-xs font-black tracking-widest text-red-300 uppercase"
                             >
                               {item.category}
                             </span>
@@ -1961,16 +2157,16 @@
                           <div
                             class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1"
                           >
-                            <h4 class="font-outfit text-[13px] leading-snug font-bold text-white">
+                            <h4 class="font-outfit text-sm leading-snug font-bold text-white">
                               {item.role}
                             </h4>
-                            <span class="font-mono text-[9px] font-medium text-stone-500">
+                            <span class="font-mono text-xs font-medium text-stone-500">
                               {item.period}
                             </span>
                           </div>
 
                           {#if item.description}
-                            <p class="text-[10px] leading-relaxed text-stone-500">
+                            <p class="text-xs leading-relaxed text-stone-500">
                               {@html item.description}
                             </p>
                           {/if}
@@ -1984,7 +2180,7 @@
                               {#if att.image}
                                 <button
                                   type="button"
-                                  class="inline-flex cursor-zoom-in items-center gap-1 rounded border border-stone-800 bg-stone-900 px-2 py-0.5 text-[9px] font-bold text-amber-500 transition-colors hover:text-amber-400"
+                                  class="inline-flex cursor-zoom-in items-center gap-1 rounded border border-stone-800 bg-stone-900 px-2 py-0.5 text-xs font-bold text-amber-500 transition-colors hover:text-amber-400"
                                   onclick={() =>
                                     openLightbox(
                                       att.image || '',
@@ -1996,7 +2192,7 @@
                                 </button>
                               {:else}
                                 <span
-                                  class="border-stone-850 inline-flex items-center gap-1 rounded border bg-stone-900 px-2 py-0.5 text-[9px] font-medium text-stone-600 select-none"
+                                  class="border-stone-850 inline-flex items-center gap-1 rounded border bg-stone-900 px-2 py-0.5 text-xs font-medium text-stone-600 select-none"
                                 >
                                   <span>📎</span>
                                   <span>{att.name}</span>
@@ -2042,13 +2238,13 @@
                     </div>
                     <div class="min-w-0 flex-1 space-y-1">
                       <h3
-                        class="font-outfit text-[13px] leading-snug font-bold text-white transition-colors group-hover:text-amber-400"
+                        class="font-outfit text-sm leading-snug font-bold text-white transition-colors group-hover:text-amber-400"
                       >
                         {group.organization}
                       </h3>
                       {#if group.commonCategory}
                         <p
-                          class="text-[9px] font-semibold tracking-[0.18em] text-red-300/95 uppercase"
+                          class="text-xs font-semibold tracking-[0.18em] text-red-300/95 uppercase"
                         >
                           {group.commonCategory}
                         </p>
@@ -2060,16 +2256,16 @@
                     class="flex min-h-24 flex-1 flex-col rounded-lg border border-red-950/40 bg-[#1a1111]/88 p-2"
                   >
                     <div class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-                      <h4 class="font-outfit text-[12px] leading-snug font-bold text-white">
+                      <h4 class="font-outfit text-sm leading-snug font-bold text-white">
                         {item.role}
                       </h4>
-                      <span class="font-mono text-[9px] font-medium text-stone-500">
+                      <span class="font-mono text-xs font-medium text-stone-500">
                         {item.period}
                       </span>
                     </div>
 
                     {#if item.description}
-                      <p class="mt-1 flex-1 text-[9px] leading-relaxed text-stone-500">
+                      <p class="mt-1 flex-1 text-xs leading-relaxed text-stone-500">
                         {@html item.description}
                       </p>
                     {/if}
@@ -2080,7 +2276,7 @@
                           {#if att.image}
                             <button
                               type="button"
-                              class="inline-flex cursor-zoom-in items-center gap-1 rounded border border-stone-800 bg-stone-900 px-2 py-0.5 text-[9px] font-bold text-amber-500 transition-colors hover:text-amber-400"
+                              class="inline-flex cursor-zoom-in items-center gap-1 rounded border border-stone-800 bg-stone-900 px-2 py-0.5 text-xs font-bold text-amber-500 transition-colors hover:text-amber-400"
                               onclick={() =>
                                 openLightbox(
                                   att.image || '',
@@ -2092,7 +2288,7 @@
                             </button>
                           {:else}
                             <span
-                              class="border-stone-850 inline-flex items-center gap-1 rounded border bg-stone-900 px-2 py-0.5 text-[9px] font-medium text-stone-600 select-none"
+                              class="border-stone-850 inline-flex items-center gap-1 rounded border bg-stone-900 px-2 py-0.5 text-xs font-medium text-stone-600 select-none"
                             >
                               <span>📎</span>
                               <span>{att.name}</span>
@@ -2118,90 +2314,42 @@
           </div>
         </div>
 
-        <!-- Filtered Project Grid -->
-        <div class="grid grid-cols-1 gap-6 md:grid-cols-3">
+        <!-- Filtered Project List -->
+        <div class="grid grid-cols-1 gap-3 lg:grid-cols-2">
           {#each filteredProjects as project (project.title)}
-            <div
-              class="flex flex-col justify-between rounded-2xl border transition-all duration-300 {project.isSelf
-                ? 'border-amber-500/35 bg-stone-900/40'
-                : 'border-stone-800/80 bg-stone-950'} overflow-hidden shadow-md hover:-translate-y-1 hover:border-amber-500/50 hover:shadow-xl"
+            <a
+              href={project.href ?? project.image ?? '#projects'}
+              target="_blank"
+              rel="noreferrer"
+              class="group grid w-full grid-cols-[4.5rem_minmax(0,1fr)] gap-4 rounded-xl bg-stone-950/80 p-4 text-left shadow-[inset_0_0_0_1px_rgba(255,255,255,0.045),0_10px_28px_rgba(0,0,0,0.2)] transition duration-200 hover:-translate-y-0.5 hover:bg-stone-900/70 hover:shadow-[inset_0_0_0_1px_rgba(245,158,11,0.12),0_14px_32px_rgba(0,0,0,0.24)] focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50 sm:grid-cols-[5.5rem_minmax(0,1fr)] sm:items-center sm:p-4"
             >
-              {#if project.image}
-                <button
-                  type="button"
-                  class="border-stone-850 h-40 w-full cursor-zoom-in overflow-hidden border-b bg-stone-900/50 text-left focus:outline-none"
-                  onclick={() => openLightbox(project.image, project.title)}
-                >
+              <div
+                class="font-outfit flex size-18 items-center justify-center text-lg font-black tracking-wide text-amber-400 sm:size-22 sm:text-xl"
+                aria-hidden="true"
+              >
+                {#if project.iconImage}
                   <img
-                    src={project.image}
-                    alt={project.title}
-                    loading="lazy"
-                    decoding="async"
-                    class="size-full object-cover transition-transform duration-500 hover:scale-105"
+                    src={project.iconImage}
+                    alt=""
+                    class="project-logo size-14 object-contain sm:size-18"
+                    style={`--project-logo-scale: ${project.logoScale};`}
                   />
-                </button>
-              {/if}
-              <div class="flex flex-1 flex-col justify-between p-6">
-                <div class="space-y-3">
-                  <div class="flex items-start justify-between gap-1">
-                    <h3 class="font-outfit text-base font-bold text-white">{project.title}</h3>
-                    <span
-                      class="shrink-0 rounded border border-red-800/35 bg-red-950 px-2 py-0.5 text-[8px] font-black tracking-widest text-amber-400 uppercase"
-                      >{project.tag}</span
-                    >
-                  </div>
-                  <p class="text-xs leading-relaxed text-stone-400">{project.description}</p>
-                </div>
-
-                <div class="mt-6 space-y-4">
-                  <div class="flex flex-wrap items-center gap-2">
-                    {#each project.tech as tech (tech)}
-                      {#if projectTechIconMap[tech]}
-                        <div
-                          class="flex size-8 items-center justify-center rounded-lg border border-stone-800 bg-stone-900/80"
-                          title={tech}
-                          aria-label={tech}
-                        >
-                          <img
-                            src={projectTechIconMap[tech]}
-                            alt={tech}
-                            class="size-4.5 object-contain"
-                          />
-                        </div>
-                      {:else}
-                        <div
-                          class="flex size-8 items-center justify-center rounded-lg border border-stone-800 bg-stone-900/80 text-[8px] font-black tracking-wide text-stone-400 uppercase"
-                          title={tech}
-                          aria-label={tech}
-                        >
-                          {getProjectTechAbbreviation(tech)}
-                        </div>
-                      {/if}
-                    {/each}
-                  </div>
-
-                  {#if project.isSelf}
-                    {#if data.currentUser}
-                      <button
-                        onclick={() => goto('/dashboard')}
-                        class="flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg bg-amber-500 py-2 text-center text-xs font-bold text-stone-950 shadow-md transition-all hover:bg-amber-400"
-                      >
-                        <span>Launch Workspace</span>
-                        <ArrowUpRight class="size-3.5" />
-                      </button>
-                    {:else}
-                      <button
-                        onclick={() => goto('/login')}
-                        class="flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-stone-700 bg-stone-800 py-2 text-center text-xs font-bold text-stone-200 shadow-md transition-all hover:bg-stone-700"
-                      >
-                        <span>Login to Workspace</span>
-                        <ArrowUpRight class="size-3.5 text-amber-400" />
-                      </button>
-                    {/if}
-                  {/if}
-                </div>
+                {:else}
+                  {project.icon}
+                {/if}
               </div>
-            </div>
+
+              <div class="min-w-0 space-y-2">
+                <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+                  <h3 class="font-outfit text-base leading-tight font-bold text-white">
+                    {project.title}
+                  </h3>
+                </div>
+                <p class="max-w-3xl text-xs leading-relaxed text-stone-400">
+                  {project.description}
+                </p>
+              </div>
+            </a>
           {/each}
         </div>
       </section>
@@ -2265,12 +2413,12 @@
                 <div class="space-y-3">
                   <div class="flex flex-wrap gap-1.5">
                     <span
-                      class="rounded bg-stone-900/80 px-2 py-0.5 text-[8px] font-semibold tracking-widest text-stone-400 uppercase"
+                      class="rounded bg-stone-900/80 px-2 py-0.5 text-xs font-semibold tracking-widest text-stone-400 uppercase"
                     >
                       {award.title}
                     </span>
                     <span
-                      class="rounded bg-stone-900/80 px-2 py-0.5 text-[8px] font-semibold tracking-widest text-stone-500 uppercase"
+                      class="rounded bg-stone-900/80 px-2 py-0.5 text-xs font-semibold tracking-widest text-stone-500 uppercase"
                     >
                       {award.scope}
                     </span>
@@ -2318,7 +2466,7 @@
             {#each bookshelfCollections as collection (collection.id)}
               <button
                 type="button"
-                class="cursor-pointer rounded-full border px-3 py-1 text-[10px] font-black tracking-wider uppercase transition-all {activeBookshelfCollection ===
+                class="cursor-pointer rounded-full border px-3 py-1 text-xs font-black tracking-wider uppercase transition-all {activeBookshelfCollection ===
                 collection.id
                   ? 'border-amber-500 bg-amber-500 text-stone-950 shadow-md'
                   : 'border-stone-800 bg-stone-900 text-stone-400 hover:border-stone-700 hover:text-stone-200'}"
@@ -2331,35 +2479,30 @@
         </div>
 
         <!-- Mahogany Book Rack grid -->
-        <div
-          class="grid grid-cols-2 gap-x-4 gap-y-6 pt-2 sm:grid-cols-4 lg:flex lg:flex-wrap lg:items-end lg:justify-center lg:gap-3"
-        >
-          {#each activeBookshelfBooks as book (book.title)}
-            <div class="group flex items-end justify-center lg:shrink-0 lg:basis-24">
-              <div
-                class={`relative h-36 ${getBookshelfCoverClass(book.title)} shadow-xl transition-all duration-300 [perspective:1000px] group-hover:-translate-y-2`}
-              >
-                <img
-                  src="/covers/{book.cover}"
-                  alt="{book.title} cover"
-                  loading="lazy"
-                  decoding="async"
-                  class="h-full w-full rounded-sm border border-stone-800 object-cover shadow-md"
-                />
+        <div class="flex flex-wrap justify-center gap-x-6 gap-y-8 pt-2">
+          {#each activeBookshelfGroups as bookGroup, groupIndex (groupIndex)}
+            <div class="bookshelf-platform-group">
+              <div class="flex min-h-40 items-end justify-center gap-3 px-3">
+                {#each bookGroup as book (book.title)}
+                  <div class="group flex items-end justify-center">
+                    <div
+                      class={`bookshelf-book relative ${getBookshelfCoverClass(book.title)} shadow-xl transition-all duration-300 [perspective:1000px] group-hover:-translate-y-2`}
+                    >
+                      <img
+                        src="/covers/{book.cover}"
+                        alt="{book.title} cover"
+                        loading="lazy"
+                        decoding="async"
+                        class="block w-full rounded-sm border border-stone-800 shadow-md"
+                      />
+                    </div>
+                  </div>
+                {/each}
               </div>
+
+              <div class="bookshelf-platform" aria-hidden="true"></div>
             </div>
           {/each}
-        </div>
-        <!-- Mahogany Shelf Line -->
-        <div
-          class="relative h-3 w-full rounded border-b-2 border-amber-600/30 bg-[#3A2218] shadow-md"
-        >
-          <div
-            class="absolute -top-1.5 left-1/4 h-1.5 w-4 rounded-full bg-amber-500 opacity-60"
-          ></div>
-          <div
-            class="absolute -top-1.5 right-1/4 h-1.5 w-4 rounded-full bg-amber-500 opacity-60"
-          ></div>
         </div>
       </section>
 
@@ -2384,14 +2527,10 @@
                 <div class="flex flex-wrap gap-1.5">
                   {#each cat.skills as skill (skill)}
                     <span
-                      class="border-stone-850 flex items-center gap-1.5 rounded border bg-stone-900 px-2 py-1 text-xs text-stone-300"
+                      class="skill-chip flex items-center gap-1.5 rounded px-2 py-1 text-xs text-stone-300"
                     >
                       {#if skillIconMap[skill]}
-                        <img
-                          src={skillIconMap[skill]}
-                          alt={skill}
-                          class="size-3.5 object-contain"
-                        />
+                        <img src={skillIconMap[skill]} alt="" class="size-3.5 object-contain" />
                       {/if}
                       {skill}
                     </span>
@@ -2422,11 +2561,8 @@
                     <span class="text-base select-none">{lang.flag}</span>
                     {lang.name}
                   </span>
-                  <span class="text-[10px] font-bold tracking-wider text-amber-400 uppercase"
-                    >{lang.detail}</span
-                  >
                 </div>
-                <p class="text-[10px] text-stone-500">{lang.desc}</p>
+                <p class="text-xs text-stone-500">{lang.desc}</p>
 
                 <!-- Gold Coin rating rating progress -->
                 <div class="flex items-center gap-1 pt-1">
@@ -2603,6 +2739,147 @@
     transition: transform 0.4s ease-in-out;
     transform-origin: top;
     backface-visibility: hidden;
+  }
+
+  .bill-paper {
+    isolation: isolate;
+    background: #fff;
+    box-shadow:
+      0 24px 60px rgba(0, 0, 0, 0.24),
+      inset 0 0 0 1px #0c0a09;
+  }
+
+  .bill-paper::before,
+  .bill-paper::after {
+    position: absolute;
+    right: 1rem;
+    left: 1rem;
+    z-index: 2;
+    height: 12px;
+    content: '';
+    background-image: radial-gradient(circle, #070605 0 4px, transparent 4.5px);
+    background-repeat: repeat-x;
+    background-size: 18px 12px;
+    opacity: 1;
+  }
+
+  .bill-paper::before {
+    top: -1px;
+    transform: translateY(-50%);
+  }
+
+  .bill-paper::after {
+    bottom: -1px;
+    transform: translateY(50%);
+  }
+
+  .bill-line-copy strong {
+    color: #1c1917;
+    font-weight: 900;
+  }
+
+  .experience-card-sleeve {
+    transform-origin: center bottom;
+  }
+
+  .bookshelf-platform-group {
+    display: flex;
+    max-width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+    filter: drop-shadow(0 0.7rem 0.8rem rgba(0, 0, 0, 0.24));
+  }
+
+  .bookshelf-book::after {
+    position: absolute;
+    right: 8%;
+    bottom: -0.55rem;
+    left: 8%;
+    height: 0.38rem;
+    content: '';
+    background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.42), transparent 72%);
+    filter: blur(2px);
+    opacity: 0.72;
+    transition:
+      opacity 300ms ease,
+      transform 300ms ease;
+  }
+
+  .group:hover .bookshelf-book::after {
+    opacity: 0.5;
+    transform: translateY(0.45rem) scaleX(0.78);
+  }
+
+  .bookshelf-platform {
+    position: relative;
+    z-index: 1;
+    height: 0.78rem;
+    min-width: min(100%, 15rem);
+    margin-top: 0;
+    border-radius: 0.16rem;
+    border: 1px solid rgba(251, 191, 36, 0.1);
+    border-bottom-color: rgba(0, 0, 0, 0.42);
+    background:
+      linear-gradient(180deg, rgba(251, 191, 36, 0.34), transparent 34%),
+      linear-gradient(90deg, #2a1208 0%, #6a3215 45%, #3a190b 100%);
+    box-shadow:
+      inset 0 1px 0 rgba(251, 191, 36, 0.42),
+      inset 0 -0.22rem 0 rgba(31, 12, 4, 0.38),
+      0 0.38rem 0.85rem rgba(0, 0, 0, 0.32);
+  }
+
+  .bookshelf-platform::before {
+    position: absolute;
+    top: -0.24rem;
+    right: 0.45rem;
+    left: 0.45rem;
+    height: 0.24rem;
+    content: '';
+    border: 1px solid rgba(251, 191, 36, 0.08);
+    border-bottom: 0;
+    border-radius: 0.12rem 0.12rem 0 0;
+    background: linear-gradient(90deg, #1f0d05, #4d2210 48%, #261006);
+    box-shadow: inset 0 1px 0 rgba(251, 191, 36, 0.2);
+  }
+
+  .bookshelf-platform::after {
+    position: absolute;
+    right: 0.35rem;
+    bottom: -0.28rem;
+    left: 0.35rem;
+    height: 0.28rem;
+    content: '';
+    border-radius: 0 0 0.12rem 0.12rem;
+    background: linear-gradient(90deg, #120703, #2c1107 48%, #160803);
+  }
+
+  .skill-chip {
+    position: relative;
+    overflow: hidden;
+    border: 0;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.055), transparent 72%), rgba(41, 37, 36, 0.78);
+    box-shadow:
+      inset 0 0 0 1px rgba(255, 255, 255, 0.045),
+      0 0.28rem 0.65rem rgba(0, 0, 0, 0.14);
+    transition:
+      background 180ms ease,
+      box-shadow 180ms ease,
+      transform 180ms ease;
+  }
+
+  .skill-chip:hover {
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.075), transparent 72%), rgba(57, 53, 50, 0.86);
+    box-shadow:
+      inset 0 0 0 1px rgba(245, 158, 11, 0.12),
+      0 0.32rem 0.8rem rgba(0, 0, 0, 0.18);
+    transform: translateY(-1px);
+  }
+
+  .project-logo {
+    transform: scale(var(--project-logo-scale, 1));
+    transition: transform 180ms ease;
   }
 
   :global(.reveal-on-scroll) {

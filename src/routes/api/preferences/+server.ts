@@ -22,7 +22,15 @@ export const POST: RequestHandler = async ({ request, locals }) => {
   const authId = locals.session?.user?.id;
   if (!authId) return json({}, { status: 401 });
 
-  const body = await request.json();
+  let body: Record<string, unknown>;
+  try {
+    body = (await request.json()) as Record<string, unknown>;
+  } catch (err) {
+    if (err instanceof Error && err.message.toLowerCase().includes('aborted')) {
+      return new Response(null, { status: 204 });
+    }
+    return json({ error: 'Invalid preferences payload' }, { status: 400 });
+  }
   if (body.lastWorkspaceId !== undefined && body.lastWorkspaceId !== null) {
     await assertWorkspaceAccess(locals, Number(body.lastWorkspaceId));
   }
@@ -45,6 +53,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
     sounds: body.sounds ?? current.sounds ?? true,
     hintAlwaysOn: body.hintAlwaysOn ?? current.hintAlwaysOn ?? false,
     selectedLevels: body.selectedLevels ?? current.selectedLevels ?? [],
+    readingSuccessCounts: current.readingSuccessCounts ?? {},
     lastWorkspaceId:
       body.lastWorkspaceId !== undefined ? body.lastWorkspaceId : current.lastWorkspaceId,
     lastProjectId: body.lastProjectId !== undefined ? body.lastProjectId : current.lastProjectId,
@@ -53,7 +62,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
   // Preserve highscore if not explicitly provided (only update when higher)
   if (body.highscore !== undefined) {
     const currentHighscore = (current.highscore as number) ?? 0;
-    prefs.highscore = Math.max(body.highscore, currentHighscore);
+    prefs.highscore = Math.max(Number(body.highscore), currentHighscore);
     prefs.highscoreName = body.highscoreName ?? (current.highscoreName as string) ?? 'Anonymous';
   } else {
     prefs.highscore = current.highscore;
@@ -71,6 +80,28 @@ export const POST: RequestHandler = async ({ request, locals }) => {
   } else {
     prefs.masteredHanzi = current.masteredHanzi;
   }
+
+  if (body.readingSuccessCounts !== undefined && body.readingSuccessCounts != null) {
+    const incoming = body.readingSuccessCounts as Record<string, number>;
+    const stored = (current.readingSuccessCounts as Record<string, number>) ?? {};
+    const merged: Record<string, number> = {};
+    for (const lv of new Set([...Object.keys(stored), ...Object.keys(incoming)])) {
+      merged[lv] = Math.max(Number(stored[lv] ?? 0), Number(incoming[lv] ?? 0));
+    }
+    prefs.readingSuccessCounts = merged;
+  }
+
+  if (body.completedReadingLevel !== undefined) {
+    const level = Number(body.completedReadingLevel);
+    if (Number.isInteger(level) && level >= 1 && level <= 7) {
+      const stored = (prefs.readingSuccessCounts as Record<string, number>) ?? {};
+      prefs.readingSuccessCounts = {
+        ...stored,
+        [level]: Number(stored[level] ?? 0) + 1
+      };
+    }
+  }
+
   // Remove null game states
   if (prefs.gameState === null) delete prefs.gameState;
 

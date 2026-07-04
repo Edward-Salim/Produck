@@ -5,6 +5,7 @@
   import * as Select from '$lib/components/ui/select/index.js';
   import { page } from '$app/state';
   import { goto } from '$app/navigation';
+  import { saveLastAppPagePath, clearLastAppPagePath } from '$lib/client/last-app-page.js';
   import { getFullscreen } from '$lib/stores/fullscreen.svelte.js';
 
   let fullscreen = $derived(getFullscreen());
@@ -167,6 +168,11 @@
     }
   });
 
+  $effect(() => {
+    saveLastAppPagePath(page.url.pathname);
+    sessionStorage.removeItem('produck_show_landing');
+  });
+
   function switchProject(id: string | undefined) {
     if (!id) return;
     document.cookie = `active_project=${id};path=/;max-age=${60 * 60 * 24 * 365};samesite=lax`;
@@ -220,6 +226,10 @@
 
     goto(buildUrl(NAV_PAGES[next]));
   }
+
+  function showLandingPage() {
+    sessionStorage.setItem('produck_show_landing', '1');
+  }
 </script>
 
 <svelte:head>
@@ -231,10 +241,14 @@
   {#if !fullscreen}
     <Sidebar.Root collapsible="icon">
       <Sidebar.Header>
-        <div class="flex items-center gap-2 px-2 py-1">
+        <a
+          href="/"
+          onclick={showLandingPage}
+          class="flex items-center gap-2 rounded px-2 py-1 transition-colors hover:bg-sidebar-accent/40"
+        >
           <img src={logoProduck} alt="Produck" class="size-5 shrink-0 object-contain" />
           <span class="font-display text-xl group-data-[collapsible=icon]:hidden">Produck</span>
-        </div>
+        </a>
         {#if data.workspaces.length > 0}
           <div class="px-2 pb-1 group-data-[collapsible=icon]:hidden">
             <span
@@ -414,6 +428,7 @@
                   class="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm text-cork-700 outline-none hover:bg-cork-200/50 data-highlighted:bg-cork-200/50"
                   onSelect={async () => {
                     await fetch('/api/auth', { method: 'DELETE' });
+                    clearLastAppPagePath();
                     goto('/login');
                   }}
                 >

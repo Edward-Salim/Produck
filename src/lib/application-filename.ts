@@ -1,5 +1,9 @@
 function safeFilenamePart(value: string | undefined, fallback: string): string {
-  const cleaned = (value ?? fallback).replace(/[^a-z0-9_-]+/gi, '_').replace(/^_+|_+$/g, '');
+  const cleaned = (value ?? fallback)
+    .replace(/['']/g, '')
+    .replace(/[^a-z0-9]+/gi, '_')
+    .replace(/_+/g, '_')
+    .replace(/^_+|_+$/g, '');
   return cleaned || fallback;
 }
 

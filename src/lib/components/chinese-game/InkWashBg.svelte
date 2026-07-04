@@ -31,6 +31,25 @@
       <feGaussianBlur stdDeviation="2.5" />
     </filter>
 
+    <!-- Rougher brush edge for plum branches -->
+    <filter id="branch-brush" x="-24%" y="-24%" width="148%" height="148%">
+      <feTurbulence
+        type="fractalNoise"
+        baseFrequency="0.025"
+        numOctaves="2"
+        seed="12"
+        result="grain"
+      />
+      <feDisplacementMap
+        in="SourceGraphic"
+        in2="grain"
+        scale="2.2"
+        xChannelSelector="R"
+        yChannelSelector="G"
+      />
+      <feGaussianBlur stdDeviation="1.15" />
+    </filter>
+
     <!-- Light ink blur for distant elements -->
     <filter id="ink-far" x="-30%" y="-30%" width="160%" height="160%">
       <feGaussianBlur stdDeviation="5" />
@@ -125,6 +144,18 @@
       <stop offset="100%" stop-color="#b07020" stop-opacity="0" />
     </radialGradient>
 
+    <radialGradient id="plum-petal-fill" cx="42%" cy="30%" r="72%">
+      <stop offset="0%" stop-color="#f8d99c" stop-opacity="0.74" />
+      <stop offset="48%" stop-color="#e9ab44" stop-opacity="0.38" />
+      <stop offset="100%" stop-color="#a95f24" stop-opacity="0.05" />
+    </radialGradient>
+
+    <radialGradient id="plum-petal-pale" cx="42%" cy="30%" r="72%">
+      <stop offset="0%" stop-color="#fff1c9" stop-opacity="0.62" />
+      <stop offset="52%" stop-color="#e8c56f" stop-opacity="0.28" />
+      <stop offset="100%" stop-color="#b7772a" stop-opacity="0.03" />
+    </radialGradient>
+
     <!-- Moon glow -->
     <radialGradient id="moon" cx="50%" cy="50%" r="50%">
       <stop offset="0%" stop-color="#fffdf5" stop-opacity="0.18" />
@@ -136,20 +167,70 @@
     <!-- Vignette -->
     <radialGradient id="vignette" cx="50%" cy="45%" r="55%">
       <stop offset="0%" stop-color="transparent" />
-      <stop offset="55%" stop-color="transparent" />
-      <stop offset="82%" stop-color="#c8a878" stop-opacity="0.05" />
-      <stop offset="100%" stop-color="#a89068" stop-opacity="0.16" />
+      <stop offset="58%" stop-color="transparent" />
+      <stop offset="84%" stop-color="#b89468" stop-opacity="0.07" />
+      <stop offset="100%" stop-color="#6f4c31" stop-opacity="0.18" />
     </radialGradient>
 
     <!-- Center light -->
-    <radialGradient id="center-glow" cx="50%" cy="40%" r="45%">
-      <stop offset="0%" stop-color="#fff8e8" stop-opacity="0.35" />
-      <stop offset="50%" stop-color="#fff4e0" stop-opacity="0.08" />
+    <radialGradient id="center-glow" cx="50%" cy="46%" r="54%">
+      <stop offset="0%" stop-color="#fffaf0" stop-opacity="0.44" />
+      <stop offset="46%" stop-color="#fff4e0" stop-opacity="0.14" />
+      <stop offset="76%" stop-color="#f1dfc3" stop-opacity="0.04" />
       <stop offset="100%" stop-color="transparent" />
     </radialGradient>
 
-    <!-- Reusable plum blossom petal -->
-    <ellipse id="petal" cx="0" cy="-18" rx="6" ry="14" />
+    <!-- Subtle vertical clearing for the play surface -->
+    <linearGradient id="content-wash" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#fff8e8" stop-opacity="0" />
+      <stop offset="18%" stop-color="#fff8e8" stop-opacity="0.04" />
+      <stop offset="50%" stop-color="#fffaf0" stop-opacity="0.16" />
+      <stop offset="82%" stop-color="#fff8e8" stop-opacity="0.04" />
+      <stop offset="100%" stop-color="#fff8e8" stop-opacity="0" />
+    </linearGradient>
+
+    <!-- Warm edge depth so the paper does not feel flat -->
+    <linearGradient id="paper-depth" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fff7e8" stop-opacity="0.24" />
+      <stop offset="48%" stop-color="#f6ead6" stop-opacity="0" />
+      <stop offset="100%" stop-color="#b98545" stop-opacity="0.12" />
+    </linearGradient>
+
+    <!-- Reusable plum blossom shapes -->
+    <path
+      id="plum-petal"
+      d="M0,-19 C6,-18 10,-12 9,-6 C8,1 3,5 0,7 C-3,5 -8,1 -9,-6 C-10,-12 -6,-18 0,-19 Z"
+    />
+    <g id="plum-bloom">
+      <g stroke="#8b5a28" stroke-opacity="0.16" stroke-width="0.8">
+        <use href="#plum-petal" fill="url(#plum-petal-fill)" transform="rotate(0)" />
+        <use href="#plum-petal" fill="url(#plum-petal-fill)" transform="rotate(72)" />
+        <use href="#plum-petal" fill="url(#plum-petal-fill)" transform="rotate(144)" />
+        <use href="#plum-petal" fill="url(#plum-petal-fill)" transform="rotate(216)" />
+        <use href="#plum-petal" fill="url(#plum-petal-fill)" transform="rotate(288)" />
+      </g>
+      <g stroke="#9a6427" stroke-opacity="0.24" stroke-width="0.8" stroke-linecap="round">
+        <path d="M0,0 L0,-8" />
+        <path d="M0,0 L7,-3" />
+        <path d="M0,0 L4,6" />
+        <path d="M0,0 L-4,6" />
+        <path d="M0,0 L-7,-3" />
+      </g>
+      <circle cx="0" cy="0" r="4" fill="url(#plum-center)" />
+      <circle cx="0" cy="-8" r="1.4" fill="#b56d24" opacity="0.34" />
+      <circle cx="7" cy="-3" r="1.2" fill="#b56d24" opacity="0.28" />
+      <circle cx="-7" cy="-3" r="1.2" fill="#b56d24" opacity="0.28" />
+    </g>
+    <g id="plum-bloom-pale">
+      <g stroke="#9a6a34" stroke-opacity="0.12" stroke-width="0.8">
+        <use href="#plum-petal" fill="url(#plum-petal-pale)" transform="rotate(0)" />
+        <use href="#plum-petal" fill="url(#plum-petal-pale)" transform="rotate(72)" />
+        <use href="#plum-petal" fill="url(#plum-petal-pale)" transform="rotate(144)" />
+        <use href="#plum-petal" fill="url(#plum-petal-pale)" transform="rotate(216)" />
+        <use href="#plum-petal" fill="url(#plum-petal-pale)" transform="rotate(288)" />
+      </g>
+      <circle cx="0" cy="0" r="3.4" fill="url(#plum-center)" opacity="0.85" />
+    </g>
   </defs>
 
   <!-- ══════════ Rice paper ══════════ -->
@@ -161,6 +242,7 @@
     filter="url(#paper-mobile)"
     class="mobile-paper"
   />
+  <rect width="1000" height="1400" fill="url(#paper-depth)" />
 
   <!-- ══════════ Moon ══════════ -->
   <circle cx="720" cy="280" r="140" fill="url(#moon)" filter="url(#mist)" class="mist-filtered" />
@@ -174,25 +256,43 @@
   </g>
 
   <!-- ══════════ DISTANT MOUNTAINS ══════════ -->
-  <g filter="url(#mist)" opacity="0.22" class="mist-filtered">
-    <!-- Far ridge — soft rolling peaks -->
+  <g filter="url(#mist)" opacity="0.18" class="mist-filtered">
+    <!-- Far ridge — pale layered peaks -->
     <path
-      d="M0,540 Q60,490 120,510 Q180,460 250,500 Q320,450 400,490 Q480,440 560,480 Q640,450 720,490 Q800,460 880,500 Q940,470 1000,490 L1000,570 L0,570 Z"
-      fill="#cfc0a4"
+      d="M0,560 C70,515 118,535 168,492 C222,450 274,532 326,496 C382,456 438,530 492,485 C558,430 628,522 688,492 C752,455 800,526 858,500 C912,474 948,500 1000,482 L1000,610 L0,610 Z"
+      fill="#d5c7ac"
+    />
+    <path
+      d="M0,590 C90,555 150,572 225,535 C310,495 386,575 468,530 C548,488 620,570 710,535 C790,505 858,558 1000,530 L1000,620 L0,620 Z"
+      fill="#bba889"
+      opacity="0.38"
     />
   </g>
 
   <!-- ══════════ MID MOUNTAINS ══════════ -->
-  <g filter="url(#mist)" opacity="0.28" class="mist-filtered">
-    <!-- Main range — gentle rounded peaks -->
+  <g filter="url(#mist)" opacity="0.22" class="mist-filtered">
+    <!-- Main range — stronger ink wash silhouettes -->
     <path
-      d="M0,600 Q70,550 130,575 Q200,510 280,555 Q360,500 440,550 Q520,490 600,540 Q680,500 760,545 Q840,510 920,550 Q960,530 1000,540 L1000,660 L0,660 Z"
-      fill="#c4b290"
+      d="M0,635 C52,598 90,610 130,560 C178,500 232,585 282,544 C344,486 402,568 462,516 C528,458 590,556 650,520 C716,478 770,554 824,520 C884,486 938,536 1000,510 L1000,700 L0,700 Z"
+      fill="#bda47d"
+    />
+    <path
+      d="M20,644 C78,620 118,632 160,592 C214,540 264,596 312,566 C374,528 420,596 482,552 C550,504 606,584 670,552 C734,520 780,576 838,548 C902,518 944,548 1000,538"
+      stroke="#765f42"
+      stroke-width="5"
+      stroke-opacity="0.14"
+      fill="none"
+      stroke-linecap="round"
+    />
+    <path
+      d="M0,670 C120,640 205,665 300,626 C412,582 502,668 612,628 C740,580 830,660 1000,610 L1000,710 L0,710 Z"
+      fill="#9f8462"
+      opacity="0.28"
     />
   </g>
 
   <!-- ══════════ FOREGROUND HILLS ══════════ -->
-  <g filter="url(#ink-far)" opacity="0.22" class="mobile-hide">
+  <g filter="url(#ink-far)" opacity="0.18" class="mobile-hide">
     <!-- Left hill — smooth dome -->
     <path
       d="M0,820 Q100,740 200,780 Q300,730 400,790 Q460,770 480,800 L480,880 L0,880 Z"
@@ -207,7 +307,7 @@
   </g>
 
   <!-- ══════════ BASE GROUND ══════════ -->
-  <g filter="url(#ink-far)" opacity="0.18" class="mobile-hide">
+  <g filter="url(#ink-far)" opacity="0.14" class="mobile-hide">
     <path
       d="M0,980 Q120,950 250,970 Q380,940 500,965 Q620,945 750,970 Q880,950 1000,960 L1000,1020 L0,1020 Z"
       fill="#a08860"
@@ -226,7 +326,7 @@
   <rect width="1000" height="1400" fill="url(#vignette)" />
 
   <!-- ═══════════════ TOP-RIGHT BRANCH ═══════════════ -->
-  <g filter="url(#ink-wash)">
+  <g filter="url(#branch-brush)">
     <!-- Main branch -->
     <path
       d="M1000,0 Q920,80 850,160 Q780,240 740,200 Q700,160 680,220 Q660,280 620,330"
@@ -239,6 +339,15 @@
       d="M1000,0 Q920,80 850,160 Q780,240 740,200 Q700,160 680,220 Q660,280 620,330"
       stroke="url(#ink-medium)"
       stroke-width="4.5"
+      fill="none"
+      stroke-linecap="round"
+    />
+    <path
+      d="M990,10 Q915,82 850,156 Q786,232 742,199 Q704,170 681,220 Q660,280 624,326"
+      stroke="#f6deb4"
+      stroke-width="1.6"
+      stroke-opacity="0.12"
+      stroke-dasharray="30 18 8 24"
       fill="none"
       stroke-linecap="round"
     />
@@ -299,43 +408,60 @@
       fill="none"
       stroke-linecap="round"
     />
+    <ellipse
+      cx="742"
+      cy="201"
+      rx="9"
+      ry="5"
+      fill="#3d2518"
+      opacity="0.12"
+      transform="rotate(30 742 201)"
+    />
+    <ellipse
+      cx="820"
+      cy="180"
+      rx="7"
+      ry="3.5"
+      fill="#4a3020"
+      opacity="0.1"
+      transform="rotate(-58 820 180)"
+    />
+    <ellipse
+      cx="680"
+      cy="224"
+      rx="6"
+      ry="3.2"
+      fill="#4a3020"
+      opacity="0.1"
+      transform="rotate(-42 680 224)"
+    />
   </g>
 
   <!-- Top-right plum blossoms + round blossoms -->
   <g filter="url(#petal-blur)">
-    <!-- Round blossom cluster on main branch -->
-    <circle cx="730" cy="195" r="26" fill="url(#blossom-amber)" />
-    <circle cx="725" cy="190" r="16" fill="url(#blossom-gold)" />
-    <circle cx="738" cy="200" r="11" fill="url(#blossom-pale)" />
+    <circle cx="730" cy="195" r="30" fill="url(#blossom-amber)" opacity="0.5" />
+    <circle cx="798" cy="350" r="26" fill="url(#blossom-gold)" opacity="0.44" />
+    <circle cx="900" cy="70" r="34" fill="url(#blossom-ochre)" opacity="0.48" />
 
-    <!-- Round blossom on drooping branch -->
-    <circle cx="798" cy="350" r="22" fill="url(#blossom-gold)" />
-    <circle cx="793" cy="345" r="13" fill="url(#blossom-amber)" />
-
-    <!-- Round blossom near corner -->
-    <circle cx="900" cy="70" r="28" fill="url(#blossom-ochre)" />
-    <circle cx="895" cy="65" r="18" fill="url(#blossom-amber)" />
-    <circle cx="908" cy="75" r="12" fill="url(#blossom-gold)" />
-
-    <!-- Plum blossom at twig end -->
-    <g transform="translate(698,98) scale(0.9)">
-      <ellipse cx="0" cy="-16" rx="5" ry="12" fill="url(#blossom-amber)" transform="rotate(0)" />
-      <ellipse cx="0" cy="-16" rx="5" ry="12" fill="url(#blossom-amber)" transform="rotate(72)" />
-      <ellipse cx="0" cy="-16" rx="5" ry="12" fill="url(#blossom-amber)" transform="rotate(144)" />
-      <ellipse cx="0" cy="-16" rx="5" ry="12" fill="url(#blossom-amber)" transform="rotate(216)" />
-      <ellipse cx="0" cy="-16" rx="5" ry="12" fill="url(#blossom-amber)" transform="rotate(288)" />
-      <circle cx="0" cy="0" r="3" fill="url(#plum-center)" />
-    </g>
-
-    <!-- Plum blossom on droop end -->
-    <g transform="translate(808,355) scale(0.75)">
-      <ellipse cx="0" cy="-16" rx="5" ry="12" fill="url(#blossom-gold)" transform="rotate(30)" />
-      <ellipse cx="0" cy="-16" rx="5" ry="12" fill="url(#blossom-gold)" transform="rotate(102)" />
-      <ellipse cx="0" cy="-16" rx="5" ry="12" fill="url(#blossom-gold)" transform="rotate(174)" />
-      <ellipse cx="0" cy="-16" rx="5" ry="12" fill="url(#blossom-gold)" transform="rotate(246)" />
-      <ellipse cx="0" cy="-16" rx="5" ry="12" fill="url(#blossom-gold)" transform="rotate(318)" />
-      <circle cx="0" cy="0" r="2.5" fill="url(#plum-center)" />
-    </g>
+    <use href="#plum-bloom" transform="translate(728,194) rotate(-12) scale(0.82)" opacity="0.88" />
+    <use
+      href="#plum-bloom-pale"
+      transform="translate(747,204) rotate(18) scale(0.5)"
+      opacity="0.72"
+    />
+    <use href="#plum-bloom" transform="translate(797,350) rotate(24) scale(0.68)" opacity="0.82" />
+    <use
+      href="#plum-bloom-pale"
+      transform="translate(814,365) rotate(-20) scale(0.42)"
+      opacity="0.66"
+    />
+    <use href="#plum-bloom" transform="translate(897,68) rotate(8) scale(0.9)" opacity="0.84" />
+    <use
+      href="#plum-bloom-pale"
+      transform="translate(920,82) rotate(-18) scale(0.48)"
+      opacity="0.64"
+    />
+    <use href="#plum-bloom" transform="translate(698,98) rotate(-28) scale(0.54)" opacity="0.78" />
 
     <!-- Buds -->
     <circle cx="780" cy="250" r="7" fill="url(#bud)" />
@@ -346,7 +472,7 @@
   </g>
 
   <!-- ═══════════════ BOTTOM-LEFT BRANCH ═══════════════ -->
-  <g filter="url(#ink-wash)">
+  <g filter="url(#branch-brush)">
     <!-- Main branch -->
     <path
       d="M0,1400 Q80,1320 150,1240 Q220,1160 280,1120 Q340,1080 360,1020"
@@ -359,6 +485,15 @@
       d="M0,1400 Q80,1320 150,1240 Q220,1160 280,1120 Q340,1080 360,1020"
       stroke="url(#ink-medium)"
       stroke-width="5.5"
+      fill="none"
+      stroke-linecap="round"
+    />
+    <path
+      d="M8,1392 Q88,1317 154,1241 Q222,1164 281,1121 Q338,1082 358,1024"
+      stroke="#f6deb4"
+      stroke-width="1.8"
+      stroke-opacity="0.12"
+      stroke-dasharray="36 22 10 28"
       fill="none"
       stroke-linecap="round"
     />
@@ -419,46 +554,76 @@
       fill="none"
       stroke-linecap="round"
     />
+    <ellipse
+      cx="358"
+      cy="1024"
+      rx="10"
+      ry="5.5"
+      fill="#3d2518"
+      opacity="0.13"
+      transform="rotate(-62 358 1024)"
+    />
+    <ellipse
+      cx="282"
+      cy="1122"
+      rx="8"
+      ry="4"
+      fill="#4a3020"
+      opacity="0.1"
+      transform="rotate(-28 282 1122)"
+    />
+    <ellipse
+      cx="200"
+      cy="1222"
+      rx="7"
+      ry="3.5"
+      fill="#4a3020"
+      opacity="0.1"
+      transform="rotate(-52 200 1222)"
+    />
+    <ellipse
+      cx="428"
+      cy="832"
+      rx="6"
+      ry="3"
+      fill="#5a3824"
+      opacity="0.08"
+      transform="rotate(-84 428 832)"
+    />
   </g>
 
   <!-- Bottom-left blossoms -->
   <g filter="url(#petal-blur)">
-    <!-- Round blossom cluster -->
-    <circle cx="355" cy="1025" r="30" fill="url(#blossom-amber)" />
-    <circle cx="348" cy="1018" r="20" fill="url(#blossom-gold)" />
-    <circle cx="362" cy="1030" r="12" fill="url(#blossom-pale)" />
+    <circle cx="355" cy="1025" r="34" fill="url(#blossom-amber)" opacity="0.5" />
+    <circle cx="428" cy="830" r="28" fill="url(#blossom-gold)" opacity="0.44" />
+    <circle cx="80" cy="1330" r="30" fill="url(#blossom-amber)" opacity="0.46" />
+    <circle cx="295" cy="1125" r="22" fill="url(#blossom-ochre)" opacity="0.4" />
 
-    <!-- Round blossom -->
-    <circle cx="428" cy="830" r="24" fill="url(#blossom-gold)" />
-    <circle cx="423" cy="825" r="14" fill="url(#blossom-amber)" />
-
-    <!-- Round blossom near corner -->
-    <circle cx="80" cy="1330" r="26" fill="url(#blossom-amber)" />
-    <circle cx="75" cy="1325" r="16" fill="url(#blossom-pale)" />
-
-    <!-- Plum blossom on upward branch -->
-    <g transform="translate(440,715) scale(0.85)">
-      <ellipse cx="0" cy="-16" rx="5" ry="12" fill="url(#blossom-amber)" transform="rotate(15)" />
-      <ellipse cx="0" cy="-16" rx="5" ry="12" fill="url(#blossom-amber)" transform="rotate(87)" />
-      <ellipse cx="0" cy="-16" rx="5" ry="12" fill="url(#blossom-amber)" transform="rotate(159)" />
-      <ellipse cx="0" cy="-16" rx="5" ry="12" fill="url(#blossom-amber)" transform="rotate(231)" />
-      <ellipse cx="0" cy="-16" rx="5" ry="12" fill="url(#blossom-amber)" transform="rotate(303)" />
-      <circle cx="0" cy="0" r="2.8" fill="url(#plum-center)" />
-    </g>
-
-    <!-- Plum blossom on crossing twig -->
-    <g transform="translate(338,935) scale(0.7)">
-      <ellipse cx="0" cy="-16" rx="5" ry="12" fill="url(#blossom-gold)" transform="rotate(45)" />
-      <ellipse cx="0" cy="-16" rx="5" ry="12" fill="url(#blossom-gold)" transform="rotate(117)" />
-      <ellipse cx="0" cy="-16" rx="5" ry="12" fill="url(#blossom-gold)" transform="rotate(189)" />
-      <ellipse cx="0" cy="-16" rx="5" ry="12" fill="url(#blossom-gold)" transform="rotate(261)" />
-      <ellipse cx="0" cy="-16" rx="5" ry="12" fill="url(#blossom-gold)" transform="rotate(333)" />
-      <circle cx="0" cy="0" r="2.3" fill="url(#plum-center)" />
-    </g>
-
-    <!-- Round on secondary -->
-    <circle cx="295" cy="1125" r="18" fill="url(#blossom-ochre)" />
-    <circle cx="290" cy="1120" r="10" fill="url(#blossom-gold)" />
+    <use href="#plum-bloom" transform="translate(354,1024) rotate(10) scale(0.92)" opacity="0.88" />
+    <use
+      href="#plum-bloom-pale"
+      transform="translate(376,1036) rotate(-22) scale(0.5)"
+      opacity="0.68"
+    />
+    <use href="#plum-bloom" transform="translate(428,830) rotate(-18) scale(0.72)" opacity="0.82" />
+    <use
+      href="#plum-bloom-pale"
+      transform="translate(410,818) rotate(18) scale(0.44)"
+      opacity="0.62"
+    />
+    <use href="#plum-bloom" transform="translate(80,1328) rotate(24) scale(0.74)" opacity="0.78" />
+    <use
+      href="#plum-bloom-pale"
+      transform="translate(98,1340) rotate(-12) scale(0.4)"
+      opacity="0.6"
+    />
+    <use href="#plum-bloom" transform="translate(440,715) rotate(16) scale(0.58)" opacity="0.76" />
+    <use
+      href="#plum-bloom-pale"
+      transform="translate(338,935) rotate(-28) scale(0.48)"
+      opacity="0.68"
+    />
+    <use href="#plum-bloom" transform="translate(295,1125) rotate(34) scale(0.52)" opacity="0.7" />
 
     <!-- Buds -->
     <circle cx="400" cy="950" r="7" fill="url(#bud)" />
@@ -559,7 +724,7 @@
   </g>
 
   <!-- ═══════════════ BOTTOM-RIGHT — branch tip ═══════════════ -->
-  <g filter="url(#ink-wash)">
+  <g filter="url(#branch-brush)">
     <path
       d="M1000,1400 Q920,1350 880,1290 Q850,1240 830,1200"
       stroke="url(#ink-medium)"
@@ -581,19 +746,41 @@
       fill="none"
       stroke-linecap="round"
     />
+    <path
+      d="M995,1396 Q925,1350 882,1291 Q852,1245 832,1202"
+      stroke="#f6deb4"
+      stroke-width="1"
+      stroke-opacity="0.1"
+      stroke-dasharray="24 16 8 18"
+      fill="none"
+      stroke-linecap="round"
+    />
+    <ellipse
+      cx="834"
+      cy="1205"
+      rx="5.5"
+      ry="2.8"
+      fill="#4a3020"
+      opacity="0.1"
+      transform="rotate(-58 834 1205)"
+    />
   </g>
 
   <g filter="url(#petal-blur)">
-    <circle cx="835" cy="1205" r="18" fill="url(#blossom-gold)" />
-    <circle cx="830" cy="1200" r="11" fill="url(#blossom-amber)" />
-    <circle cx="910" cy="1215" r="13" fill="url(#blossom-ochre)" />
-    <circle cx="908" cy="1212" r="7" fill="url(#blossom-pale)" />
+    <circle cx="835" cy="1205" r="22" fill="url(#blossom-gold)" opacity="0.42" />
+    <circle cx="910" cy="1215" r="17" fill="url(#blossom-ochre)" opacity="0.36" />
+    <use href="#plum-bloom" transform="translate(835,1205) rotate(-18) scale(0.5)" opacity="0.7" />
+    <use
+      href="#plum-bloom-pale"
+      transform="translate(910,1215) rotate(22) scale(0.34)"
+      opacity="0.58"
+    />
     <circle cx="860" cy="1260" r="5.5" fill="url(#bud)" />
     <circle cx="900" cy="1230" r="4.5" fill="url(#bud)" />
   </g>
 
   <!-- ═══════════════ TOP-LEFT — light tendril ═══════════════ -->
-  <g filter="url(#ink-wash)">
+  <g filter="url(#branch-brush)">
     <path
       d="M0,0 Q60,40 100,100 Q130,150 140,200"
       stroke="url(#ink-light)"
@@ -616,25 +803,32 @@
       fill="none"
       stroke-linecap="round"
     />
+    <ellipse
+      cx="100"
+      cy="100"
+      rx="4.5"
+      ry="2.2"
+      fill="#5a3824"
+      opacity="0.08"
+      transform="rotate(42 100 100)"
+    />
   </g>
 
   <g filter="url(#petal-blur)">
     <!-- Plum blossom -->
-    <g transform="translate(138,198) scale(0.65)">
-      <ellipse cx="0" cy="-16" rx="5" ry="12" fill="url(#blossom-pale)" transform="rotate(10)" />
-      <ellipse cx="0" cy="-16" rx="5" ry="12" fill="url(#blossom-pale)" transform="rotate(82)" />
-      <ellipse cx="0" cy="-16" rx="5" ry="12" fill="url(#blossom-pale)" transform="rotate(154)" />
-      <ellipse cx="0" cy="-16" rx="5" ry="12" fill="url(#blossom-pale)" transform="rotate(226)" />
-      <ellipse cx="0" cy="-16" rx="5" ry="12" fill="url(#blossom-pale)" transform="rotate(298)" />
-      <circle cx="0" cy="0" r="2.2" fill="url(#plum-center)" />
-    </g>
-    <circle cx="165" cy="82" r="9" fill="url(#blossom-ochre)" />
-    <circle cx="163" cy="80" r="4.5" fill="url(#blossom-pale)" />
+    <circle cx="138" cy="198" r="18" fill="url(#blossom-pale)" opacity="0.38" />
+    <circle cx="165" cy="82" r="13" fill="url(#blossom-ochre)" opacity="0.32" />
+    <use
+      href="#plum-bloom-pale"
+      transform="translate(138,198) rotate(14) scale(0.44)"
+      opacity="0.62"
+    />
+    <use href="#plum-bloom" transform="translate(165,82) rotate(-18) scale(0.28)" opacity="0.5" />
     <circle cx="120" cy="145" r="4.5" fill="url(#bud)" />
   </g>
 
   <!-- ═══════════════ FALLING PETALS ═══════════════ -->
-  <g filter="url(#soft-blur)" opacity="0.35" class="mobile-hide">
+  <g filter="url(#soft-blur)" opacity="0.26" class="mobile-hide">
     <!-- Larger scattered petals -->
     <ellipse cx="480" cy="380" rx="4" ry="8" fill="#e8c060" transform="rotate(30,480,380)" />
     <ellipse cx="350" cy="520" rx="3" ry="7" fill="#f0a830" transform="rotate(-20,350,520)" />
@@ -672,6 +866,9 @@
       opacity="0.5"
     />
   </g>
+
+  <!-- Keep the center quiet where cards and text sit. -->
+  <rect width="1000" height="1400" fill="url(#content-wash)" />
 </svg>
 
 <style>

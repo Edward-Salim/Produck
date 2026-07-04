@@ -12,7 +12,12 @@ export const handle: Handle = async ({ event, resolve }) => {
 
   let sessionResult = null;
   if (sessionId) {
-    sessionResult = await validateSession(sessionId);
+    try {
+      sessionResult = await validateSession(sessionId);
+    } catch (err) {
+      console.error('Session validation failed:', err);
+      event.cookies.delete('session_id', { path: '/' });
+    }
   }
 
   if (sessionResult) {

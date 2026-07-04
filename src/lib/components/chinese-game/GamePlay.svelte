@@ -162,6 +162,14 @@
   // ── Derived ──
   let heat = $derived(engine.heat);
   let maxHealth = $derived(engine.maxHealth);
+  let allEditableSlotsFilled = $derived(
+    Boolean(
+      engine.currentSentence &&
+        [...engine.currentSentence.hanzi].every(
+          (char, index) => isPunct(char) || Boolean(engine.userChars[index])
+        )
+    )
+  );
 </script>
 
 <!-- Full-viewport streak overlay (subtle, only for higher tiers) -->
@@ -179,7 +187,7 @@
       aria-hidden="true"
       class:particles-visible={heat === 'blaze' || heat === 'inferno'}
     >
-      {#each Array(count) as _, i}
+      {#each Array(count) as _, i (i)}
         <span
           class="particle"
           style="left: {(i * 37 + 13) % 100}%; animation-delay: {((i * 0.7) % 4).toFixed(
@@ -192,12 +200,12 @@
 </div>
 
 <div
-  class="relative z-10 mx-auto flex w-full max-w-xl flex-col items-center justify-center gap-4 px-2 pb-8 md:min-h-[calc(100dvh-10rem)] md:gap-6"
+  class="relative z-10 mx-auto flex w-full max-w-xl flex-col items-center justify-center gap-4 px-2 pb-28 md:min-h-[calc(100dvh-10rem)] md:gap-6"
 >
   <!-- Health bar -->
   <div class="flex w-full items-center justify-between gap-2">
     <div class="flex items-center gap-1 md:gap-1.5">
-      {#each Array(maxHealth) as _, i}
+      {#each Array(maxHealth) as _, i (i)}
         {#if i < engine.health}
           <span
             class="scale-100 transition-all duration-300"
@@ -212,7 +220,7 @@
         {/if}
       {/each}
       {#if engine.bonusHearts > 0}
-        {#each Array(engine.bonusHearts) as _}
+        {#each Array(engine.bonusHearts) as _, i (i)}
           <span
             class="scale-100 transition-all duration-300"
             class:heart-gain={engine.justGainedHealth}
@@ -261,13 +269,13 @@
           </p>
         {/if}
         <!-- English translation (the prompt) -->
-        <p class="font-outfit text-lg leading-relaxed text-cork-800 md:text-3xl">
+        <p class="font-outfit text-xl leading-relaxed text-cork-800 md:text-3xl">
           {engine.currentSentence.translation}
         </p>
 
         <!-- Character slots: one box per hanzi character -->
         <div class="mt-4 flex flex-wrap items-center justify-center gap-1 md:mt-6 md:gap-1.5">
-          {#each engine.userChars as _, i}
+          {#each engine.userChars as _, i (i)}
             {@const punct = engine.currentSentence
               ? isPunct([...engine.currentSentence.hanzi][i])
               : false}
@@ -305,11 +313,11 @@
             {engine.streak} streak
           </p>
         {/if}
-        <p class="font-outfit text-lg leading-relaxed text-cork-800 md:text-3xl">
+        <p class="font-outfit text-xl leading-relaxed text-cork-800 md:text-3xl">
           {engine.currentSentence.translation}
         </p>
         <div class="mt-4 flex flex-wrap items-center justify-center gap-1 md:mt-6 md:gap-1.5">
-          {#each engine.userChars as ch, i}
+          {#each engine.userChars as ch, i (i)}
             {#if engine.currentSentence && isPunct([...engine.currentSentence.hanzi][i])}
               <span class="char-punct">{ch}</span>
             {:else}
@@ -327,7 +335,7 @@
         {/if}
         <div class="flex flex-col items-center gap-2 md:gap-3">
           <div>
-            <p class="font-outfit text-lg leading-relaxed text-cork-800 md:text-3xl">
+            <p class="font-outfit text-xl leading-relaxed text-cork-800 md:text-3xl">
               {engine.currentSentence.translation}
             </p>
             <p class="text-xs text-cork-400 md:text-sm">{engine.revealedPinyin}</p>
@@ -337,7 +345,7 @@
           <div
             class="flex flex-wrap items-start justify-center gap-x-1 gap-y-3 md:gap-x-1.5 md:gap-y-4"
           >
-            {#each [...engine.currentSentence.hanzi] as correctChar, i}
+            {#each [...engine.currentSentence.hanzi] as correctChar, i (i)}
               {#if isPunct(correctChar)}
                 <span class="char-punct">{correctChar}</span>
               {:else}
@@ -360,53 +368,57 @@
   {/if}
 
   <!-- Controls -->
-  <div class="flex flex-wrap items-center justify-center gap-2 md:gap-3">
-    {#if engine.feedback === 'wrong' || engine.feedback === 'correct'}
-      <button
-        type="button"
-        class="flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-cork-200/50 bg-cork-100 px-4 py-2 text-sm font-medium text-cork-600 shadow-sm transition-all hover:border-cork-300/50 hover:bg-cork-200 hover:shadow"
-        onclick={() => engine.nextAfterWrong()}
-      >
-        Next
-        <ArrowRight class="size-4" />
-      </button>
-    {:else}
-      <!-- HSK badge -->
+  <div class="fixed right-0 bottom-4 left-0 z-30 flex justify-center px-4 md:left-8">
+    <div
+      class="flex flex-wrap items-center justify-center gap-2 rounded-xl border border-cork-200/60 bg-cork-50/85 p-2 shadow-lg shadow-cork-900/10 backdrop-blur md:gap-3"
+    >
       <span
-        class="inline-flex items-center rounded-lg bg-cork-100 px-3 py-2 text-[11px] font-semibold tracking-wider text-cork-400 uppercase"
+        class="inline-flex items-center px-1 text-[11px] font-semibold tracking-wider text-cork-400 uppercase"
       >
-        HSK {engine.currentSentence?.level}
+        HSK {engine.currentSentence?.level ?? engine.currentLevel}
       </span>
-      <!-- Skip button -->
-      <button
-        type="button"
-        class="flex cursor-pointer items-center justify-center rounded-lg border border-cork-200/50 bg-cork-100 p-2 text-cork-600 shadow-sm transition-all hover:border-cork-300/50 hover:bg-cork-200 hover:shadow disabled:cursor-not-allowed disabled:opacity-40"
-        disabled={engine.feedback !== null}
-        onclick={() => engine.skipSentence()}
-        aria-label="Skip"
-      >
-        <SkipForward class="size-4" />
-      </button>
-      <!-- Hint button -->
-      <button
-        type="button"
-        class="flex cursor-pointer items-center justify-center rounded-lg border border-cork-200/50 bg-cork-100 p-2 text-cork-600 shadow-sm transition-all hover:border-cork-300/50 hover:bg-cork-200 hover:shadow disabled:cursor-not-allowed disabled:opacity-40"
-        disabled={engine.feedback !== null || engine.hintUsedThisSentence}
-        onclick={() => engine.useHint()}
-        aria-label="Hint"
-      >
-        <Lightbulb class="size-4" />
-      </button>
-      <!-- Check button -->
-      <button
-        type="button"
-        class="flex cursor-pointer items-center justify-center rounded-lg border border-cork-200/50 bg-cork-100 p-2 text-cork-600 shadow-sm transition-all hover:border-cork-300/50 hover:bg-cork-200 hover:shadow disabled:cursor-not-allowed disabled:opacity-40"
-        disabled={!engine.userChars.some((c) => c) || engine.feedback !== null}
-        onclick={doCheckAnswer}
-        aria-label="Check"
-      >
-        <Send class="size-4" />
-      </button>
-    {/if}
+
+      {#if engine.feedback === 'wrong' || engine.feedback === 'correct'}
+        <button
+          type="button"
+          class="flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-cork-200/50 bg-cork-100 px-4 py-2 text-sm font-medium text-cork-600 shadow-sm transition-all hover:border-cork-300/50 hover:bg-cork-200 hover:shadow"
+          onclick={() => engine.nextAfterWrong()}
+        >
+          Next
+          <ArrowRight class="size-4" />
+        </button>
+      {:else}
+        <!-- Skip button -->
+        <button
+          type="button"
+          class="flex cursor-pointer items-center justify-center rounded-lg border border-cork-200/50 bg-cork-100 p-2 text-cork-600 shadow-sm transition-all hover:border-cork-300/50 hover:bg-cork-200 hover:shadow disabled:cursor-not-allowed disabled:opacity-40"
+          disabled={engine.feedback !== null || allEditableSlotsFilled}
+          onclick={() => engine.skipSentence()}
+          aria-label="Skip"
+        >
+          <SkipForward class="size-4" />
+        </button>
+        <!-- Hint button -->
+        <button
+          type="button"
+          class="flex cursor-pointer items-center justify-center rounded-lg border border-cork-200/50 bg-cork-100 p-2 text-cork-600 shadow-sm transition-all hover:border-cork-300/50 hover:bg-cork-200 hover:shadow disabled:cursor-not-allowed disabled:opacity-40"
+          disabled={engine.feedback !== null || engine.hintUsedThisSentence}
+          onclick={() => engine.useHint()}
+          aria-label="Hint"
+        >
+          <Lightbulb class="size-4" />
+        </button>
+        <!-- Check button -->
+        <button
+          type="button"
+          class="flex cursor-pointer items-center justify-center rounded-lg border border-cork-200/50 bg-cork-100 p-2 text-cork-600 shadow-sm transition-all hover:border-cork-300/50 hover:bg-cork-200 hover:shadow disabled:cursor-not-allowed disabled:opacity-40"
+          disabled={!engine.userChars.some((c) => c) || engine.feedback !== null}
+          onclick={doCheckAnswer}
+          aria-label="Check"
+        >
+          <Send class="size-4" />
+        </button>
+      {/if}
+    </div>
   </div>
 </div>

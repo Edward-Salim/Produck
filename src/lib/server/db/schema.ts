@@ -28,6 +28,7 @@ export const appUser = pgTable('app_user', {
       selectedLevels?: number[];
       highscore?: number;
       highscoreName?: string;
+      readingSuccessCounts?: Record<string, number>;
       lastWorkspaceId?: number;
       lastProjectId?: number;
       gameState?: {
@@ -701,6 +702,30 @@ export const applicationCoverLetterJob = pgTable('application_cover_letter_job',
   model: text('model'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
+});
+
+export type ChineseReadingStoryContent = {
+  titleHanzi: string;
+  titlePinyin: string;
+  titleEnglish: string;
+  storyHanzi: string[];
+  storyPinyin: string[];
+  storyEnglish: string[];
+  questions: {
+    question: string;
+    options: string[];
+    answerIndex: number;
+    explanation: string;
+  }[];
+};
+
+export const chineseReadingStory = pgTable('chinese_reading_story', {
+  id: serial('id').primaryKey(),
+  level: integer('level').notNull(),
+  reading: jsonb('reading').$type<ChineseReadingStoryContent>().notNull(),
+  model: text('model'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  usedAt: timestamp('used_at', { withTimezone: true }).notNull().defaultNow()
 });
 
 // ── Framework Instances (user drafts) ─────────────────

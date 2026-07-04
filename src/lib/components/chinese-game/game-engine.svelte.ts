@@ -6,11 +6,12 @@ export interface SentenceData {
 }
 
 export type GameState = 'menu' | 'playing' | 'gameover';
-export type MenuScreen = 'main' | 'difficulty' | 'options';
+export type MenuScreen = 'main' | 'mode' | 'difficulty' | 'readingDifficulty' | 'options';
 export type Feedback = 'correct' | 'wrong' | null;
 
 export const STORAGE_KEY = 'hanzi-game-save';
 const SETTINGS_KEY = 'hanzi-game-settings';
+const READING_SUCCESS_KEY = 'chinese-reading-success-counts';
 
 type SavedGameData = ReturnType<GameEngine['buildGameData']>;
 
@@ -89,6 +90,8 @@ export class GameEngine {
   // ── Menu state ──
   menuScreen = $state<MenuScreen>('main');
   selectedLevels = $state<Set<number>>(new Set());
+  selectedReadingLevel = $state(1);
+  readingSuccessCounts: Record<number, number> = $state({});
 
   // ── Game state ──
   gameState = $state<GameState>('menu');
@@ -162,6 +165,7 @@ export class GameEngine {
   init(sentences: SentenceData[], levelNames: Record<string, string>, callbacks?: EngineCallbacks) {
     this.sentences = sentences;
     this.levelNames = levelNames;
+    this.loadReadingSuccessCounts();
     if (callbacks) this.cb = callbacks;
   }
 
@@ -190,6 +194,10 @@ export class GameEngine {
         if (p.masteredHanzi != null && typeof p.masteredHanzi === 'object') {
           this.masteredHanzi = p.masteredHanzi as Record<number, string[]>;
         }
+        if (p.readingSuccessCounts != null && typeof p.readingSuccessCounts === 'object') {
+          this.readingSuccessCounts = p.readingSuccessCounts as Record<number, number>;
+          localStorage.setItem(READING_SUCCESS_KEY, JSON.stringify(this.readingSuccessCounts));
+        }
         return p;
       }
     } catch {}
@@ -206,6 +214,9 @@ export class GameEngine {
         if (s.masteredHanzi != null && typeof s.masteredHanzi === 'object') {
           this.masteredHanzi = s.masteredHanzi as Record<number, string[]>;
         }
+        if (s.readingSuccessCounts != null && typeof s.readingSuccessCounts === 'object') {
+          this.readingSuccessCounts = s.readingSuccessCounts as Record<number, number>;
+        }
       }
     } catch {}
     return null;
@@ -221,7 +232,8 @@ export class GameEngine {
           sounds: this.soundsEnabled,
           hintAlwaysOn: this.hintAlwaysOn,
           selectedLevels: [...this.selectedLevels],
-          masteredHanzi: this.masteredHanzi
+          masteredHanzi: this.masteredHanzi,
+          readingSuccessCounts: this.readingSuccessCounts
         })
       });
     } catch {}
@@ -233,7 +245,8 @@ export class GameEngine {
           sounds: this.soundsEnabled,
           hintAlwaysOn: this.hintAlwaysOn,
           selectedLevels: [...this.selectedLevels],
-          masteredHanzi: this.masteredHanzi
+          masteredHanzi: this.masteredHanzi,
+          readingSuccessCounts: this.readingSuccessCounts
         })
       );
     } catch {}
@@ -259,8 +272,36 @@ export class GameEngine {
   }
 
   // ── Menu actions ──
+  loadReadingSuccessCounts() {
+    try {
+      const raw = localStorage.getItem(READING_SUCCESS_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      if (parsed != null && typeof parsed === 'object') {
+        this.readingSuccessCounts = parsed as Record<number, number>;
+      }
+    } catch {}
+  }
+
+  openMode() {
+    this.menuScreen = 'mode';
+    this.cb.onClick?.();
+  }
+
   openDifficulty() {
     this.menuScreen = 'difficulty';
+    this.cb.onClick?.();
+  }
+
+  openReadingDifficulty() {
+    this.loadReadingSuccessCounts();
+    this.menuScreen = 'readingDifficulty';
+    this.cb.onClick?.();
+  }
+
+  selectReadingLevel(level: number) {
+    if (level > 7) return;
+    this.selectedReadingLevel = level;
     this.cb.onClick?.();
   }
 
