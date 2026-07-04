@@ -55,16 +55,21 @@ export const POST: RequestHandler = async ({ request, locals, url, platform }) =
   const [caller] = authId ? await db.select().from(appUser).where(eq(appUser.authId, authId)) : [];
   if (!caller) return json({ error: 'Sign in to generate AI readings.' }, { status: 401 });
 
-  const body = (await request.json().catch(() => ({}))) as { level?: unknown; force?: unknown };
+  const body = (await request.json().catch(() => ({}))) as {
+    level?: unknown;
+    force?: unknown;
+    allowCache?: unknown;
+  };
   const requestedLevel = Number(body.level);
   const level = (CHINESE_READING_LEVELS.has(requestedLevel) ? requestedLevel : 1) as HskLevel;
   const force = body.force === true;
+  const allowCache = body.allowCache === true;
 
   try {
     await ensureChineseReadingStoryTable(db);
     const guard = getVocabGuard(level);
 
-    if (!force) {
+    if (allowCache && !force) {
       const cachedStories = await db
         .select()
         .from(chineseReadingStory)
