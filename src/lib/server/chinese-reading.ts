@@ -24,6 +24,16 @@ type ChineseReadingResult = {
   unknownWords: string[];
 };
 
+export type ChineseReadingAvoidance = {
+  titleHanzi: string;
+  titleEnglish: string;
+  openingHanzi: string;
+}[];
+
+type ChineseReadingGenerationOptions = {
+  avoidReadings?: ChineseReadingAvoidance;
+};
+
 export type ChineseReadingEnv = {
   DEEPSEEK_API_KEY?: string;
   DEEPSEEK_MODEL?: string;
@@ -141,6 +151,58 @@ const LEVEL_GUIDANCE: Record<HskLevel, string> = {
   5: 'HSK 5. Write 6 paragraphs. Use richer description, character motivation, and implied details, but stay learner-friendly.',
   6: 'HSK 6. Write 6-7 paragraphs. Use mature syntax, nuanced motivations, and concrete scenes.',
   7: 'HSK 7-9. Write 7 paragraphs. Advanced prose with idioms only when context makes them clear.'
+};
+
+const STORY_BRIEFS: Record<HskLevel, string[]> = {
+  1: [
+    'Scene: at home before school. Tiny problem: someone cannot find a book. Ending: a simple helpful action.',
+    'Scene: a classroom in the morning. Tiny problem: a student does not understand one character. Ending: the teacher and friend help.',
+    'Scene: lunch with classmates. Tiny problem: someone wants water or rice. Ending: everyone eats together.',
+    'Scene: after school. Tiny problem: deciding whether to read or write first. Ending: the work feels easy.',
+    'Scene: visiting a friend at home. Tiny problem: asking who is in the room. Ending: a warm greeting.'
+  ],
+  2: [
+    'Scene: going to a store. Problem: the thing to buy is not easy to find. Ending: a practical choice.',
+    'Scene: a rainy weekend. Problem: plans need to change. Ending: the new plan is still good.',
+    'Scene: riding a bus or subway. Problem: time is tight. Ending: someone arrives and learns a small lesson.',
+    'Scene: preparing for a birthday. Problem: one person is busy. Ending: friends divide the work.',
+    'Scene: after an exam or class. Problem: someone feels tired or worried. Ending: a clear next step.'
+  ],
+  3: [
+    'Scene: a normal work or study day. Problem: a sudden mistake changes the plan. Ending: the character solves it calmly.',
+    'Scene: a family or friend appointment. Problem: someone notices an important detail late. Ending: the decision works.',
+    'Scene: buying or returning something. Problem: the first solution fails. Ending: the final result is concrete.',
+    'Scene: a short trip across town. Problem: weather or time creates pressure. Ending: the character explains what changed.',
+    'Scene: helping another person. Problem: the helper has limited time. Ending: both people understand the result.'
+  ],
+  4: [
+    'Scene: a community, school, or workplace choice. Problem: two reasonable opinions conflict. Ending: a balanced decision.',
+    'Scene: planning a small event. Problem: resources are limited. Ending: the group changes priorities.',
+    'Scene: learning a practical skill. Problem: progress is slower than expected. Ending: reflection plus action.',
+    'Scene: a misunderstanding between friends or coworkers. Problem: unclear communication. Ending: direct explanation improves things.',
+    'Scene: changing a habit. Problem: convenience conflicts with long-term benefit. Ending: the character makes a measured choice.'
+  ],
+  5: [
+    'Scene: a personal project. Problem: motivation fades after the first difficulty. Ending: a specific compromise keeps it moving.',
+    'Scene: a workplace or school responsibility. Problem: hidden assumptions cause tension. Ending: the character adjusts their approach.',
+    'Scene: an old place revisited. Problem: memory differs from reality. Ending: the character understands the change.',
+    'Scene: helping a younger person. Problem: advice is not immediately accepted. Ending: example works better than argument.',
+    'Scene: preparing for a public moment. Problem: confidence and preparation do not match. Ending: the character finds a steadier method.'
+  ],
+  6: [
+    'Scene: an important but ordinary decision. Problem: short-term efficiency conflicts with trust. Ending: a nuanced tradeoff.',
+    'Scene: a team under pressure. Problem: people agree on goals but differ on method. Ending: an imperfect but workable path.',
+    'Scene: a change in a familiar neighborhood. Problem: development brings both convenience and loss. Ending: concrete observation, not moralizing.',
+    'Scene: recovering from a mistake. Problem: apology alone is not enough. Ending: responsibility is shown through action.',
+    'Scene: mentoring or being mentored. Problem: experience becomes a burden if repeated mechanically. Ending: adaptation matters.'
+  ],
+  7: [
+    'Scene: a professional or civic dilemma. Problem: incentives distort a sensible plan. Ending: the character accepts ambiguity.',
+    'Scene: a family memory crossing generations. Problem: silence protects and harms at the same time. Ending: a restrained revelation.',
+    'Scene: an institutional change. Problem: procedure and human judgment collide. Ending: a pragmatic settlement.',
+    'Scene: a creative or research failure. Problem: evidence undermines a cherished idea. Ending: intellectual humility.',
+    'Scene: a city or workplace transition. Problem: speed erodes attention. Ending: one concrete detail carries the theme.'
+  ]
 };
 
 const LEVEL_1_PREFERRED_WORD_BANK = [
@@ -469,7 +531,7 @@ function stripFences(text: string): string {
     .trim();
 }
 
-async function generateWithDeepSeek(env: ChineseReadingEnv, prompt: string) {
+async function generateWithDeepSeek(env: ChineseReadingEnv, prompt: string, temperature = 0.4) {
   const key = env.DEEPSEEK_API_KEY;
   if (!key) throw new Error('No DeepSeek API key configured');
 
@@ -485,7 +547,7 @@ async function generateWithDeepSeek(env: ChineseReadingEnv, prompt: string) {
       body: JSON.stringify({
         model: env.DEEPSEEK_MODEL ?? CHINESE_READING_MODEL,
         messages: [{ role: 'user', content: prompt }],
-        temperature: 0.4,
+        temperature,
         response_format: { type: 'json_object' }
       })
     });
@@ -784,14 +846,50 @@ HSK 3 quality guide:
   return '';
 }
 
-function buildPrompt(level: HskLevel, guard: VocabGuard) {
+function pickStoryBrief(level: HskLevel) {
+  const briefs = STORY_BRIEFS[level];
+  return briefs[Math.floor(Math.random() * briefs.length)] ?? briefs[0];
+}
+
+function formatAvoidReadings(avoidReadings: ChineseReadingAvoidance = []) {
+  const rows = avoidReadings
+    .filter((reading) => reading.titleHanzi || reading.titleEnglish || reading.openingHanzi)
+    .slice(0, 6)
+    .map((reading, index) => {
+      const title = reading.titleHanzi || reading.titleEnglish || 'Untitled';
+      const opening = reading.openingHanzi ? ` Opening: ${reading.openingHanzi}` : '';
+      return `${index + 1}. ${title}.${opening}`;
+    });
+
+  if (rows.length === 0) return '';
+
+  return `
+Recent readings to avoid repeating:
+${rows.join('\n')}
+
+Variety requirements:
+- Do not reuse the same title, opening sentence, main setting, main problem, or ending as the recent readings above.
+- Use a different situation and story arc even if the HSK vocabulary is simple.`;
+}
+
+function buildPrompt(
+  level: HskLevel,
+  guard: VocabGuard,
+  options: ChineseReadingGenerationOptions = {}
+) {
   const levelGenerationHelp = buildLevelGenerationHelp(level);
+  const storyBrief = pickStoryBrief(level);
+  const avoidReadings = formatAvoidReadings(options.avoidReadings);
 
   return `Create one Chinese reading-comprehension mini game for a Mandarin learner.
 
 Difficulty:
 ${LEVEL_GUIDANCE[level]}
 ${levelGenerationHelp}
+
+Story variety brief:
+${storyBrief}
+${avoidReadings}
 
 Vocabulary guardrail:
 - Use ONLY words from this cumulative HSK ${level} allowed vocabulary list for titleHanzi, storyHanzi, questions, options, and explanations.
@@ -904,9 +1002,10 @@ Rules:
 export async function generateValidatedReading(
   env: ChineseReadingEnv,
   level: HskLevel,
-  guard: VocabGuard
+  guard: VocabGuard,
+  options: ChineseReadingGenerationOptions = {}
 ): Promise<ChineseReadingResult> {
-  const text = await generateWithDeepSeek(env, buildPrompt(level, guard));
+  const text = await generateWithDeepSeek(env, buildPrompt(level, guard, options), 0.75);
   const parsed = JSON.parse(extractJsonObject(text));
   const reading = normalizeReading(parsed);
 
@@ -920,7 +1019,8 @@ export async function generateValidatedReading(
 
     const repairText = await generateWithDeepSeek(
       env,
-      buildRepairPrompt(level, guard, reading, err)
+      buildRepairPrompt(level, guard, reading, err),
+      0.25
     );
     const repairParsed = JSON.parse(extractJsonObject(repairText));
     const repairedReading = normalizeReading(repairParsed);

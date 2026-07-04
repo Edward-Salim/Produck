@@ -1,13 +1,52 @@
-import { eq } from 'drizzle-orm';
+import { and, desc, eq } from 'drizzle-orm';
 import {
   CHINESE_READING_MODEL,
   generateValidatedReading,
   getVocabGuard,
+  type ChineseReadingAvoidance,
   type ChineseReadingEnv,
   type HskLevel
 } from './chinese-reading.js';
 import { ensureChineseReadingStoryTable } from './chinese-reading-schema.js';
 import { chineseReadingJob, chineseReadingStory } from './db/schema.js';
+
+async function getRecentReadingsToAvoid(
+  database: any,
+  userId: number,
+  level: HskLevel,
+  currentJobId: string
+): Promise<ChineseReadingAvoidance> {
+  const recentJobs = await database
+    .select({
+      id: chineseReadingJob.id,
+      reading: chineseReadingJob.reading
+    })
+    .from(chineseReadingJob)
+    .where(
+      and(
+        eq(chineseReadingJob.userId, userId),
+        eq(chineseReadingJob.level, level),
+        eq(chineseReadingJob.status, 'completed')
+      )
+    )
+    .orderBy(desc(chineseReadingJob.updatedAt))
+    .limit(8);
+
+  return recentJobs
+    .filter((recent: { id: string }) => recent.id !== currentJobId)
+    .map((recent: { reading?: any }) => ({
+      titleHanzi: typeof recent.reading?.titleHanzi === 'string' ? recent.reading.titleHanzi : '',
+      titleEnglish:
+        typeof recent.reading?.titleEnglish === 'string' ? recent.reading.titleEnglish : '',
+      openingHanzi:
+        typeof recent.reading?.storyHanzi?.[0] === 'string' ? recent.reading.storyHanzi[0] : ''
+    }))
+    .filter(
+      (reading: ChineseReadingAvoidance[number]) =>
+        reading.titleHanzi || reading.titleEnglish || reading.openingHanzi
+    )
+    .slice(0, 6);
+}
 
 export async function processChineseReadingJob(
   database: any,
@@ -32,7 +71,8 @@ export async function processChineseReadingJob(
   try {
     const level = job.level as HskLevel;
     const guard = getVocabGuard(level);
-    const result = await generateValidatedReading(env, level, guard);
+    const avoidReadings = await getRecentReadingsToAvoid(database, job.userId, level, jobId);
+    const result = await generateValidatedReading(env, level, guard, { avoidReadings });
     const model = env.DEEPSEEK_MODEL ?? CHINESE_READING_MODEL;
 
     if (result.unknownWords.length === 0) {
