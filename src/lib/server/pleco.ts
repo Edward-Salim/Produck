@@ -1,21 +1,22 @@
-const plecoFiles = import.meta.glob('../../../static/pleco/*.txt', {
-  eager: true,
-  import: 'default',
-  query: '?raw'
-}) as Record<string, string>;
+import { existsSync, readFileSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const moduleDir = dirname(fileURLToPath(import.meta.url));
 
 export function readPlecoLevelFile(label: string) {
-  const suffix = `/hsk3.0-level${label}.txt`;
-  const text = Object.entries(plecoFiles).find(([path]) => path.endsWith(suffix))?.[1];
+  const fileName = `hsk3.0-level${label}.txt`;
+  const candidates = [
+    resolve(process.cwd(), 'static', 'pleco', fileName),
+    resolve(moduleDir, '..', '..', '..', 'static', 'pleco', fileName),
+    resolve(moduleDir, '..', '..', '..', '..', 'static', 'pleco', fileName),
+    resolve('/var/task', 'static', 'pleco', fileName)
+  ];
 
-  if (!text) {
-    const availableFiles = Object.keys(plecoFiles)
-      .map((path) => path.split('/').pop())
-      .filter(Boolean)
-      .join(', ');
-
-    throw new Error(`Missing Pleco HSK file hsk3.0-level${label}.txt. Available: ${availableFiles}`);
+  const filePath = candidates.find((candidate) => existsSync(candidate));
+  if (!filePath) {
+    throw new Error(`Missing Pleco HSK file ${fileName}. Checked: ${candidates.join(', ')}`);
   }
 
-  return text;
+  return readFileSync(filePath, 'utf-8');
 }

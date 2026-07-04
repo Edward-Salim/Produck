@@ -44,9 +44,16 @@
     vocabWarningWords: string[];
     savedAt: number;
   };
+  type ChineseReadingJobStatus = {
+    status?: string;
+    reading?: ChineseReading;
+    unknownWords?: unknown;
+    error?: string;
+  };
 
   const levels = [1, 2, 3, 4, 5, 6, 7];
   const OPTION_LABELS = ['A', 'B', 'C'];
+  const READING_JOB_POLL_MS = 2500;
   const READING_SUCCESS_KEY = 'chinese-reading-success-counts';
   const READING_STATE_KEY = 'chinese-reading-current-state';
   const READING_FORCE_NEXT_KEY = 'chinese-reading-force-next';
@@ -171,6 +178,7 @@
   let soundsEnabled = $state(true);
   let bgMusic: HTMLAudioElement | undefined;
   let audioCtx: AudioContext | undefined;
+  let pollController: AbortController | undefined;
 
   let answeredCount = $derived(Object.keys(selectedAnswers).length);
   let canCheck = $derived(Boolean(reading && answeredCount === reading.questions.length));
@@ -193,6 +201,7 @@
   });
 
   onDestroy(() => {
+    pollController?.abort();
     bgMusic?.pause();
     bgMusic = undefined;
   });
@@ -480,6 +489,7 @@
     if (force) clearReadingState();
 
     try {
+      pollController?.abort();
       const response = await fetch('/api/chinese-reading', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -489,6 +499,10 @@
       if (!response.ok) {
         throw new Error(data?.error ?? 'Could not generate a reading.');
       }
+      if (response.status === 202 && typeof data?.jobId === 'string') {
+        await pollReadingJob(data.jobId);
+        return;
+      }
       reading = data.reading;
       vocabWarningWords = Array.isArray(data?.unknownWords) ? data.unknownWords : [];
       saveReadingState({ reading: data.reading, vocabWarningWords });
@@ -497,6 +511,53 @@
     } finally {
       loading = false;
       loadingIsRegenerating = false;
+    }
+  }
+
+  function waitForPoll(signal: AbortSignal) {
+    return new Promise<void>((resolve, reject) => {
+      const timeout = window.setTimeout(resolve, READING_JOB_POLL_MS);
+      signal.addEventListener(
+        'abort',
+        () => {
+          window.clearTimeout(timeout);
+          reject(new DOMException('Polling aborted', 'AbortError'));
+        },
+        { once: true }
+      );
+    });
+  }
+
+  async function pollReadingJob(jobId: string) {
+    const controller = new AbortController();
+    pollController = controller;
+
+    try {
+      while (!controller.signal.aborted) {
+        const response = await fetch(`/api/chinese-reading/status/${jobId}`, {
+          signal: controller.signal
+        });
+        const data = (await response.json()) as ChineseReadingJobStatus;
+
+        if (!response.ok) {
+          throw new Error(data?.error ?? 'Could not check reading generation status.');
+        }
+
+        if (data.status === 'completed' && data.reading) {
+          reading = data.reading;
+          vocabWarningWords = Array.isArray(data.unknownWords) ? data.unknownWords : [];
+          saveReadingState({ reading: data.reading, vocabWarningWords });
+          return;
+        }
+
+        if (data.status === 'failed') {
+          throw new Error(data.error ?? 'Could not generate a reading.');
+        }
+
+        await waitForPoll(controller.signal);
+      }
+    } finally {
+      if (pollController === controller) pollController = undefined;
     }
   }
 

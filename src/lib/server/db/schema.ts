@@ -728,6 +728,23 @@ export const chineseReadingStory = pgTable('chinese_reading_story', {
   usedAt: timestamp('used_at', { withTimezone: true }).notNull().defaultNow()
 });
 
+export const chineseReadingJob = pgTable('chinese_reading_job', {
+  id: text('id').primaryKey(),
+  userId: integer('user_id')
+    .notNull()
+    .references(() => appUser.id, { onDelete: 'cascade' }),
+  level: integer('level').notNull(),
+  status: text('status').notNull().default('queued'),
+  reading: jsonb('reading').$type<ChineseReadingStoryContent>(),
+  unknownWords: jsonb('unknown_words')
+    .$type<string[]>()
+    .default(sql`'[]'`),
+  error: text('error'),
+  model: text('model'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
+});
+
 // ── Framework Instances (user drafts) ─────────────────
 
 export const frameworkInstance = pgTable('framework_instance', {
