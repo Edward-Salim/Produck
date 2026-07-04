@@ -1,12 +1,7 @@
-import { readFileSync } from 'fs';
-import { resolve, dirname } from 'path';
-import { fileURLToPath } from 'url';
+import { readPlecoLevelFile } from '$lib/server/pleco.js';
 import type { PageServerLoad } from './$types.js';
 import { generateSentences } from './sentences.js';
 import type { SentenceData } from './sentences.js';
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const PLECO_DIR = resolve(__dirname, '../../../../../static/pleco');
 
 export interface WordData {
   hanzi: string;
@@ -544,9 +539,8 @@ function loadAllWords(): WordData[] {
 
   for (let level = 1; level <= 7; level++) {
     const label = LEVEL_LABELS[level];
-    const filePath = resolve(PLECO_DIR, `hsk3.0-level${label}.txt`);
     try {
-      const text = readFileSync(filePath, 'utf-8');
+      const text = readPlecoLevelFile(label);
       const words = parseHskFile(text, level);
       allWords.push(...words);
     } catch (err) {

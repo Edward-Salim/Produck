@@ -1,12 +1,10 @@
 import { json } from '@sveltejs/kit';
 import { env } from '$env/dynamic/private';
 import { eq, sql } from 'drizzle-orm';
-import { readFileSync } from 'fs';
-import { dirname, resolve } from 'path';
-import { fileURLToPath } from 'url';
 import { ensureChineseReadingStoryTable } from '$lib/server/chinese-reading-schema.js';
 import { db } from '$lib/server/db/index.js';
 import { chineseReadingStory } from '$lib/server/db/schema.js';
+import { readPlecoLevelFile } from '$lib/server/pleco.js';
 import type { RequestHandler } from './$types.js';
 
 type HskLevel = 1 | 2 | 3 | 4 | 5 | 6 | 7;
@@ -43,8 +41,6 @@ type VocabGuard = {
 
 const LEVELS = new Set([1, 2, 3, 4, 5, 6, 7]);
 const MODEL = 'deepseek-v4-flash';
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const PLECO_DIR = resolve(__dirname, '../../../../static/pleco');
 const PINYIN_SPLIT_RE = /[\s，。？、！；：,.?!;:]+/;
 const HANZI_RE = /[\u3400-\u9fff]/u;
 const PINYIN_INITIALS = [
@@ -373,8 +369,7 @@ function loadLevelWords(level: HskLevel) {
   if (vocabCache[level]) return vocabCache[level];
 
   const label = LEVEL_LABELS[level];
-  const filePath = resolve(PLECO_DIR, `hsk3.0-level${label}.txt`);
-  const words = parsePlecoWords(readFileSync(filePath, 'utf-8'));
+  const words = parsePlecoWords(readPlecoLevelFile(label));
   vocabCache[level] = words;
   return words;
 }
