@@ -40,8 +40,9 @@ function normalizeGeneratedPlainText(text: string): string {
     .replace(/[—–]/g, ', ')
     .replace(/[‘’]/g, "'")
     .replace(/[“”]/g, '"')
-    .replace(/[ \t]+,/g, ',')
-    .replace(/,(\p{L})/gu, ', $1')
+    .replace(/[ \t]+([,.;:!?])/g, '$1')
+    .replace(/([,.;:!?])(?=\p{L}|\p{N})/gu, '$1 ')
+    .replace(/('s)(?=\p{L}|\p{N})/giu, '$1 ')
     .replace(/[ \t]{2,}/g, ' ');
 }
 

@@ -7,6 +7,10 @@ function safeFilenamePart(value: string | undefined, fallback: string): string {
   return cleaned || fallback;
 }
 
+function removeFilenameOnlyRoleQualifiers(value: string | undefined): string | undefined {
+  return value?.replace(/\s*\([^()]{2,80}\bspeaking\b[^()]*\)\s*/gi, ' ').trim();
+}
+
 function splitFilenamePart(value: string): string[] {
   return value.split('_').filter(Boolean);
 }
@@ -39,7 +43,10 @@ export function buildApplicationPdfFilename({
 }): string {
   const prefix = includeCv ? 'Application' : 'Cover_Letter';
   const safeCompany = safeFilenamePart(company, 'Company');
-  const safeRole = dedupeRoleForCompany(safeCompany, safeFilenamePart(role, 'Role'));
+  const safeRole = dedupeRoleForCompany(
+    safeCompany,
+    safeFilenamePart(removeFilenameOnlyRoleQualifiers(role), 'Role')
+  );
 
   return `Edward_Salim_${prefix}_${safeCompany}_${safeRole}.pdf`;
 }

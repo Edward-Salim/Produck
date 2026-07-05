@@ -10,6 +10,8 @@ import {
 import { ensureChineseReadingStoryTable } from './chinese-reading-schema.js';
 import { chineseReadingJob, chineseReadingStory } from './db/schema.js';
 
+const ACTIVE_JOB_LOCK_MS = 12 * 60 * 1000;
+
 async function getRecentReadingsToAvoid(
   database: any,
   userId: number,
@@ -62,6 +64,11 @@ export async function processChineseReadingJob(
 
   if (!job) throw new Error(`Chinese reading job not found: ${jobId}`);
   if (job.status === 'completed') return job.reading;
+  if (job.status === 'failed') return null;
+  if (job.status === 'running') {
+    const updatedAt = job.updatedAt instanceof Date ? job.updatedAt : new Date(job.updatedAt);
+    if (Date.now() - updatedAt.getTime() < ACTIVE_JOB_LOCK_MS) return job.reading ?? null;
+  }
 
   await database
     .update(chineseReadingJob)
