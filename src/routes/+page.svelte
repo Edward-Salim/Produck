@@ -20,9 +20,9 @@
   } from '@lucide/svelte';
 
   // Static assets & SVGs from SVGL CLI
-  import edwardAvatar from '$lib/assets/edward.jpg?enhanced';
-  import logoProduck from '$lib/assets/logo-produck.png?enhanced';
-  import logoProduckIcon from '$lib/assets/logo-produck.png';
+  import edwardAvatar from '$lib/assets/profile/edward.jpg?enhanced';
+  import logoProduck from '$lib/assets/brand/logo-produck.png?enhanced';
+  import logoProduckIcon from '$lib/assets/brand/logo-produck.png';
   import linkedinSvg from '$lib/assets/tech/linkedin.svg';
   import githubSvg from '$lib/assets/tech/github_light.svg';
   import pythonSvg from '$lib/assets/tech/python.svg';
@@ -50,7 +50,7 @@
   import danaLogo from '$lib/assets/fintech_logos/indonesia/dana.png';
   import kitabisaLogo from '$lib/assets/fintech_logos/indonesia/kitabisa.jpeg';
   import indodanaLogo from '$lib/assets/fintech_logos/indonesia/indodana.png';
-  import desaBinaanLogo from '$lib/assets/desa-binaan-logo.png';
+  import desaBinaanLogo from '$lib/assets/company-logos/desa-binaan.png';
 
   // Lomba/Award & Project Images
   import datathonImg from '$lib/assets/awards/award-datathon.png';

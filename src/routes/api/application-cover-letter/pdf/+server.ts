@@ -42,7 +42,7 @@ const LETTER_WIDTH = 6.14 * PT;
 const PORTRAIT_FRAME_X = 1.7 * PT;
 const PORTRAIT_FRAME_TOP = PAGE_HEIGHT - 0.66 * PT;
 const PORTRAIT_WIDTH = 1.48 * PT;
-const PORTRAIT_TRIM_PX = 620;
+const PORTRAIT_HEIGHT = 1.58 * PT;
 const PORTRAIT_BORDER = 0.035 * PT;
 const PORTRAIT_PADDING = 0.025 * PT;
 const PORTRAIT_FRAME_INSET = PORTRAIT_BORDER + PORTRAIT_PADDING;
@@ -426,7 +426,14 @@ async function renderApplicationPdf(
   const bold = await pdf.embedFont(StandardFonts.TimesRomanBold);
 
   const cvSourcePath = join(process.cwd(), 'static', 'assets', 'Edward_Salim_CV.pdf');
-  const portraitSourcePath = join(process.cwd(), 'src', 'lib', 'assets', 'edward.jpg');
+  const portraitSourcePath = join(
+    process.cwd(),
+    'src',
+    'lib',
+    'assets',
+    'profile',
+    'edward-cover-letter.jpg'
+  );
   const [cvBytes, portraitBytes, signatureBytes] = await Promise.all([
     includeCv ? readFile(cvSourcePath) : Promise.resolve(undefined),
     readFile(portraitSourcePath),
@@ -449,13 +456,12 @@ async function renderApplicationPdf(
   drawRoundedPanel(page);
 
   const portraitRenderedHeight = (portrait.height / portrait.width) * PORTRAIT_WIDTH;
-  const portraitTrim = (PORTRAIT_TRIM_PX / portrait.width) * PORTRAIT_WIDTH;
-  const portraitClippedHeight = portraitRenderedHeight - portraitTrim * 2;
   const portraitFrameWidth = PORTRAIT_WIDTH + PORTRAIT_FRAME_INSET * 2;
-  const portraitFrameHeight = portraitClippedHeight + PORTRAIT_FRAME_INSET * 2;
+  const portraitFrameHeight = PORTRAIT_HEIGHT + PORTRAIT_FRAME_INSET * 2;
   const portraitFrameY = PORTRAIT_FRAME_TOP - portraitFrameHeight;
   const portraitX = PORTRAIT_FRAME_X + PORTRAIT_FRAME_INSET;
   const portraitY = portraitFrameY + PORTRAIT_FRAME_INSET;
+  const portraitImageY = portraitY + PORTRAIT_HEIGHT - portraitRenderedHeight;
 
   page.drawRectangle({
     x: PORTRAIT_FRAME_X,
@@ -467,10 +473,10 @@ async function renderApplicationPdf(
   drawImageClipped(
     page,
     portrait,
-    { x: portraitX, y: portraitY, width: PORTRAIT_WIDTH, height: portraitClippedHeight },
+    { x: portraitX, y: portraitY, width: PORTRAIT_WIDTH, height: PORTRAIT_HEIGHT },
     {
       x: portraitX,
-      y: portraitY - portraitTrim,
+      y: portraitImageY,
       width: PORTRAIT_WIDTH,
       height: portraitRenderedHeight
     }

@@ -1,6 +1,6 @@
 <script lang="ts">
   import './(app)/layout.css';
-  import favicon from '$lib/assets/favicon.png';
+  import favicon from '$lib/assets/brand/favicon.png';
   import { navigating } from '$app/stores';
 
   let { children } = $props();

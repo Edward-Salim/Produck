@@ -25,6 +25,7 @@
     model?: string;
     linkedinStatus?: 'running' | 'completed' | 'failed';
     linkedinError?: string;
+    linkedinSkills?: string;
     linkedinMessages?: LinkedInMessage[];
   };
 
@@ -96,6 +97,7 @@ I would bring that same evidence-guided approach to your team. My strength is tu
     Boolean(dump.trim() || result || error || previewPdfError || sourceDirty)
   );
   const linkedinMessages = $derived(result?.linkedinMessages ?? []);
+  const linkedinSkills = $derived(result?.linkedinSkills?.trim() ?? '');
   const linkedinGenerating = $derived(result?.linkedinStatus === 'running');
   const linkedinError = $derived(result?.linkedinError);
 
@@ -267,6 +269,7 @@ I would bring that same evidence-guided approach to your team. My strength is tu
         ...(result ?? job.result),
         linkedinStatus: job.result.linkedinStatus,
         linkedinError: job.result.linkedinError,
+        linkedinSkills: job.result.linkedinSkills ?? '',
         linkedinMessages: job.result.linkedinMessages ?? []
       };
 
@@ -577,7 +580,7 @@ I would bring that same evidence-guided approach to your team. My strength is tu
               onclick={() => (activeView = 'messages')}
             >
               <MessageCircle class={`size-3.5 ${linkedinGenerating ? 'animate-pulse' : ''}`} />
-              <span class={linkedinGenerating ? 'animate-pulse' : ''}>LinkedIn</span>
+              <span class={linkedinGenerating ? 'animate-pulse' : ''}>Outreach</span>
             </button>
           </div>
 
@@ -708,8 +711,26 @@ I would bring that same evidence-guided approach to your team. My strength is tu
           <div
             class="h-[calc(100svh-340px)] min-h-128 overflow-auto rounded-lg border border-cork-300 bg-cork-50 p-4"
           >
-            {#if linkedinMessages.length > 0}
+            {#if linkedinMessages.length > 0 || linkedinSkills}
               <div class="space-y-3">
+                {#if linkedinSkills}
+                  <article class="rounded-lg border border-cork-200 bg-white p-4 shadow-sm">
+                    <div class="mb-2 flex items-start justify-between gap-3">
+                      <h3 class="text-sm font-semibold text-cork-800">Skill Keywords</h3>
+                      <button
+                        type="button"
+                        aria-label="Copy skill keywords"
+                        title="Copy skill keywords"
+                        class="inline-flex h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-lg border border-cork-300 bg-white px-2.5 text-xs font-medium text-cork-600 transition-colors hover:bg-cork-100 hover:text-cork-800"
+                        onclick={() => copyLinkedInMessage(linkedinSkills, -1)}
+                      >
+                        <Copy class="size-3.5" />
+                        {copiedMessageIndex === -1 ? 'Copied' : 'Copy'}
+                      </button>
+                    </div>
+                    <p class="text-sm leading-relaxed text-cork-800">{linkedinSkills}</p>
+                  </article>
+                {/if}
                 {#each linkedinMessages as message, index (index)}
                   <article class="rounded-lg border border-cork-200 bg-white p-4 shadow-sm">
                     <div class="mb-3 flex items-start justify-between gap-3">
@@ -742,7 +763,7 @@ I would bring that same evidence-guided approach to your team. My strength is tu
                     class="w-full max-w-44 object-contain"
                   />
                   <div class="relative -mt-10 text-center text-sm font-medium text-cork-600">
-                    Generating LinkedIn messages<span
+                    Generating outreach assets<span
                       class="dot-cycle absolute top-0 left-full"
                       aria-hidden="true"
                     ></span>
@@ -759,9 +780,7 @@ I would bring that same evidence-guided approach to your team. My strength is tu
               </div>
             {:else}
               <div class="flex h-full items-center justify-center text-center">
-                <p class="max-w-sm text-sm leading-relaxed text-cork-500">
-                  No outreach drafts yet
-                </p>
+                <p class="max-w-sm text-sm leading-relaxed text-cork-500">No outreach drafts yet</p>
               </div>
             {/if}
           </div>

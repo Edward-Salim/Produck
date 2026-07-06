@@ -11,16 +11,16 @@
     Globe,
     Building2
   } from '@lucide/svelte';
-  import bytedanceLogo from '$lib/assets/bytedance-logo.png';
-  import seaLogo from '$lib/assets/sea.png';
-  import grabLogo from '$lib/assets/grab.png';
-  import dbsLogo from '$lib/assets/dbs.png';
-  import uobLogo from '$lib/assets/uob.png';
-  import fundingSocietiesLogo from '$lib/assets/funding-societies.png';
-  import atomeLogo from '$lib/assets/atome.png';
-  import ocbcLogo from '$lib/assets/ocbc.png';
-  import gotoLogo from '$lib/assets/goto.png';
-  import gdpLabsLogo from '$lib/assets/gdp-labs.png';
+  import bytedanceLogo from '$lib/assets/company-logos/bytedance.png';
+  import seaLogo from '$lib/assets/company-logos/sea.png';
+  import grabLogo from '$lib/assets/company-logos/grab.png';
+  import dbsLogo from '$lib/assets/company-logos/dbs.png';
+  import uobLogo from '$lib/assets/company-logos/uob.png';
+  import fundingSocietiesLogo from '$lib/assets/company-logos/funding-societies.png';
+  import atomeLogo from '$lib/assets/company-logos/atome.png';
+  import ocbcLogo from '$lib/assets/company-logos/ocbc.png';
+  import gotoLogo from '$lib/assets/company-logos/goto.png';
+  import gdpLabsLogo from '$lib/assets/company-logos/gdp-labs.png';
   import { SG, ID } from 'country-flag-icons/string/3x2';
 
   let { data } = $props();
@@ -606,7 +606,9 @@
 
       <div class="space-y-5">
         {#if detailJob.description}
-          {#each detailJob.description.split(/^### /m).filter(Boolean) as section, sectionIndex (`${sectionIndex}-${section}`)}
+          {#each detailJob.description
+            .split(/^### /m)
+            .filter(Boolean) as section, sectionIndex (`${sectionIndex}-${section}`)}
             {@const newline = section.indexOf('\n')}
             {@const heading = newline > 0 ? section.slice(0, newline) : section}
             {@const body = newline > 0 ? section.slice(newline + 1).trim() : ''}

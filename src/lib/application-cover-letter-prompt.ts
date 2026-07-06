@@ -66,11 +66,15 @@ User dump:
 ${input}`;
 }
 
-export function buildLinkedInMessagesPrompt(input: string, application: { company: string; role: string }): string {
-  return `Generate short LinkedIn outreach DM drafts for Edward Salim's job application.
+export function buildLinkedInMessagesPrompt(
+  input: string,
+  application: { company: string; role: string }
+): string {
+  return `Generate short outreach assets for Edward Salim's job application.
 
 Return ONLY valid JSON with this exact shape:
 {
+  "skills": "Skill, Skill, Skill",
   "messages": [
     {
       "label": "short label, 2-4 words",
@@ -88,20 +92,24 @@ Target application:
 - Role: ${application.role}
 
 Rules:
-- Generate 3 messages.
-- Keep labels concise, for example "Connection Request", "After Accepting", or "Follow Up".
+- Generate skills as one comma-separated line in the exact format "X, X, X".
+- Include 12-18 concise, role-relevant skill keywords. Prefer skill phrases suitable for a LinkedIn skills section, resume keyword section, or recruiter scan.
+- Skills must be grounded in Edward's profile and the job dump. Do not invent certifications, tools, or domain expertise not supported by the context.
+- Generate 1 LinkedIn message for someone who already connected with Edward and accepted his connection request.
+- Use the label "Recruiter Note" when the person appears to be a recruiter or hiring contact. Use "Referral Ask" only when the person appears to be an employee, alumni, mutual connection, or non-recruiter.
 - Keep useCase terse because it is used internally only.
-- Message 1 is a LinkedIn connection request for a recruiter, hiring poster, alumni, mutual connection, or relevant company employee. It must be 300 characters or fewer.
-- Message 2 is the first message after they accept the connection. It should thank them, give a brief background signal, and ask for advice or a brief chat. Keep it 45-80 words.
-- Message 3 is a thoughtful follow-up to send 5-7 days later if they accepted but did not reply. Keep it 25-45 words.
-- Make the messages natural, direct, modest, and specific to the role.
-- Do not ask for a job immediately. Prefer advice, perspective, a brief chat, or a pointer to the right person.
-- Make it easy to help Edward by naming the target role, relevant strength, and active search context when space allows.
-- Mention a specific role, company, recruiting area, post, or shared connection from the dump when available.
-- Ask for a referral only if the dump clearly suggests a warm connection or the message is not a first touch. Do not sound entitled.
+- Keep the message 40-55 words and short enough for one mobile screen.
+- Make the message warm, soft, relevant, concise, sincere, modest, and specific to the role.
+- Structure the message: thank them for connecting, mention the target role, give one concrete fit signal, then make one light ask.
+- If the dump includes why the person is relevant, such as recruiter, hiring team, alumni, mutual connection, similar background, or relevant function, mention that briefly.
+- If the person appears to be a recruiter or hiring contact, do not ask for a referral. Ask whether the role is still open, whether Edward's background could be relevant, or whether there is anything helpful to highlight in the application.
+- If the person appears to be an employee, alumni, mutual connection, or non-recruiter, ask for a referral softly only after the fit signal. Phrase it as "if you feel comfortable" or "if appropriate".
+- Avoid transactional phrasing like "I'd appreciate a referral". Prefer softer phrasing like "would it be alright if I asked whether a referral might be appropriate?"
+- Do not ask for "any roles", attach or mention a CV, beg, over-explain, or imply they owe Edward help.
+- Do not use generic claims like "I believe I could contribute" unless paired with specific proof from Edward's profile or the job dump.
 - Do not invent a person name. Use placeholders like "Hi [Name]," when no name is available.
 - Do not include markdown, bullets inside the message text, sign-off blocks, phone, email, or URLs.
-- Avoid semicolons, em dashes, en dashes, and curly punctuation. Use ASCII punctuation only.
+- Avoid semicolons, prose colons, em dashes, en dashes, hyphen-like separators, and curly punctuation. Use ASCII commas, periods, question marks, apostrophes, and parentheses only.
 
 User dump:
 ${input}`;

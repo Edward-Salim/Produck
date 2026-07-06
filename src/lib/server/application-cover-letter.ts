@@ -27,6 +27,11 @@ export type LinkedInMessage = {
   text: string;
 };
 
+export type LinkedInAssets = {
+  skills: string;
+  messages: LinkedInMessage[];
+};
+
 function stripFences(text: string): string {
   return text
     .trim()
@@ -118,7 +123,18 @@ function normalizeLinkedInMessages(value: unknown): LinkedInMessage[] {
       };
     })
     .filter((message): message is LinkedInMessage => Boolean(message?.label && message.text))
-    .slice(0, 3);
+    .slice(0, 1);
+}
+
+function normalizeSkillKeywords(value: unknown): string {
+  if (typeof value !== 'string') return '';
+
+  return value
+    .split(',')
+    .map((skill) => skill.trim())
+    .filter(Boolean)
+    .slice(0, 18)
+    .join(', ');
 }
 
 function extractJsonObject(text: string): string {
@@ -204,7 +220,7 @@ export async function generateLinkedInMessages(
   env: ApplicationEnv,
   input: string,
   application: { company: string; role: string }
-): Promise<LinkedInMessage[]> {
+): Promise<LinkedInAssets> {
   const prompt = buildLinkedInMessagesPrompt(input, application);
   const generated = await generateWithDeepSeek(
     env,
@@ -212,11 +228,14 @@ export async function generateLinkedInMessages(
     'deepseek-v4-flash',
     LINKEDIN_MESSAGE_TIMEOUT_MS
   );
-  const parsed = parseGeneratedJson<{ messages?: unknown }>(
+  const parsed = parseGeneratedJson<{ skills?: unknown; messages?: unknown }>(
     generated,
     'LinkedIn message generator'
   );
-  return normalizeLinkedInMessages(parsed.messages);
+  return {
+    skills: normalizeSkillKeywords(parsed.skills),
+    messages: normalizeLinkedInMessages(parsed.messages)
+  };
 }
 
 export async function generateApplicationCoverLetter(

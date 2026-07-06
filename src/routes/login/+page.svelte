@@ -1,7 +1,7 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
   import { LoaderCircle, LogIn, Eye, EyeOff } from '@lucide/svelte';
-  import logoProduck from '$lib/assets/logo-produck.png';
+  import logoProduck from '$lib/assets/brand/logo-produck.png';
   import { getLastAppPagePath } from '$lib/client/last-app-page.js';
 
   let rememberMe = $state(false);

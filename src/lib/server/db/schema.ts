@@ -696,6 +696,7 @@ export const applicationCoverLetterJob = pgTable('application_cover_letter_job',
     model: string;
     linkedinStatus?: 'running' | 'completed' | 'failed';
     linkedinError?: string;
+    linkedinSkills?: string;
     linkedinMessages?: { label: string; useCase: string; text: string }[];
   }>(),
   error: text('error'),

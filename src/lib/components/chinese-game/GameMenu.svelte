@@ -3,8 +3,8 @@
   import { Music, Volume2, Lightbulb } from '@lucide/svelte';
   import type { GameEngine } from './game-engine.svelte.js';
   import { levelColorConfig } from './game-engine.svelte.js';
-  import hanziModeCard from '$lib/assets/chinese-hanzi-mode-card.png';
-  import readingModeCard from '$lib/assets/chinese-reading-mode-card.png';
+  import hanziModeCard from '$lib/assets/tool-cards/chinese-hanzi-mode.png';
+  import readingModeCard from '$lib/assets/tool-cards/chinese-reading-mode.png';
 
   let {
     engine,

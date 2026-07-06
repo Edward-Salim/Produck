@@ -22,6 +22,7 @@ function publicResult(result: GeneratedApplicationCoverLetter) {
     plainText: result.plainText,
     model: result.model,
     linkedinStatus: 'running',
+    linkedinSkills: '',
     linkedinMessages: []
   };
 }
@@ -62,7 +63,7 @@ export async function processApplicationCoverLetterJob(
       .where(eq(applicationCoverLetterJob.id, jobId));
 
     try {
-      const linkedinMessages = await generateLinkedInMessages(env, job.dump, {
+      const linkedinAssets = await generateLinkedInMessages(env, job.dump, {
         company: result.company,
         role: result.role
       });
@@ -73,7 +74,8 @@ export async function processApplicationCoverLetterJob(
           result: {
             ...savedResult,
             linkedinStatus: 'completed',
-            linkedinMessages
+            linkedinSkills: linkedinAssets.skills,
+            linkedinMessages: linkedinAssets.messages
           },
           updatedAt: new Date()
         })

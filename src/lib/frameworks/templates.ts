@@ -12,19 +12,19 @@ import {
   TrendingUp
 } from '@lucide/svelte';
 import type { Component } from 'svelte';
-import assumptionTestCover from '$lib/assets/framework-assumption-test-card.png';
-import epicsCover from '$lib/assets/framework-epics-card.png';
-import experienceMapCover from '$lib/assets/framework-experience-map-card.png';
-import ideaBankCover from '$lib/assets/framework-idea-bank-card.png';
-import interviewSnapshotCover from '$lib/assets/framework-interview-snapshot-card.png';
-import kanbanCover from '$lib/assets/framework-kanban-card.png';
-import outcomesCover from '$lib/assets/framework-outcomes-card-v2.png';
-import storyMapCover from '$lib/assets/framework-story-map-card.png';
-import fintechLandscapeCover from '$lib/assets/framework-fintech-landscape-card.png';
-import valuePropositionCanvasCover from '$lib/assets/framework-value-proposition-canvas-card.png';
-import leanCanvasCover from '$lib/assets/framework-lean-canvas-card.png';
-import businessModelCanvasCover from '$lib/assets/framework-business-model-canvas-card.png';
-import organogramCover from '$lib/assets/framework-organogram-card.png';
+import assumptionTestCover from '$lib/assets/framework-cards/assumption-test.png';
+import epicsCover from '$lib/assets/framework-cards/epics.png';
+import experienceMapCover from '$lib/assets/framework-cards/experience-map.png';
+import ideaBankCover from '$lib/assets/framework-cards/idea-bank.png';
+import interviewSnapshotCover from '$lib/assets/framework-cards/interview-snapshot.png';
+import kanbanCover from '$lib/assets/framework-cards/kanban.png';
+import outcomesCover from '$lib/assets/framework-cards/outcomes-v2.png';
+import storyMapCover from '$lib/assets/framework-cards/story-map.png';
+import fintechLandscapeCover from '$lib/assets/framework-cards/fintech-landscape.png';
+import valuePropositionCanvasCover from '$lib/assets/framework-cards/value-proposition-canvas.png';
+import leanCanvasCover from '$lib/assets/framework-cards/lean-canvas.png';
+import businessModelCanvasCover from '$lib/assets/framework-cards/business-model-canvas.png';
+import organogramCover from '$lib/assets/framework-cards/organogram.png';
 
 export type FrameworkField = {
   id: string;

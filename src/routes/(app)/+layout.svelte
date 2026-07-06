@@ -1,6 +1,6 @@
 <script lang="ts">
-  import logoProduck from '$lib/assets/logo-produck.png';
-  import edwardAvatar from '$lib/assets/edward.jpg';
+  import logoProduck from '$lib/assets/brand/logo-produck.png';
+  import edwardAvatar from '$lib/assets/profile/edward.jpg';
   import * as Sidebar from '$lib/components/ui/sidebar/index.js';
   import * as Select from '$lib/components/ui/select/index.js';
   import { page } from '$app/state';

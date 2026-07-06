@@ -50,6 +50,8 @@ type VocabGuard = {
 export const CHINESE_READING_LEVELS = new Set([1, 2, 3, 4, 5, 6, 7]);
 export const CHINESE_READING_MODEL = 'deepseek-v4-flash';
 const DEEPSEEK_PROVIDER_TIMEOUT_MS = 120 * 1000;
+const CHINESE_READING_GENERATION_TEMPERATURE = 0.6;
+const CHINESE_READING_REPAIR_TEMPERATURE = 0.2;
 const PINYIN_SPLIT_RE = /[\s，。？、！；：,.?!;:]+/;
 const HANZI_RE = /[\u3400-\u9fff]/u;
 const PINYIN_INITIALS = [
@@ -144,13 +146,13 @@ const PINYIN_TONE_MAP: Record<string, string> = {
 };
 
 const LEVEL_GUIDANCE: Record<HskLevel, string> = {
-  1: 'HSK 1 only. Write 8-10 very simple sentences grouped into 3-4 real paragraphs. Use daily words like family, food, time, school, home, numbers, and simple verbs.',
-  2: 'HSK 2. Write 10-12 simple sentences grouped into 4 real paragraphs. Use simple connectors, past/future time words, and daily situations.',
-  3: 'HSK 3. Write 12-15 sentences grouped into 4-5 real paragraphs. Use a clear narrative with a problem, decision, and result.',
-  4: 'HSK 4. Write 5-6 paragraphs. Include opinions, reasons, and everyday abstract words while keeping a clear story arc.',
-  5: 'HSK 5. Write 6 paragraphs. Use richer description, character motivation, and implied details, but stay learner-friendly.',
-  6: 'HSK 6. Write 6-7 paragraphs. Use mature syntax, nuanced motivations, and concrete scenes.',
-  7: 'HSK 7-9. Write 7 paragraphs. Advanced prose with idioms only when context makes them clear.'
+  1: 'HSK 1 only. Write 8-10 very simple sentences grouped into exactly 3 real paragraphs. Use daily words like family, food, time, school, home, numbers, and simple verbs.',
+  2: 'HSK 2. Write 10-12 simple sentences grouped into exactly 4 real paragraphs. Use simple connectors, past/future time words, and daily situations.',
+  3: 'HSK 3. Write 12-15 sentences grouped into exactly 4 real paragraphs. Use a clear narrative with a problem, decision, and result.',
+  4: 'HSK 4. Write exactly 5 paragraphs. Include opinions, reasons, and everyday abstract words while keeping a clear story arc.',
+  5: 'HSK 5. Write exactly 6 paragraphs. Use richer description, character motivation, and implied details, but stay learner-friendly.',
+  6: 'HSK 6. Write exactly 6 paragraphs. Use mature syntax, nuanced motivations, and concrete scenes.',
+  7: 'HSK 7-9. Write exactly 7 paragraphs. Advanced prose with idioms only when context makes them clear.'
 };
 
 const STORY_BRIEFS: Record<HskLevel, string[]> = {
@@ -387,6 +389,16 @@ const LEVEL_LABELS: Record<HskLevel, string> = {
   7: '7-9'
 };
 
+const LEVEL_PARAGRAPH_COUNTS: Record<HskLevel, number> = {
+  1: 3,
+  2: 4,
+  3: 4,
+  4: 5,
+  5: 6,
+  6: 6,
+  7: 7
+};
+
 const NAME_WHITELIST = [
   '小明',
   '小丽',
@@ -402,8 +414,8 @@ const NAME_WHITELIST = [
   '张老师'
 ];
 
-let vocabCache: Partial<Record<HskLevel, string[]>> = {};
-let guardCache: Partial<Record<HskLevel, VocabGuard>> = {};
+const vocabCache: Partial<Record<HskLevel, string[]>> = {};
+const guardCache: Partial<Record<HskLevel, VocabGuard>> = {};
 
 export class VocabGuardError extends Error {
   unknownWords: string[];
@@ -554,7 +566,8 @@ async function generateWithDeepSeek(env: ChineseReadingEnv, prompt: string, temp
   } catch (err) {
     if (err instanceof Error && err.name === 'AbortError') {
       throw new Error(
-        `DeepSeek generation timed out after ${Math.round(DEEPSEEK_PROVIDER_TIMEOUT_MS / 1000)} seconds`
+        `DeepSeek generation timed out after ${Math.round(DEEPSEEK_PROVIDER_TIMEOUT_MS / 1000)} seconds`,
+        { cause: err }
       );
     }
     throw err;
@@ -872,6 +885,37 @@ Variety requirements:
 - Use a different situation and story arc even if the HSK vocabulary is simple.`;
 }
 
+function buildJsonShapeExample(level: HskLevel) {
+  const paragraphs = Array.from({ length: LEVEL_PARAGRAPH_COUNTS[level] }, (_, index) => index + 1);
+
+  return JSON.stringify(
+    {
+      titleHanzi: 'Chinese title',
+      titlePinyin: 'pinyin with tone marks',
+      titleEnglish: 'English title',
+      storyHanzi: paragraphs.map((index) => `Chinese paragraph ${index}`),
+      storyPinyin: paragraphs.map((index) => `Pinyin paragraph ${index}`),
+      storyEnglish: paragraphs.map((index) => `English translation paragraph ${index}`),
+      questions: [
+        {
+          question: '中文问题一',
+          options: ['中文选项一', '中文选项二', '中文选项三'],
+          answerIndex: 0,
+          explanation: '中文解释一'
+        },
+        {
+          question: '中文问题二',
+          options: ['中文选项一', '中文选项二', '中文选项三'],
+          answerIndex: 1,
+          explanation: '中文解释二'
+        }
+      ]
+    },
+    null,
+    2
+  );
+}
+
 function buildPrompt(
   level: HskLevel,
   guard: VocabGuard,
@@ -880,6 +924,7 @@ function buildPrompt(
   const levelGenerationHelp = buildLevelGenerationHelp(level);
   const storyBrief = pickStoryBrief(level);
   const avoidReadings = formatAvoidReadings(options.avoidReadings);
+  const paragraphCount = LEVEL_PARAGRAPH_COUNTS[level];
 
   return `Create one Chinese reading-comprehension mini game for a Mandarin learner.
 
@@ -897,25 +942,11 @@ Vocabulary guardrail:
 - Allowed names: ${NAME_WHITELIST.join('、')}.
 - Allowed vocabulary: ${guard.promptList}
 
-Return ONLY valid JSON with this exact shape:
-{
-  "titleHanzi": "Chinese title",
-  "titlePinyin": "pinyin with tone marks",
-  "titleEnglish": "English title",
-  "storyHanzi": ["Chinese paragraph 1", "Chinese paragraph 2"],
-  "storyPinyin": ["Pinyin paragraph 1", "Pinyin paragraph 2"],
-  "storyEnglish": ["English translation paragraph 1", "English translation paragraph 2"],
-  "questions": [
-    {
-      "question": "中文问题",
-      "options": ["中文选项一", "中文选项二", "中文选项三"],
-      "answerIndex": 0,
-      "explanation": "中文解释"
-    }
-  ]
-}
+Return ONLY valid JSON with this exact shape, replacing placeholder strings with generated content:
+${buildJsonShapeExample(level)}
 
 Rules:
+- storyHanzi, storyPinyin, and storyEnglish must each contain exactly ${paragraphCount} items.
 - Make exactly 2 questions.
 - The questions, options, and explanations must be written only in simplified Chinese.
 - Each question must have exactly 3 answer options.
@@ -928,6 +959,7 @@ Rules:
 - Do not use any Chinese word outside the allowed vocabulary list.
 - Each item in storyHanzi must be a paragraph with multiple related sentences, not a single isolated sentence.
 - Make the story feel like a complete story, not a vocabulary list or disconnected sentence drill.
+- Before returning, silently check every Chinese field against the allowed vocabulary and replace any out-of-list word.
 - Use simplified Chinese.
 - Do not add spaces between Chinese words or before Chinese punctuation.
 - Pinyin must align paragraph-by-paragraph with storyHanzi.
@@ -964,6 +996,7 @@ function buildRepairPrompt(
   reading: ChineseReading,
   error: VocabGuardError
 ) {
+  const paragraphCount = reading.storyHanzi.length || LEVEL_PARAGRAPH_COUNTS[level];
   const repairHints = buildRepairHints(error);
 
   return `Repair this Chinese reading-comprehension mini game for a Mandarin learner.
@@ -985,18 +1018,61 @@ Vocabulary guardrail:
 - Allowed vocabulary: ${guard.promptList}
 
 Original JSON to repair:
-${JSON.stringify(reading)}
+${JSON.stringify(reading, null, 2)}
 
 Return ONLY valid JSON with the same exact shape.
 
 Rules:
 - Make the smallest changes needed to pass vocabulary validation.
+- storyHanzi, storyPinyin, and storyEnglish must each contain exactly ${paragraphCount} items.
 - Keep exactly 2 questions and exactly 3 options per question.
 - The questions, options, and explanations must be written only in simplified Chinese.
 - Do not invent emotions, reasons, or facts in questions or explanations; the evidence must appear directly in storyHanzi.
 - Do not use city names, country names, brand names, or personal names except the allowed names above.
 - Do not add spaces between Chinese words or before Chinese punctuation.
+- Pinyin must align paragraph-by-paragraph with storyHanzi.
+- English translation must be natural but close to the Chinese.
 - Do not include markdown fences, comments, or extra text.`;
+}
+
+async function repairReadingAfterVocabularyError(
+  env: ChineseReadingEnv,
+  level: HskLevel,
+  guard: VocabGuard,
+  reading: ChineseReading,
+  error: VocabGuardError
+): Promise<ChineseReadingResult> {
+  try {
+    const repairText = await generateWithDeepSeek(
+      env,
+      buildRepairPrompt(level, guard, reading, error),
+      CHINESE_READING_REPAIR_TEMPERATURE
+    );
+    const repairParsed = JSON.parse(extractJsonObject(repairText));
+    const repairedReading = normalizeReading(repairParsed);
+
+    try {
+      validateReadingVocabulary(repairedReading, level, guard);
+      console.warn(`Repaired Chinese reading after vocabulary validation failed: ${error.message}`);
+      return { reading: repairedReading, unknownWords: [] };
+    } catch (repairErr) {
+      if (!(repairErr instanceof VocabGuardError)) {
+        throw repairErr;
+      }
+
+      if (repairErr.unknownWords.length <= error.unknownWords.length) {
+        console.warn(
+          `Using repaired Chinese reading with highlighted out-of-level words: ${repairErr.message}`
+        );
+        return { reading: repairedReading, unknownWords: repairErr.unknownWords };
+      }
+    }
+  } catch (repairErr) {
+    console.warn('Chinese reading repair failed, using original generated reading:', repairErr);
+  }
+
+  console.warn(`Using Chinese reading with highlighted out-of-level words: ${error.message}`);
+  return { reading, unknownWords: error.unknownWords };
 }
 
 export async function generateValidatedReading(
@@ -1005,7 +1081,11 @@ export async function generateValidatedReading(
   guard: VocabGuard,
   options: ChineseReadingGenerationOptions = {}
 ): Promise<ChineseReadingResult> {
-  const text = await generateWithDeepSeek(env, buildPrompt(level, guard, options), 0.75);
+  const text = await generateWithDeepSeek(
+    env,
+    buildPrompt(level, guard, options),
+    CHINESE_READING_GENERATION_TEMPERATURE
+  );
   const parsed = JSON.parse(extractJsonObject(text));
   const reading = normalizeReading(parsed);
 
@@ -1017,27 +1097,6 @@ export async function generateValidatedReading(
       throw err;
     }
 
-    const repairText = await generateWithDeepSeek(
-      env,
-      buildRepairPrompt(level, guard, reading, err),
-      0.25
-    );
-    const repairParsed = JSON.parse(extractJsonObject(repairText));
-    const repairedReading = normalizeReading(repairParsed);
-
-    try {
-      validateReadingVocabulary(repairedReading, level, guard);
-      console.warn(`Repaired Chinese reading after vocabulary validation failed: ${err.message}`);
-      return { reading: repairedReading, unknownWords: [] };
-    } catch (repairErr) {
-      if (!(repairErr instanceof VocabGuardError)) {
-        throw repairErr;
-      }
-
-      console.warn(
-        `Using repaired Chinese reading with highlighted out-of-level words: ${repairErr.message}`
-      );
-      return { reading: repairedReading, unknownWords: repairErr.unknownWords };
-    }
+    return repairReadingAfterVocabularyError(env, level, guard, reading, err);
   }
 }
