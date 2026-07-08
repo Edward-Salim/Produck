@@ -11,7 +11,7 @@ export type ChineseSongLyricsEnv = {
 
 export const CHINESE_SONG_LYRICS_MODEL = 'deepseek-v4-flash';
 
-const DEEPSEEK_TIMEOUT_MS = 120_000;
+const DEEPSEEK_TIMEOUT_MS = 75_000;
 const HAN_RE = /[\u3400-\u9fff]/u;
 
 function stripFences(text: string) {

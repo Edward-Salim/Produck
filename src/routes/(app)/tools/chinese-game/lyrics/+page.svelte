@@ -779,7 +779,9 @@
               <h2 id="standardize-song-title" class="text-cork-950 text-base font-semibold">
                 Standardize Song
               </h2>
-              <p class="mt-0.5 text-xs text-cork-500">DeepSeek v4 Flash</p>
+              <p class="mt-0.5 text-xs text-cork-500">
+                Creates sections, simplified Chinese, pinyin, and English.
+              </p>
             </div>
             <button
               type="button"
@@ -897,7 +899,7 @@
                 >
                   <Music2
                     class="size-4 shrink-0 {isVerifiedSong(song)
-                      ? 'text-yellow-600'
+                      ? 'text-slate-300 [filter:drop-shadow(0_1px_0_rgba(255,255,255,0.95))_drop-shadow(0_0_7px_rgba(186,230,253,0.95))_drop-shadow(0_0_1px_rgba(15,23,42,0.75))]'
                       : 'text-cork-500'}"
                     aria-label={`Verify ${song.titleHanzi}`}
                     onclick={(event) => verifySongFromMobileIcon(event, song.id)}
@@ -905,7 +907,7 @@
                   <span class="min-w-0">
                     <span
                       class="font-chinese block truncate text-base font-bold {isVerifiedSong(song)
-                        ? 'text-yellow-600 drop-shadow-[0_0_4px_rgba(202,138,4,0.22)]'
+                        ? 'text-slate-500 [text-shadow:0_1px_0_rgba(255,255,255,0.95),0_0_7px_rgba(186,230,253,0.9),0_0_1px_rgba(15,23,42,0.7)]'
                         : ''}"
                     >
                       {song.titleHanzi}
@@ -1014,7 +1016,7 @@
                       <span class="flex items-center justify-between gap-2">
                         <span
                           class="font-chinese truncate text-sm font-semibold {isVerifiedSong(song)
-                            ? 'text-yellow-600 drop-shadow-[0_0_4px_rgba(202,138,4,0.22)]'
+                            ? 'text-slate-500 [text-shadow:0_1px_0_rgba(255,255,255,0.95),0_0_7px_rgba(186,230,253,0.9),0_0_1px_rgba(15,23,42,0.7)]'
                             : ''}"
                         >
                           {song.titleHanzi}

@@ -49,7 +49,7 @@ type VocabGuard = {
 
 export const CHINESE_READING_LEVELS = new Set([1, 2, 3, 4, 5, 6, 7]);
 export const CHINESE_READING_MODEL = 'deepseek-v4-flash';
-const DEEPSEEK_PROVIDER_TIMEOUT_MS = 120 * 1000;
+const DEEPSEEK_PROVIDER_TIMEOUT_MS = 75 * 1000;
 const CHINESE_READING_GENERATION_TEMPERATURE = 0.6;
 const CHINESE_READING_REPAIR_TEMPERATURE = 0.2;
 const PINYIN_SPLIT_RE = /[\s，。？、！；：,.?!;:]+/;

@@ -33,11 +33,7 @@ export default async (request: Request) => {
   const db = drizzle(client, { schema });
 
   try {
-    try {
-      await processChineseSongLyricImportJob(db, process.env, jobId);
-    } catch (err) {
-      console.error('Chinese song lyric import background job failed:', err);
-    }
+    await processChineseSongLyricImportJob(db, process.env, jobId);
     return new Response(null, { status: 202 });
   } finally {
     await client.end({ timeout: 5 });
