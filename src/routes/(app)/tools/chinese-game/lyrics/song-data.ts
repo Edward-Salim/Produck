@@ -23,6 +23,28 @@ export type LyricSong = {
   sections: LyricSection[];
 };
 
+const ARTIST_COLLATOR = new Intl.Collator('en', { numeric: true, sensitivity: 'base' });
+const TITLE_COLLATOR = new Intl.Collator(['zh-Hans-u-co-pinyin', 'en'], {
+  numeric: true,
+  sensitivity: 'base'
+});
+
+function compareText(a: string, b: string, collator = ARTIST_COLLATOR) {
+  return collator.compare(a.trim(), b.trim());
+}
+
+export function compareLyricSongsByArtistAndTitle(a: LyricSong, b: LyricSong) {
+  return (
+    compareText(a.singer, b.singer) ||
+    compareText(a.singerHanzi, b.singerHanzi, TITLE_COLLATOR) ||
+    compareText(a.singerPinyin, b.singerPinyin) ||
+    compareText(a.titlePinyin, b.titlePinyin) ||
+    compareText(a.titleHanzi, b.titleHanzi, TITLE_COLLATOR) ||
+    compareText(a.titleEnglish, b.titleEnglish) ||
+    compareText(a.id, b.id)
+  );
+}
+
 export const songs: LyricSong[] = [
   {
     id: 'gao-bai-qi-qiu',

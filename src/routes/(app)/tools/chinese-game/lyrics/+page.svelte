@@ -18,6 +18,7 @@
   import InkWashBg from '$lib/components/chinese-game/InkWashBg.svelte';
   import '$lib/components/chinese-game/game.css';
   import type { PageData } from './$types.js';
+  import { compareLyricSongsByArtistAndTitle } from './song-data.js';
   import type { LyricLine, LyricSection, LyricSong } from './song-data.js';
 
   type LyricToken = {
@@ -72,7 +73,7 @@
       ? songs.filter((song) => normalizeSearch(songListSearchText(song)).includes(normalizedQuery))
       : songs;
 
-    return [...matches].sort((a, b) => Number(isVerifiedSong(b)) - Number(isVerifiedSong(a)));
+    return [...matches].sort(compareLyricSongsByArtistAndTitle);
   });
   let selectedSong = $derived(songs.find((song) => song.id === selectedId) ?? songs[0] ?? null);
   const verificationRequestIds = new Map<string, number>();
@@ -346,13 +347,33 @@
   }
 
   function pinyinSyllables(pinyin: string, sourceText = '') {
-    const syllables = pinyin
+    let syllables = pinyin
       .split(/\s+/)
       .map((part) => part.trim())
       .filter((part) => !/^[-–—]+$/u.test(part))
       .filter(Boolean);
 
     const hanziCount = [...sourceText].filter((char) => HAN_RE.test(char)).length;
+    const latinWords = sourceText
+      .match(/[A-Za-z0-9'’.-]+/gu)
+      ?.map((word) => normalizeSearch(word))
+      .filter(Boolean);
+    if (hanziCount && latinWords?.length) {
+      const latinWordCounts: Record<string, number> = {};
+      for (const word of latinWords) {
+        latinWordCounts[word] = (latinWordCounts[word] ?? 0) + 1;
+      }
+
+      syllables = syllables.filter((part) => {
+        const word = normalizeSearch(part);
+        const count = latinWordCounts[word] ?? 0;
+        if (!count) return true;
+        if (count === 1) delete latinWordCounts[word];
+        else latinWordCounts[word] = count - 1;
+        return false;
+      });
+    }
+
     const hasFusedSyllable = syllables.some((part) => [...part.matchAll(TONE_MARK_RE)].length > 1);
     if (!sourceText || !hanziCount || (syllables.length >= hanziCount && !hasFusedSyllable)) {
       return syllables;

@@ -1,7 +1,7 @@
 import { asc, eq, sql } from 'drizzle-orm';
 import { chineseSongLyric } from '$lib/server/db/schema.js';
 import { db } from '$lib/server/db/index.js';
-import { songs as seedSongs } from './song-data.js';
+import { compareLyricSongsByArtistAndTitle, songs as seedSongs } from './song-data.js';
 import type { PageServerLoad } from './$types.js';
 
 const VERIFIED_SEED_SONG_IDS = new Set([
@@ -46,7 +46,9 @@ export const load: PageServerLoad = async ({ url }) => {
     .where(eq(chineseSongLyric.hidden, false))
     .orderBy(asc(chineseSongLyric.sortOrder), asc(chineseSongLyric.id));
 
-  const songs = rows.map((row) => ({ ...row.song, verified: row.verified }));
+  const songs = rows
+    .map((row) => ({ ...row.song, verified: row.verified }))
+    .sort(compareLyricSongsByArtistAndTitle);
   const selectedId = url.searchParams.get('song');
 
   return {
