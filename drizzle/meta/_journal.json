@@ -176,6 +176,20 @@
       "when": 1783120000000,
       "tag": "0024_chinese_reading_story_cache",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1783382400000,
+      "tag": "0025_chinese_song_lyrics",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1783449600000,
+      "tag": "0026_chinese_song_lyric_import_jobs",
+      "breakpoints": true
     }
   ]
 }

@@ -705,6 +705,54 @@ export const applicationCoverLetterJob = pgTable('application_cover_letter_job',
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
 });
 
+// ── Chinese Song Lyrics ───────────────────────────────
+
+export type ChineseSongLyricContent = {
+  id: string;
+  titlePinyin: string;
+  titleHanzi: string;
+  titleEnglish: string;
+  singer: string;
+  singerHanzi: string;
+  singerPinyin: string;
+  tags: string[];
+  sourceUrl?: string;
+  publishedAt?: string | null;
+  sections: {
+    id: string;
+    label: string;
+    lines?: {
+      hanzi: string;
+      pinyin: string;
+      english: string;
+    }[];
+    repeatOf?: string;
+  }[];
+};
+
+export const chineseSongLyric = pgTable('chinese_song_lyric', {
+  id: serial('id').primaryKey(),
+  slug: text('slug').notNull().unique(),
+  song: jsonb('song').$type<ChineseSongLyricContent>().notNull(),
+  sortOrder: integer('sort_order').notNull().default(0),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
+});
+
+export const chineseSongLyricImportJob = pgTable('chinese_song_lyric_import_job', {
+  id: text('id').primaryKey(),
+  userId: integer('user_id')
+    .notNull()
+    .references(() => appUser.id, { onDelete: 'cascade' }),
+  status: text('status').notNull().default('queued'),
+  rawSong: text('raw_song').notNull(),
+  songSlug: text('song_slug'),
+  error: text('error'),
+  model: text('model'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
+});
+
 export type ChineseReadingStoryContent = {
   titleHanzi: string;
   titlePinyin: string;

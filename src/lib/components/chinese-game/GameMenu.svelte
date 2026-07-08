@@ -107,6 +107,14 @@
             >
               Start Game
             </button>
+            <a
+              href="/tools/chinese-game/lyrics"
+              class="flex w-full cursor-pointer {entrance(
+                5
+              )} items-center justify-center rounded-lg bg-cork-700 px-6 py-3 font-display text-xl text-cork-200 transition-all hover:bg-cork-600 hover:shadow-md"
+            >
+              Song Lyrics
+            </a>
             <button
               type="button"
               class="flex w-full cursor-pointer {entrance(
