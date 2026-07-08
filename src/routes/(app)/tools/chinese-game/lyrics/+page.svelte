@@ -278,8 +278,28 @@
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
+  function scrollTargetTop(element: HTMLElement, scrollRoot: HTMLElement) {
+    const elementRect = element.getBoundingClientRect();
+    const rootRect = scrollRoot.getBoundingClientRect();
+    const scrollMarginTop = Number.parseFloat(getComputedStyle(element).scrollMarginTop) || 0;
+
+    return scrollRoot.scrollTop + elementRect.top - rootRect.top - scrollMarginTop;
+  }
+
   function scrollToSection(anchor: string) {
-    document.getElementById(anchor)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const target = document.getElementById(anchor);
+    if (!target) return;
+
+    const scrollRoot = document.querySelector<HTMLElement>('[data-slot="sidebar-inset"]');
+    if (scrollRoot) {
+      scrollRoot.scrollTo({
+        top: Math.max(0, scrollTargetTop(target, scrollRoot)),
+        behavior: 'smooth'
+      });
+      return;
+    }
+
+    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   function jumpToRepeatedSection(event: MouseEvent, song: LyricSong, repeat: LyricSection) {
