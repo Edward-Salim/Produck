@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount, untrack } from 'svelte';
-  import { goto } from '$app/navigation';
+  import { goto, replaceState } from '$app/navigation';
   import { fade, fly } from 'svelte/transition';
   import {
     ArrowUp,
@@ -77,6 +77,7 @@
   let selectedSong = $derived(songs.find((song) => song.id === selectedId) ?? songs[0] ?? null);
   const verificationRequestIds = new Map<string, number>();
   let verificationRequestId = 0;
+  let routeSelectedId = untrack(() => data.selectedId ?? '');
 
   $effect(() => {
     songs = (data.songs as DisplayLyricSong[]).map((song) =>
@@ -87,8 +88,10 @@
   });
 
   $effect(() => {
-    if (data.selectedId && data.selectedId !== selectedId) {
-      selectedId = data.selectedId;
+    const nextRouteSelectedId = data.selectedId ?? '';
+    if (nextRouteSelectedId && nextRouteSelectedId !== routeSelectedId) {
+      routeSelectedId = nextRouteSelectedId;
+      selectedId = nextRouteSelectedId;
     }
   });
 
@@ -223,7 +226,7 @@
 
     const url = new URL(window.location.href);
     url.searchParams.set('song', songId);
-    window.history.replaceState({}, '', url);
+    replaceState(url, {});
   }
 
   function selectSongFromDesktopList(songId: string) {
