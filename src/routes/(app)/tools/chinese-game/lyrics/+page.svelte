@@ -37,28 +37,20 @@
     pinyin: string;
   };
 
+  type DisplayLyricSong = LyricSong & {
+    verified?: boolean;
+  };
+
   const PUNCT_RE = /[-，。？、！；：—…“”‘’（）《》,.?!;:()]/u;
   const HAN_RE = /\p{Script=Han}/u;
   const LATIN_RE = /[A-Za-z0-9'’]+/u;
   const TONE_MARK_RE = /[āáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜüńňǹḿ]/gu;
-  const SELECTED_SONG_KEY = 'chinese-song-lyrics:selected';
-  const CUSTOM_VERIFIED_SONGS_KEY = 'chinese-song-lyrics:verified';
-  const CUSTOM_UNVERIFIED_SONGS_KEY = 'chinese-song-lyrics:unverified';
-  const VERIFIED_SONG_IDS = new Set([
-    'gao-bai-qi-qiu',
-    'nu-er-dian-xia-jay-chou',
-    'qi-yue-de-ji-guang-jay-chou',
-    'shui-xi-han-jay-chou',
-    'ai-qin-hai-jay-chou',
-    'i-do-jay-chou-i-do'
-  ]);
 
   let { data }: { data: PageData } = $props();
-  let songs = $derived(data.songs);
+  let songs = $derived(data.songs as DisplayLyricSong[]);
   let query = $state('');
   let selectedId = $state(untrack(() => data.selectedId ?? data.songs[0]?.id ?? ''));
-  let customVerifiedSongIds = $state(new Set<string>());
-  let customUnverifiedSongIds = $state(new Set<string>());
+  let verifiedOverrides = $state<Record<string, boolean>>({});
   let songClickCounts = $state<Record<string, number>>({});
   let songListOpen = $state(false);
   let importModalOpen = $state(false);
@@ -86,42 +78,26 @@
   $effect(() => {
     if (data.selectedId && data.selectedId !== selectedId) {
       selectedId = data.selectedId;
-      window.localStorage.setItem(SELECTED_SONG_KEY, data.selectedId);
     }
+  });
+
+  $effect(() => {
+    selectedId;
+    filteredSongs;
+    window.requestAnimationFrame(() => {
+      const list = document.querySelector<HTMLElement>('.song-list-scroll');
+      const active = list?.querySelector<HTMLElement>('[data-active-desktop-song="true"]');
+      if (!list || !active) return;
+
+      list.scrollTo({
+        top: active.offsetTop - list.clientHeight / 2 + active.clientHeight / 2,
+        behavior: 'smooth'
+      });
+    });
   });
 
   onMount(() => {
     const scrollRoot = document.querySelector<HTMLElement>('[data-slot="sidebar-inset"]');
-    const savedSong = window.localStorage.getItem(SELECTED_SONG_KEY);
-    const savedVerifiedSongs = window.localStorage.getItem(CUSTOM_VERIFIED_SONGS_KEY);
-    const savedUnverifiedSongs = window.localStorage.getItem(CUSTOM_UNVERIFIED_SONGS_KEY);
-    const initialSong = savedSong && songs.some((song) => song.id === savedSong) ? savedSong : null;
-
-    if (!data.selectedId && initialSong) selectedId = initialSong;
-    if (savedVerifiedSongs) {
-      try {
-        const parsed = JSON.parse(savedVerifiedSongs);
-        if (Array.isArray(parsed)) {
-          customVerifiedSongIds = new Set(
-            parsed.filter((id): id is string => typeof id === 'string')
-          );
-        }
-      } catch {
-        window.localStorage.removeItem(CUSTOM_VERIFIED_SONGS_KEY);
-      }
-    }
-    if (savedUnverifiedSongs) {
-      try {
-        const parsed = JSON.parse(savedUnverifiedSongs);
-        if (Array.isArray(parsed)) {
-          customUnverifiedSongIds = new Set(
-            parsed.filter((id): id is string => typeof id === 'string')
-          );
-        }
-      } catch {
-        window.localStorage.removeItem(CUSTOM_UNVERIFIED_SONGS_KEY);
-      }
-    }
 
     function updateBackToTopVisibility() {
       const scrollTop =
@@ -164,47 +140,42 @@
     ].join(' ');
   }
 
-  function isSongIdVerified(songId: string) {
-    return (
-      (VERIFIED_SONG_IDS.has(songId) || customVerifiedSongIds.has(songId)) &&
-      !customUnverifiedSongIds.has(songId)
-    );
+  function isVerifiedSong(song: DisplayLyricSong) {
+    return verifiedOverrides[song.id] ?? song.verified === true;
   }
 
-  function isVerifiedSong(song: LyricSong) {
-    return isSongIdVerified(song.id);
-  }
+  async function setSongVerified(songId: string, verified: boolean) {
+    const previousOverride = verifiedOverrides[songId];
+    const hadPreviousOverride = Object.hasOwn(verifiedOverrides, songId);
+    verifiedOverrides = { ...verifiedOverrides, [songId]: verified };
 
-  function persistVerificationOverrides() {
-    window.localStorage.setItem(
-      CUSTOM_VERIFIED_SONGS_KEY,
-      JSON.stringify([...customVerifiedSongIds])
-    );
-    window.localStorage.setItem(
-      CUSTOM_UNVERIFIED_SONGS_KEY,
-      JSON.stringify([...customUnverifiedSongIds])
-    );
-  }
-
-  function setSongVerified(songId: string, verified: boolean) {
-    const nextVerified = new Set(customVerifiedSongIds);
-    const nextUnverified = new Set(customUnverifiedSongIds);
-
-    if (verified) {
-      nextVerified.add(songId);
-      nextUnverified.delete(songId);
-    } else {
-      nextVerified.delete(songId);
-      nextUnverified.add(songId);
+    try {
+      const response = await fetch(
+        `/api/chinese-song-lyrics/verify/${encodeURIComponent(songId)}`,
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ verified })
+        }
+      );
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error ?? 'Could not save lyric verification.');
+    } catch (err) {
+      if (hadPreviousOverride) {
+        verifiedOverrides = { ...verifiedOverrides, [songId]: previousOverride };
+      } else {
+        const next = { ...verifiedOverrides };
+        delete next[songId];
+        verifiedOverrides = next;
+      }
+      console.error('Could not save lyric verification:', err);
     }
-
-    customVerifiedSongIds = nextVerified;
-    customUnverifiedSongIds = nextUnverified;
-    persistVerificationOverrides();
   }
 
   function toggleSongVerified(songId: string) {
-    setSongVerified(songId, !isSongIdVerified(songId));
+    const song = songs.find((item) => item.id === songId);
+    if (!song) return;
+    void setSongVerified(songId, !isVerifiedSong(song));
   }
 
   function compactSingerTitle(song: LyricSong) {
@@ -227,7 +198,6 @@
   function selectSong(songId: string, closeSongList = true) {
     selectedId = songId;
     if (closeSongList) songListOpen = false;
-    window.localStorage.setItem(SELECTED_SONG_KEY, songId);
 
     const url = new URL(window.location.href);
     url.searchParams.set('song', songId);
@@ -465,7 +435,6 @@
       if (data.status === 'completed' && data.songSlug) {
         selectedId = data.songSlug;
         query = '';
-        window.localStorage.setItem(SELECTED_SONG_KEY, data.songSlug);
         rawSongInput = '';
         await goto(`/tools/chinese-game/lyrics?song=${encodeURIComponent(data.songSlug)}`, {
           invalidateAll: true
@@ -1009,6 +978,7 @@
                 {@const active = selectedSong?.id === song.id}
                 <button
                   type="button"
+                  data-active-desktop-song={active ? 'true' : undefined}
                   class="group cursor-pointer rounded-lg border px-3 py-2.5 text-left transition {active
                     ? 'text-cork-950 border-cork-300 bg-cork-50 shadow-sm shadow-cork-900/10'
                     : 'border-transparent text-cork-700 hover:border-cork-200 hover:bg-cork-100/70'}"

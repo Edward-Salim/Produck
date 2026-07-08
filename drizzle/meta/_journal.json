@@ -190,6 +190,13 @@
       "when": 1783449600000,
       "tag": "0026_chinese_song_lyric_import_jobs",
       "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1783478400000,
+      "tag": "0027_chinese_song_lyric_verified",
+      "breakpoints": true
     }
   ]
 }

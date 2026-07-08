@@ -734,6 +734,7 @@ export const chineseSongLyric = pgTable('chinese_song_lyric', {
   id: serial('id').primaryKey(),
   slug: text('slug').notNull().unique(),
   song: jsonb('song').$type<ChineseSongLyricContent>().notNull(),
+  verified: boolean('verified').notNull().default(false),
   sortOrder: integer('sort_order').notNull().default(0),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
