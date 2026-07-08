@@ -170,6 +170,12 @@ export async function processChineseSongLyricImportJob(
     const existing = await findExistingSongForImport(database, song);
     const targetSlug = existing?.slug ?? song.id;
     const storedSong = { ...song, id: targetSlug };
+    const model = env.DEEPSEEK_MODEL ?? CHINESE_SONG_LYRICS_MODEL;
+
+    await database
+      .update(chineseSongLyricImportJob)
+      .set({ songSlug: targetSlug, model, updatedAt: new Date() })
+      .where(eq(chineseSongLyricImportJob.id, jobId));
 
     await database
       .insert(chineseSongLyric)
@@ -187,7 +193,6 @@ export async function processChineseSongLyricImportJob(
         }
       });
 
-    const model = env.DEEPSEEK_MODEL ?? CHINESE_SONG_LYRICS_MODEL;
     await database
       .update(chineseSongLyricImportJob)
       .set({

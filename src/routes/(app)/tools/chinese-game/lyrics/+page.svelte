@@ -47,7 +47,7 @@
   const TONE_MARK_RE = /[āáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜüńňǹḿ]/gu;
 
   let { data }: { data: PageData } = $props();
-  let songs = $derived(data.songs as DisplayLyricSong[]);
+  let songs = $state<DisplayLyricSong[]>(untrack(() => data.songs as DisplayLyricSong[]));
   let query = $state('');
   let selectedId = $state(untrack(() => data.selectedId ?? data.songs[0]?.id ?? ''));
   let verifiedOverrides = $state<Record<string, boolean>>({});
@@ -75,6 +75,17 @@
     return [...matches].sort((a, b) => Number(isVerifiedSong(b)) - Number(isVerifiedSong(a)));
   });
   let selectedSong = $derived(songs.find((song) => song.id === selectedId) ?? songs[0] ?? null);
+  const verificationRequestIds = new Map<string, number>();
+  let verificationRequestId = 0;
+
+  $effect(() => {
+    songs = (data.songs as DisplayLyricSong[]).map((song) =>
+      Object.hasOwn(verifiedOverrides, song.id)
+        ? { ...song, verified: verifiedOverrides[song.id] }
+        : song
+    );
+  });
+
   $effect(() => {
     if (data.selectedId && data.selectedId !== selectedId) {
       selectedId = data.selectedId;
@@ -144,32 +155,43 @@
     return verifiedOverrides[song.id] ?? song.verified === true;
   }
 
-  async function setSongVerified(songId: string, verified: boolean) {
+  function setSongVerified(songId: string, verified: boolean) {
+    const requestId = (verificationRequestId += 1);
+    const previousSong = songs.find((song) => song.id === songId);
     const previousOverride = verifiedOverrides[songId];
     const hadPreviousOverride = Object.hasOwn(verifiedOverrides, songId);
+
+    verificationRequestIds.set(songId, requestId);
+    songs = songs.map((song) => (song.id === songId ? { ...song, verified } : song));
     verifiedOverrides = { ...verifiedOverrides, [songId]: verified };
 
-    try {
-      const response = await fetch(
-        `/api/chinese-song-lyrics/verify/${encodeURIComponent(songId)}`,
-        {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ verified })
+    void fetch(`/api/chinese-song-lyrics/verify/${encodeURIComponent(songId)}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ verified })
+    })
+      .then(async (response) => {
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.error ?? 'Could not save lyric verification.');
+      })
+      .catch((err) => {
+        if (verificationRequestIds.get(songId) !== requestId) return;
+
+        if (previousSong) {
+          songs = songs.map((song) =>
+            song.id === songId ? { ...song, verified: previousSong.verified } : song
+          );
         }
-      );
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(data.error ?? 'Could not save lyric verification.');
-    } catch (err) {
-      if (hadPreviousOverride) {
-        verifiedOverrides = { ...verifiedOverrides, [songId]: previousOverride };
-      } else {
-        const next = { ...verifiedOverrides };
-        delete next[songId];
-        verifiedOverrides = next;
-      }
-      console.error('Could not save lyric verification:', err);
-    }
+
+        if (hadPreviousOverride) {
+          verifiedOverrides = { ...verifiedOverrides, [songId]: previousOverride };
+        } else {
+          const next = { ...verifiedOverrides };
+          delete next[songId];
+          verifiedOverrides = next;
+        }
+        console.error('Could not save lyric verification:', err);
+      });
   }
 
   function toggleSongVerified(songId: string) {

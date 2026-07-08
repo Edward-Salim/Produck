@@ -2,10 +2,11 @@ import { json } from '@sveltejs/kit';
 import { and, eq } from 'drizzle-orm';
 import { ensureChineseSongLyricImportJobTable } from '$lib/server/chinese-song-lyric-schema.js';
 import { db } from '$lib/server/db/index.js';
-import { appUser, chineseSongLyricImportJob } from '$lib/server/db/schema.js';
+import { appUser, chineseSongLyric, chineseSongLyricImportJob } from '$lib/server/db/schema.js';
 import type { RequestHandler } from './$types.js';
 
 const STALE_JOB_MS = 5 * 60 * 1000;
+const COMPLETION_RECOVERY_GRACE_MS = 10 * 1000;
 
 export const GET: RequestHandler = async ({ params, locals }) => {
   const authId = locals.session?.user?.id;
@@ -34,6 +35,34 @@ export const GET: RequestHandler = async ({ params, locals }) => {
   if (!job) return json({ error: 'Job not found' }, { status: 404 });
 
   const updatedAt = job.updatedAt instanceof Date ? job.updatedAt : new Date(job.updatedAt);
+  const isPending = job.status === 'queued' || job.status === 'running';
+  const ageMs = Date.now() - updatedAt.getTime();
+  const canRecoverCompletedJob =
+    isPending && Boolean(job.songSlug) && ageMs > COMPLETION_RECOVERY_GRACE_MS;
+
+  if (canRecoverCompletedJob) {
+    const [song] = await db
+      .select({ slug: chineseSongLyric.slug })
+      .from(chineseSongLyric)
+      .where(eq(chineseSongLyric.slug, job.songSlug as string))
+      .limit(1);
+
+    if (song) {
+      const completedAt = new Date();
+      await db
+        .update(chineseSongLyricImportJob)
+        .set({ status: 'completed', error: null, updatedAt: completedAt })
+        .where(
+          and(
+            eq(chineseSongLyricImportJob.id, params.id),
+            eq(chineseSongLyricImportJob.userId, caller.id)
+          )
+        );
+
+      return json({ ...job, status: 'completed', error: null, updatedAt: completedAt });
+    }
+  }
+
   const isStale =
     (job.status === 'queued' || job.status === 'running') &&
     Date.now() - updatedAt.getTime() > STALE_JOB_MS;
