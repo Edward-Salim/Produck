@@ -101,6 +101,43 @@ function normalizeLinePinyin(value: string) {
   return normalizePinyinTokens(value, 'line');
 }
 
+function normalizeComparableText(value: string) {
+  return value
+    .toLocaleLowerCase()
+    .normalize('NFKC')
+    .replace(/[’]/g, "'")
+    .replace(/[^a-z0-9]+/g, '')
+    .trim();
+}
+
+function duplicateLatinEnglish(hanzi: string, english: string) {
+  return (
+    !HAN_RE.test(hanzi) &&
+    Boolean(normalizeComparableText(hanzi)) &&
+    normalizeComparableText(hanzi) === normalizeComparableText(english)
+  );
+}
+
+function normalizeHanziLinePinyin(hanzi: string, pinyin: string) {
+  if (!HAN_RE.test(hanzi)) return '';
+
+  const sourceLatinTokens = new Set(
+    [...hanzi.matchAll(/[A-Za-z0-9'’]+/gu)]
+      .map((match) => normalizeComparableText(match[0]))
+      .filter(Boolean)
+  );
+
+  if (sourceLatinTokens.size === 0) return pinyin;
+
+  return pinyin
+    .split(/\s+/u)
+    .filter((token) => {
+      const asciiToken = /^[A-Za-z0-9'’.,!?;:()[\]{}"~_-]+$/u.test(token);
+      return !asciiToken || !sourceLatinTokens.has(normalizeComparableText(token));
+    })
+    .join(' ');
+}
+
 function normalizeArtistCredit(value: string) {
   return normalizeSpace(value)
     .replace(/\s*(?:,|，|、)\s*/gu, ', ')
@@ -167,7 +204,11 @@ function normalizeLine(value: unknown): LyricLine | null {
   );
 
   if (!hanzi) return null;
-  return { hanzi, pinyin: HAN_RE.test(hanzi) ? pinyin : '', english };
+  return {
+    hanzi,
+    pinyin: normalizeHanziLinePinyin(hanzi, pinyin),
+    english: duplicateLatinEnglish(hanzi, english) ? '' : english
+  };
 }
 
 function normalizeLines(value: unknown): LyricLine[] {
@@ -313,9 +354,10 @@ Rules:
 - Standardize artist credits: use "feat." for featured artists, ", " for multiple primary artists, and " & " only when the artist credit is commonly branded that way.
 - Keep artist credit structure aligned across singer, singerHanzi, and singerPinyin, such as "Jay Chou feat. Cindy Yen", "周杰伦 feat. 袁咏琳", and "Zhōu Jié Lún feat. Yuán Yǒng Lín".
 - Generate accurate Mandarin pinyin with tone marks for every Chinese lyric line.
+- For mixed Chinese and Latin lyric lines, put only the Mandarin pinyin for Chinese characters in pinyin. Do not copy English words, Latin words, numbers, or punctuation into pinyin.
 - Capitalize pinyin consistently: titlePinyin and singerPinyin use Title Case for each syllable; lyric line pinyin uses sentence case with only the first syllable capitalized, except proper nouns.
 - Translate every Chinese lyric line into concise natural English.
-- Preserve non-Chinese lyric lines in hanzi exactly, with pinyin as an empty string and english as a helpful translation or the same line.
+- Preserve non-Chinese lyric lines in hanzi exactly and set pinyin to an empty string. If the English translation would be identical or nearly identical to the non-Chinese lyric line, set english to an empty string so the UI does not show the same Latin line twice.
 - Infer sections such as Verse 1, Verse 2, Pre-Chorus, Chorus, Bridge, Outro, Rap, Intro, Instrumental, and Repeat Chorus where the song structure supports it.
 - If a source marker such as @ contains multiple stanzas separated by blank lines, split those stanzas into separate sections such as Verse 1 and Verse 2 instead of merging them into one long verse.
 - If the input says Repeat @ and @ was split into multiple stanza sections, create one repeatOf section for each repeated stanza section, in order.
