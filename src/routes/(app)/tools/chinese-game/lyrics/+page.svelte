@@ -83,6 +83,13 @@
     return [...matches].sort((a, b) => Number(isVerifiedSong(b)) - Number(isVerifiedSong(a)));
   });
   let selectedSong = $derived(songs.find((song) => song.id === selectedId) ?? songs[0] ?? null);
+  $effect(() => {
+    if (data.selectedId && data.selectedId !== selectedId) {
+      selectedId = data.selectedId;
+      window.localStorage.setItem(SELECTED_SONG_KEY, data.selectedId);
+    }
+  });
+
   onMount(() => {
     const scrollRoot = document.querySelector<HTMLElement>('[data-slot="sidebar-inset"]');
     const savedSong = window.localStorage.getItem(SELECTED_SONG_KEY);
@@ -456,6 +463,9 @@
       }
 
       if (data.status === 'completed' && data.songSlug) {
+        selectedId = data.songSlug;
+        query = '';
+        window.localStorage.setItem(SELECTED_SONG_KEY, data.songSlug);
         rawSongInput = '';
         await goto(`/tools/chinese-game/lyrics?song=${encodeURIComponent(data.songSlug)}`, {
           invalidateAll: true
