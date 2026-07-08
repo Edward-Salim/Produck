@@ -220,6 +220,10 @@
     return compactSingerTitle(song) || singerOnSecondTitleLine(song);
   }
 
+  function compactTitleInHeader(song: LyricSong) {
+    return titleHanziLength(song.titleHanzi) > 7 || song.titleEnglish.length > 36;
+  }
+
   function selectSong(songId: string, closeSongList = true) {
     selectedId = songId;
     if (closeSongList) songListOpen = false;
@@ -707,7 +711,9 @@
       <div class="flex items-end justify-between gap-3">
         <div class="min-w-0">
           <h1 class="font-display text-2xl text-cork-800 md:text-4xl">Chinese Song Lyrics</h1>
-          <p class="mt-0.5 text-sm text-cork-500">Learn songs line by line</p>
+          <p class="mt-0.5 text-sm text-cork-500">
+            Learn {songs.length} songs line by line
+          </p>
         </div>
       </div>
 
@@ -1078,9 +1084,20 @@
               class="text-cork-950 mt-1 flex flex-wrap items-start justify-start gap-x-4 gap-y-3 text-left md:hidden"
             >
               <span class="max-w-full min-w-0">
-                {@render titleHanziText(selectedSong.titleHanzi, selectedSong.titlePinyin, true)}
+                {@render titleHanziText(
+                  selectedSong.titleHanzi,
+                  selectedSong.titlePinyin,
+                  true,
+                  compactTitleInHeader(selectedSong)
+                )}
               </span>
-              <span class="text-cork-950 font-sans text-4xl leading-none font-black">-</span>
+              <span
+                class="text-cork-950 font-sans leading-none font-black {compactTitleInHeader(
+                  selectedSong
+                )
+                  ? 'text-3xl'
+                  : 'text-4xl'}">-</span
+              >
               <span
                 class={singerOnSecondTitleLine(selectedSong)
                   ? 'max-w-full min-w-0 basis-full'
@@ -1100,10 +1117,19 @@
               class="text-cork-950 mt-2 hidden max-w-full flex-wrap items-start justify-start gap-x-8 gap-y-5 overflow-hidden text-left md:flex"
             >
               <span class="max-w-full min-w-0">
-                {@render titleHanziText(selectedSong.titleHanzi, selectedSong.titlePinyin)}
+                {@render titleHanziText(
+                  selectedSong.titleHanzi,
+                  selectedSong.titlePinyin,
+                  false,
+                  compactTitleInHeader(selectedSong)
+                )}
               </span>
-              <span class="text-cork-950 shrink-0 font-sans text-7xl leading-none font-black"
-                >-</span
+              <span
+                class="text-cork-950 shrink-0 font-sans leading-none font-black {compactTitleInHeader(
+                  selectedSong
+                )
+                  ? 'text-5xl'
+                  : 'text-7xl'}">-</span
               >
               <span
                 class={singerOnSecondTitleLine(selectedSong)
