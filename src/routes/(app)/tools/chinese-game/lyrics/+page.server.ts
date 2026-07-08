@@ -1,4 +1,4 @@
-import { asc, sql } from 'drizzle-orm';
+import { asc, eq, sql } from 'drizzle-orm';
 import { chineseSongLyric } from '$lib/server/db/schema.js';
 import { db } from '$lib/server/db/index.js';
 import { songs as seedSongs } from './song-data.js';
@@ -43,6 +43,7 @@ export const load: PageServerLoad = async ({ url }) => {
   const rows = await db
     .select({ song: chineseSongLyric.song, verified: chineseSongLyric.verified })
     .from(chineseSongLyric)
+    .where(eq(chineseSongLyric.hidden, false))
     .orderBy(asc(chineseSongLyric.sortOrder), asc(chineseSongLyric.id));
 
   const songs = rows.map((row) => ({ ...row.song, verified: row.verified }));
