@@ -26,6 +26,9 @@ Thumbs.db
 *.private.ts
 *.private.json
 *.private.sql
+jay-good.md
+jay-new.md
+songs-new.md
 drizzle/private/
 src/routes/(app)/financial-tracker/financial-tracker-data.private.ts
 static/assets/ttd_edward.png
