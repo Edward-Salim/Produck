@@ -101,15 +101,32 @@
   $effect(() => {
     selectedId;
     filteredSongs;
+    songListOpen;
     window.requestAnimationFrame(() => {
-      const list = document.querySelector<HTMLElement>('.song-list-scroll');
-      const active = list?.querySelector<HTMLElement>('[data-active-desktop-song="true"]');
-      if (!list || !active) return;
+      const targets = [
+        {
+          list: document.querySelector<HTMLElement>('.song-list-scroll'),
+          selector: '[data-active-desktop-song="true"]',
+          behavior: 'smooth' as ScrollBehavior
+        },
+        {
+          list: songListOpen
+            ? document.querySelector<HTMLElement>('.mobile-song-list-scroll')
+            : null,
+          selector: '[data-active-mobile-song="true"]',
+          behavior: 'auto' as ScrollBehavior
+        }
+      ];
 
-      list.scrollTo({
-        top: active.offsetTop - list.clientHeight / 2 + active.clientHeight / 2,
-        behavior: 'smooth'
-      });
+      for (const { list, selector, behavior } of targets) {
+        const active = list?.querySelector<HTMLElement>(selector);
+        if (!list || !active) continue;
+
+        list.scrollTo({
+          top: active.offsetTop - list.clientHeight / 2 + active.clientHeight / 2,
+          behavior
+        });
+      }
     });
   });
 
@@ -1001,7 +1018,7 @@
             </div>
           </div>
 
-          <div class="min-h-0 flex-1 overflow-y-auto p-2">
+          <div class="mobile-song-list-scroll min-h-0 flex-1 overflow-y-auto p-2">
             {#if filteredSongs.length === 0}
               <p class="px-2 py-3 text-sm text-cork-600">No songs found.</p>
             {:else}
@@ -1009,6 +1026,7 @@
                 {@const active = selectedSong?.id === song.id}
                 <button
                   type="button"
+                  data-active-mobile-song={active ? 'true' : undefined}
                   class="flex w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-3 text-left transition {active
                     ? 'text-cork-950 bg-cork-200'
                     : 'text-cork-800 hover:bg-cork-100'}"

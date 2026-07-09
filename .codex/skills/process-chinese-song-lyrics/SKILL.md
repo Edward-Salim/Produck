@@ -28,6 +28,7 @@ Use this skill for Produck lyric imports and cleanup.
    - no duplicate Latin-only line appears in both `hanzi` and `english`.
    - no copied Latin source words are present in pinyin for mixed Hanzi/Latin lines.
    - artist metadata is not contaminated by source noise like `en<artist>en`, `Preview`, `Full Track`, or duplicated artist names.
+   - section ids and labels are named cleanly: if there is only one distinct `verse`, `chorus`, `bridge`, or `outro`, use unnumbered ids/labels like `verse` / `Verse` and `chorus` / `Chorus`; use numbered variants like `verse-1`, `verse-2`, `chorus-1`, `chorus-2` only when those sections are genuinely different. Repeat sections should point to the clean target id, for example `repeat-chorus` with `repeatOf: "chorus"` when there is only one chorus. If the same unnumbered section repeats more than once, keep repeat ids unique as needed, such as `repeat-chorus-1` and `repeat-chorus-2`, but keep the visible label generic as `Repeat Chorus` because the target chorus is not numbered.
    - title version suffixes are removed when the user asks, but leave slugs unchanged unless needed.
 
 5. Remove temporary one-off scripts after use. Do not commit unless the user asks.
