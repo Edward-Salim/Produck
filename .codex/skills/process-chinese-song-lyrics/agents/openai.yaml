@@ -1,0 +1,4 @@
+interface:
+  display_name: "Process Chinese Song Lyrics"
+  short_description: "Import and clean Produck Chinese lyric batches."
+  default_prompt: "Process a Chinese song lyric markdown batch into the Produck lyrics database, then audit the imported songs."

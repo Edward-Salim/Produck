@@ -63,9 +63,11 @@
   let showTranslation = $state(true);
   let expandRepeats = $state(false);
   let showBackToTop = $state(false);
+  let mobileKeyboardInset = $state(0);
   let bouncedSectionAnchor = $state('');
   let returnRepeatAnchor = $state('');
   let returnTargetAnchor = $state('');
+  let songListHistoryOpen = false;
 
   let normalizedQuery = $derived(normalizeSearch(query));
   let filteredSongs = $derived.by(() => {
@@ -122,13 +124,39 @@
       showBackToTop = isMobile && scrollTop > 400;
     }
 
+    function updateMobileKeyboardInset() {
+      const viewport = window.visualViewport;
+      if (!viewport || window.matchMedia('(min-width: 768px)').matches) {
+        mobileKeyboardInset = 0;
+        return;
+      }
+
+      mobileKeyboardInset = Math.max(
+        0,
+        window.innerHeight - viewport.height - viewport.offsetTop
+      );
+    }
+
+    function closeSongListFromBack() {
+      if (!songListHistoryOpen) return;
+      songListHistoryOpen = false;
+      songListOpen = false;
+    }
+
     updateBackToTopVisibility();
+    updateMobileKeyboardInset();
     (scrollRoot ?? window).addEventListener('scroll', updateBackToTopVisibility, { passive: true });
     window.addEventListener('resize', updateBackToTopVisibility);
+    window.addEventListener('popstate', closeSongListFromBack);
+    window.visualViewport?.addEventListener('resize', updateMobileKeyboardInset);
+    window.visualViewport?.addEventListener('scroll', updateMobileKeyboardInset);
 
     return () => {
       (scrollRoot ?? window).removeEventListener('scroll', updateBackToTopVisibility);
       window.removeEventListener('resize', updateBackToTopVisibility);
+      window.removeEventListener('popstate', closeSongListFromBack);
+      window.visualViewport?.removeEventListener('resize', updateMobileKeyboardInset);
+      window.visualViewport?.removeEventListener('scroll', updateMobileKeyboardInset);
     };
   });
 
@@ -225,12 +253,40 @@
     return titleHanziLength(song.titleHanzi) > 7 || song.titleEnglish.length > 36;
   }
 
-  function selectSong(songId: string, closeSongList = true) {
-    selectedId = songId;
-    if (closeSongList) songListOpen = false;
+  function openSongList() {
+    songListOpen = true;
+    if (songListHistoryOpen) return;
 
     const url = new URL(window.location.href);
+    url.hash = 'songs';
+    window.history.pushState({ ...window.history.state, songListOpen: true }, '', url);
+    songListHistoryOpen = true;
+  }
+
+  function closeSongList() {
+    if (!songListOpen) return;
+    songListOpen = false;
+
+    if (songListHistoryOpen) {
+      songListHistoryOpen = false;
+      window.history.back();
+    }
+  }
+
+  function selectSong(songId: string, closeAfterSelect = true) {
+    selectedId = songId;
+
+    const url = new URL(window.location.href);
+    url.hash = '';
     url.searchParams.set('song', songId);
+
+    if (closeAfterSelect && songListHistoryOpen) {
+      songListOpen = false;
+      songListHistoryOpen = false;
+    } else if (closeAfterSelect) {
+      songListOpen = false;
+    }
+
     replaceState(url, {});
   }
 
@@ -750,7 +806,7 @@
         <button
           type="button"
           class="flex h-10 w-full cursor-pointer items-center justify-center gap-2 rounded-lg border border-cork-300/70 bg-cork-50/80 px-3 text-sm font-semibold text-cork-700 transition hover:bg-cork-100"
-          onclick={() => (songListOpen = true)}
+          onclick={openSongList}
         >
           <ListMusic class="size-4" />
           Songs
@@ -897,11 +953,12 @@
           type="button"
           class="bg-cork-950/35 absolute inset-0 cursor-default backdrop-blur-sm"
           aria-label="Close song list"
-          onclick={() => (songListOpen = false)}
+          onclick={closeSongList}
           transition:fade={{ duration: 160 }}
         ></button>
         <div
-          class="absolute right-3 bottom-3 left-3 max-h-[78dvh] overflow-hidden rounded-lg border border-cork-300 bg-cork-50 shadow-xl"
+          class="absolute right-3 left-3 flex flex-col overflow-hidden rounded-lg border border-cork-300 bg-cork-50 shadow-xl"
+          style={`bottom: calc(${mobileKeyboardInset}px + 0.75rem + env(safe-area-inset-bottom)); max-height: min(78dvh, calc(100dvh - ${mobileKeyboardInset}px - 1.5rem - env(safe-area-inset-bottom)));`}
           role="dialog"
           aria-modal="true"
           aria-label="Choose a song"
@@ -913,7 +970,7 @@
               type="button"
               class="flex size-8 cursor-pointer items-center justify-center rounded-lg text-cork-500 transition hover:bg-cork-200 hover:text-cork-800"
               aria-label="Close song list"
-              onclick={() => (songListOpen = false)}
+              onclick={closeSongList}
             >
               <X class="size-4" />
             </button>
@@ -926,15 +983,25 @@
               />
               <input
                 bind:value={query}
-                type="search"
+                type="text"
                 placeholder="Search songs..."
-                class="lyrics-search h-10 w-full rounded-lg border-cork-300/80 bg-white/70 pr-3 pl-10 text-base text-cork-900 placeholder:text-cork-500 focus:border-cork-600 focus:ring-cork-600"
+                class="h-10 w-full rounded-lg border-cork-300/80 bg-white/70 pr-11 pl-10 text-base text-cork-900 placeholder:text-cork-500 focus:border-cork-600 focus:ring-cork-600"
                 aria-label="Search songs"
               />
+              {#if query}
+                <button
+                  type="button"
+                  class="absolute top-1/2 right-1.5 flex size-9 -translate-y-1/2 cursor-pointer items-center justify-center rounded-md text-cork-500 transition hover:bg-cork-100 hover:text-cork-800"
+                  aria-label="Clear song search"
+                  onclick={() => (query = '')}
+                >
+                  <X class="size-5" />
+                </button>
+              {/if}
             </div>
           </div>
 
-          <div class="max-h-[calc(78dvh-7.5rem)] overflow-y-auto p-2">
+          <div class="min-h-0 flex-1 overflow-y-auto p-2">
             {#if filteredSongs.length === 0}
               <p class="px-2 py-3 text-sm text-cork-600">No songs found.</p>
             {:else}
@@ -1078,7 +1145,7 @@
                         {/if}
                       </span>
                       <span class="font-chinese mt-1 block truncate text-xs text-cork-400">
-                        {song.singerHanzi}
+                        {song.singer ? `${song.singer} · ${song.singerHanzi}` : song.singerHanzi}
                       </span>
                     </span>
                   </span>
