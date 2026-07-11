@@ -115,6 +115,14 @@
             >
               Song Lyrics
             </a>
+            <a
+              href="/tools/chinese-game/hsk"
+              class="flex w-full cursor-pointer {entrance(
+                5
+              )} items-center justify-center rounded-lg bg-cork-700 px-6 py-3 font-display text-xl text-cork-200 transition-all hover:bg-cork-600 hover:shadow-md"
+            >
+              HSK Course
+            </a>
             <button
               type="button"
               class="flex w-full cursor-pointer {entrance(

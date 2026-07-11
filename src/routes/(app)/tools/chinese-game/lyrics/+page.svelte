@@ -148,10 +148,7 @@
         return;
       }
 
-      mobileKeyboardInset = Math.max(
-        0,
-        window.innerHeight - viewport.height - viewport.offsetTop
-      );
+      mobileKeyboardInset = Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop);
     }
 
     function closeSongListFromBack() {
@@ -1283,13 +1280,18 @@
                     ? findSection(selectedSong, section.repeatOf)
                     : section}
                   <div class="mb-4 flex flex-wrap items-center gap-3">
-                    <p class="text-xs font-semibold tracking-[0.14em] text-cork-500">
+                    <p
+                      class="text-xs font-semibold tracking-[0.14em] {returnTargetAnchor ===
+                        currentAnchor && !expandRepeats
+                        ? 'repeat-target-label'
+                        : 'text-cork-500'}"
+                    >
                       {sectionLabelText(section)}
                     </p>
                     {#if returnTargetAnchor === currentAnchor && !expandRepeats}
                       <button
                         type="button"
-                        class="inline-flex size-7 cursor-pointer items-center justify-center rounded-md border border-cork-300/70 bg-cork-50/80 text-cork-600 shadow-sm transition hover:bg-cork-100 hover:text-cork-900"
+                        class="hidden size-7 cursor-pointer items-center justify-center rounded-md border border-cork-300/70 bg-cork-50/80 text-cork-600 shadow-sm transition hover:bg-cork-100 hover:text-cork-900 md:inline-flex"
                         aria-label="Back to repeat marker"
                         title="Back to repeat marker"
                         onclick={goBackToRepeat}
@@ -1310,16 +1312,34 @@
     </div>
   </main>
 
-  {#if showBackToTop}
-    <button
-      type="button"
-      class="fixed right-4 bottom-[calc(1rem+env(safe-area-inset-bottom))] z-[100] flex size-11 cursor-pointer items-center justify-center rounded-full border border-cork-300 bg-cork-50/95 text-cork-800 shadow-lg shadow-cork-900/15 backdrop-blur transition hover:bg-cork-100 md:hidden"
-      aria-label="Back to top"
-      onclick={scrollToTop}
+  {#if showBackToTop || (returnRepeatAnchor && !expandRepeats)}
+    <div
+      class="fixed right-4 bottom-[calc(1rem+env(safe-area-inset-bottom))] z-[100] flex items-center gap-2 md:hidden"
       transition:fly={{ y: 12, duration: 160 }}
     >
-      <ArrowUp class="size-5" />
-    </button>
+      {#if returnRepeatAnchor && !expandRepeats}
+        <button
+          type="button"
+          class="flex size-11 cursor-pointer items-center justify-center rounded-full border border-cork-300 bg-cork-50/95 text-cork-800 shadow-lg shadow-cork-900/15 backdrop-blur transition hover:bg-cork-100"
+          aria-label="Back to repeat marker"
+          title="Back to repeat marker"
+          onclick={goBackToRepeat}
+        >
+          <CornerDownLeft class="size-5" />
+        </button>
+      {/if}
+      {#if showBackToTop}
+        <button
+          type="button"
+          class="flex size-11 cursor-pointer items-center justify-center rounded-full border border-cork-300 bg-cork-50/95 text-cork-800 shadow-lg shadow-cork-900/15 backdrop-blur transition hover:bg-cork-100"
+          aria-label="Back to top"
+          title="Back to top"
+          onclick={scrollToTop}
+        >
+          <ArrowUp class="size-5" />
+        </button>
+      {/if}
+    </div>
   {/if}
 </div>
 
@@ -1372,6 +1392,11 @@
     animation: repeat-target-bounce 0.72s ease-out;
   }
 
+  .repeat-target-label {
+    color: #b45309;
+    transition: color 180ms ease;
+  }
+
   @keyframes repeat-target-bounce {
     0% {
       transform: translateY(0);
@@ -1390,8 +1415,6 @@
     }
     100% {
       transform: translateY(0);
-      background: transparent;
-      box-shadow: 0 0 0 0 transparent;
     }
   }
 

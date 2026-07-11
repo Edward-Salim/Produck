@@ -29,6 +29,8 @@ export const appUser = pgTable('app_user', {
       highscore?: number;
       highscoreName?: string;
       readingSuccessCounts?: Record<string, number>;
+      hskStudiedTopics?: string[];
+      hsk2StudiedTopics?: string[];
       lastWorkspaceId?: number;
       lastProjectId?: number;
       gameState?: {

@@ -48,12 +48,34 @@ export const POST: RequestHandler = async ({ request, locals }) => {
     string,
     unknown
   >;
+  const hskStudiedTopics = Array.isArray(body.hskStudiedTopics)
+    ? [
+        ...new Set(
+          body.hskStudiedTopics
+            .filter((topic): topic is string => typeof topic === 'string')
+            .map((topic) => topic.trim())
+            .filter(Boolean)
+        )
+      ].slice(0, 100)
+    : (current.hskStudiedTopics ?? []);
+  const hsk2StudiedTopics = Array.isArray(body.hsk2StudiedTopics)
+    ? [
+        ...new Set(
+          body.hsk2StudiedTopics
+            .filter((topic): topic is string => typeof topic === 'string')
+            .map((topic) => topic.trim())
+            .filter(Boolean)
+        )
+      ].slice(0, 100)
+    : (current.hsk2StudiedTopics ?? []);
   const prefs: Record<string, unknown> = {
     music: body.music ?? current.music ?? true,
     sounds: body.sounds ?? current.sounds ?? true,
     hintAlwaysOn: body.hintAlwaysOn ?? current.hintAlwaysOn ?? false,
     selectedLevels: body.selectedLevels ?? current.selectedLevels ?? [],
     readingSuccessCounts: current.readingSuccessCounts ?? {},
+    hskStudiedTopics,
+    hsk2StudiedTopics,
     lastWorkspaceId:
       body.lastWorkspaceId !== undefined ? body.lastWorkspaceId : current.lastWorkspaceId,
     lastProjectId: body.lastProjectId !== undefined ? body.lastProjectId : current.lastProjectId,
