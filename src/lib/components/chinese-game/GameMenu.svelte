@@ -63,18 +63,21 @@
 
 <!-- ── MENU / LEVEL SELECT ── -->
 <div
-  class="mx-auto flex max-w-2xl flex-col gap-4 px-4 pb-8 md:min-h-[calc(100dvh-8rem)] md:flex-row md:items-center md:justify-center md:gap-6"
+  class="mx-auto flex max-w-3xl flex-col gap-4 px-4 pb-8 md:min-h-[calc(100dvh-8rem)] md:flex-row md:items-center md:justify-center md:gap-10"
 >
   <!-- Left column: Title + subtitle -->
-  <div class="text-center md:w-48 md:text-left">
+  <div class="text-center md:w-auto md:shrink-0 md:text-left">
     <img
       src="/assets/produck-chinese-logo.png"
-      alt="Hanzi Game logo"
+      alt="Chinese Learning logo"
       class="mx-auto mb-2 h-16 w-auto object-contain md:mx-0 md:h-20 {entrance(1)}"
     />
-    <h1 class="font-display text-3xl text-cork-800 md:text-4xl {entrance(2)}">Hanzi Game</h1>
+    <h1 class="font-display text-3xl text-cork-800 md:text-4xl md:whitespace-nowrap {entrance(2)}">
+      Chinese Learning
+    </h1>
     <p class="mt-1 text-xs text-cork-500 md:text-sm {entrance(3)}">
-      Your future in 中国 starts with every 汉字 you master
+      <span class="block whitespace-nowrap">Your future in 中国 starts with</span>
+      <span class="block whitespace-nowrap">every 汉字 you master</span>
     </p>
   </div>
 
@@ -108,7 +111,7 @@
               Start Game
             </button>
             <a
-              href="/tools/chinese-game/lyrics"
+              href="/chinese-learning/lyrics"
               class="flex w-full cursor-pointer {entrance(
                 5
               )} items-center justify-center rounded-lg bg-cork-700 px-6 py-3 font-display text-xl text-cork-200 transition-all hover:bg-cork-600 hover:shadow-md"
@@ -116,7 +119,7 @@
               Song Lyrics
             </a>
             <a
-              href="/tools/chinese-game/hsk"
+              href="/chinese-learning/hsk"
               class="flex w-full cursor-pointer {entrance(
                 5
               )} items-center justify-center rounded-lg bg-cork-700 px-6 py-3 font-display text-xl text-cork-200 transition-all hover:bg-cork-600 hover:shadow-md"
@@ -132,14 +135,6 @@
             >
               Options
             </button>
-            <a
-              href="/tools"
-              class="flex w-full cursor-pointer {entrance(
-                5
-              )} items-center justify-center rounded-lg bg-cork-700 px-6 py-3 font-display text-xl text-cork-200 transition-all hover:bg-cork-600 hover:shadow-md"
-            >
-              Back
-            </a>
           </div>
         {:else if engine.menuScreen === 'mode'}
           <!-- ── MODE SELECT ── -->
@@ -309,7 +304,7 @@
             </button>
             <a
               class="flex flex-1 cursor-pointer items-center justify-center rounded-lg bg-red-700 px-6 py-2.5 font-display text-lg text-amber-100 transition-all hover:bg-red-600 hover:shadow-md hover:shadow-red-900/30"
-              href={`/tools/chinese-game/reading?level=${engine.selectedReadingLevel}&new=1`}
+              href={`/chinese-learning/reading?level=${engine.selectedReadingLevel}&new=1`}
             >
               Begin
             </a>

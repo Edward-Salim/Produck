@@ -3,14 +3,15 @@ export interface SentenceData {
   pinyin: string;
   translation: string;
   level: number;
+  section?: string;
 }
 
 export type GameState = 'menu' | 'playing' | 'gameover';
 export type MenuScreen = 'main' | 'mode' | 'difficulty' | 'readingDifficulty' | 'options';
 export type Feedback = 'correct' | 'wrong' | null;
 
-export const STORAGE_KEY = 'hanzi-game-save';
-const SETTINGS_KEY = 'hanzi-game-settings';
+export const STORAGE_KEY = 'hanzi-game-save-v2';
+const SETTINGS_KEY = 'hanzi-game-settings-v2';
 const READING_SUCCESS_KEY = 'chinese-reading-success-counts';
 
 type SavedGameData = ReturnType<GameEngine['buildGameData']>;

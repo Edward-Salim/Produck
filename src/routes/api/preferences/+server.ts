@@ -68,6 +68,16 @@ export const POST: RequestHandler = async ({ request, locals }) => {
         )
       ].slice(0, 100)
     : (current.hsk2StudiedTopics ?? []);
+  const hsk3StudiedTopics = Array.isArray(body.hsk3StudiedTopics)
+    ? [
+        ...new Set(
+          body.hsk3StudiedTopics
+            .filter((topic): topic is string => typeof topic === 'string')
+            .map((topic) => topic.trim())
+            .filter(Boolean)
+        )
+      ].slice(0, 100)
+    : (current.hsk3StudiedTopics ?? []);
   const prefs: Record<string, unknown> = {
     music: body.music ?? current.music ?? true,
     sounds: body.sounds ?? current.sounds ?? true,
@@ -76,6 +86,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
     readingSuccessCounts: current.readingSuccessCounts ?? {},
     hskStudiedTopics,
     hsk2StudiedTopics,
+    hsk3StudiedTopics,
     lastWorkspaceId:
       body.lastWorkspaceId !== undefined ? body.lastWorkspaceId : current.lastWorkspaceId,
     lastProjectId: body.lastProjectId !== undefined ? body.lastProjectId : current.lastProjectId,

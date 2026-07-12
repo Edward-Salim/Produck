@@ -1,7 +1,10 @@
 import { asc, eq, sql } from 'drizzle-orm';
 import { chineseSongLyric } from '$lib/server/db/schema.js';
 import { db } from '$lib/server/db/index.js';
-import { compareLyricSongsByArtistAndTitle, songs as seedSongs } from './song-data.js';
+import {
+  compareLyricSongsByArtistAndTitle,
+  songs as seedSongs
+} from '$lib/data/chinese-song-lyrics.js';
 import type { PageServerLoad } from './$types.js';
 
 const VERIFIED_SEED_SONG_IDS = new Set([

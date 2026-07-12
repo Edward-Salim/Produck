@@ -1,14 +1,201 @@
 import type { WordData } from './+page.server.js';
+import { pinyin as makePinyin } from 'pinyin-pro';
+import {
+  HSK2_SECTION_SENTENCES,
+  HSK2_SENTENCES_PER_SECTION
+} from '$lib/data/hsk2-typing-sentences.js';
 
 export interface SentenceData {
   hanzi: string;
   pinyin: string;
   translation: string;
   level: number;
+  section?: string;
 }
 
+export const HSK1_SENTENCES_PER_SECTION = 3;
+
+// These are required by the HSK 1 course sections but are absent from the supplied Pleco Level 1 file.
+const HSK1_REQUIRED_COURSE_TERMS = ['可以', '怎么样'];
+const HSK2_REQUIRED_COURSE_TERMS = ['漂漂亮亮'];
+
+const HSK1_SECTION_SENTENCES: Record<string, string[]> = {
+  '汉语的基本语序 · Basic word order in Chinese': ['我爱你', '我喝水', '他吃米饭'],
+  '“是”字句 · Sentences with 是': ['他是老师', '我们是学生', '我是北京人'],
+  '结构助词“的” · Structural particle 的': ['今天是我的生日', '这是你的书吗？', '他是我最好的朋友'],
+  '用“吗”的是非问句 · Yes–no questions with 吗': ['你有书吗？', '你忙吗？', '你认识他吗？'],
+  '“有”字句（1） · Sentences with 有': ['我有一个手机', '他有一个妹妹', '我没有钱'],
+  '数字的表达 · Expressing numbers': ['请你再说一次', '他早上六点起床', '今天二零二六年七月十三号'],
+  '语气助词“呢”（1） · Modal Particle 呢 (1)': [
+    '我有两个哥哥，你呢？',
+    '我是学生，你呢？',
+    '我喜欢喝茶，你呢？'
+  ],
+  '名量词和名量结构 · Nominal Measure Words and [Num+M+(N)] Structure': [
+    '她有两个学生',
+    '他看了一本书',
+    '我买了三本书'
+  ],
+  '时间的表达（1） · Expressing time': ['今天五月一号', '明天七月八号', '今天是星期五'],
+  '名词谓语句 · Nominal-predicate sentences': ['我妹妹十二岁', '我儿子八岁', '她今年二十岁'],
+  '能愿动词“会” · Modal Verb 会': ['我会说中文', '我不会做菜', '我不会忘记你'],
+  '能愿动词“想” · Modal Verb 想': ['我想喝水', '我不想休息', '我想去商店'],
+  '连动句（1） · Serial-verb sentences (1)': ['我坐火车去北京', '我们去图书馆看书', '我回家吃饭'],
+  '疑问代词“怎么” · Interrogative pronoun 怎么': [
+    '我们怎么去学校？',
+    '你怎么去商店？',
+    '这个字怎么写？'
+  ],
+  '时间的表达（2） · Expression of Time (2)': [
+    '现在九点零五分',
+    '现在下午两点半',
+    '现在晚上九点十分'
+  ],
+  '语气助词“吧”（1） · Modal Particle 吧 (1)': ['我们看电影吧', '我们下午三点见吧', '你坐这里吧'],
+  '副词、时间词语作状语的位置 · Position of Adverbs and Time Expressions as Adverbials': [
+    '明天我上班',
+    '早上我喝茶',
+    '我常常看书'
+  ],
+  '语气助词“呢”（2） · Modal Particle 呢 (2)': [
+    '我明天还上课呢',
+    '妹妹还在睡觉呢',
+    '他今天还很忙呢'
+  ],
+  '方位词 · Positional Words': ['外边很冷', '桌子上没有书', '学校前边有一家书店'],
+  '介词“在” · Preposition 在': ['他在医院工作', '我们在家看电视', '我在书店买书'],
+  '能愿动词“能” · Modal Verb 能': ['爸爸能来', '我不能去学校', '你能帮我吗？'],
+  '存现句（1） · Existential Sentences (1)': [
+    '电影院前边是一家商店',
+    '商店后边是一家饭店',
+    '学校旁边有一个商店'
+  ],
+  '时间词语和处所词语同时作状语的顺序 · Sequence of Time and Location Expressions When Used as Adverbials Simultaneously':
+    ['我们明天在学校见', '他下午在家看书', '我们七点在电影院外边见'],
+  '表示序数的“第” · Indicating Ordinal Numbers': [
+    '她是第一个学生',
+    '这是我的第一本中文书',
+    '他是第二个来的'
+  ],
+  '钱数的表达 · Expression of Amount of Money': [
+    '这本书十二块五毛钱',
+    '这个杯子五块钱',
+    '这本书三元五毛钱'
+  ],
+  '形容词谓语句 · Adjectival-Predicate Sentences': ['姐姐很好看', '这个菜不好吃', '我的衣服很贵'],
+  '疑问代词“怎么样” · Interrogative Pronoun 怎么样': [
+    '这个菜怎么样？',
+    '这本书怎么样？',
+    '今天的天气怎么样？'
+  ],
+  '正反问 · Affirmative-Negative Questions': [
+    '他会不会说中文？',
+    '你去不去学校？',
+    '这个杯子贵不贵？'
+  ],
+  '时间副词“在/正在” · Temporal Adverbs 在/正在': ['我正在看电视', '爸爸正在做饭', '他在打电话呢'],
+  '能愿动词“要” · Modal Verb 要': ['妈妈要去商店', '我要买这本书', '他明天要去北京'],
+  '非主谓句 · Non-Subject-Predicate Sentences': ['下雨了', '上课了', '对不起'],
+  '语气助词“了”（1） · Modal Particle 了 (1)': ['朋友来了', '我们走了', '现在十点了'],
+  '“太……了”格式 · 太……了 Pattern': ['今天太冷了', '这个杯子太小了', '我们今天太高兴了'],
+  '能愿动词“可以” · Modal Verb 可以': ['我可以坐这里吗？', '你可以看这本书', '我可以问老师吗？'],
+  '“动词+一下”结构 · Verb+一下 Structure': ['请你看一下', '请休息一下', '你问一下老师'],
+  '双宾语句（1） · Double-Object Sentences (1)': [
+    '他给我一本书',
+    '我给你一个东西',
+    '我问老师他的名字'
+  ],
+  '动态助词“了”（2） · Aspect Particle 了 (2)': [
+    '我买了一个手机',
+    '她穿了新衣服',
+    '我昨天没去商店'
+  ],
+  '离合词（1） · Separable Words (1)': ['我上了两次课', '他上了三次课', '我们上了三天班'],
+  '范围副词“都” · Scope Adverb 都': ['我们都很高兴', '学生们都在上课', '我们都没看见他'],
+  '并列复句“……，还/也……” · Coordinate Compound Sentence “……，还/也……”': [
+    '我喜欢喝茶，也喜欢喝牛奶',
+    '我喜欢看书，还喜欢看电影',
+    '姐姐会写汉字，还会说中文'
+  ]
+};
+
 export function generateSentences(_words: WordData[]): SentenceData[] {
-  return SENTENCES;
+  const byHanzi = new Map(SENTENCES.map((sentence) => [sentence.hanzi, sentence]));
+  const assigned = new Set<string>();
+  const hsk1 = Object.entries(HSK1_SECTION_SENTENCES).flatMap(([section, hanziList]) => {
+    if (hanziList.length !== HSK1_SENTENCES_PER_SECTION) {
+      throw new Error(`${section} must have exactly ${HSK1_SENTENCES_PER_SECTION} sentences`);
+    }
+    return hanziList.map((hanzi) => {
+      const sentence = byHanzi.get(hanzi);
+      if (!sentence || sentence.level !== 1) throw new Error(`Missing HSK 1 sentence: ${hanzi}`);
+      if (assigned.has(hanzi)) throw new Error(`HSK 1 sentence assigned twice: ${hanzi}`);
+      assigned.add(hanzi);
+      return { ...sentence, section };
+    });
+  });
+
+  const level1Vocabulary = new Set(
+    _words.filter((word) => word.level === 1).flatMap((word) => [word.hanzi, ...word.alternatives])
+  );
+  for (const term of HSK1_REQUIRED_COURSE_TERMS) level1Vocabulary.add(term);
+  if (level1Vocabulary.size > HSK1_REQUIRED_COURSE_TERMS.length) {
+    for (const sentence of hsk1) {
+      if (!canSegmentWithVocabulary(sentence.hanzi, level1Vocabulary)) {
+        throw new Error(
+          `HSK 1 sentence uses vocabulary outside the Level 1 list: ${sentence.hanzi}`
+        );
+      }
+    }
+  }
+
+  const assignedHsk2 = new Set<string>();
+  const hsk2 = Object.entries(HSK2_SECTION_SENTENCES).flatMap(([section, sentences]) => {
+    if (sentences.length !== HSK2_SENTENCES_PER_SECTION) {
+      throw new Error(`${section} must have exactly ${HSK2_SENTENCES_PER_SECTION} sentences`);
+    }
+    return sentences.map((sentence) => {
+      if (assignedHsk2.has(sentence.hanzi)) {
+        throw new Error(`HSK 2 sentence assigned twice: ${sentence.hanzi}`);
+      }
+      assignedHsk2.add(sentence.hanzi);
+      return {
+        ...sentence,
+        pinyin: makePinyin(sentence.hanzi, { toneType: 'symbol' }),
+        level: 2,
+        section
+      };
+    });
+  });
+
+  const level2Vocabulary = new Set(
+    _words.filter((word) => word.level <= 2).flatMap((word) => [word.hanzi, ...word.alternatives])
+  );
+  for (const term of HSK2_REQUIRED_COURSE_TERMS) level2Vocabulary.add(term);
+  if (level2Vocabulary.size > HSK2_REQUIRED_COURSE_TERMS.length) {
+    for (const sentence of hsk2) {
+      if (!canSegmentWithVocabulary(sentence.hanzi, level2Vocabulary)) {
+        throw new Error(
+          `HSK 2 sentence uses vocabulary outside the cumulative Level 1-2 lists: ${sentence.hanzi}`
+        );
+      }
+    }
+  }
+
+  return [...hsk1, ...hsk2, ...SENTENCES.filter((sentence) => sentence.level > 2)];
+}
+
+function canSegmentWithVocabulary(sentence: string, vocabulary: Set<string>): boolean {
+  const text = sentence.replace(/[\s，。？！、；：“”]/g, '');
+  const reachable = new Array<boolean>(text.length + 1).fill(false);
+  reachable[0] = true;
+  for (let start = 0; start < text.length; start += 1) {
+    if (!reachable[start]) continue;
+    for (const word of vocabulary) {
+      if (word && text.startsWith(word, start)) reachable[start + word.length] = true;
+    }
+  }
+  return reachable[text.length];
 }
 
 const SENTENCES: SentenceData[] = [
@@ -171,7 +358,7 @@ const SENTENCES: SentenceData[] = [
   {
     hanzi: '她穿了新衣服',
     pinyin: 'tā chuānle xīn yīfu',
-    translation: 'She wears new clothes.',
+    translation: 'She put on new clothes.',
     level: 1
   },
   {
@@ -367,7 +554,12 @@ const SENTENCES: SentenceData[] = [
     level: 1
   },
   { hanzi: '我去车站', pinyin: 'wǒ qù chēzhàn', translation: 'I go to the station.', level: 1 },
-  { hanzi: '他坐了飞机', pinyin: 'tā zuòle fēijī', translation: 'He took a plane.', level: 1 },
+  {
+    hanzi: '他坐飞机去北京',
+    pinyin: 'tā zuò fēijī qù běijīng',
+    translation: 'He goes to Beijing by plane.',
+    level: 1
+  },
   {
     hanzi: '我们在家看电视',
     pinyin: 'wǒmen zài jiā kàn diànshì',
@@ -423,9 +615,9 @@ const SENTENCES: SentenceData[] = [
     level: 1
   },
   {
-    hanzi: '中国人很多',
-    pinyin: 'zhōngguó rén hěnduō',
-    translation: 'Chinese people are many.',
+    hanzi: '这里有很多中国人',
+    pinyin: 'zhèlǐ yǒu hěnduō zhōngguó rén',
+    translation: 'There are many Chinese people here.',
     level: 1
   },
   {
@@ -435,9 +627,9 @@ const SENTENCES: SentenceData[] = [
     level: 1
   },
   {
-    hanzi: '这个衣服很贵',
-    pinyin: 'zhège yīfu hěn guì',
-    translation: 'This clothing is very expensive.',
+    hanzi: '这件衣服很贵',
+    pinyin: 'zhè jiàn yīfu hěn guì',
+    translation: 'This item of clothing is very expensive.',
     level: 1
   },
   {
@@ -499,6 +691,560 @@ const SENTENCES: SentenceData[] = [
     hanzi: '请你再说一次',
     pinyin: 'qǐng nǐ zài shuō yī cì',
     translation: 'Please say it once more.',
+    level: 1
+  },
+  {
+    hanzi: '我有两个哥哥，你呢？',
+    pinyin: 'wǒ yǒu liǎng ge gēge, nǐ ne',
+    translation: 'I have two older brothers. How about you?',
+    level: 1
+  },
+  {
+    hanzi: '我明天还上课呢',
+    pinyin: 'wǒ míngtiān hái shàngkè ne',
+    translation: 'I still have class tomorrow.',
+    level: 1
+  },
+  {
+    hanzi: '我们怎么去学校？',
+    pinyin: 'wǒmen zěnme qù xuéxiào',
+    translation: 'How do we get to school?',
+    level: 1
+  },
+  {
+    hanzi: '这个菜怎么样？',
+    pinyin: 'zhège cài zěnmeyàng',
+    translation: 'How is this dish?',
+    level: 1
+  },
+  { hanzi: '爸爸能来', pinyin: 'bàba néng lái', translation: 'Dad can come.', level: 1 },
+  {
+    hanzi: '我不能去学校',
+    pinyin: 'wǒ bù néng qù xuéxiào',
+    translation: 'I cannot go to school.',
+    level: 1
+  },
+  {
+    hanzi: '我正在看电视',
+    pinyin: 'wǒ zhèngzài kàn diànshì',
+    translation: 'I am watching TV.',
+    level: 1
+  },
+  {
+    hanzi: '学生们在上课呢',
+    pinyin: 'xuéshengmen zài shàngkè ne',
+    translation: 'The students are having class.',
+    level: 1
+  },
+  { hanzi: '我看书呢', pinyin: 'wǒ kàn shū ne', translation: 'I am reading.', level: 1 },
+  {
+    hanzi: '我没看电视',
+    pinyin: 'wǒ méi kàn diànshì',
+    translation: 'I am not watching TV.',
+    level: 1
+  },
+  {
+    hanzi: '妈妈要去超市',
+    pinyin: 'māma yào qù chāoshì',
+    translation: 'Mom wants to go to the supermarket.',
+    level: 1
+  },
+  {
+    hanzi: '我不想休息',
+    pinyin: 'wǒ bù xiǎng xiūxi',
+    translation: 'I do not want to rest.',
+    level: 1
+  },
+  {
+    hanzi: '今天太冷了',
+    pinyin: 'jīntiān tài lěng le',
+    translation: 'It is too cold today.',
+    level: 1
+  },
+  {
+    hanzi: '我可以坐这里吗？',
+    pinyin: 'wǒ kěyǐ zuò zhèlǐ ma',
+    translation: 'May I sit here?',
+    level: 1
+  },
+  {
+    hanzi: '请你看一下',
+    pinyin: 'qǐng nǐ kàn yīxià',
+    translation: 'Please take a look.',
+    level: 1
+  },
+  {
+    hanzi: '她是第一个学生',
+    pinyin: 'tā shì dì-yī ge xuésheng',
+    translation: 'She is the first student.',
+    level: 1
+  },
+  {
+    hanzi: '这本书十二块五毛钱',
+    pinyin: 'zhè běn shū shíèr kuài wǔ máo qián',
+    translation: 'This book costs twelve yuan and fifty cents.',
+    level: 1
+  },
+  {
+    hanzi: '我喜欢喝茶，也喜欢喝牛奶',
+    pinyin: 'wǒ xǐhuan hē chá, yě xǐhuan hē niúnǎi',
+    translation: 'I like drinking tea, and I also like drinking milk.',
+    level: 1
+  },
+  {
+    hanzi: '我喜欢看书，还喜欢看电影',
+    pinyin: 'wǒ xǐhuan kàn shū, hái xǐhuan kàn diànyǐng',
+    translation: 'I like reading, and I also like watching movies.',
+    level: 1
+  },
+  {
+    hanzi: '我们明天在学校见',
+    pinyin: 'wǒmen míngtiān zài xuéxiào jiàn',
+    translation: 'We will meet at school tomorrow.',
+    level: 1
+  },
+  { hanzi: '下雨了', pinyin: 'xià yǔ le', translation: 'It has started raining.', level: 1 },
+  {
+    hanzi: '电影院前边是一家超市',
+    pinyin: 'diànyǐngyuàn qiánbian shì yì jiā chāoshì',
+    translation: 'There is a supermarket in front of the cinema.',
+    level: 1
+  },
+  {
+    hanzi: '桌子上没有书',
+    pinyin: 'zhuōzi shàng méiyǒu shū',
+    translation: 'There is no book on the table.',
+    level: 1
+  },
+  {
+    hanzi: '我昨天没去商店',
+    pinyin: 'wǒ zuótiān méi qù shāngdiàn',
+    translation: 'I did not go to the store yesterday.',
+    level: 1
+  },
+  {
+    hanzi: '今天五月一号',
+    pinyin: 'jīntiān wǔ yuè yī hào',
+    translation: 'Today is May 1st.',
+    level: 1
+  },
+  {
+    hanzi: '我妹妹十二岁',
+    pinyin: 'wǒ mèimei shíèr suì',
+    translation: 'My younger sister is twelve years old.',
+    level: 1
+  },
+  {
+    hanzi: '现在九点零五分',
+    pinyin: 'xiànzài jiǔ diǎn líng wǔ fēn',
+    translation: 'It is 9:05 now.',
+    level: 1
+  },
+  {
+    hanzi: '我上了两节课',
+    pinyin: 'wǒ shàngle liǎng jié kè',
+    translation: 'I attended two classes.',
+    level: 1
+  },
+  {
+    hanzi: '你去不去学校？',
+    pinyin: 'nǐ qù bu qù xuéxiào',
+    translation: 'Are you going to school?',
+    level: 1
+  },
+  {
+    hanzi: '这件衣服贵不贵？',
+    pinyin: 'zhè jiàn yīfu guì bu guì',
+    translation: 'Is this item of clothing expensive?',
+    level: 1
+  },
+  {
+    hanzi: '我是学生，你呢？',
+    pinyin: 'wǒ shì xuésheng, nǐ ne',
+    translation: 'I am a student. How about you?',
+    level: 1
+  },
+  {
+    hanzi: '我喜欢喝茶，你呢？',
+    pinyin: 'wǒ xǐhuan hē chá, nǐ ne',
+    translation: 'I like drinking tea. How about you?',
+    level: 1
+  },
+  {
+    hanzi: '妹妹还在睡觉呢',
+    pinyin: 'mèimei hái zài shuìjiào ne',
+    translation: 'My younger sister is still sleeping.',
+    level: 1
+  },
+  {
+    hanzi: '他今天还很忙呢',
+    pinyin: 'tā jīntiān hái hěn máng ne',
+    translation: 'He is still very busy today.',
+    level: 1
+  },
+  {
+    hanzi: '你怎么去超市？',
+    pinyin: 'nǐ zěnme qù chāoshì',
+    translation: 'How do you get to the supermarket?',
+    level: 1
+  },
+  {
+    hanzi: '这个字怎么写？',
+    pinyin: 'zhège zì zěnme xiě',
+    translation: 'How do you write this character?',
+    level: 1
+  },
+  {
+    hanzi: '这本书怎么样？',
+    pinyin: 'zhè běn shū zěnmeyàng',
+    translation: 'How is this book?',
+    level: 1
+  },
+  {
+    hanzi: '今天的天气怎么样？',
+    pinyin: 'jīntiān de tiānqì zěnmeyàng',
+    translation: 'How is the weather today?',
+    level: 1
+  },
+  {
+    hanzi: '你能帮我吗？',
+    pinyin: 'nǐ néng bāng wǒ ma',
+    translation: 'Can you help me?',
+    level: 1
+  },
+  {
+    hanzi: '他今天不能上班',
+    pinyin: 'tā jīntiān bù néng shàngbān',
+    translation: 'He cannot go to work today.',
+    level: 1
+  },
+  {
+    hanzi: '爸爸正在做饭',
+    pinyin: 'bàba zhèngzài zuòfàn',
+    translation: 'Dad is cooking.',
+    level: 1
+  },
+  {
+    hanzi: '他在打电话呢',
+    pinyin: 'tā zài dǎ diànhuà ne',
+    translation: 'He is making a phone call.',
+    level: 1
+  },
+  {
+    hanzi: '我们学中文呢',
+    pinyin: 'wǒmen xué zhōngwén ne',
+    translation: 'We are studying Chinese.',
+    level: 1
+  },
+  { hanzi: '她没睡觉', pinyin: 'tā méi shuìjiào', translation: 'She is not sleeping.', level: 1 },
+  {
+    hanzi: '我要买这本书',
+    pinyin: 'wǒ yào mǎi zhè běn shū',
+    translation: 'I want to buy this book.',
+    level: 1
+  },
+  {
+    hanzi: '他明天要去北京',
+    pinyin: 'tā míngtiān yào qù běijīng',
+    translation: 'He intends to go to Beijing tomorrow.',
+    level: 1
+  },
+  {
+    hanzi: '这个杯子太小了',
+    pinyin: 'zhège bēizi tài xiǎo le',
+    translation: 'This cup is too small.',
+    level: 1
+  },
+  {
+    hanzi: '我们今天太高兴了',
+    pinyin: 'wǒmen jīntiān tài gāoxìng le',
+    translation: 'We are so happy today!',
+    level: 1
+  },
+  {
+    hanzi: '你可以看这本书',
+    pinyin: 'nǐ kěyǐ kàn zhè běn shū',
+    translation: 'You may read this book.',
+    level: 1
+  },
+  {
+    hanzi: '我可以问一个问题吗？',
+    pinyin: 'wǒ kěyǐ wèn yīge wèntí ma',
+    translation: 'May I ask a question?',
+    level: 1
+  },
+  {
+    hanzi: '请休息一下',
+    pinyin: 'qǐng xiūxi yīxià',
+    translation: 'Please rest for a moment.',
+    level: 1
+  },
+  {
+    hanzi: '你可以问一下老师',
+    pinyin: 'nǐ kěyǐ wèn yīxià lǎoshī',
+    translation: 'You can ask the teacher.',
+    level: 1
+  },
+  {
+    hanzi: '这是我的第一本中文书',
+    pinyin: 'zhè shì wǒ de dì yī běn zhōngwén shū',
+    translation: 'This is my first Chinese book.',
+    level: 1
+  },
+  {
+    hanzi: '他是第二个来的',
+    pinyin: 'tā shì dì èr ge lái de',
+    translation: 'He is the second person to arrive.',
+    level: 1
+  },
+  {
+    hanzi: '这个杯子五块钱',
+    pinyin: 'zhège bēizi wǔ kuài qián',
+    translation: 'This cup costs five yuan.',
+    level: 1
+  },
+  {
+    hanzi: '这个苹果三元五角',
+    pinyin: 'zhège píngguǒ sān yuán wǔ jiǎo',
+    translation: 'This apple costs three yuan and fifty cents.',
+    level: 1
+  },
+  {
+    hanzi: '王老师是北京人，李老师也是北京人',
+    pinyin: 'wáng lǎoshī shì běijīng rén, lǐ lǎoshī yě shì běijīng rén',
+    translation: 'Teacher Wang is from Beijing, and Teacher Li is also from Beijing.',
+    level: 1
+  },
+  {
+    hanzi: '姐姐会写汉字，还会说中文',
+    pinyin: 'jiějie huì xiě hànzì, hái huì shuō zhōngwén',
+    translation: 'My older sister can write Chinese characters and can also speak Chinese.',
+    level: 1
+  },
+  {
+    hanzi: '他下午在家看书',
+    pinyin: 'tā xiàwǔ zài jiā kàn shū',
+    translation: 'He reads at home in the afternoon.',
+    level: 1
+  },
+  {
+    hanzi: '我们七点在电影院外边见',
+    pinyin: 'wǒmen qī diǎn zài diànyǐngyuàn wàibian jiàn',
+    translation: 'We will meet outside the cinema at seven.',
+    level: 1
+  },
+  { hanzi: '下雪了', pinyin: 'xià xuě le', translation: 'It has started snowing.', level: 1 },
+  { hanzi: '对不起', pinyin: 'duìbuqǐ', translation: 'Sorry.', level: 1 },
+  {
+    hanzi: '学校前边有一家书店',
+    pinyin: 'xuéxiào qiánbian yǒu yì jiā shūdiàn',
+    translation: 'There is a bookstore in front of the school.',
+    level: 1
+  },
+  {
+    hanzi: '超市后边是一家饭店',
+    pinyin: 'chāoshì hòubian shì yì jiā fàndiàn',
+    translation: 'There is a restaurant behind the supermarket.',
+    level: 1
+  },
+  {
+    hanzi: '我没买那件衣服',
+    pinyin: 'wǒ méi mǎi nà jiàn yīfu',
+    translation: 'I did not buy that item of clothing.',
+    level: 1
+  },
+  {
+    hanzi: '他昨天没看电影',
+    pinyin: 'tā zuótiān méi kàn diànyǐng',
+    translation: 'He did not watch a movie yesterday.',
+    level: 1
+  },
+  {
+    hanzi: '明天七月八号',
+    pinyin: 'míngtiān qī yuè bā hào',
+    translation: 'Tomorrow is July 8th.',
+    level: 1
+  },
+  {
+    hanzi: '今天二零二六年七月十三号',
+    pinyin: 'jīntiān èr líng èr liù nián qī yuè shísān hào',
+    translation: 'Today is July 13, 2026.',
+    level: 1
+  },
+  {
+    hanzi: '我儿子八岁',
+    pinyin: 'wǒ érzi bā suì',
+    translation: 'My son is eight years old.',
+    level: 1
+  },
+  {
+    hanzi: '她今年二十岁',
+    pinyin: 'tā jīnnián èrshí suì',
+    translation: 'She is twenty years old this year.',
+    level: 1
+  },
+  {
+    hanzi: '现在下午两点半',
+    pinyin: 'xiànzài xiàwǔ liǎng diǎn bàn',
+    translation: 'It is 2:30 in the afternoon.',
+    level: 1
+  },
+  {
+    hanzi: '现在晚上九点十分',
+    pinyin: 'xiànzài wǎnshang jiǔ diǎn shí fēn',
+    translation: 'It is 9:10 in the evening.',
+    level: 1
+  },
+  {
+    hanzi: '他睡了八个小时的觉',
+    pinyin: 'tā shuìle bā ge xiǎoshí de jiào',
+    translation: 'He slept for eight hours.',
+    level: 1
+  },
+  {
+    hanzi: '我们上了三个小时的班',
+    pinyin: 'wǒmen shàngle sān ge xiǎoshí de bān',
+    translation: 'We worked for three hours.',
+    level: 1
+  },
+  {
+    hanzi: '我们下午三点见吧',
+    pinyin: 'wǒmen xiàwǔ sān diǎn jiàn ba',
+    translation: "Let's meet at three in the afternoon.",
+    level: 1
+  },
+  { hanzi: '你坐这里吧', pinyin: 'nǐ zuò zhèlǐ ba', translation: 'Please sit here.', level: 1 },
+  {
+    hanzi: '学生们都在上课',
+    pinyin: 'xuéshengmen dōu zài shàngkè',
+    translation: 'The students are all in class.',
+    level: 1
+  },
+  {
+    hanzi: '我们都没看见他',
+    pinyin: 'wǒmen dōu méi kànjiàn tā',
+    translation: 'None of us saw him.',
+    level: 1
+  },
+  {
+    hanzi: '我不会做菜',
+    pinyin: 'wǒ bù huì zuò cài',
+    translation: 'I cannot cook dishes.',
+    level: 1
+  },
+  {
+    hanzi: '我想去超市',
+    pinyin: 'wǒ xiǎng qù chāoshì',
+    translation: 'I want to go to the supermarket.',
+    level: 1
+  },
+  {
+    hanzi: '她有两个学生',
+    pinyin: 'tā yǒu liǎng ge xuésheng',
+    translation: 'She has two students.',
+    level: 1
+  },
+  {
+    hanzi: '我买了三本书',
+    pinyin: 'wǒ mǎile sān běn shū',
+    translation: 'I bought three books.',
+    level: 1
+  },
+  {
+    hanzi: '我想去商店',
+    pinyin: 'wǒ xiǎng qù shāngdiàn',
+    translation: 'I want to go to the store.',
+    level: 1
+  },
+  {
+    hanzi: '你怎么去商店？',
+    pinyin: 'nǐ zěnme qù shāngdiàn',
+    translation: 'How do you get to the store?',
+    level: 1
+  },
+  {
+    hanzi: '电影院前边是一家商店',
+    pinyin: 'diànyǐngyuàn qiánbian shì yì jiā shāngdiàn',
+    translation: 'There is a store in front of the cinema.',
+    level: 1
+  },
+  {
+    hanzi: '商店后边是一家饭店',
+    pinyin: 'shāngdiàn hòubian shì yì jiā fàndiàn',
+    translation: 'There is a restaurant behind the store.',
+    level: 1
+  },
+  {
+    hanzi: '这本书三元五毛钱',
+    pinyin: 'zhè běn shū sān yuán wǔ máo qián',
+    translation: 'This book costs three yuan and fifty cents.',
+    level: 1
+  },
+  {
+    hanzi: '姐姐很好看',
+    pinyin: 'jiějie hěn hǎokàn',
+    translation: 'My older sister is good-looking.',
+    level: 1
+  },
+  {
+    hanzi: '我的衣服很贵',
+    pinyin: 'wǒ de yīfu hěn guì',
+    translation: 'My clothes are expensive.',
+    level: 1
+  },
+  {
+    hanzi: '这个杯子贵不贵？',
+    pinyin: 'zhège bēizi guì bu guì',
+    translation: 'Is this cup expensive?',
+    level: 1
+  },
+  {
+    hanzi: '妈妈要去商店',
+    pinyin: 'māma yào qù shāngdiàn',
+    translation: 'Mom wants to go to the store.',
+    level: 1
+  },
+  { hanzi: '上课了', pinyin: 'shàngkè le', translation: 'Class has started.', level: 1 },
+  {
+    hanzi: '我可以问老师吗？',
+    pinyin: 'wǒ kěyǐ wèn lǎoshī ma',
+    translation: 'May I ask the teacher?',
+    level: 1
+  },
+  {
+    hanzi: '你问一下老师',
+    pinyin: 'nǐ wèn yīxià lǎoshī',
+    translation: 'Ask the teacher briefly.',
+    level: 1
+  },
+  {
+    hanzi: '我给你一个东西',
+    pinyin: 'wǒ gěi nǐ yīge dōngxi',
+    translation: 'I give you something.',
+    level: 1
+  },
+  {
+    hanzi: '我问老师他的名字',
+    pinyin: 'wǒ wèn lǎoshī tā de míngzi',
+    translation: 'I ask the teacher his name.',
+    level: 1
+  },
+  {
+    hanzi: '我上了两次课',
+    pinyin: 'wǒ shàngle liǎng cì kè',
+    translation: 'I attended class twice.',
+    level: 1
+  },
+  {
+    hanzi: '他上了三次课',
+    pinyin: 'tā shàngle sān cì kè',
+    translation: 'He attended class three times.',
+    level: 1
+  },
+  {
+    hanzi: '我们上了三天班',
+    pinyin: 'wǒmen shàngle sān tiān bān',
+    translation: 'We worked for three days.',
     level: 1
   },
 

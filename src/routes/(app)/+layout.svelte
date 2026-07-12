@@ -20,7 +20,8 @@
     LogOut,
     EllipsisVertical,
     Shield,
-    Trash2
+    Trash2,
+    Languages
   } from '@lucide/svelte';
   import { DropdownMenu } from 'bits-ui';
   import * as Dialog from '$lib/components/ui/dialog/index.js';
@@ -193,7 +194,7 @@
   );
 
   // Main page routes for Ctrl+Tab navigation (no tools)
-  const NAV_PAGES = ['/frameworks'];
+  const NAV_PAGES = ['/frameworks', '/chinese-learning'];
 
   function getCurrentPageIndex(): number {
     return NAV_PAGES.findIndex((p) => page.url.pathname.startsWith(p));
@@ -289,6 +290,29 @@
                 >
                   {#snippet child({ props })}
                     <a href="/frameworks" {...props}><Layers3 /><span>Frameworks</span></a>
+                  {/snippet}
+                </Sidebar.MenuButton>
+              </Sidebar.MenuItem>
+            </Sidebar.Menu>
+          </Sidebar.GroupContent>
+        </Sidebar.Group>
+
+        <Sidebar.Separator />
+
+        <Sidebar.Group>
+          <Sidebar.GroupLabel>Learn</Sidebar.GroupLabel>
+          <Sidebar.GroupContent>
+            <Sidebar.Menu>
+              <Sidebar.MenuItem>
+                <Sidebar.MenuButton
+                  size="sm"
+                  isActive={page.url.pathname.startsWith('/chinese-learning')}
+                  tooltipContent="Chinese Learning"
+                >
+                  {#snippet child({ props })}
+                    <a href="/chinese-learning" {...props}
+                      ><Languages /><span>Chinese Learning</span></a
+                    >
                   {/snippet}
                 </Sidebar.MenuButton>
               </Sidebar.MenuItem>

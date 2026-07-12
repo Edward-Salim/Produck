@@ -1,0 +1,4 @@
+interface:
+  display_name: "Process HSK Course Books"
+  short_description: "Import Xiaoyu classroom content faithfully"
+  default_prompt: "Use $process-hsk-course-books to import or audit HSK course content."

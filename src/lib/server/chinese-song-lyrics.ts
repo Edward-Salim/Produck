@@ -1,8 +1,4 @@
-import type {
-  LyricLine,
-  LyricSection,
-  LyricSong
-} from '../../routes/(app)/tools/chinese-game/lyrics/song-data.js';
+import type { LyricLine, LyricSection, LyricSong } from '$lib/data/chinese-song-lyrics.js';
 
 export type ChineseSongLyricsEnv = {
   DEEPSEEK_API_KEY?: string;

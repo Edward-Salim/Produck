@@ -183,7 +183,7 @@
       // Check if there's a saved game to restore
       let hasSaved = false;
       try {
-        const raw = localStorage.getItem('hanzi-game-save');
+        const raw = localStorage.getItem('hanzi-game-save-v2');
         if (raw) {
           const data = JSON.parse(raw);
           hasSaved = data?.gameState && data.gameState !== 'menu';
@@ -221,7 +221,7 @@
 <svelte:window onkeydown={onKeydown} />
 
 <svelte:head>
-  <title>Hanzi Game | Produck</title>
+  <title>Chinese Learning | Produck</title>
 </svelte:head>
 
 <div class="game-container">

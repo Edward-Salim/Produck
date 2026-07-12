@@ -2,6 +2,17 @@ import { json, redirect, type Handle } from '@sveltejs/kit';
 import { validateSession } from '$lib/server/auth.js';
 
 export const handle: Handle = async ({ event, resolve }) => {
+  const legacyChineseLearningPrefix = ['/tools/chinese-game', '/tools/chinese-learning'].find(
+    (prefix) => event.url.pathname === prefix || event.url.pathname.startsWith(`${prefix}/`)
+  );
+  if (legacyChineseLearningPrefix) {
+    const destination = event.url.pathname.replace(
+      legacyChineseLearningPrefix,
+      '/chinese-learning'
+    );
+    throw redirect(308, `${destination}${event.url.search}`);
+  }
+
   // Public routes that don't require auth
   const publicPaths = ['/login', '/api/auth'];
   const isPublic =

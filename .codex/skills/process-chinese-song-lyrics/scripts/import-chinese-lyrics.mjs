@@ -194,6 +194,7 @@ Rules:
 - For mixed Chinese and Latin lines, pinyin must include only Chinese-character syllables.
 - Preserve non-Chinese lyric lines in hanzi exactly with empty pinyin; if english duplicates it, make english empty.
 - Use repeatOf sections for exact repeated sections when appropriate.
+- Never use alphabetic suffixes in section ids or labels (for example, chorus-1a or Chorus 1B). Give genuinely different sections consecutive whole numbers such as chorus-1, chorus-2, and chorus-3.
 
 Pasted song:
 ${rawSong}`;

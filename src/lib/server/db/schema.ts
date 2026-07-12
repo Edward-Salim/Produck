@@ -31,6 +31,7 @@ export const appUser = pgTable('app_user', {
       readingSuccessCounts?: Record<string, number>;
       hskStudiedTopics?: string[];
       hsk2StudiedTopics?: string[];
+      hsk3StudiedTopics?: string[];
       lastWorkspaceId?: number;
       lastProjectId?: number;
       gameState?: {
@@ -729,6 +730,7 @@ export type ChineseSongLyricContent = {
       english: string;
     }[];
     repeatOf?: string;
+    repeatOfMany?: string[];
   }[];
 };
 

@@ -16,6 +16,7 @@ export type BookTopicGuide = {
   summary: string;
   pattern: string;
   examples: (string | { a: string; b: string })[];
+  exampleLabel?: string;
   useTableSections?: boolean;
   blocks?: {
     title?: string;

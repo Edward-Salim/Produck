@@ -9,6 +9,7 @@ export type LyricSection = {
   label: string;
   lines?: LyricLine[];
   repeatOf?: string;
+  repeatOfMany?: string[];
 };
 
 export type LyricSong = {
@@ -110,7 +111,8 @@ export const songs: LyricSong[] = [
           {
             hanzi: '礼物不需挑最贵 只要香榭的落叶',
             pinyin: 'Lǐ wù bù xū tiāo zuì guì zhǐ yào Xiāng Xiè de luò yè',
-            english: 'A gift need not be the most expensive, just fallen leaves from the Champs-Elysees'
+            english:
+              'A gift need not be the most expensive, just fallen leaves from the Champs-Elysees'
           },
           {
             hanzi: '营造浪漫的约会 不害怕搞砸一切',

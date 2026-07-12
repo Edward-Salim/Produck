@@ -50,6 +50,7 @@
     getGuide,
     explanations,
     tables,
+    searchQuery = '',
     preferenceKey = 'hskStudiedTopics',
     onStudiedChange
   }: {
@@ -57,15 +58,59 @@
     getGuide: (title: string) => TopicGuide | undefined;
     explanations: Record<string, string>;
     tables: Record<string, TopicTable[]>;
-    preferenceKey?: 'hskStudiedTopics' | 'hsk2StudiedTopics';
+    searchQuery?: string;
+    preferenceKey?: 'hskStudiedTopics' | 'hsk2StudiedTopics' | 'hsk3StudiedTopics';
     onStudiedChange?: (studiedTopics: string[]) => void;
   } = $props();
 
-  let openTopic = $state('汉语的基本语序 · Basic Word Order in Chinese');
+  let openTopic = $state('');
   let studiedTopics = $state<string[]>([]);
   let savingTopics = $state<string[]>([]);
   let loadingStudiedTopics = $state(true);
   const openTopicStorageKey = `${preferenceKey}-open-classroom-topic`;
+
+  function normalizeSearchText(value: string) {
+    return value
+      .normalize('NFD')
+      .replace(/\p{M}/gu, '')
+      .toLocaleLowerCase()
+      .replace(/[“”‘’'"·，。！？：；（）()\[\]{}+→/\\…—–-]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  function topicMatches(topic: ClassroomTopic) {
+    const normalizedQuery = normalizeSearchText(searchQuery);
+    if (!normalizedQuery) return true;
+
+    const chineseTitle = topic.title.split(' · ')[0];
+    const guide = getGuide(topic.title);
+    const tableSections = tables[chineseTitle] ?? [];
+    const searchableContent = normalizeSearchText(
+      JSON.stringify({
+        topic: topic.title,
+        lesson: {
+          number: topic.lesson.number,
+          hanzi: topic.lesson.hanzi,
+          pinyin: topic.lesson.pinyin,
+          title: topic.lesson.title
+        },
+        examples: [
+          ...(guide?.examples ?? []),
+          ...(guide?.blocks?.flatMap((block) => block.examples) ?? []),
+          ...tableSections.flatMap((section) => section.examples ?? [])
+        ],
+        tableContent: tableSections.flatMap((section) => [
+          ...(section.headers ?? []),
+          ...section.rows.flat()
+        ])
+      })
+    );
+
+    return normalizedQuery.split(' ').every((token) => searchableContent.includes(token));
+  }
+
+  let matchingTopicCount = $derived(topics.filter((topic) => topicMatches(topic)).length);
 
   onMount(async () => {
     const savedOpenTopic = localStorage.getItem(openTopicStorageKey);
@@ -128,6 +173,7 @@
   {#each topics as topic, index (topic.title)}
     {@const studiedKey = topic.title.split(' · ')[0]}
     {@const isStudied = studiedTopics.includes(studiedKey)}
+    {#if topicMatches(topic)}
     <article
       class="border-l-2 {openTopic === topic.title
         ? 'border-red-700 bg-red-50/70'
@@ -372,7 +418,15 @@
         </div>
       {/if}
     </article>
+    {/if}
   {/each}
+
+  {#if matchingTopicCount === 0}
+    <div class="px-4 py-12 text-center">
+      <p class="text-sm font-medium text-cork-700">No classroom topics found</p>
+      <p class="mt-1 text-xs text-cork-500">Try a Hanzi word, grammar term, pinyin, or example.</p>
+    </div>
+  {/if}
 </div>
 
 <style>

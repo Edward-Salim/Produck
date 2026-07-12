@@ -1,6 +1,7 @@
 <script lang="ts">
   import { tick, onMount } from 'svelte';
   import { Heart, Send, ArrowRight, SkipForward, Lightbulb } from '@lucide/svelte';
+  import { pinyin as makePinyin } from 'pinyin-pro';
   import type { GameEngine } from './game-engine.svelte.js';
   import { isPunct } from './game-engine.svelte.js';
 
@@ -165,11 +166,24 @@
   let allEditableSlotsFilled = $derived(
     Boolean(
       engine.currentSentence &&
-        [...engine.currentSentence.hanzi].every(
-          (char, index) => isPunct(char) || Boolean(engine.userChars[index])
-        )
+      [...engine.currentSentence.hanzi].every(
+        (char, index) => isPunct(char) || Boolean(engine.userChars[index])
+      )
     )
   );
+  let currentPinyin = $derived(
+    engine.currentSentence
+      ? makePinyin(engine.currentSentence.hanzi, {
+          type: 'array',
+          toneType: 'symbol',
+          nonZh: 'consecutive'
+        })
+      : []
+  );
+
+  function sectionTranslation(section: string): string {
+    return section.split(' · ')[1] ?? section;
+  }
 </script>
 
 <!-- Full-viewport streak overlay (subtle, only for higher tiers) -->
@@ -272,6 +286,11 @@
         <p class="font-outfit text-xl leading-relaxed text-cork-800 md:text-3xl">
           {engine.currentSentence.translation}
         </p>
+        {#if engine.currentSentence.section}
+          <p class="mt-1 text-xs leading-relaxed text-cork-400 md:mt-2 md:text-sm">
+            {sectionTranslation(engine.currentSentence.section)}
+          </p>
+        {/if}
 
         <!-- Character slots: one box per hanzi character -->
         <div class="mt-4 flex flex-wrap items-center justify-center gap-1 md:mt-6 md:gap-1.5">
@@ -316,6 +335,11 @@
         <p class="font-outfit text-xl leading-relaxed text-cork-800 md:text-3xl">
           {engine.currentSentence.translation}
         </p>
+        {#if engine.currentSentence.section}
+          <p class="mt-1 text-xs leading-relaxed text-cork-400 md:mt-2 md:text-sm">
+            {sectionTranslation(engine.currentSentence.section)}
+          </p>
+        {/if}
         <div class="mt-4 flex flex-wrap items-center justify-center gap-1 md:mt-6 md:gap-1.5">
           {#each engine.userChars as ch, i (i)}
             {#if engine.currentSentence && isPunct([...engine.currentSentence.hanzi][i])}
@@ -338,7 +362,11 @@
             <p class="font-outfit text-xl leading-relaxed text-cork-800 md:text-3xl">
               {engine.currentSentence.translation}
             </p>
-            <p class="text-xs text-cork-400 md:text-sm">{engine.revealedPinyin}</p>
+            {#if engine.currentSentence.section}
+              <p class="mt-1 text-xs leading-relaxed text-cork-400/80 md:text-sm">
+                {sectionTranslation(engine.currentSentence.section)}
+              </p>
+            {/if}
           </div>
 
           <!-- Character-by-character feedback -->
@@ -355,9 +383,10 @@
                   <div class="char-slot {uc ? 'filled' : 'empty'}">
                     <span class="char-result-char {ok ? 'char-ok' : 'char-bad'}">{uc || ''}</span>
                   </div>
-                  {#if !ok}
-                    <span class="char-result-hint">{correctChar}</span>
-                  {/if}
+                  <span class="char-result-hint">{correctChar}</span>
+                  <span class="-mt-1 text-[10px] leading-none text-cork-400 md:text-xs">
+                    {currentPinyin[i]}
+                  </span>
                 </div>
               {/if}
             {/each}

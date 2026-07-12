@@ -193,7 +193,7 @@
     const forceNext = forceFromUrl || shouldForceNextStory(nextLevel);
     level = nextLevel;
     if (forceFromUrl) {
-      window.history.replaceState(null, '', `/tools/chinese-game/reading?level=${nextLevel}`);
+      window.history.replaceState(null, '', `/chinese-learning/reading?level=${nextLevel}`);
     }
     if (forceNext || !restoreReadingState(nextLevel)) {
       generateReading(nextLevel, forceNext);
@@ -477,7 +477,7 @@
     try {
       localStorage.setItem(READING_FORCE_NEXT_KEY, String(level));
     } catch {}
-    goto('/tools/chinese-game');
+    goto('/chinese-learning');
   }
 
   async function generateReading(targetLevel: number, force = false) {

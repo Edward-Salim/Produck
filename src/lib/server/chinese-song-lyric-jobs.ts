@@ -6,7 +6,7 @@ import {
 } from './chinese-song-lyrics.js';
 import { ensureChineseSongLyricImportJobTable } from './chinese-song-lyric-schema.js';
 import { chineseSongLyric, chineseSongLyricImportJob } from './db/schema.js';
-import type { LyricSong } from '../../routes/(app)/tools/chinese-game/lyrics/song-data.js';
+import type { LyricSong } from '$lib/data/chinese-song-lyrics.js';
 
 const ACTIVE_JOB_LOCK_MS = 12 * 60 * 1000;
 

@@ -18,8 +18,8 @@
   import InkWashBg from '$lib/components/chinese-game/InkWashBg.svelte';
   import '$lib/components/chinese-game/game.css';
   import type { PageData } from './$types.js';
-  import { compareLyricSongsByArtistAndTitle } from './song-data.js';
-  import type { LyricLine, LyricSection, LyricSong } from './song-data.js';
+  import { compareLyricSongsByArtistAndTitle } from '$lib/data/chinese-song-lyrics.js';
+  import type { LyricLine, LyricSection, LyricSong } from '$lib/data/chinese-song-lyrics.js';
 
   type LyricToken = {
     hanzi: string;
@@ -67,7 +67,9 @@
   let bouncedSectionAnchor = $state('');
   let returnRepeatAnchor = $state('');
   let returnTargetAnchor = $state('');
+  let platinumCelebrationId = $state('');
   let songListHistoryOpen = false;
+  let platinumCelebrationTimer: number | undefined;
 
   let normalizedQuery = $derived(normalizeSearch(query));
   let filteredSongs = $derived.by(() => {
@@ -96,6 +98,13 @@
       routeSelectedId = nextRouteSelectedId;
       selectedId = nextRouteSelectedId;
     }
+  });
+
+  $effect(() => {
+    selectedId;
+    returnRepeatAnchor = '';
+    returnTargetAnchor = '';
+    bouncedSectionAnchor = '';
   });
 
   $effect(() => {
@@ -166,6 +175,7 @@
     window.visualViewport?.addEventListener('scroll', updateMobileKeyboardInset);
 
     return () => {
+      if (platinumCelebrationTimer) window.clearTimeout(platinumCelebrationTimer);
       (scrollRoot ?? window).removeEventListener('scroll', updateBackToTopVisibility);
       window.removeEventListener('resize', updateBackToTopVisibility);
       window.removeEventListener('popstate', closeSongListFromBack);
@@ -195,6 +205,14 @@
       song.singerPinyin,
       song.tags.join(' ')
     ].join(' ');
+  }
+
+  function songListSingerText(song: LyricSong) {
+    if (!song.singer) return song.singerHanzi;
+    if (!song.singerHanzi || normalizeSearch(song.singer) === normalizeSearch(song.singerHanzi)) {
+      return song.singer;
+    }
+    return `${song.singer} · ${song.singerHanzi}`;
   }
 
   function isVerifiedSong(song: DisplayLyricSong) {
@@ -243,7 +261,20 @@
   function toggleSongVerified(songId: string) {
     const song = songs.find((item) => item.id === songId);
     if (!song) return;
-    void setSongVerified(songId, !isVerifiedSong(song));
+    const verified = !isVerifiedSong(song);
+    if (verified) celebratePlatinumSong(songId);
+    void setSongVerified(songId, verified);
+  }
+
+  function celebratePlatinumSong(songId: string) {
+    if (platinumCelebrationTimer) window.clearTimeout(platinumCelebrationTimer);
+    platinumCelebrationId = '';
+    window.requestAnimationFrame(() => {
+      platinumCelebrationId = songId;
+      platinumCelebrationTimer = window.setTimeout(() => {
+        if (platinumCelebrationId === songId) platinumCelebrationId = '';
+      }, 1100);
+    });
   }
 
   function compactSingerTitle(song: LyricSong) {
@@ -378,10 +409,11 @@
   }
 
   function jumpToRepeatedSection(event: MouseEvent, song: LyricSong, repeat: LyricSection) {
-    if (!repeat.repeatOf) return;
+    const firstTargetId = repeat.repeatOf ?? repeat.repeatOfMany?.[0];
+    if (!firstTargetId) return;
     event.preventDefault();
 
-    const targetAnchor = sectionAnchor(song, repeat.repeatOf);
+    const targetAnchor = sectionAnchor(song, firstTargetId);
     const repeatAnchor = sectionAnchor(song, repeat.id);
 
     returnRepeatAnchor = repeatAnchor;
@@ -576,7 +608,7 @@
         selectedId = data.songSlug;
         query = '';
         rawSongInput = '';
-        await goto(`/tools/chinese-game/lyrics?song=${encodeURIComponent(data.songSlug)}`, {
+        await goto(`/chinese-learning/lyrics?song=${encodeURIComponent(data.songSlug)}`, {
           invalidateAll: true
         });
         importModalOpen = false;
@@ -723,14 +755,15 @@
             : ''}"
         >
           <span
-            class="font-chinese leading-none font-black {mobile
+            class="{token.kind === 'hanzi'
+              ? 'font-chinese'
+              : 'font-sans'} leading-none font-black {mobile
               ? compact
                 ? 'text-3xl'
                 : 'text-4xl'
               : compact
                 ? 'text-5xl'
                 : 'text-7xl'}"
-            class:font-sans={token.kind !== 'hanzi'}
           >
             {token.hanzi}
           </span>
@@ -793,13 +826,13 @@
   <main class="relative z-10 mx-auto flex min-h-dvh w-full max-w-5xl flex-col px-4 py-4 md:px-6">
     <header class="mb-6">
       <a
-        href="/tools/chinese-game"
-        class="mb-2 inline-flex items-center gap-1 text-xs text-cork-400 transition-colors hover:text-cork-600"
+        href="/chinese-learning"
+        class="inline-flex items-center gap-1.5 text-xs font-medium text-cork-600 transition hover:text-cork-900"
       >
-        <ArrowLeft class="size-3" />Hanzi Game
+        <ArrowLeft class="size-3.5" /> Chinese Learning
       </a>
 
-      <div class="flex items-end justify-between gap-3">
+      <div class="mt-2 flex items-end justify-between gap-3">
         <div class="min-w-0">
           <h1 class="font-display text-2xl text-cork-800 md:text-4xl">Chinese Song Lyrics</h1>
           <p class="mt-0.5 text-sm text-cork-500">
@@ -1039,14 +1072,17 @@
                   />
                   <span class="min-w-0">
                     <span
-                      class="font-chinese block truncate text-base font-bold {isVerifiedSong(song)
+                      class="font-chinese block truncate text-base font-bold {platinumCelebrationId ===
+                      song.id
+                        ? 'platinum-text-celebration'
+                        : ''} {isVerifiedSong(song)
                         ? 'text-slate-500 [text-shadow:0_1px_0_rgba(255,255,255,0.95),0_0_7px_rgba(186,230,253,0.9),0_0_1px_rgba(15,23,42,0.7)]'
                         : ''}"
                     >
                       {song.titleHanzi}
                     </span>
                     <span class="block truncate text-xs text-cork-500">
-                      {song.singer} · {song.singerHanzi}
+                      {songListSingerText(song)}
                     </span>
                   </span>
                 </button>
@@ -1149,7 +1185,10 @@
                     <span class="min-w-0 flex-1">
                       <span class="flex items-center justify-between gap-2">
                         <span
-                          class="font-chinese truncate text-sm font-semibold {isVerifiedSong(song)
+                          class="font-chinese truncate text-sm font-semibold {platinumCelebrationId ===
+                          song.id
+                            ? 'platinum-text-celebration'
+                            : ''} {isVerifiedSong(song)
                             ? 'text-slate-500 [text-shadow:0_1px_0_rgba(255,255,255,0.95),0_0_7px_rgba(186,230,253,0.9),0_0_1px_rgba(15,23,42,0.7)]'
                             : ''}"
                         >
@@ -1160,7 +1199,7 @@
                         {/if}
                       </span>
                       <span class="font-chinese mt-1 block truncate text-xs text-cork-400">
-                        {song.singer ? `${song.singer} · ${song.singerHanzi}` : song.singerHanzi}
+                        {songListSingerText(song)}
                       </span>
                     </span>
                   </span>
@@ -1265,10 +1304,11 @@
                   ? 'repeat-target-bounce'
                   : ''}"
               >
-                {#if section.repeatOf && !expandRepeats}
-                  {@const target = findSection(selectedSong, section.repeatOf)}
+                {#if (section.repeatOf || section.repeatOfMany?.length) && !expandRepeats}
+                  {@const firstTargetId = section.repeatOf ?? section.repeatOfMany?.[0] ?? ''}
+                  {@const target = findSection(selectedSong, firstTargetId)}
                   <a
-                    href={`#${sectionAnchor(selectedSong, section.repeatOf)}`}
+                    href={`#${sectionAnchor(selectedSong, firstTargetId)}`}
                     class="inline-flex text-xs font-semibold tracking-[0.14em] text-cork-500 underline decoration-cork-400/50 decoration-dotted underline-offset-4 transition hover:text-cork-900 hover:decoration-cork-800"
                     aria-label={`Jump to ${target?.label ?? 'repeated section'}`}
                     onclick={(event) => jumpToRepeatedSection(event, selectedSong, section)}
@@ -1276,9 +1316,6 @@
                     {sectionLabelText(section)}
                   </a>
                 {:else}
-                  {@const expandedSection = section.repeatOf
-                    ? findSection(selectedSong, section.repeatOf)
-                    : section}
                   <div class="mb-4 flex flex-wrap items-center gap-3">
                     <p
                       class="text-xs font-semibold tracking-[0.14em] {returnTargetAnchor ===
@@ -1300,7 +1337,24 @@
                       </button>
                     {/if}
                   </div>
-                  {@render lyricLines(expandedSection?.lines ?? [])}
+                  {#if section.repeatOfMany?.length}
+                    <div class="space-y-10">
+                      {#each section.repeatOfMany as repeatedSectionId (repeatedSectionId)}
+                        {@const repeatedSection = findSection(selectedSong, repeatedSectionId)}
+                        <div>
+                          <p class="mb-4 text-xs font-semibold tracking-[0.14em] text-cork-400">
+                            {repeatedSection?.label.toUpperCase()}
+                          </p>
+                          {@render lyricLines(repeatedSection?.lines ?? [])}
+                        </div>
+                      {/each}
+                    </div>
+                  {:else}
+                    {@const expandedSection = section.repeatOf
+                      ? findSection(selectedSong, section.repeatOf)
+                      : section}
+                    {@render lyricLines(expandedSection?.lines ?? [])}
+                  {/if}
                 {/if}
               </section>
             {/each}
@@ -1397,6 +1451,31 @@
     transition: color 180ms ease;
   }
 
+  .platinum-text-celebration {
+    animation: platinum-text-shimmer 1.05s ease-out;
+  }
+
+  @keyframes platinum-text-shimmer {
+    0% {
+      color: #64748b;
+      text-shadow: 0 0 0 rgba(125, 211, 252, 0);
+    }
+    35% {
+      color: #f8fafc;
+      text-shadow:
+        0 0 5px rgba(255, 255, 255, 0.95),
+        0 0 12px rgba(125, 211, 252, 0.95),
+        0 0 22px rgba(186, 230, 253, 0.75);
+    }
+    100% {
+      color: #64748b;
+      text-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.95),
+        0 0 7px rgba(186, 230, 253, 0.9),
+        0 0 1px rgba(15, 23, 42, 0.7);
+    }
+  }
+
   @keyframes repeat-target-bounce {
     0% {
       transform: translateY(0);
@@ -1420,6 +1499,10 @@
 
   @media (prefers-reduced-motion: reduce) {
     .repeat-target-bounce {
+      animation: none;
+    }
+
+    .platinum-text-celebration {
       animation: none;
     }
   }
