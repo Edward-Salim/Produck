@@ -2,8 +2,15 @@ import type { WordData } from './+page.server.js';
 import { pinyin as makePinyin } from 'pinyin-pro';
 import {
   HSK2_SECTION_SENTENCES,
-  HSK2_SENTENCES_PER_SECTION
+  HSK2_MIN_SENTENCES_PER_SECTION
 } from '$lib/data/hsk2-typing-sentences.js';
+import { classroomTopics } from '$lib/data/hsk1-course.js';
+import { hsk2ClassroomTopics } from '$lib/data/hsk2-course.js';
+import {
+  HSK3_MIN_SENTENCES_PER_SECTION,
+  HSK3_SECTION_SENTENCES
+} from '$lib/data/hsk3-typing-sentences.js';
+import { hsk3ClassroomTopics } from '$lib/data/hsk3-course.js';
 
 export interface SentenceData {
   hanzi: string;
@@ -13,11 +20,41 @@ export interface SentenceData {
   section?: string;
 }
 
-export const HSK1_SENTENCES_PER_SECTION = 3;
+export const HSK1_MIN_SENTENCES_PER_SECTION = 3;
 
 // These are required by the HSK 1 course sections but are absent from the supplied Pleco Level 1 file.
-const HSK1_REQUIRED_COURSE_TERMS = ['可以', '怎么样'];
-const HSK2_REQUIRED_COURSE_TERMS = ['漂漂亮亮'];
+const HSK1_REQUIRED_COURSE_TERMS = ['可以', '怎么样', '千', '角', '漂亮', '生'];
+// These are printed in the HSK 2 course but absent as standalone cumulative Pleco entries.
+// “游” is needed to validate the separated form “游泳游了……”.
+const HSK2_REQUIRED_COURSE_TERMS = ['漂漂亮亮', '苹果', '咖啡', '游泳', '游'];
+// These are printed in the HSK 3 course but absent as cumulative Pleco entries.
+// Single characters support the course's separated or erhua forms.
+const HSK3_REQUIRED_COURSE_TERMS = [
+  '箱子',
+  '儿',
+  '踢',
+  '宾馆',
+  '玩',
+  '西瓜',
+  '极了',
+  '泳',
+  '遇到',
+  '电梯',
+  '泰国',
+  '刮起',
+  '雨伞',
+  '蛋糕',
+  '聊天',
+  '根据',
+  '兴趣',
+  '选择',
+  '关于',
+  '熊猫',
+  '觉',
+  '了解',
+  '锻炼',
+  '视频'
+];
 
 const HSK1_SECTION_SENTENCES: Record<string, string[]> = {
   '汉语的基本语序 · Basic word order in Chinese': ['我爱你', '我喝水', '他吃米饭'],
@@ -119,15 +156,138 @@ const HSK1_SECTION_SENTENCES: Record<string, string[]> = {
   ]
 };
 
+// Extra prompts cover explicit variants taught by the course that cannot fit in the original
+// three-sentence sampler. Keeping them separate makes the coverage additions easy to audit.
+const HSK1_COVERAGE_SENTENCES: Record<string, Pick<SentenceData, 'hanzi' | 'translation'>[]> = {
+  '“是”字句 · Sentences with 是': [{ hanzi: '我不是老师', translation: 'I am not a teacher.' }],
+  '结构助词“的” · Structural particle 的': [
+    { hanzi: '这是我妈妈', translation: 'This is my mother.' }
+  ],
+  '数字的表达 · Expressing numbers': [
+    { hanzi: '我有两本书', translation: 'I have two books.' },
+    { hanzi: '他有二十二本书', translation: 'He has twenty-two books.' },
+    { hanzi: '这个手机二百零八块钱', translation: 'This mobile phone costs 208 yuan.' },
+    { hanzi: '学校有两千个学生', translation: 'The school has two thousand students.' }
+  ],
+  '名量词和名量结构 · Nominal Measure Words and [Num+M+(N)] Structure': [
+    { hanzi: '我家有四口人', translation: 'There are four people in my family.' },
+    { hanzi: '我买两个', translation: 'I will buy two.' }
+  ],
+  '时间的表达（1） · Expressing time': [
+    { hanzi: '今天五月一日', translation: 'Today is May 1st.' },
+    {
+      hanzi: '二零二六年七月十三日，星期一',
+      translation: 'Monday, July 13, 2026.'
+    }
+  ],
+  '名词谓语句 · Nominal-predicate sentences': [
+    { hanzi: '明天星期六', translation: 'Tomorrow is Saturday.' },
+    { hanzi: '现在九点', translation: "It is nine o'clock now." }
+  ],
+  '能愿动词“会” · Modal Verb 会': [{ hanzi: '你会做饭吗？', translation: 'Can you cook?' }],
+  '时间的表达（2） · Expression of Time (2)': [
+    { hanzi: '现在上午九点', translation: 'It is nine in the morning now.' },
+    { hanzi: '现在中午十二点', translation: 'It is twelve noon now.' }
+  ],
+  '副词、时间词语作状语的位置 · Position of Adverbs and Time Expressions as Adverbials': [
+    { hanzi: '妹妹很高兴', translation: 'My younger sister is very happy.' },
+    { hanzi: '我不想去', translation: 'I do not want to go.' }
+  ],
+  '方位词 · Positional Words': [
+    { hanzi: '书在桌子下', translation: 'The book is under the table.' },
+    { hanzi: '书在房间里', translation: 'The book is in the room.' },
+    { hanzi: '我们在学校外边', translation: 'We are outside the school.' },
+    { hanzi: '饭店在商店后边', translation: 'The restaurant is behind the store.' }
+  ],
+  '存现句（1） · Existential Sentences (1)': [
+    {
+      hanzi: '电影院前边不是商店',
+      translation: 'The place in front of the cinema is not a store.'
+    },
+    { hanzi: '桌子下没有书', translation: 'There is no book under the table.' }
+  ],
+  '表示序数的“第” · Indicating Ordinal Numbers': [
+    { hanzi: '我是第一', translation: 'I am first.' }
+  ],
+  '钱数的表达 · Expression of Amount of Money': [
+    { hanzi: '这个东西六块零两分钱', translation: 'This item costs six yuan and two fen.' },
+    { hanzi: '这个东西三元两角', translation: 'This item costs three yuan and two jiao.' }
+  ],
+  '形容词谓语句 · Adjectival-Predicate Sentences': [
+    { hanzi: '那个菜好吃', translation: 'That dish is tasty.' },
+    { hanzi: '这儿的水果真不少', translation: 'There really is a lot of fruit here.' }
+  ],
+  '正反问 · Affirmative-Negative Questions': [
+    { hanzi: '他是不是老师？', translation: 'Is he a teacher?' },
+    { hanzi: '昨天你去没去书店？', translation: 'Did you go to the bookstore yesterday?' }
+  ],
+  '时间副词“在/正在” · Temporal Adverbs 在/正在': [
+    { hanzi: '我们读书呢', translation: 'We are reading.' },
+    {
+      hanzi: '我没买菜，买水果呢',
+      translation: 'I am not buying vegetables; I am buying fruit.'
+    },
+    { hanzi: '学生们正在上课呢', translation: 'The students are having class.' }
+  ],
+  '非主谓句 · Non-Subject-Predicate Sentences': [
+    { hanzi: '真漂亮', translation: 'Really beautiful!' },
+    { hanzi: '没关系', translation: 'It does not matter.' }
+  ],
+  '语气助词“了”（1） · Modal Particle 了 (1)': [
+    { hanzi: '弟弟还没起来呢', translation: 'My younger brother has not gotten up yet.' },
+    { hanzi: '十二点了，我们吃饭吧', translation: "It is twelve o'clock; let us eat." }
+  ],
+  '能愿动词“可以” · Modal Verb 可以': [
+    { hanzi: '这里可以坐三个人', translation: 'Three people can sit here.' },
+    { hanzi: '这个手机可以打电话', translation: 'This mobile phone can make calls.' }
+  ],
+  '离合词（1） · Separable Words (1)': [
+    { hanzi: '我晚上十点睡觉', translation: 'I go to sleep at ten in the evening.' },
+    { hanzi: '他下班了', translation: 'He has finished work.' },
+    { hanzi: '我们说了很多话', translation: 'We talked a lot.' },
+    { hanzi: '妹妹生了病', translation: 'My younger sister became ill.' }
+  ]
+};
+
 export function generateSentences(_words: WordData[]): SentenceData[] {
   const byHanzi = new Map(SENTENCES.map((sentence) => [sentence.hanzi, sentence]));
+  const courseSectionNames = new Set(classroomTopics.map((topic) => topic.title.split(' · ')[0]));
+  const typingSectionNames = new Set(
+    Object.keys(HSK1_SECTION_SENTENCES).map((section) => section.split(' · ')[0])
+  );
+  const missingSections = [...courseSectionNames].filter(
+    (section) => !typingSectionNames.has(section)
+  );
+  const extraSections = [...typingSectionNames].filter(
+    (section) => !courseSectionNames.has(section)
+  );
+  if (missingSections.length > 0 || extraSections.length > 0) {
+    throw new Error(
+      `HSK 1 course/typing section mismatch. Missing: ${missingSections.join(', ') || 'none'}. Extra: ${extraSections.join(', ') || 'none'}.`
+    );
+  }
+
   const assigned = new Set<string>();
-  const hsk1 = Object.entries(HSK1_SECTION_SENTENCES).flatMap(([section, hanziList]) => {
-    if (hanziList.length !== HSK1_SENTENCES_PER_SECTION) {
-      throw new Error(`${section} must have exactly ${HSK1_SENTENCES_PER_SECTION} sentences`);
+  const hsk1 = Object.entries(HSK1_SECTION_SENTENCES).flatMap(([section, baseHanziList]) => {
+    const coverageSentences = HSK1_COVERAGE_SENTENCES[section] ?? [];
+    const coverageByHanzi = new Map(
+      coverageSentences.map((sentence) => [sentence.hanzi, sentence])
+    );
+    const hanziList = [...baseHanziList, ...coverageByHanzi.keys()];
+    if (hanziList.length < HSK1_MIN_SENTENCES_PER_SECTION) {
+      throw new Error(`${section} must have at least ${HSK1_MIN_SENTENCES_PER_SECTION} sentences`);
     }
     return hanziList.map((hanzi) => {
-      const sentence = byHanzi.get(hanzi);
+      const coverageSentence = coverageByHanzi.get(hanzi);
+      const sentence =
+        byHanzi.get(hanzi) ??
+        (coverageSentence
+          ? {
+              ...coverageSentence,
+              pinyin: makePinyin(hanzi, { toneType: 'symbol' }),
+              level: 1
+            }
+          : undefined);
       if (!sentence || sentence.level !== 1) throw new Error(`Missing HSK 1 sentence: ${hanzi}`);
       if (assigned.has(hanzi)) throw new Error(`HSK 1 sentence assigned twice: ${hanzi}`);
       assigned.add(hanzi);
@@ -150,9 +310,27 @@ export function generateSentences(_words: WordData[]): SentenceData[] {
   }
 
   const assignedHsk2 = new Set<string>();
+  const hsk2CourseSectionNames = new Set(
+    hsk2ClassroomTopics.map((topic) => topic.title.split(' · ')[0])
+  );
+  const hsk2TypingSectionNames = new Set(
+    Object.keys(HSK2_SECTION_SENTENCES).map((section) => section.split(' · ')[0])
+  );
+  const missingHsk2Sections = [...hsk2CourseSectionNames].filter(
+    (section) => !hsk2TypingSectionNames.has(section)
+  );
+  const extraHsk2Sections = [...hsk2TypingSectionNames].filter(
+    (section) => !hsk2CourseSectionNames.has(section)
+  );
+  if (missingHsk2Sections.length > 0 || extraHsk2Sections.length > 0) {
+    throw new Error(
+      `HSK 2 course/typing section mismatch. Missing: ${missingHsk2Sections.join(', ') || 'none'}. Extra: ${extraHsk2Sections.join(', ') || 'none'}.`
+    );
+  }
+
   const hsk2 = Object.entries(HSK2_SECTION_SENTENCES).flatMap(([section, sentences]) => {
-    if (sentences.length !== HSK2_SENTENCES_PER_SECTION) {
-      throw new Error(`${section} must have exactly ${HSK2_SENTENCES_PER_SECTION} sentences`);
+    if (sentences.length < HSK2_MIN_SENTENCES_PER_SECTION) {
+      throw new Error(`${section} must have at least ${HSK2_MIN_SENTENCES_PER_SECTION} sentences`);
     }
     return sentences.map((sentence) => {
       if (assignedHsk2.has(sentence.hanzi)) {
@@ -182,7 +360,58 @@ export function generateSentences(_words: WordData[]): SentenceData[] {
     }
   }
 
-  return [...hsk1, ...hsk2, ...SENTENCES.filter((sentence) => sentence.level > 2)];
+  const hsk3CourseSectionNames = new Set(
+    hsk3ClassroomTopics.map((topic) => topic.title.split(' · ')[0])
+  );
+  const hsk3TypingSectionNames = new Set(
+    Object.keys(HSK3_SECTION_SENTENCES).map((section) => section.split(' · ')[0])
+  );
+  const missingHsk3Sections = [...hsk3CourseSectionNames].filter(
+    (section) => !hsk3TypingSectionNames.has(section)
+  );
+  const extraHsk3Sections = [...hsk3TypingSectionNames].filter(
+    (section) => !hsk3CourseSectionNames.has(section)
+  );
+  if (missingHsk3Sections.length > 0 || extraHsk3Sections.length > 0) {
+    throw new Error(
+      `HSK 3 course/typing section mismatch. Missing: ${missingHsk3Sections.join(', ') || 'none'}. Extra: ${extraHsk3Sections.join(', ') || 'none'}.`
+    );
+  }
+
+  const assignedHsk3 = new Set<string>();
+  const hsk3 = Object.entries(HSK3_SECTION_SENTENCES).flatMap(([section, sentences]) => {
+    if (sentences.length < HSK3_MIN_SENTENCES_PER_SECTION) {
+      throw new Error(`${section} must have at least ${HSK3_MIN_SENTENCES_PER_SECTION} sentences`);
+    }
+    return sentences.map((sentence) => {
+      if (assignedHsk3.has(sentence.hanzi)) {
+        throw new Error(`HSK 3 sentence assigned twice: ${sentence.hanzi}`);
+      }
+      assignedHsk3.add(sentence.hanzi);
+      return {
+        ...sentence,
+        pinyin: makePinyin(sentence.hanzi, { toneType: 'symbol' }),
+        level: 3,
+        section
+      };
+    });
+  });
+
+  const level3Vocabulary = new Set(
+    _words.filter((word) => word.level <= 3).flatMap((word) => [word.hanzi, ...word.alternatives])
+  );
+  for (const term of HSK3_REQUIRED_COURSE_TERMS) level3Vocabulary.add(term);
+  if (level3Vocabulary.size > HSK3_REQUIRED_COURSE_TERMS.length) {
+    for (const sentence of hsk3) {
+      if (!canSegmentWithVocabulary(sentence.hanzi, level3Vocabulary)) {
+        throw new Error(
+          `HSK 3 sentence uses vocabulary outside the cumulative Level 1-3 lists: ${sentence.hanzi}`
+        );
+      }
+    }
+  }
+
+  return [...hsk1, ...hsk2, ...hsk3, ...SENTENCES.filter((sentence) => sentence.level > 3)];
 }
 
 function canSegmentWithVocabulary(sentence: string, vocabulary: Set<string>): boolean {

@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import { Music, Volume2, Lightbulb } from '@lucide/svelte';
   import type { GameEngine } from './game-engine.svelte.js';
-  import { levelColorConfig } from './game-engine.svelte.js';
+  import { levelColorConfig, MASTERY_REQUIRED_SUCCESSES } from './game-engine.svelte.js';
   import hanziModeCard from '$lib/assets/tool-cards/chinese-hanzi-mode.png';
   import readingModeCard from '$lib/assets/tool-cards/chinese-reading-mode.png';
 
@@ -191,17 +191,18 @@
           <p class="mb-4 text-center text-xs leading-relaxed text-cork-300">
             Pick HSK levels for Hanzi Typing. <strong class="font-semibold text-amber-400"
               >3 hearts</strong
-            >, gain up to 5. Lose one per mistake.
+            >, gain up to 5. Lose one per mistake. Master each sentence with
+            {MASTERY_REQUIRED_SUCCESSES} correct answers.
           </p>
 
           <!-- Level grid -->
           <div class="flex w-full flex-col gap-1">
             {#each Object.entries(levelNames) as [levelStr, name] (levelStr)}
               {@const level = Number(levelStr)}
-              {@const isActive = level <= 7}
-              {@const isMastered = engine.isLevelMastered(level)}
+              {@const isActive = level <= 3}
+              {@const isMastered = isActive && engine.isLevelMastered(level)}
               {@const total = levelSentenceCounts[level] ?? 0}
-              {@const done = (engine.masteredHanzi[level] ?? []).length}
+              {@const done = engine.getLevelMasteredCount(level)}
               {@const colors = levelColorConfig[Math.min(level - 1, levelColorConfig.length - 1)]}
               {@const isSelected = engine.selectedLevels.has(level)}
               {@const goldText =
@@ -223,9 +224,6 @@
               >
                 <span class="text-xs font-semibold tracking-wide md:text-sm {goldText}">
                   {name}
-                  {#if !isActive && !isMastered}
-                    <span class="ml-2 text-[10px] italic opacity-60">Coming soon</span>
-                  {/if}
                 </span>
                 <span class="text-[10px] opacity-70 md:text-[11px] {goldText}">
                   {#if isActive}
@@ -234,6 +232,8 @@
                     {:else}
                       {total} sentences
                     {/if}
+                  {:else}
+                    <span class="font-medium opacity-60">Coming soon</span>
                   {/if}
                 </span>
               </button>
@@ -268,27 +268,37 @@
           <div class="flex w-full flex-col gap-1">
             {#each Object.entries(levelNames) as [levelStr, name] (levelStr)}
               {@const level = Number(levelStr)}
+              {@const isActive = level <= 3}
               {@const colors = levelColorConfig[Math.min(level - 1, levelColorConfig.length - 1)]}
-              {@const isSelected = engine.selectedReadingLevel === level}
+              {@const isSelected = isActive && engine.selectedReadingLevel === level}
               {@const done = engine.readingSuccessCounts[level] ?? 0}
-              {@const isReadingMastered = done >= READING_MASTERY_GOAL}
+              {@const isReadingMastered = isActive && done >= READING_MASTERY_GOAL}
               {@const readingGoldText = isReadingMastered
                 ? 'text-amber-900 drop-shadow-[0_0_6px_rgba(251,191,36,0.35)]'
                 : ''}
               <button
                 type="button"
+                disabled={!isActive}
                 class="flex w-full cursor-pointer items-center justify-between rounded-lg border px-3 py-2 text-left transition-all {isReadingMastered
                   ? colors.mastered + ' gold-plated'
                   : isSelected
                     ? colors.active
-                    : colors.base} {isSelected ? 'scale-[1.01]' : ''}"
+                    : isActive
+                      ? colors.base
+                      : 'border-cork-800/40 bg-cork-900/30 text-cork-600'} {isSelected
+                  ? 'scale-[1.01]'
+                  : ''} disabled:cursor-not-allowed"
                 onclick={() => engine.selectReadingLevel(level)}
               >
                 <span class="text-xs font-semibold tracking-wide md:text-sm {readingGoldText}">
                   {name}
                 </span>
                 <span class="text-[10px] font-medium opacity-75 md:text-[11px] {readingGoldText}">
-                  {done}x
+                  {#if isActive}
+                    {done}x
+                  {:else}
+                    <span class="opacity-60">Coming soon</span>
+                  {/if}
                 </span>
               </button>
             {/each}

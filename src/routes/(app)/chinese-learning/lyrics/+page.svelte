@@ -67,6 +67,7 @@
   let bouncedSectionAnchor = $state('');
   let returnRepeatAnchor = $state('');
   let returnTargetAnchor = $state('');
+  let highlightedRepeatTargetAnchors = $state<string[]>([]);
   let platinumCelebrationId = $state('');
   let songListHistoryOpen = false;
   let platinumCelebrationTimer: number | undefined;
@@ -104,6 +105,7 @@
     selectedId;
     returnRepeatAnchor = '';
     returnTargetAnchor = '';
+    highlightedRepeatTargetAnchors = [];
     bouncedSectionAnchor = '';
   });
 
@@ -417,7 +419,10 @@
     const repeatAnchor = sectionAnchor(song, repeat.id);
 
     returnRepeatAnchor = repeatAnchor;
-    returnTargetAnchor = targetAnchor;
+    highlightedRepeatTargetAnchors = consecutiveRepeatTargetIds(song, repeat).map((sectionId) =>
+      sectionAnchor(song, sectionId)
+    );
+    returnTargetAnchor = highlightedRepeatTargetAnchors.at(-1) ?? targetAnchor;
     bouncedSectionAnchor = '';
 
     requestAnimationFrame(() => {
@@ -433,7 +438,31 @@
     const target = returnRepeatAnchor;
     returnRepeatAnchor = '';
     returnTargetAnchor = '';
+    highlightedRepeatTargetAnchors = [];
     if (target) scrollToSection(target);
+  }
+
+  function consecutiveRepeatTargetIds(song: LyricSong, repeat: LyricSection) {
+    const clickedIndex = song.sections.findIndex((section) => section.id === repeat.id);
+    if (clickedIndex < 0) return [];
+
+    const isRepeat = (section: LyricSection | undefined) =>
+      Boolean(section && (section.repeatOf || section.repeatOfMany?.length));
+    let firstRepeatIndex = clickedIndex;
+    let lastRepeatIndex = clickedIndex;
+
+    while (isRepeat(song.sections[firstRepeatIndex - 1])) firstRepeatIndex -= 1;
+    while (isRepeat(song.sections[lastRepeatIndex + 1])) lastRepeatIndex += 1;
+
+    return [
+      ...new Set(
+        song.sections
+          .slice(firstRepeatIndex, lastRepeatIndex + 1)
+          .flatMap((section) =>
+            section.repeatOf ? [section.repeatOf] : (section.repeatOfMany ?? [])
+          )
+      )
+    ];
   }
 
   function sectionAnchor(song: LyricSong, sectionId: string) {
@@ -1318,8 +1347,9 @@
                 {:else}
                   <div class="mb-4 flex flex-wrap items-center gap-3">
                     <p
-                      class="text-xs font-semibold tracking-[0.14em] {returnTargetAnchor ===
-                        currentAnchor && !expandRepeats
+                      class="text-xs font-semibold tracking-[0.14em] {highlightedRepeatTargetAnchors.includes(
+                        currentAnchor
+                      ) && !expandRepeats
                         ? 'repeat-target-label'
                         : 'text-cork-500'}"
                     >

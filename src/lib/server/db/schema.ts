@@ -28,6 +28,7 @@ export const appUser = pgTable('app_user', {
       selectedLevels?: number[];
       highscore?: number;
       highscoreName?: string;
+      masterySuccessCounts?: Record<string, Record<string, number>>;
       readingSuccessCounts?: Record<string, number>;
       hskStudiedTopics?: string[];
       hsk2StudiedTopics?: string[];

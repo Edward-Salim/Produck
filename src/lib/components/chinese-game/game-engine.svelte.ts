@@ -13,6 +13,9 @@ export type Feedback = 'correct' | 'wrong' | null;
 export const STORAGE_KEY = 'hanzi-game-save-v2';
 const SETTINGS_KEY = 'hanzi-game-settings-v2';
 const READING_SUCCESS_KEY = 'chinese-reading-success-counts';
+export const MASTERY_REQUIRED_SUCCESSES = 2;
+export const AVAILABLE_HSK_LEVEL = 3;
+const MASTERY_PUNCT_RE = /[，。？、！；：]/g;
 
 type SavedGameData = ReturnType<GameEngine['buildGameData']>;
 
@@ -87,6 +90,7 @@ export class GameEngine {
   hintAlwaysOn = $state(false);
   hintsUsed = $state(0);
   masteredHanzi: Record<number, string[]> = $state({});
+  masterySuccessCounts: Record<number, Record<string, number>> = $state({});
 
   // ── Menu state ──
   menuScreen = $state<MenuScreen>('main');
@@ -157,9 +161,17 @@ export class GameEngine {
   }
 
   isLevelMastered(level: number): boolean {
-    const mastered = this.masteredHanzi[level] ?? [];
     const total = this.sentences.filter((s) => s.level === level).length;
-    return total > 0 && mastered.length >= total;
+    return total > 0 && this.getLevelMasteredCount(level) >= total;
+  }
+
+  getLevelMasteredCount(level: number): number {
+    const currentHanzi = new Set(
+      this.sentences
+        .filter((sentence) => sentence.level === level)
+        .map((sentence) => sentence.hanzi)
+    );
+    return (this.masteredHanzi[level] ?? []).filter((hanzi) => currentHanzi.has(hanzi)).length;
   }
 
   // ── Initialization ──
@@ -172,6 +184,61 @@ export class GameEngine {
 
   setCallbacks(cb: EngineCallbacks) {
     this.cb = { ...this.cb, ...cb };
+  }
+
+  private loadMasteryProgress(source: { masteredHanzi?: unknown; masterySuccessCounts?: unknown }) {
+    if (source.masteredHanzi != null && typeof source.masteredHanzi === 'object') {
+      this.masteredHanzi = source.masteredHanzi as Record<number, string[]>;
+    }
+    if (source.masterySuccessCounts != null && typeof source.masterySuccessCounts === 'object') {
+      this.masterySuccessCounts = source.masterySuccessCounts as Record<
+        number,
+        Record<string, number>
+      >;
+    }
+
+    // Course migrations may add terminal punctuation to an otherwise unchanged prompt.
+    // Re-key old progress to the current canonical Hanzi while retaining unrelated history.
+    const canonicalByLevel = new Map<number, Map<string, string>>();
+    for (const sentence of this.sentences) {
+      if (!canonicalByLevel.has(sentence.level)) canonicalByLevel.set(sentence.level, new Map());
+      canonicalByLevel
+        .get(sentence.level)!
+        .set(sentence.hanzi.replace(MASTERY_PUNCT_RE, ''), sentence.hanzi);
+    }
+    const canonicalMastered: Record<number, string[]> = {};
+    for (const [level, sentences] of Object.entries(this.masteredHanzi)) {
+      const canonical = canonicalByLevel.get(Number(level));
+      canonicalMastered[Number(level)] = [
+        ...new Set(
+          sentences.map((hanzi) => canonical?.get(hanzi.replace(MASTERY_PUNCT_RE, '')) ?? hanzi)
+        )
+      ];
+    }
+    this.masteredHanzi = canonicalMastered;
+
+    const canonicalCounts: Record<number, Record<string, number>> = {};
+    for (const [level, counts] of Object.entries(this.masterySuccessCounts)) {
+      const canonical = canonicalByLevel.get(Number(level));
+      const levelCounts: Record<string, number> = {};
+      for (const [hanzi, count] of Object.entries(counts)) {
+        const key = canonical?.get(hanzi.replace(MASTERY_PUNCT_RE, '')) ?? hanzi;
+        levelCounts[key] = Math.max(Number(levelCounts[key] ?? 0), Number(count));
+      }
+      canonicalCounts[Number(level)] = levelCounts;
+    }
+    this.masterySuccessCounts = canonicalCounts;
+
+    // Existing mastered sentences stay mastered after introducing the two-recall threshold.
+    const migrated = { ...this.masterySuccessCounts };
+    for (const [level, sentences] of Object.entries(this.masteredHanzi)) {
+      const levelCounts = { ...(migrated[Number(level)] ?? {}) };
+      for (const hanzi of sentences) {
+        levelCounts[hanzi] = Math.max(MASTERY_REQUIRED_SUCCESSES, Number(levelCounts[hanzi] ?? 0));
+      }
+      migrated[Number(level)] = levelCounts;
+    }
+    this.masterySuccessCounts = migrated;
   }
 
   // ── Settings ──
@@ -190,11 +257,16 @@ export class GameEngine {
           };
         }
         if (Array.isArray(p.selectedLevels)) {
-          this.selectedLevels = new Set(p.selectedLevels);
+          this.selectedLevels = new Set(
+            p.selectedLevels.filter(
+              (level: unknown) =>
+                Number.isInteger(level) &&
+                Number(level) >= 1 &&
+                Number(level) <= AVAILABLE_HSK_LEVEL
+            )
+          );
         }
-        if (p.masteredHanzi != null && typeof p.masteredHanzi === 'object') {
-          this.masteredHanzi = p.masteredHanzi as Record<number, string[]>;
-        }
+        this.loadMasteryProgress(p);
         if (p.readingSuccessCounts != null && typeof p.readingSuccessCounts === 'object') {
           this.readingSuccessCounts = p.readingSuccessCounts as Record<number, number>;
           localStorage.setItem(READING_SUCCESS_KEY, JSON.stringify(this.readingSuccessCounts));
@@ -210,11 +282,16 @@ export class GameEngine {
         this.soundsEnabled = s.sounds ?? true;
         this.hintAlwaysOn = s.hintAlwaysOn ?? false;
         if (Array.isArray(s.selectedLevels)) {
-          this.selectedLevels = new Set(s.selectedLevels);
+          this.selectedLevels = new Set(
+            s.selectedLevels.filter(
+              (level: unknown) =>
+                Number.isInteger(level) &&
+                Number(level) >= 1 &&
+                Number(level) <= AVAILABLE_HSK_LEVEL
+            )
+          );
         }
-        if (s.masteredHanzi != null && typeof s.masteredHanzi === 'object') {
-          this.masteredHanzi = s.masteredHanzi as Record<number, string[]>;
-        }
+        this.loadMasteryProgress(s);
         if (s.readingSuccessCounts != null && typeof s.readingSuccessCounts === 'object') {
           this.readingSuccessCounts = s.readingSuccessCounts as Record<number, number>;
         }
@@ -234,6 +311,7 @@ export class GameEngine {
           hintAlwaysOn: this.hintAlwaysOn,
           selectedLevels: [...this.selectedLevels],
           masteredHanzi: this.masteredHanzi,
+          masterySuccessCounts: this.masterySuccessCounts,
           readingSuccessCounts: this.readingSuccessCounts
         })
       });
@@ -247,6 +325,7 @@ export class GameEngine {
           hintAlwaysOn: this.hintAlwaysOn,
           selectedLevels: [...this.selectedLevels],
           masteredHanzi: this.masteredHanzi,
+          masterySuccessCounts: this.masterySuccessCounts,
           readingSuccessCounts: this.readingSuccessCounts
         })
       );
@@ -301,13 +380,13 @@ export class GameEngine {
   }
 
   selectReadingLevel(level: number) {
-    if (level > 7) return;
+    if (level < 1 || level > AVAILABLE_HSK_LEVEL) return;
     this.selectedReadingLevel = level;
     this.cb.onClick?.();
   }
 
   toggleLevel(level: number) {
-    if (level > 7) return;
+    if (level < 1 || level > AVAILABLE_HSK_LEVEL) return;
     this.cb.onClick?.();
     const next = new Set(this.selectedLevels);
     if (next.has(level)) {
@@ -391,15 +470,24 @@ export class GameEngine {
       if (this.streak > this.bestStreak) this.bestStreak = this.streak;
       this.totalCorrect += this.currentSentence?.level ?? 1;
 
-      // Track mastered sentences per level
+      // Require two successful recalls before a sentence is considered mastered.
       const lv = this.currentSentence?.level ?? 0;
       if (lv > 0) {
         const hanzi = this.currentSentence!.hanzi;
+        const levelCounts = this.masterySuccessCounts[lv] ?? {};
+        const successCount = Math.min(
+          MASTERY_REQUIRED_SUCCESSES,
+          Number(levelCounts[hanzi] ?? 0) + 1
+        );
+        this.masterySuccessCounts = {
+          ...this.masterySuccessCounts,
+          [lv]: { ...levelCounts, [hanzi]: successCount }
+        };
         const mastered = this.masteredHanzi[lv] ?? [];
-        if (!mastered.includes(hanzi)) {
+        if (successCount >= MASTERY_REQUIRED_SUCCESSES && !mastered.includes(hanzi)) {
           this.masteredHanzi[lv] = [...mastered, hanzi];
-          this.saveSettings();
         }
+        this.saveSettings();
       }
 
       if (this.health < this.absoluteMaxHealth && Math.random() < 0.2) {
@@ -595,7 +683,9 @@ export class GameEngine {
     const byHanzi = new Map(this.sentences.map((s: SentenceData) => [s.hanzi, s]));
     const savedShuffled = data.shuffledHanzi
       .map((h) => byHanzi.get(h))
-      .filter(Boolean) as SentenceData[];
+      .filter((sentence): sentence is SentenceData =>
+        Boolean(sentence && sentence.level <= AVAILABLE_HSK_LEVEL)
+      );
     if (savedShuffled.length === 0) return false;
 
     this.shuffled = savedShuffled;
@@ -607,7 +697,9 @@ export class GameEngine {
     this.bestStreak = data.bestStreak;
     this.streak = data.streak;
     this.currentLevel = data.currentLevel;
-    this.selectedLevels = new Set(data.selectedLevels);
+    this.selectedLevels = new Set(
+      data.selectedLevels.filter((level) => level >= 1 && level <= AVAILABLE_HSK_LEVEL)
+    );
     this.gameState = data.gameState;
 
     const idx = (data.poolIndex - 1 + savedShuffled.length) % savedShuffled.length;

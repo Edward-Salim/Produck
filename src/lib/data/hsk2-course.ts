@@ -29,6 +29,53 @@ export const hsk2ClassroomTopics: ClassroomTopic[] = hsk2Lessons.flatMap((lesson
   lesson.classroom.map((title) => ({ title, lesson }))
 );
 
+export const hsk2EnglishGrammarEquivalents: Record<string, string> = {
+  '语气助词“吧”（2）': 'Tag questions',
+  '“是……的”句': 'It was … that …',
+  兼语句: 'Ask / let someone do',
+  '固定格式“还是……吧”': 'Had better',
+  '用“多”表达概数': 'Over / more than',
+  '动词或动词性短语、主谓短语作定语': 'Relative clauses',
+  结果补语: 'Verb + result',
+  '动词重叠（1）': 'Briefly / a little',
+  '动词重叠（2）': 'Did briefly',
+  '动态助词“过”': 'Have ever',
+  '因果复句“因为……，所以……”': 'Because / so',
+  '“的”字短语': 'The one / ones',
+  '简单趋向补语（1）': 'Come in / go out',
+  '简单趋向补语（2）': 'Bring in / take out',
+  '固定格式“都……了”': 'Already / by now',
+  '固定短语“什么的”': 'And so on',
+  '结构助词“地”': '“-ly” adverbs',
+  '紧缩复句“一……就……”': 'As soon as',
+  '状态补语（1）': 'Verb + adverb',
+  '状态补语（2）': 'Verb + object + adverb',
+  '比较句（1）': '“-er” / more … than',
+  '比较句（2）': 'Even “-er” / more',
+  '转折复句“虽然……，但是……”': 'Although / but',
+  '比较句（3）': 'Not as … as',
+  '动词“离”': 'Distance from',
+  '时量补语（1）': 'For + duration',
+  主谓谓语句: 'As for …',
+  选择问句: 'A or B?',
+  '固定格式“要/快/快要/就要……了”': 'Be about to',
+  '动态助词“着”（1）': 'Be “-ing” / remain',
+  '动态助词“着”（2）': 'Ongoing actions / states',
+  '程度副词“最”': 'Superlatives',
+  '比较句（4）': 'Much “-er” / much more',
+  '比较句（5）': 'Do … better than',
+  '比较句（6）': 'Do something better than',
+  '双宾语句（2）': 'Give someone something',
+  '比较句（7）': 'Three years older',
+  '比较句（8）': 'A little “-er”',
+  '存现句（2）': 'There is / are',
+  '程度副词“多”': 'How + adjective!',
+  复合趋向补语: 'Come in / go out',
+  '动量补语（1）': 'Once / twice',
+  '动量补语（2）': 'Once / twice + object',
+  '“有”字句（2）': 'For / in + duration'
+};
+
 function guide(zh: string, en: string, examples: string[], pattern = ''): BookTopicGuide {
   return { summary: en, pattern, examples: [], blocks: [{ zh, en, examples }] };
 }

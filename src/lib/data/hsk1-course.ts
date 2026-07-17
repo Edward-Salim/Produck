@@ -217,6 +217,47 @@ export const classroomTopics: ClassroomTopic[] = lessons.flatMap((lesson) =>
   lesson.classroom.map((title) => ({ title, lesson }))
 );
 
+export const englishGrammarEquivalents: Record<string, string> = {
+  汉语的基本语序: 'Subject–Verb–Object',
+  '“是”字句': 'Am / is / are',
+  '结构助词“的”': '“’s” / “of”',
+  '用“吗”的是非问句': 'Yes/no questions',
+  '“有”字句（1）': 'Have / has',
+  数字的表达: 'Cardinal numbers',
+  '语气助词“呢”（1）': 'What about you?',
+  名量词和名量结构: 'A cup / piece of',
+  '时间的表达（1）': 'Dates and weekdays',
+  名词谓语句: '“Be” with age / dates',
+  '能愿动词“会”': 'Can / know how to',
+  '能愿动词“想”': 'Want to',
+  '连动句（1）': 'Verb + to + verb',
+  '疑问代词“怎么”': 'How?',
+  '时间的表达（2）': 'Telling time',
+  '语气助词“吧”（1）': 'Let’s / shall we',
+  '副词、时间词语作状语的位置': 'Adverb placement',
+  方位词: 'In / on / under',
+  '介词“在”': 'At / in + place',
+  '能愿动词“能”': 'Can / be able to',
+  '存现句（1）': 'There is / are',
+  时间词语和处所词语同时作状语的顺序: 'Time–place order',
+  '表示序数的“第”': 'First / second / third',
+  钱数的表达: 'Dollars and cents',
+  形容词谓语句: 'Be + adjective',
+  '疑问代词“怎么样”': 'How is …?',
+  正反问: 'Yes/no questions',
+  '时间副词“在/正在”': 'Present continuous',
+  '能愿动词“要”': 'Want to / going to',
+  非主谓句: 'It’s raining',
+  '语气助词“了”（1）': 'Now / already',
+  '“太……了”格式': 'Too + adjective',
+  '能愿动词“可以”': 'May / can',
+  '“动词+一下”结构': 'Briefly / a little',
+  '双宾语句（1）': 'Give someone something',
+  '动态助词“了”（2）': 'Simple past / present perfect',
+  '范围副词“都”': 'All / both',
+  '并列复句“……，还/也……”': 'And / also'
+};
+
 const bookTopicGuides: Record<string, BookTopicGuide> = {
   '汉语的基本语序 · Basic word order in Chinese': {
     summary:
@@ -329,7 +370,7 @@ const bookTopicGuides: Record<string, BookTopicGuide> = {
   },
   '时间的表达（2） · Expression of Time (2)': {
     summary:
-      'The words “点” and “分” are used to indicate specific points in time. “点” is used for whole hours, while “分” is used when minutes are involved. The word “分” can be omitted when the time is exactly ten minutes, but for times less than ten minutes, “零” must be pronounced. Time nouns such as “上午”, “中午”, “下午”, and “晚上” can be used to express time periods, and they can be directly followed by a specific time.',
+      'The words “点” and “分” are used to indicate specific points in time. “点” is used for whole hours, while “分” is used when minutes are involved. The word “分” can usually be omitted. However, when the time is exactly ten minutes, “分” cannot be omitted. For times less than ten minutes, “零” must be pronounced. Time nouns such as “上午”, “中午”, “下午”, and “晚上” can be used to express time periods, and they can be directly followed by a specific time.',
     pattern: 'time period + number + 点 + 分',
     examples: [],
     useTableSections: true

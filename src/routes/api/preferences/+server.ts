@@ -114,6 +114,26 @@ export const POST: RequestHandler = async ({ request, locals }) => {
     prefs.masteredHanzi = current.masteredHanzi;
   }
 
+  if (body.masterySuccessCounts !== undefined) {
+    const incoming = body.masterySuccessCounts as Record<string, Record<string, number>>;
+    const stored = (current.masterySuccessCounts as Record<string, Record<string, number>>) ?? {};
+    const merged: Record<string, Record<string, number>> = {};
+    for (const level of new Set([...Object.keys(stored), ...Object.keys(incoming)])) {
+      const storedLevel = stored[level] ?? {};
+      const incomingLevel = incoming[level] ?? {};
+      merged[level] = {};
+      for (const hanzi of new Set([...Object.keys(storedLevel), ...Object.keys(incomingLevel)])) {
+        merged[level][hanzi] = Math.min(
+          2,
+          Math.max(0, Number(storedLevel[hanzi] ?? 0), Number(incomingLevel[hanzi] ?? 0))
+        );
+      }
+    }
+    prefs.masterySuccessCounts = merged;
+  } else {
+    prefs.masterySuccessCounts = current.masterySuccessCounts;
+  }
+
   if (body.readingSuccessCounts !== undefined && body.readingSuccessCounts != null) {
     const incoming = body.readingSuccessCounts as Record<string, number>;
     const stored = (current.readingSuccessCounts as Record<string, number>) ?? {};

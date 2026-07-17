@@ -61,7 +61,9 @@ export const POST: RequestHandler = async ({ request, locals, url, platform }) =
     allowCache?: unknown;
   };
   const requestedLevel = Number(body.level);
-  const level = (CHINESE_READING_LEVELS.has(requestedLevel) ? requestedLevel : 1) as HskLevel;
+  const level = (
+    CHINESE_READING_LEVELS.has(requestedLevel) && requestedLevel <= 3 ? requestedLevel : 1
+  ) as HskLevel;
   const force = body.force === true;
   const allowCache = body.allowCache === true;
 

@@ -7,6 +7,7 @@
   import {
     chineseExplanations,
     classroomTopics,
+    englishGrammarEquivalents,
     getBookTopicGuide,
     hskLevels,
     topicTables
@@ -15,36 +16,40 @@
     getHsk2TopicGuide,
     hsk2ChineseExplanations,
     hsk2ClassroomTopics,
+    hsk2EnglishGrammarEquivalents,
     hsk2TopicTables
   } from '$lib/data/hsk2-course.js';
   import {
     getHsk3TopicGuide,
     hsk3ChineseExplanations,
     hsk3ClassroomTopics,
+    hsk3EnglishGrammarEquivalents,
     hsk3TopicTables
   } from '$lib/data/hsk3-course.js';
   import '$lib/components/chinese-game/game.css';
 
+  let { data } = $props();
+
   let selectedLevel = $state(1);
   let glossaryOpen = $state(false);
   let searchQuery = $state('');
-  let studiedTopicKeys = $state<string[]>([]);
-  let studiedHsk2TopicKeys = $state<string[]>([]);
-  let studiedHsk3TopicKeys = $state<string[]>([]);
-  let allHsk1Studied = $derived(
+  let masteredHsk1TopicKeys = $state<string[]>([]);
+  let masteredHsk2TopicKeys = $state<string[]>([]);
+  let masteredHsk3TopicKeys = $state<string[]>([]);
+  let allHsk1Mastered = $derived(
     classroomTopics.length > 0 &&
-      classroomTopics.every((topic) => studiedTopicKeys.includes(topic.title.split(' · ')[0]))
+      classroomTopics.every((topic) => masteredHsk1TopicKeys.includes(topic.title.split(' · ')[0]))
   );
-  let allHsk2Studied = $derived(
+  let allHsk2Mastered = $derived(
     hsk2ClassroomTopics.length > 0 &&
       hsk2ClassroomTopics.every((topic) =>
-        studiedHsk2TopicKeys.includes(topic.title.split(' · ')[0])
+        masteredHsk2TopicKeys.includes(topic.title.split(' · ')[0])
       )
   );
-  let allHsk3Studied = $derived(
+  let allHsk3Mastered = $derived(
     hsk3ClassroomTopics.length > 0 &&
       hsk3ClassroomTopics.every((topic) =>
-        studiedHsk3TopicKeys.includes(topic.title.split(' · ')[0])
+        masteredHsk3TopicKeys.includes(topic.title.split(' · ')[0])
       )
   );
 
@@ -113,9 +118,9 @@
         {#each hskLevels as level}
           {@const isAvailable = level <= 3}
           {@const isComplete =
-            (level === 1 && allHsk1Studied) ||
-            (level === 2 && allHsk2Studied) ||
-            (level === 3 && allHsk3Studied)}
+            (level === 1 && allHsk1Mastered) ||
+            (level === 2 && allHsk2Mastered) ||
+            (level === 3 && allHsk3Mastered)}
           <button
             type="button"
             disabled={!isAvailable}
@@ -127,9 +132,7 @@
               : selectedLevel === level
                 ? 'cursor-pointer border-red-700 bg-red-700 text-white'
                 : isAvailable
-                  ? level === 3
-                    ? 'cursor-pointer border-cork-200 bg-cork-100/70 text-cork-400'
-                    : 'cursor-pointer border-cork-300 bg-white/75 text-cork-600'
+                  ? 'cursor-pointer border-cork-200 bg-cork-100/70 text-cork-400'
                   : 'cursor-not-allowed border-cork-200 bg-cork-100/70 text-cork-400'}"
           >
             HSK {level}{isAvailable ? '' : ' · Soon'}
@@ -170,8 +173,12 @@
           getGuide={getBookTopicGuide}
           explanations={chineseExplanations}
           tables={topicTables}
+          englishEquivalents={englishGrammarEquivalents}
           {searchQuery}
-          onStudiedChange={(topics) => (studiedTopicKeys = topics)}
+          active={selectedLevel === 1}
+          typingLevel={1}
+          typingSectionHanzi={data.typingSectionHanzi[1]}
+          onMasteryChange={(topics) => (masteredHsk1TopicKeys = topics)}
         />
       </section>
     </div>
@@ -207,9 +214,12 @@
           getGuide={getHsk2TopicGuide}
           explanations={hsk2ChineseExplanations}
           tables={hsk2TopicTables}
+          englishEquivalents={hsk2EnglishGrammarEquivalents}
           {searchQuery}
-          preferenceKey="hsk2StudiedTopics"
-          onStudiedChange={(topics) => (studiedHsk2TopicKeys = topics)}
+          active={selectedLevel === 2}
+          typingLevel={2}
+          typingSectionHanzi={data.typingSectionHanzi[2]}
+          onMasteryChange={(topics) => (masteredHsk2TopicKeys = topics)}
         />
       </section>
     </div>
@@ -245,9 +255,12 @@
           getGuide={getHsk3TopicGuide}
           explanations={hsk3ChineseExplanations}
           tables={hsk3TopicTables}
+          englishEquivalents={hsk3EnglishGrammarEquivalents}
           {searchQuery}
-          preferenceKey="hsk3StudiedTopics"
-          onStudiedChange={(topics) => (studiedHsk3TopicKeys = topics)}
+          active={selectedLevel === 3}
+          typingLevel={3}
+          typingSectionHanzi={data.typingSectionHanzi[3]}
+          onMasteryChange={(topics) => (masteredHsk3TopicKeys = topics)}
         />
       </section>
     </div>

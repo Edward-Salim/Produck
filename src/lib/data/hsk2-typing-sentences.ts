@@ -3,9 +3,9 @@ export interface Hsk2SectionSentence {
   translation: string;
 }
 
-export const HSK2_SENTENCES_PER_SECTION = 3;
+export const HSK2_MIN_SENTENCES_PER_SECTION = 3;
 
-export const HSK2_SECTION_SENTENCES: Record<string, Hsk2SectionSentence[]> = {
+const HSK2_BASE_SECTION_SENTENCES: Record<string, Hsk2SectionSentence[]> = {
   '语气助词“吧”（2） · Modal Particle “吧” (2)': [
     {
       hanzi: '你是老师吧？',
@@ -638,3 +638,203 @@ export const HSK2_SECTION_SENTENCES: Record<string, Hsk2SectionSentence[]> = {
     }
   ]
 };
+
+// These prompts cover explicit course variants that do not fit in the original
+// three-sentence sampler. Existing prompts stay unchanged so saved mastery is preserved.
+const HSK2_COVERAGE_SENTENCES: Record<string, Hsk2SectionSentence[]> = {
+  '“是……的”句 · “是……的” Sentence': [
+    {
+      hanzi: '苹果在哪儿买的？',
+      translation: 'Where were the apples bought?'
+    },
+    {
+      hanzi: '我们是来旅游的。',
+      translation: 'We came to travel.'
+    },
+    {
+      hanzi: '这个菜是妈妈做的。',
+      translation: 'Mom was the one who made this dish.'
+    }
+  ],
+  '结果补语 · Complement of Result': [
+    {
+      hanzi: '你吃完饭了没有？',
+      translation: 'Have you finished eating?'
+    },
+    {
+      hanzi: '你学没学会？',
+      translation: 'Did you manage to learn it?'
+    }
+  ],
+  '动词重叠（1） · Verb Reduplication (1)': [
+    {
+      hanzi: '你想一想。',
+      translation: 'Think about it for a moment.'
+    },
+    {
+      hanzi: '我想休息休息。',
+      translation: 'I want to rest for a while.'
+    },
+    {
+      hanzi: '你来帮帮忙吧。',
+      translation: 'Come and help a little.'
+    }
+  ],
+  '动词重叠（2） · Verb Reduplication (2)': [
+    {
+      hanzi: '我休息了一下。',
+      translation: 'I rested for a little while.'
+    }
+  ],
+  '动态助词“过” · Aspect Particle “过”': [
+    {
+      hanzi: '你吃过饺子没有？',
+      translation: 'Have you eaten dumplings before?'
+    },
+    {
+      hanzi: '你看没看过那个电影？',
+      translation: 'Have you seen that movie before?'
+    }
+  ],
+  '因果复句“因为……，所以……” · Causal Complex Sentence “因为……，所以……”': [
+    {
+      hanzi: '因为我生病了，今天没去上班。',
+      translation: 'Because I was sick, I did not go to work today.'
+    }
+  ],
+  '“的”字短语 · “的” Phrase': [
+    {
+      hanzi: '这是我的。',
+      translation: 'This is mine.'
+    },
+    {
+      hanzi: '那个书包是老师的。',
+      translation: 'That schoolbag belongs to the teacher.'
+    }
+  ],
+  '简单趋向补语（1） · Simple Complement of Direction (1)': [
+    {
+      hanzi: '你下来吧。',
+      translation: 'Come down.'
+    },
+    {
+      hanzi: '你出去吧。',
+      translation: 'Go out.'
+    },
+    {
+      hanzi: '我回来了。',
+      translation: 'I came back.'
+    },
+    {
+      hanzi: '你上去吧。',
+      translation: 'Go up.'
+    }
+  ],
+  '简单趋向补语（2） · Simple Complement of Direction (2)': [
+    {
+      hanzi: '你拿一本书来。',
+      translation: 'Bring a book here.'
+    },
+    {
+      hanzi: '爸爸买回了很多水果。',
+      translation: 'Dad bought a lot of fruit and brought it back.'
+    },
+    {
+      hanzi: '妈妈拿出了二十块钱。',
+      translation: 'Mom took out twenty yuan.'
+    }
+  ],
+  '紧缩复句“一……就……” · Contracted Complex Sentence “一……就……”': [
+    {
+      hanzi: '一到星期六，他就去打篮球。',
+      translation: 'As soon as Saturday arrives, he goes to play basketball.'
+    }
+  ],
+  '状态补语（1） · Complement of State (1)': [
+    {
+      hanzi: '你跑得快吗？',
+      translation: 'Do you run fast?'
+    },
+    {
+      hanzi: '他来得早不早？',
+      translation: 'Did he come early?'
+    }
+  ],
+  '比较句（3） · Comparative Sentences (3)': [
+    {
+      hanzi: '昨天没有今天这么冷。',
+      translation: 'Yesterday was not as cold as today.'
+    },
+    {
+      hanzi: '这块手表没有那块好看。',
+      translation: 'This watch is not as attractive as that one.'
+    }
+  ],
+  '时量补语（1） · Complement of Duration (1)': [
+    {
+      hanzi: '我等了她一个小时。',
+      translation: 'I waited for her for an hour.'
+    },
+    {
+      hanzi: '我游泳游了一个下午。',
+      translation: 'I swam for an entire afternoon.'
+    }
+  ],
+  '固定格式“要/快/快要/就要……了” · Fixed Pattern “要/快/快要/就要……了”': [
+    {
+      hanzi: '饭菜快要做好了。',
+      translation: 'The food is almost ready.'
+    }
+  ],
+  '动态助词“着”（2） · Aspect Particle “着” (2)': [
+    {
+      hanzi: '他没拿着咖啡。',
+      translation: 'He is not holding the coffee.'
+    },
+    {
+      hanzi: '她坐着没有？',
+      translation: 'Is she sitting?'
+    },
+    {
+      hanzi: '她拿没拿着手机？',
+      translation: 'Is she holding her phone?'
+    }
+  ],
+  '程度副词“多” · Adverb of Degree “多”': [
+    {
+      hanzi: '一个人在这儿多没意思啊！',
+      translation: 'How boring it is to be here alone!'
+    }
+  ],
+  '复合趋向补语 · Compound Complement of Direction': [
+    {
+      hanzi: '我们走下去吧。',
+      translation: 'Let us walk down.'
+    },
+    {
+      hanzi: '妈妈让我买回一些菜来。',
+      translation: 'Mom asked me to buy some vegetables and bring them back.'
+    },
+    {
+      hanzi: '他站起来了。',
+      translation: 'He stood up.'
+    },
+    {
+      hanzi: '她跑过来了。',
+      translation: 'She ran over here.'
+    }
+  ],
+  '动量补语（1） · Complement of Frequency (1)': [
+    {
+      hanzi: '我去过一次北京。',
+      translation: 'I have been to Beijing once.'
+    }
+  ]
+};
+
+export const HSK2_SECTION_SENTENCES: Record<string, Hsk2SectionSentence[]> = Object.fromEntries(
+  Object.entries(HSK2_BASE_SECTION_SENTENCES).map(([section, sentences]) => [
+    section,
+    [...sentences, ...(HSK2_COVERAGE_SENTENCES[section] ?? [])]
+  ])
+);

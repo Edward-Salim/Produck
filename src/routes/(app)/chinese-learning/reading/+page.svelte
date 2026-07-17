@@ -51,7 +51,7 @@
     error?: string;
   };
 
-  const levels = [1, 2, 3, 4, 5, 6, 7];
+  const levels = [1, 2, 3];
   const OPTION_LABELS = ['A', 'B', 'C'];
   const READING_JOB_POLL_MS = 2500;
   const READING_SUCCESS_KEY = 'chinese-reading-success-counts';
