@@ -1,0 +1,500 @@
+爱;ai4;love;爫 (claw);我爱你。 I love you.
+爱好;ai4hao4;hobby;爫 (claw), 女 (woman);我的爱好是看书。 My hobby is reading.
+八;ba1;eight;八 (eight);我有八本书。 I have eight books.
+爸爸;ba4ba5;father;父 (father);爸爸能来。 Dad can come.
+吧;ba5;suggestion particle;口 (mouth);我们走吧！ Let's go!
+白;bai2;white;白 (white);我喜欢白衣服。 I like white clothes.
+白天;bai2tian5;daytime;白 (white), 大 (big);白天我在学校学习。 I study at school during the daytime.
+百;bai3;hundred;白 (white);这本书一百元。 This book costs one hundred yuan.
+班;ban1;class;王 (jade);我们在一个班。 We are in the same class.
+半;ban4;half;十 (ten);现在下午两点半。 It is 2:30 in the afternoon.
+半年;ban4nian2;half a year;十 (ten), 干 (dry);我学了半年中文。 I have studied Chinese for half a year.
+半天;ban4tian1;half a day;十 (ten), 大 (big);我等了你半天。 I waited for you for half a day.
+帮;bang1;help;巾 (turban);你能帮我吗？ Can you help me?
+帮忙;bang1mang2;help;巾 (turban), 忄 (heart);谢谢你的帮忙。 Thank you for your help.
+包;bao1;bag;勹 (wrap);这是我的书包。 This is my schoolbag.
+包子;bao1zi5;steamed stuffed bun;勹 (wrap), 子 (child);我早上吃了两个包子。 I ate two steamed stuffed buns in the morning.
+杯;bei1;cup;木 (tree);我要一杯水。 I want a cup of water.
+杯子;bei1zi5;cup;木 (tree), 子 (child);那个杯子是我的。 That cup is mine.
+北;bei3;north;匕 (spoon);那是北边。 That is the north.
+北边;bei3bian5;north;匕 (spoon), 辶 (walk);我的家在北边。 My home is to the north.
+北京;Bei3jing1;Beijing;匕 (spoon), 亠 (lid);我是北京人。 I am from Beijing.
+本;ben3;measure word for books;木 (tree);我有一本书。 I have a book.
+本子;ben3zi5;notebook;木 (tree), 子 (child);这是我的本子。 This is my notebook.
+比;bi3;than;比 (compare);他比我高。 He is taller than me.
+别;bie2;don't;刂 (knife);别说话！ Don't talk!
+别的;bie2de5;other;刂 (knife), 白 (white);我想看别的书。 I want to read another book.
+别人;bie2ren5;other people;刂 (knife), 人 (person);不要拿别人的东西。 Don't take other people's things.
+病;bing4;illness;疒 (sickness);他生病了。 He is ill.
+病人;bing4ren2;patient;疒 (sickness), 人 (person);医院里有很多病人。 There are many patients in the hospital.
+不大;bu4da4;not very;一 (one), 大 (big);这个房子不大。 This house is not very big.
+不对;bu4dui4;incorrect;一 (one), 寸 (inch);这个字不对。 This character is incorrect.
+不客气;bu4ke4qi4;you're welcome;一 (one), 宀 (roof), 气 (gas);谢谢！——不客气。 Thank you! -- You're welcome.
+不用;bu4yong4;do not need to;一 (one), 用 (use);你不用来了。 You don't need to come.
+不;bu4;not;一 (one);我不喝茶。 I do not drink tea.
+菜;cai4;dish;艹 (grass);我不会做菜。 I cannot cook dishes.
+茶;cha2;tea;艹 (grass);我想喝一杯茶。 I want to drink a cup of tea.
+差;cha4;short of;工 (work);现在差十分八点。 It is ten minutes to eight now.
+常;chang2;often;巾 (turban);我常去图书馆。 I often go to the library.
+常常;chang2chang2;frequently;巾 (turban);我常常看书。 I often read books.
+唱;chang4;sing;口 (mouth);她喜欢唱歌。 She likes to sing.
+唱歌;chang4ge1;sing (a song);口 (mouth), 欠 (yawn);他们在唱歌。 They are singing a song.
+车;che1;car;车 (cart);那是我的车。 That is my car.
+车票;che1piao4;ticket;车 (cart), 示 (show);这是我的车票。 This is my ticket.
+车上;che1 shang4;in the car;车 (cart), 一 (one);车上人很多。 There are many people on the car.
+车站;che1zhan4;station;车 (cart), 立 (stand);我们在车站见。 We will meet at the station.
+吃;chi1;eat;口 (mouth);他吃米饭。 He eats rice.
+吃饭;chi1fan4;eat a meal;口 (mouth), 饣 (food);我们去吃饭吧。 Let's go eat a meal.
+出;chu1;go out;凵 (receptacle);我要出门。 I need to go out.
+出来;chu1lai5;come out;凵 (receptacle), 木 (tree);请出来一下。 Please come out for a moment.
+出去;chu1qu5;go out;凵 (receptacle), 厶 (private);我想出去。 I want to go out.
+穿;chuan1;wear;穴 (cave);她穿了新衣服。 She put on new clothes.
+床;chuang2;bed;广 (house on cliff);我想在床上休息。 I want to rest on the bed.
+次;ci4;time;欠 (yawn);我去过一次中国。 I have been to China one time.
+从;cong2;from;人 (person);我从北京来。 I come from Beijing.
+错;cuo4;wrong;钅 (metal);这个字写错了。 This character is written wrong.
+打;da3;hit;扌 (hand);不要打人。 Don't hit people.
+打车;da3che1;take a taxi;扌 (hand), 车 (cart);我们打车去吧。 Let's take a taxi there.
+打电话;da3 dian4hua4;make a phone call;扌 (hand), 田 (field), 讠 (speech);我明天给你打电话。 I will make a phone call to you tomorrow.
+打开;da3kai1;open;扌 (hand), 廾 (two hands);请打开书。 Please open the book.
+打球;da3qiu2;play ball;扌 (hand), 王 (jade);他们喜欢打球。 They like to play ball.
+大;da4;big;大 (big);你多大了？ How old are you?
+大学;da4xue2;university;大 (big), 子 (child);他在北京大学读书。 He studies at Peking University.
+大学生;da4xue2sheng1;university student;大 (big), 子 (child), 生 (life);姐姐是大学生。 Older sister is a university student.
+到;dao4;arrive;刂 (knife);我到家了。 I have arrived home.
+得到;de2dao4;get;彳 (step), 刂 (knife);我得到了这本书。 I got this book.
+地(de5);de5;adverbial particle;土 (earth);她高兴地说。 She spoke happily.
+的;de5;possessive particle;白 (white);这是我的书。 This is my book.
+等;deng3;wait;⺮ (bamboo);请等我一下。 Please wait for me a moment.
+地(di4);di4;ground;土 (earth);书在地上。 The book is on the ground.
+地点;di4dian3;location;土 (earth), 灬 (fire);这个地点在学校前边。 This location is in front of the school.
+地方;di4fang5;place;土 (earth), 方 (square);我喜欢这个地方。 I like this place.
+地上;di4shang5;on the ground;土 (earth), 一 (one);地上有一块钱。 There is one yuan on the ground.
+地图;di4tu2;map;土 (earth), 囗 (enclosure);这是中国地图。 This is a map of China.
+弟弟;di4di5;younger brother;弓 (bow);我的弟弟五岁了。 My younger brother is five years old.
+第;di4;ordinal prefix;⺮ (bamboo);这是我第一次来中国。 This is my first time coming to China.
+点;dian3;o'clock;灬 (fire);现在是三点。 It is three o'clock now.
+电;dian4;electricity;田 (field);这里没有电。 There is no electricity here.
+电话;dian4hua4;telephone;田 (field), 讠 (speech);我给他打电话。 I call him on the phone.
+电脑;dian4nao3;computer;田 (field), 月 (flesh/body);电脑很贵。 The computer is very expensive.
+电视;dian4shi4;television;田 (field), 礻 (spirit);我们一起看电视吧。 Let's watch television together.
+电视机;dian4shi4ji1;TV set;田 (field), 礻 (spirit), 木 (tree);我家有电视机。 My home has a television set.
+电影;dian4ying3;movie;田 (field), 彡 (hair);他喜欢看电影。 He likes to watch movies.
+电影院;dian4ying3 yuan4;cinema;田 (field), 彡 (hair), 阝 (mound);我们去电影院看电影。 We go to the cinema to watch a movie.
+东;dong1;east;一 (one);他从东边来。 He comes from the east.
+东边;dong1bian1;east;一 (one), 辶 (walk);我家在学校的东边。 My house is on the eastern side of the school.
+东西;dong1xi5;thing;一 (one), 襾 (cover);我给你一个东西。 I give you something.
+动;dong4;move;力 (power);你别动！ You don't move!
+动作;dong4zuo4;movement;力 (power), 亻 (person);他的动作很快。 His action is very fast.
+都;dou1;all;阝 (city);我们都会觉得累。 We all feel tired.
+读;du2;read;讠 (speech);他在读书。 He is reading.
+读书;du2shu1;study;讠 (speech), 乙 (second);她喜欢读书。 She likes to study.
+对;dui4;correct;寸 (inch);你的回答是对的。 Your answer is correct.
+对不起;dui4bu5qi3;sorry;寸 (inch), 一 (one), 走 (walk);对不起。 Sorry.
+多;duo1;many;夕 (evening);今天人很多。 There are many people today.
+多少;duo1shao5;how much;夕 (evening), 小 (small);多少钱？ How much money?
+饿;e4;hungry;饣 (food);我很饿。 I am hungry.
+儿子;er2zi5;son;儿 (son), 子 (child);我儿子八岁。 My son is eight years old.
+二;er4;two;二 (two);我有二十本书。 I have twenty books.
+饭;fan4;meal;饣 (food);我回家吃饭。 I go home to eat.
+饭店;fan4dian4;restaurant;饣 (food), 广 (house on cliff);我们在那家饭店吃过饭。 We have eaten at that restaurant.
+房间;fang2jian1;room;户 (door), 门 (gate);我的房间很干净。 My room is very clean.
+房子;fang2zi5;house;户 (door), 子 (child);这个房子很大。 This house is big.
+放;fang4;put;攵 (tap);请放下书。 Please put the book down.
+放假;fang4jia4;have a holiday;攵 (tap), 亻 (person);我们明天放假。 We have a holiday tomorrow.
+放学;fang4xue2;finish school;攵 (tap), 子 (child);妹妹五点放学。 My younger sister finishes school at five.
+飞;fei1;fly;飞 (fly);飞机在天上飞。 The plane is flying in the sky.
+飞机;fei1ji1;airplane;飞 (fly), 木 (tree);我坐飞机去北京。 I am taking an airplane to Beijing.
+非常;fei1chang2;very;非 (wrong), 巾 (turban);我非常喜欢这本书。 I like this book very much.
+分;fen1;minute;刀 (knife);现在是三点十分。 It is three ten right now.
+风;feng1;wind;风 (wind);今天风很大。 The wind is very strong today.
+干(gan1);gan1;dry;干 (dry);衣服干了。 The clothes are dry now.
+干净;gan1jing4;clean;干 (dry), 冫 (ice);这个房间很干净。 This room is very clean.
+干(gan4);gan4;do;干 (dry);你在干什么？ What are you doing?
+干什么;gan4shen2me5;do what;干 (dry), 亻 (person), 么 (what);你在干什么？ What are you doing?
+高;gao1;tall;高 (tall);他很高。 He is very tall.
+高兴;gao1xing4;happy;高 (tall), 八 (eight);今天我很高兴。 I am very happy today.
+告诉;gao4su5;tell;口 (mouth), 讠 (speech);请告诉我你的名字。 Please tell me your name.
+哥哥;ge1ge5;older brother;口 (mouth);我有两个哥哥，你呢？ I have two older brothers. How about you?
+歌;ge1;song;欠 (yawn);这是我喜欢的歌。 This is a song I like.
+个;ge4;measure word;丨 (line);我有一个手机。 I have a mobile phone.
+给;gei3;give;纟 (silk);请给我一杯水。 Please give me a cup of water.
+跟;gen1;with;⻊ (foot);我跟你一起去。 I will go with you.
+工人;gong1ren5;worker;工 (work), 人 (person);他的爸爸是工人。 His father is a worker.
+工作;gong1zuo4;work;工 (work), 亻 (person);他在医院工作。 He works at the hospital.
+关;guan1;close;八 (eight);请关门。 Please close the door.
+关上;guan1shang4;close;八 (eight), 一 (one);请关上门。 Please close the door.
+贵;gui4;expensive;贝 (shell);电脑很贵。 The computer is very expensive.
+国;guo2;country;囗 (enclosure);中国是一个大国。 China is a large country.
+国家;guo2jia1;country;囗 (enclosure), 宀 (roof);中国是一个大国家。 China is a big country.
+国外;guo2wai4;abroad;囗 (enclosure), 夕 (evening);他去国外学习了。 He went abroad to study.
+过;guo4;spend time;辶 (walk);我在中国过新年。 I spend New Year in China.
+还(hai2);hai2;still;辶 (walk);他还在睡觉。 He is still sleeping.
+还是;hai2shi5;or;辶 (walk), 日 (sun);你喝茶还是水？ Would you like tea or water?
+还有;hai2you3;also have;辶 (walk), 月 (moon);我还有一本书。 I have one more book.
+孩子;hai2zi5;child;子 (child), 子 (child);我有两个孩子。 I have two children.
+汉语;Han4yu3;Chinese language;氵 (water), 讠 (speech);我在学习汉语。 I am studying the Chinese language.
+汉字;Han4zi4;Chinese character;氵 (water), 子 (child);我会写汉字。 I can write Chinese characters.
+好;hao3;good;女 (woman);今天天气很好。 The weather is very good today.
+好吃;hao3chi1;delicious;女 (woman), 口 (mouth);这个饭很好吃。 This food is very tasty.
+好看;hao3kan4;good-looking;女 (woman), 目 (eye);姐姐很好看。 My older sister is good-looking.
+好听;hao3ting1;pleasant to hear;女 (woman), 口 (mouth);这个歌很好听。 This song sounds nice.
+好玩儿;hao3wan2r5;fun;女 (woman), 王 (jade), 儿 (son);这个很好玩儿。 This is fun.
+号;hao4;date;口 (mouth);今天是十号。 Today is the 10th.
+喝;he1;drink;口 (mouth);我想喝一杯牛奶。 I want to drink a cup of milk.
+和;he2;and;口 (mouth);我和你一起去。 You and I will go together.
+很;hen3;very;彳 (step);天气很冷。 The weather is very cold.
+后;hou4;later;口 (mouth);三天后，我回家。 I will go home three days later.
+后边;hou4bian5;behind;口 (mouth), 辶 (walk);后边那个人是谁？ Who is that person behind?
+后天;hou4tian1;day after tomorrow;口 (mouth), 大 (big);后天我不去学校。 I will not go to school the day after tomorrow.
+花;hua1;flower;艹 (grass);这是花。 This is a flower.
+话;hua4;words;讠 (speech);老师说的话我明白了。 I understood what the teacher said.
+坏;huai4;broken;土 (earth);电视机坏了。 The TV set is broken.
+还(huan2);huan2;return;辶 (walk);我还你这本书。 I am returning this book to you.
+回;hui2;return;囗 (enclosure);我明年回中国。 I will return to China next year.
+回答;hui2da2;answer;囗 (enclosure), ⺮ (bamboo);老师问，你回答。 The teacher asks, and you answer.
+回到;hui2dao4;return to;囗 (enclosure), 刂 (knife);他回到了家里。 He returned to his home.
+回家;hui2jia1;go home;囗 (enclosure), 宀 (roof);我要回家了。 I am going home.
+回来;hui2lai5;come back;囗 (enclosure), 木 (tree);爸爸回来了。 Dad has come back.
+回去;hui2qu5;go back;囗 (enclosure), 厶 (private);你快回去吧。 You'd better go back quickly.
+会;hui4;can;人 (person);我会说中文。 I can speak Chinese.
+火车;huo3che1;train;火 (fire), 车 (cart);我坐火车去北京。 I take the train to Beijing.
+机场;ji1chang3;airport;木 (tree), 土 (earth);我们在机场等他。 We are waiting for him at the airport.
+机票;ji1piao4;plane ticket;木 (tree), 示 (show);这是我的机票。 This is my plane ticket.
+鸡蛋;ji1dan4;egg;鸟 (bird), 虫 (insect);我早上吃了一个鸡蛋。 I ate an egg in the morning.
+几;ji3;how many;几 (table);你几岁了？ How old are you?
+记;ji4;remember;讠 (speech);请记一下这个电话。 Please note this phone number.
+记得;ji4de5;remember;讠 (speech), 彳 (step);你还记得我吗？ Do you still remember me?
+记住;ji4zhu5;remember;讠 (speech), 亻 (person);请记住我的名字。 Please remember my name.
+家;jia1;family;宀 (roof);我家有五口人。 My family has five people.
+家里;jia1li3;at home;宀 (roof), 里 (village);他今天在家里休息。 He rests at home today.
+家人;jia1ren2;family member;宀 (roof), 人 (person);我很想我的家人。 I really miss my family members.
+间;jian1;measure word for room;门 (gate);这是一间小房子。 This is a small house.
+见;jian4;see;见 (see);明天见。 See you tomorrow.
+见面;jian4mian4;meet;见 (see), 面 (face);我们下午见面。 We will meet in the afternoon.
+教;jiao4;teach;攵 (tap);老师教我们汉语。 The teacher teaches us Chinese.
+叫;jiao4;be called;口 (mouth);你叫什么名字？ What is your name?
+教学楼;jiao4xue2lou2;classroom building;攵 (tap), 子 (child), 木 (tree);教学楼在学校中间。 The teaching building is in the middle of the school.
+姐姐;jie3jie5;older sister;女 (woman);姐姐很好看。 My older sister is good-looking.
+介绍;jie4shao4;introduce;人 (person), 纟 (silk);我介绍一下老师。 Let me introduce the teacher.
+今年;jin1nian2;this year;人 (person), 干 (dry);今年我很忙。 This year I am very busy.
+今天;jin1tian1;today;人 (person), 大 (big);今天天气很好。 The weather is very good today.
+进;jin4;enter;辶 (walk);请进！ Please enter!
+进来;jin4lai5;come in;辶 (walk), 木 (tree);快进来吧！ Come in quickly!
+进去;jin4qu5;go in;辶 (walk), 厶 (private);我们进去看看吧。 Let's go in and take a look.
+九;jiu3;nine;乙 (second);现在是九点。 It is nine o'clock now.
+就;jiu4;just;尢 (lame);我就知道他会来。 I just knew he would come.
+觉得;jue2de5;feel;见 (see), 彳 (step);我觉得有点冷。 I feel a little cold.
+开;kai1;open;廾 (two hands);请开门。 Please open the door.
+开车;kai1che1;drive;廾 (two hands), 车 (cart);爸爸会开车。 Dad can drive.
+开会;kai1hui4;have a meeting;廾 (two hands), 人 (person);我们下午开会。 We will have a meeting in the afternoon.
+开玩笑;kai1wan2xiao4;joke;廾 (two hands), 王 (jade), ⺮ (bamboo);他在开玩笑。 He is joking.
+看;kan4;watch;目 (eye);我喜欢看电视。 I like watching television.
+看病;kan4bing4;see a doctor;目 (eye), 疒 (sickness);我明天去看病。 I am going to see a doctor tomorrow.
+看到;kan4dao4;see;目 (eye), 刂 (knife);我看到他了。 I saw him.
+看见;kan4jian5;catch sight of;目 (eye), 见 (see);你看见我的书了吗？ Did you catch sight of my book?
+考;kao3;take a test;老 (old);明天我们要考中文。 Tomorrow we will take a Chinese test.
+考试;kao3shi4;examination;老 (old), 讠 (speech);这次考试很难。 This examination is very difficult.
+渴;ke3;thirsty;氵 (water);我有点渴了。 I am a little thirsty.
+课;ke4;lesson;讠 (speech);今天我们学习第一课。 Today we will study the first lesson.
+课本;ke4ben3;textbook;讠 (speech), 木 (tree);请打开课本。 Please open the textbook.
+课文;ke4wen2;text;讠 (speech), 文 (script);我在读课文。 I am reading the text.
+口;kou3;measure word for family members;口 (mouth);我家有三口人。 My family has three people.
+块;kuai4;piece;土 (earth);这块肉很好吃。 This piece of meat is delicious.
+快;kuai4;fast;忄 (heart);他走路快。 He walks quickly.
+来;lai2;come;木 (tree);你什么时候来？ When are you coming?
+来到;lai2dao4;arrive;木 (tree), 刂 (knife);他来到了北京。 He arrived in Beijing.
+老;lao3;old;老 (old);那个老人很高。 That old man is very tall.
+老人;lao3ren5;old person;老 (old), 人 (person);那个老人是我爷爷。 That elderly man is my grandfather.
+老师;lao3shi1;teacher;老 (old), 巾 (turban);他是我的老师。 He is my teacher.
+了;le5;completed action marker;亅 (hook);下雨了。 It has started raining.
+累;lei4;tired;纟 (silk);今天我很累。 Today I am very tired.
+冷;leng3;cold;冫 (ice);今天很冷。 Today is very cold.
+里;li3;inside;里 (village);水杯里没有水。 There is no water inside the cup.
+里边;li3bian5;inside;里 (village), 辶 (walk);书在房子里边。 The book is inside the house.
+两;liang3;two;一 (one);我有两个弟弟。 I have two younger brothers.
+零;ling2;zero;雨 (rain);今天是二零二三年。 Today is the year two thousand and twenty-three.
+六;liu4;six;八 (eight);我有六本书。 I have six books.
+楼;lou2;floor;木 (tree);我在二楼等你。 I will wait for you on the second floor.
+楼上;lou2shang4;upstairs;木 (tree), 一 (one);他在楼上睡觉。 He is sleeping upstairs.
+楼下;lou2xia4;downstairs;木 (tree), 一 (one);我们去楼下吃饭吧。 Let's go eat downstairs.
+路;lu4;road;⻊ (foot);这是路。 This is a road.
+路口;lu4kou3;crossing;⻊ (foot), 口 (mouth);我们在路口见。 We will meet at the intersection.
+路上;lu4shang5;on the road;⻊ (foot), 一 (one);我们在回家的路上。 We are on the road home.
+妈妈;ma1ma5;mother;女 (woman);我的妈妈很爱我。 My mother loves me very much.
+马路;ma3lu4;street;马 (horse), ⻊ (foot);我们要过马路了。 We are going to cross the street.
+马上;ma3shang4;immediately;马 (horse), 一 (one);我马上就来。 I'm coming immediately.
+吗;ma5;question particle;口 (mouth);你是学生吗？ Are you a student?
+买;mai3;buy;乙 (second);我买了一本书。 I bought a book.
+慢;man4;slow;忄 (heart);他走路很慢。 He walks very slowly.
+忙;mang2;busy;忄 (heart);你今天忙吗？ Are you busy today?
+毛;mao2;0.1 yuan;毛 (hair);这本书三元五毛钱。 This book costs three yuan and fifty cents.
+没;mei2;did not;氵 (water);我没去过那里。 I haven't been there.
+没关系;mei2guan1xi5;it doesn't matter;氵 (water), 八 (eight), 纟 (silk);对不起。——没关系。 I'm sorry. -- It doesn't matter.
+没什么;mei2shen2me5;it's nothing;氵 (water), 亻 (person), 么 (what);没什么大不了的。 It's nothing big.
+没事儿;mei2shi4r5;it's okay;氵 (water), 亅 (hook), 儿 (son);对不起。——没事儿。 I'm sorry. — It's okay.
+没有;mei2you5;not have;氵 (water), 月 (moon);我没有钱。 I don't have money.
+妹妹;mei4mei5;younger sister;女 (woman);妹妹很小。 Little sister is very small.
+门;men2;door;门 (gate);请关门。 Please close the door.
+门口;men2kou3;entrance;门 (gate), 口 (mouth);他在学校门口等你。 He is waiting for you at the school entrance.
+门票;men2piao4;entrance ticket;门 (gate), 示 (show);这是电影门票。 This is a movie ticket.
+们;men5;plural suffix;亻 (person);我们是好朋友。 We are good friends.
+米饭;mi3fan4;cooked rice;米 (rice), 饣 (food);他吃米饭。 He eats rice.
+面包;mian4bao1;bread;面 (face), 勹 (wrap);早上我吃面包。 I eat bread in the morning.
+面条儿;mian4tiao2r5;noodles;面 (face), 木 (tree), 儿 (son);我会做面条儿。 I can make noodles.
+名字;ming2zi5;name;口 (mouth), 子 (child);你的名字叫什么？ What is your name?
+明白;ming2bai5;understand;日 (sun), 白 (white);我明白了。 I understand now.
+明年;ming2nian2;next year;日 (sun), 干 (dry);明年我会去中国。 I will go to China next year.
+明天;ming2tian1;tomorrow;日 (sun), 大 (big);明天会下雨。 Tomorrow it will rain.
+拿;na2;take;手 (hand);我拿了一本书。 I took a book.
+哪;na3;which;口 (mouth);你是哪国人？ Which country are you from?
+哪里;na3li5;where;口 (mouth), 里 (village);你在哪里？ Where are you?
+哪儿;na3r5;where;口 (mouth), 儿 (son);你去哪儿？ Where are you going?
+哪些;na3xie1;which (ones);口 (mouth), 二 (two);这些书里哪些是你的？ Which of these books are yours?
+那;na4;that;阝 (city);那个人是我的老师。 That person is my teacher.
+那边;na4bian5;over there;阝 (city), 辶 (walk);学校在那边。 The school is over there.
+那里;na4li3;there;阝 (city), 里 (village);那里有很多人。 There are many people there.
+那儿;na4r5;there;阝 (city), 儿 (son);他在那儿。 He is there.
+那些;na4xie1;those;阝 (city), 二 (two);那些书是我的。 Those books are mine.
+奶;nai3;milk;女 (woman);我喝奶。 I drink milk.
+奶奶;nai3nai5;grandmother;女 (woman);我的奶奶八十岁了。 My grandmother is eighty years old.
+男;nan2;male;田 (field);他是男老师。 He is a male teacher.
+男孩儿;nan2hai2r5;boy;田 (field), 子 (child), 儿 (son);那个男孩儿是我弟弟。 That boy is my younger brother.
+男朋友;nan2peng2you5;boyfriend;田 (field), 月 (moon), 又 (right hand);她的男朋友是医生。 Her boyfriend is a doctor.
+男人;nan2ren5;man;田 (field), 人 (person);那个男人很高。 That man is very tall.
+男生;nan2sheng1;male student;田 (field), 生 (life);班里有十五个男生。 There are fifteen male students in the class.
+南;nan2;south;十 (ten);我家在南边。 My home is in the south.
+南边;nan2bian5;south;十 (ten), 辶 (walk);我家在学校南边。 My home is on the southern side of the school.
+难;nan2;difficult;隹 (short-tailed bird);这个字很难。 This character is difficult.
+呢;ne5;question particle;口 (mouth);我很好，你呢？ I am fine, and you?
+能;neng2;can;月 (flesh);你能帮我吗？ Can you help me?
+你;ni3;you;亻 (person);你好！ Hello!
+你们;ni3men5;you (plural);亻 (person), 亻 (person);你们好！ Hello everyone!
+年;nian2;year;干 (dry);今年是二零二三年。 This year is two thousand and twenty-three.
+您;nin2;you (polite);心 (heart);您好！ Hello (polite)!
+牛奶;niu2nai3;cow's milk;牛 (cow), 女 (woman);早上我喝了牛奶。 This morning I drank milk.
+女;nü3;female;女 (woman);她是女老师。 She is a female teacher.
+女儿;nü3er2;daughter;女 (woman), 儿 (son);他的女儿三岁了。 His daughter is three years old.
+女孩儿;nü3hai2r5;girl;女 (woman), 子 (child), 儿 (son);这个女孩儿是我妹妹。 This girl is my younger sister.
+女朋友;nü3peng2you5;girlfriend;女 (woman), 月 (moon), 又 (right hand);我的女朋友喜欢看书。 My girlfriend likes reading books.
+女人;nü3ren2;woman;女 (woman), 人 (person);那个女人是我的妈妈。 That woman is my mother.
+女生;nü3sheng1;female student;女 (woman), 生 (life);我们班有十个女生。 Our class has ten female students.
+旁边;pang2bian1;beside;方 (square), 辶 (walk);我的旁边是老师。 Beside me is the teacher.
+跑;pao3;run;⻊ (foot);他会跑。 He can run.
+朋友;peng2you5;friend;月 (moon), 又 (right hand);朋友来了。 My friend has come.
+票;piao4;ticket;示 (show);这是我的票。 This is my ticket.
+七;qi1;seven;一 (one);一个星期有七天。 A week has seven days.
+起;qi3;rise;走 (walk);他六点起床。 He gets up at six.
+起床;qi3chuang2;get up;走 (walk), 广 (house on cliff);我早上六点起床。 I get up at six in the morning.
+起来;qi3lai5;stand up;走 (walk), 木 (tree);请站起来。 Please stand up.
+汽车;qi4che1;car;氵 (water), 车 (cart);这是爸爸的汽车。 This is Dad's car.
+前;qian2;before;刂 (knife);三天前我在北京。 I was in Beijing three days ago.
+前边;qian2bian5;in front;刂 (knife), 辶 (walk);学校前边有一家书店。 There is a bookstore in front of the school.
+前天;qian2tian1;day before yesterday;刂 (knife), 大 (big);前天我没上班。 I did not work the day before yesterday.
+钱;qian2;money;钅 (metal);我没有钱。 I do not have money.
+钱包;qian2bao1;wallet;钅 (metal), 勹 (wrap);钱包在桌子上。 The wallet is on the table.
+请;qing3;please;讠 (speech);请坐下。 Please sit down.
+请假;qing3jia4;ask for leave;讠 (speech), 亻 (person);我今天生病了，想请假。 I am sick today and want to ask for leave.
+请进;qing3jin4;please come in;讠 (speech), 辶 (walk);老师，我能请进吗？ Teacher, may I come in?
+请问;qing3wen4;excuse me;讠 (speech), 门 (gate);请问去医院怎么走？ Excuse me, how to go to the hospital?
+请坐;qing3 zuo4;please sit down;讠 (speech), 土 (earth);老师说：“请坐。”。 The teacher says, “Please sit down.”
+球;qiu2;ball;王 (jade);他们喜欢打球。 They like playing ball.
+去;qu4;go;厶 (private);你要去哪里？ Where are you going?
+去年;qu4nian2;last year;厶 (private), 干 (dry);去年我去了中国。 I went to China last year.
+热;re4;hot;灬 (fire);今天天气很热。 The weather is very hot today.
+人;ren2;person;人 (person);我是北京人。 I am from Beijing.
+认识;ren4shi5;know;讠 (speech), 讠 (speech);认识你很高兴。 Glad to know you.
+认真;ren4zhen1;seriously;讠 (speech), 目 (eye);他学习很认真。 He studies very earnestly.
+日;ri4;day;日 (sun);今天是八月一号（日）。 Today is August 1st.
+日期;ri4qi1;date;日 (sun), 月 (moon);今天的日期是多少？ What is today's date?
+肉;rou4;meat;肉 (meat);我不吃肉。 I do not eat meat.
+三;san1;three;一 (one);我买了三本书。 I bought three books.
+山;shan1;mountain;山 (mountain);那边有山。 There are mountains over there.
+商场;shang1chang3;shopping mall;口 (mouth), 土 (earth);我去商场买衣服。 I go to the shopping mall to buy clothes.
+商店;shang1dian4;shop;口 (mouth), 广 (house on cliff);我们去商店。 We go to the store.
+上;shang4;on;一 (one);书在桌子上。 The book is on the desk.
+上班;shang4ban1;go to work;一 (one), 王 (jade);明天我上班。 Tomorrow I go to work.
+上边;shang4bian5;above;一 (one), 辶 (walk);书在桌子上边。 The book is on the table.
+上车;shang4che1;get on a car;一 (one), 车 (cart);请上车。 Please get in.
+上次;shang4ci4;last time;一 (one), 欠 (yawn);上次我们一起吃了饭。 We ate together last time.
+上课;shang4ke4;attend class;一 (one), 讠 (speech);我们马上要上课了。 We will attend class immediately.
+上网;shang4wang3;go online;一 (one), 网 (net);我在上网。 I am online.
+上午;shang4wu3;morning;一 (one), 十 (ten);我上午在学校学习。 I study at school in the morning.
+上学;shang4xue2;go to school;一 (one), 子 (child);孩子去上学了。 The child has gone to school.
+少;shao3;little;小 (small);杯子里的水很少。 There is very little water in the cup.
+谁;shei2;who;讠 (speech);那个人是谁？ Who is that person?
+身上;shen1shang5;on one's body;身 (body), 一 (one);我身上没有钱。 I don't have money on me.
+身体;shen1ti3;health;身 (body), 亻 (person);爷爷身体很好。 Grandpa is in good health.
+什么;shen2me5;what;亻 (person), 丿 (slash);你在找什么？ What are you looking for?
+生病;sheng1bing4;fall ill;生 (life), 疒 (sickness);他今天生病了。 He fell ill today.
+生气;sheng1qi4;get angry;生 (life), 气 (gas);你别生气了。 Don't be angry.
+生日;sheng1ri5;birthday;生 (life), 日 (sun);今天是我的生日。 Today is my birthday.
+十;shi2;ten;十 (ten);我有十本书。 I have ten books.
+时候;shi2hou5;time;日 (sun), 亻 (person);你什么时候回来？ When will you come back?
+时间;shi2jian1;time;日 (sun), 门 (gate);我没有时间看电影。 I don't have time to watch movies.
+事;shi4;matter;亅 (hook);你找我有什么事？ What matter do you have to find me for?
+试;shi4;try;讠 (speech);我想试一下。 I want to try it.
+是;shi4;be;日 (sun);我是学生。 I am a student.
+是不是;shi4bu4shi4;whether;日 (sun), 一 (one), 日 (sun);你是不是不喜欢吃肉？ Do you not like eating meat?
+手;shou3;hand;手 (hand);我的手很冷。 My hands are cold.
+手机;shou3ji1;mobile phone;手 (hand), 木 (tree);这是我的新手机。 This is my new mobile phone.
+书;shu1;book;乙 (second);我喜欢看书。 I like reading books.
+书包;shu1bao1;schoolbag;乙 (second), 勹 (wrap);我的书包很重。 My schoolbag is very heavy.
+书店;shu1dian4;bookstore;乙 (second), 广 (house on cliff);我们去书店买书吧。 Let's go to the bookstore to buy books.
+树;shu4;tree;木 (tree);学校前边有树。 There are trees in front of the school.
+水;shui3;water;水 (water);我想喝水。 I want to drink water.
+水果;shui3guo3;fruit;水 (water), 木 (tree);多吃水果对身体好。 Eating more fruit is good for your health.
+睡;shui4;sleep;目 (eye);他在睡。 He is sleeping.
+睡觉;shui4jiao4;sleep;目 (eye), 见 (see);我现在要去睡觉了。 I am going to sleep now.
+说;shuo1;speak;讠 (speech);我会说中文。 I can speak Chinese.
+说话;shuo1hua4;talk;讠 (speech), 讠 (speech);请不要说话。 Please do not talk.
+四;si4;four;囗 (enclosure);我有四本书。 I have four books.
+送;song4;give;辶 (walk);我送你一本书。 I am giving you a book.
+岁;sui4;years old;山 (mountain);我的妹妹五岁了。 My younger sister is five years old.
+他;ta1;he;亻 (person);他是我的好朋友。 He is my good friend.
+他们;ta1men5;they;亻 (person), 亻 (person);他们都是学生。 They are all students.
+她;ta1;she;女 (woman);她没睡觉。 She is not sleeping.
+她们;ta1men5;they (female);女 (woman), 亻 (person);她们都在学习。 They are all studying.
+太;tai4;too;大 (big);今天太热了。 It is too hot today.
+天;tian1;day;大 (big);我在北京五天。 I am in Beijing for five days.
+天气;tian1qi4;weather;大 (big), 气 (gas);今天天气很好。 The weather is very good today.
+听;ting1;listen;口 (mouth);我喜欢听歌。 I like listening to songs.
+听到;ting1dao4;hear;口 (mouth), 刂 (knife);我听到他说话了。 I heard him speaking.
+听见;ting1jian5;hear;口 (mouth), 见 (see);你听见我说的话了吗？ Did you hear what I said?
+听写;ting1xie3;dictation;口 (mouth), 冖 (cover);我们在听写汉字。 We are taking a Chinese-character dictation.
+同学;tong2xue2;classmate;口 (mouth), 子 (child);他们都是我的同学。 They are all my classmates.
+图书馆;tu2shu1guan3;library;囗 (enclosure), 乙 (second), 饣 (food);我在图书馆学习。 I study in the library.
+外;wai4;outside;夕 (evening);他在门外。 He is outside the door.
+外边;wai4bian5;outside;夕 (evening), 辶 (walk);外边很冷。 It is very cold outside.
+外国;wai4guo2;foreign country;夕 (evening), 囗 (enclosure);他是外国人。 He is a foreigner.
+外语;wai4yu3;foreign language;夕 (evening), 讠 (speech);他会说两门外语。 He can speak two foreign languages.
+玩儿;wan2r5;play;王 (jade), 儿 (son);孩子们在玩儿。 The children are playing.
+晚;wan3;late;日 (sun);他今天来晚了。 He arrived late today.
+晚饭;wan3fan4;dinner;日 (sun), 饣 (food);我们一起吃晚饭吧。 Let's eat dinner together.
+晚上;wan3shang5;evening;日 (sun), 一 (one);晚上我想看电影。 I want to watch a movie in the evening.
+网上;wang3shang4;online;网 (net), 一 (one);我在网上买了一本书。 I bought a book online.
+网友;wang3you3;online friend;网 (net), 又 (right hand);他是我的网友。 He is my online friend.
+忘;wang4;forget;心 (heart);不要忘了我。 Do not forget me.
+忘记;wang4ji4;forget;心 (heart), 讠 (speech);我不会忘记你。 I will not forget you.
+问;wen4;ask;门 (gate);你问一下老师。 Ask the teacher briefly.
+我;wo3;I;戈 (halberd);我爱你。 I love you.
+我们;wo3men5;we;戈 (halberd), 亻 (person);我们是好朋友。 We are good friends.
+五;wu3;five;二 (two);我有五本书。 I have five books.
+午饭;wu3fan4;lunch;十 (ten), 饣 (food);中午我们在学校吃午饭。 We eat lunch at school at noon.
+西;xi1;west;襾 (cover);他从西边来。 He comes from the west.
+西边;xi1bian5;to the west;襾 (cover), 辶 (walk);学校西边有商场。 There is a shopping mall west of the school.
+洗;xi3;wash;氵 (water);我帮妈妈洗衣服。 I help mom wash clothes.
+洗手间;xi3shou3jian1;washroom;氵 (water), 手 (hand), 门 (gate);请问洗手间在哪里？ Excuse me, where is the washroom?
+喜欢;xi3huan5;like;口 (mouth), 欠 (yawn);我喜欢喝茶。 I like to drink tea.
+下;xia4;under;一 (one);书在桌子下边。 The book is below the desk.
+下班;xia4ban1;get off work;一 (one), 王 (jade);爸爸下午六点下班。 Dad finishes work at six in the afternoon.
+下边;xia4bian5;below;一 (one), 辶 (walk);书在桌子下边。 The book is under the table.
+下车;xia4che1;get off a car;一 (one), 车 (cart);我要在这个站下车。 I will get off the car at this station.
+下次;xia4ci4;next time;一 (one), 欠 (yawn);下次我请你吃饭。 Next time I will treat you to a meal.
+下课;xia4ke4;finish class;一 (one), 讠 (speech);同学们，下课了！ Students, class is dismissed!
+下午;xia4wu3;afternoon;一 (one), 十 (ten);今天下午我去图书馆。 I will go to the library this afternoon.
+下雨;xia4yu3;rain;一 (one), 雨 (rain);下雨了。 It has started raining.
+先;xian1;first;儿 (son);你先走吧。 You go first.
+先生;xian1sheng5;sir;儿 (son), 生 (life);先生，你好。 Hello, sir.
+现在;xian4zai4;now;王 (jade), 土 (earth);现在十点了。 It is ten o'clock now.
+想;xiang3;want;心 (heart);我想回家。 I want to go home.
+小;xiao3;small;小 (small);妹妹很小。 Little sister is very small.
+小孩儿;xiao3hai2r5;child;小 (small), 子 (child), 儿 (son);那个小孩儿在看书。 That child is reading.
+小姐;xiao3jie3;Miss;小 (small), 女 (woman);小姐，你好。 Hello, miss.
+小朋友;xiao3peng2you3;child;小 (small), 月 (moon), 又 (right hand);这个小朋友叫什么名字？ What is this little friend's name?
+小时;xiao3shi2;hour;小 (small), 日 (sun);我等了一小时。 I waited for an hour.
+小学;xiao3xue2;primary school;小 (small), 子 (child);我的弟弟在读小学。 My younger brother is studying in a primary school.
+小学生;xiao3 xue2sheng5;primary school student;小 (small), 子 (child), 生 (life);他是小学生。 He is a primary school student.
+笑;xiao4;smile;⺮ (bamboo);请笑一下！ Please smile!
+写;xie3;write;冖 (cover);他写了很多字。 He wrote many characters.
+谢谢;xie4xie5;thank you;讠 (speech);谢谢你。 Thank you.
+新;xin1;new;斤 (axe);她穿了新衣服。 She put on new clothes.
+新年;xin1nian2;New Year;斤 (axe), 干 (dry);明天是新年。 Tomorrow is New Year.
+星期;xing1qi1;week;日 (sun), 月 (moon);我这个星期很忙。 I am very busy this week.
+星期日;xing1qi1ri4;Sunday;日 (sun), 月 (moon), 日 (sun);今天是星期日。 Today is Sunday.
+星期天;xing1qi1tian1;Sunday;日 (sun), 月 (moon), 大 (big);明天是星期天。 Tomorrow is Sunday.
+行;xing2;all right;行 (walk);你去吧，行。 You may go; all right.
+休息;xiu1xi5;rest;亻 (person), 心 (heart);爷爷在休息。 Grandpa is resting.
+学;xue2;learn;子 (child);我学汉语。 I study Chinese.
+学生;xue2sheng5;student;子 (child), 生 (life);班上有二十个学生。 There are twenty students in the class.
+学习;xue2xi2;study;子 (child), 习 (flying);我们一起学习吧。 Let's study together.
+学校;xue2xiao4;school;子 (child), 木 (tree);我们去学校。 We go to school.
+学院;xue2yuan4;college;子 (child), 阝 (mound);这个学院很大。 This college is large.
+要;yao4;want;襾 (cover);我要一杯热水。 I want a cup of hot water.
+爷爷;ye2ye5;grandfather;父 (father);爷爷在休息。 Grandpa is resting.
+也;ye3;also;乙 (second);我也是学生。 I am also a student.
+页;ye4;page;页 (leaf);请看书的第五页。 Please look at the fifth page of the book.
+一;yi1;one;一 (one);我有一个姐姐。 I have an older sister.
+衣服;yi1fu5;clothes;衣 (clothes), 月 (moon);她穿了新衣服。 She put on new clothes.
+医生;yi1sheng1;doctor;匸 (hiding enclosure), 生 (life);我的爸爸是医生。 My father is a doctor.
+医院;yi1yuan4;hospital;匸 (hiding enclosure), 阝 (mound);他在医院工作。 He works at the hospital.
+一半;yi1ban4;half;一 (one), 十 (ten);我吃了一半。 I ate half.
+一会儿;yi1hui4r5;a little while;一 (one), 亻 (person), 儿 (son);我一会儿就回来。 I will come back in a little while.
+一块儿;yi1kuai4r5;together;一 (one), 土 (earth), 儿 (son);我们一块儿去吧。 Let's go together.
+一下儿;yi1xia4r5;a moment;一 (one), 一 (one), 儿 (son);请等一下儿。 Please wait a moment.
+一样;yi1yang4;same;一 (one), 木 (tree);这两个杯子一样。 These two cups are the same.
+一边;yi1bian1;one side;一 (one), 辶 (walk);路一边有商店。 There are shops on one side of the road.
+一点儿;yi1dian3r5;a little;一 (one), 灬 (fire), 儿 (son);我会说一点儿汉语。 I can speak a little Chinese.
+一起;yi1qi3;together;一 (one), 走 (walk);我们一起吃饭。 We eat a meal together.
+一些;yi1xie1;some;一 (one), 二 (two);我买了一些水果。 I bought some fruit.
+用;yong4;use;用 (use);我用电脑工作。 I work using a computer.
+有;you3;have;月 (moon);我有一百块钱。 I have a hundred yuan.
+有的;you3de5;some;月 (moon), 白 (white);有的人喜欢喝茶。 Some people like to drink tea.
+有名;you3ming2;famous;月 (moon), 口 (mouth);北京很有名。 Beijing is famous.
+有时候;you3shi2hou5;sometimes;月 (moon), 日 (sun), 亻 (person);我有时候坐车上班。 I sometimes take a car to work.
+有些;you3xie1;some;月 (moon), 二 (two);我今天有些累了。 I am somewhat tired today.
+有用;you3yong4;useful;月 (moon), 用 (use);这些书对我有用。 These books are useful for me.
+右;you4;right;口 (mouth);右边是学校。 The school is on the right.
+右边;you4bian5;right side;口 (mouth), 辶 (walk);学校在右边。 The school is on the right.
+雨;yu3;rain;雨 (rain);下雨了。 It has started raining.
+元;yuan2;yuan (currency);儿 (son);这本书三元五毛钱。 This book costs three yuan and fifty cents.
+远;yuan3;far;辶 (walk);学校很远。 The school is far away.
+月;yue4;month;月 (moon);现在是八月。 Now is August.
+再;zai4;again;冂 (down box);请你再说一次。 Please say it once more.
+再见;zai4jian4;goodbye;冂 (down box), 见 (see);明天见，再见！ See you tomorrow, goodbye!
+在;zai4;at;土 (earth);他在家。 He is at home.
+在家;zai4jia1;be at home;土 (earth), 宀 (roof);今天我在家休息。 Today I rest at home.
+早;zao3;early;日 (sun);早上我喝茶。 In the morning I drink tea.
+早饭;zao3fan4;breakfast;日 (sun), 饣 (food);你要吃早饭。 You need to eat breakfast.
+早上;zao3shang5;morning;日 (sun), 一 (one);早上好！ Good morning!
+怎么;zen3me5;how;心 (heart), 丿 (slash);你怎么去学校？ How do you go to school?
+站;zhan4;stand;立 (stand);请站起来。 Please stand up.
+找;zhao3;look for;扌 (hand);你在找什么？ What are you looking for?
+找到;zhao3dao4;to find;扌 (hand), 刂 (knife);我找到手机了。 I found the mobile phone.
+这;zhe4;this;辶 (walk);这是我的书。 This is my book.
+这边;zhe4bian1;this side;辶 (walk), 辶 (walk);我的朋友在这边。 My friend is on this side.
+这里;zhe4li3;here;辶 (walk), 里 (village);这里很冷。 It is very cold here.
+这儿;zhe4r5;here;辶 (walk), 儿 (son);请坐这儿。 Please sit here.
+这些;zhe4xie1;these;辶 (walk), 二 (two);这些书我都看过了。 I have read all these books.
+着;zhe5;durative particle;目 (eye);门开着。 The door is open.
+真;zhen1;really;目 (eye);这个菜真好吃。 This dish is really delicious.
+真的;zhen1 de5;really;目 (eye), 白 (white);我真的不知道。 I really don't know.
+正;zheng4;exactly;止 (stop);他坐在正中。 He sits right in the middle.
+正在;zheng4zai4;currently;止 (stop), 土 (earth);他正在吃饭。 He is eating now.
+知道;zhi1dao5;know;矢 (arrow), 辶 (walk);我知道他叫什么名字。 I know his name.
+知识;zhi1shi5;knowledge;矢 (arrow), 讠 (speech);书里有很多知识。 Books contain a lot of knowledge.
+中;zhong1;middle;丨 (line);他坐在正中。 He sits right in the middle.
+中国;Zhong1guo2;China;丨 (line), 囗 (enclosure);我很喜欢中国。 I like China very much.
+中间;zhong1jian1;middle;丨 (line), 门 (gate);我坐在他们中间。 I sit between them.
+中文;Zhong1wen2;Chinese language;丨 (line), 文 (script);我在学习中文。 I am studying the Chinese language.
+中午;zhong1wu3;noon;丨 (line), 十 (ten);我们中午吃饭。 We eat at noon.
+中学;zhong1xue2;middle school;丨 (line), 子 (child);这个中学很大。 This middle school is large.
+中学生;zhong1xue2sheng1;middle school student;丨 (line), 子 (child), 生 (life);我姐姐是中学生。 My older sister is a middle school student.
+重;zhong4;heavy;里 (village);这本书很重。 This book is heavy.
+重要;zhong4yao4;important;里 (village), 襾 (cover);学习很重要。 Studying is important.
+住;zhu4;live;亻 (person);你住在哪里？ Where do you live?
+准备;zhun3bei4;prepare;冫 (ice), 夂 (go);我准备去上班。 I am getting ready to go to work.
+桌子;zhuo1zi5;desk;木 (tree), 子 (child);桌子上有一本书。 There is a book on the desk.
+字;zi4;character;子 (child);这个字很难写。 This character is very difficult to write.
+子;zi5;noun suffix;子 (child);这是一个杯子。 This is a cup.
+走;zou3;go;走 (walk);我们走吧！ Let's go!
+走路;zou3lu4;walk;走 (walk), ⻊ (foot);他走路很慢。 He walks very slowly.
+最;zui4;most;曰 (say);这是我最喜欢的书。 This is my favorite book.
+最好;zui4hao3;best;曰 (say), 女 (woman);他是我最好的朋友。 He is my best friend.
+最后;zui4hou4;finally;曰 (say), 口 (mouth);他最后回家了。 He finally went home.
+昨天;zuo2tian1;yesterday;日 (sun), 大 (big);我昨天没去商店。 I did not go to the store yesterday.
+左;zuo3;left;工 (work);左边是商场。 The shopping mall is on the left.
+左边;zuo3bian5;left side;工 (work), 辶 (walk);他在你的左边。 He is on your left side.
+坐;zuo4;sit;土 (earth);请坐下。 Please sit down.
+坐下;zuo4xia4;sit down;土 (earth), 一 (one);请大家坐下。 Everyone, please sit down.
+做;zuo4;do;亻 (person);我不会做菜。 I cannot cook dishes.

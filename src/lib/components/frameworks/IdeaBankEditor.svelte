@@ -1,7 +1,8 @@
 <script lang="ts">
   import { IDEA_SECTIONS } from '$lib/constants/colors.js';
   import type { IdeaItem } from '$lib/types/story-map.js';
-  import { Plus, X } from '@lucide/svelte';
+  import { Plus, Trash2, X } from '@lucide/svelte';
+  import * as Dialog from '$lib/components/ui/dialog/index.js';
   import type { FrameworkInstance } from './types.js';
 
   let {
@@ -14,19 +15,22 @@
     onUpdate: (values: Record<string, string>, title?: string) => void;
   } = $props();
 
-  let ideas = $state<IdeaItem[]>([]);
   let showAdd = $state(false);
   let addStatus = $state('triage');
   let newTitle = $state('');
   let newDescription = $state('');
+  let selectedIdeaId = $state<string | null>(null);
+  let detailsOpen = $state(false);
+  let ideas = $derived(parseIdeas(instance.values.ideas));
+  let selectedIdea = $derived(ideas.find((idea) => idea.id === selectedIdeaId) ?? null);
 
-  $effect(() => {
+  function parseIdeas(value: string | undefined): IdeaItem[] {
     try {
-      ideas = JSON.parse(instance.values.ideas ?? '[]') as IdeaItem[];
+      return JSON.parse(value ?? '[]') as IdeaItem[];
     } catch {
-      ideas = [];
+      return [];
     }
-  });
+  }
 
   function save() {
     onUpdate({ ...instance.values, ideas: JSON.stringify(ideas) });
@@ -47,7 +51,7 @@
       title: newTitle.trim(),
       description: newDescription.trim(),
       status: addStatus,
-      proposer: '',
+      proposer: 'AI',
       okrCode: '',
       createdAt: new Date().toISOString()
     };
@@ -63,17 +67,34 @@
     save();
   }
 
+  function openIdea(id: string) {
+    selectedIdeaId = id;
+    detailsOpen = true;
+  }
+
+  function closeIdea() {
+    detailsOpen = false;
+  }
+
   function deleteIdea(id: string) {
     ideas = ideas.filter((i) => i.id !== id);
+    if (selectedIdeaId === id) {
+      detailsOpen = false;
+      selectedIdeaId = null;
+    }
     save();
   }
 
   // ── Drag and drop ──
   let draggingId = $state<string | null>(null);
+  let draggingFromSection = $state<string | null>(null);
   let dropTarget = $state<string | null>(null);
+  let didDrag = $state(false);
 
-  function onDragStart(e: DragEvent, ideaId: string) {
+  function onDragStart(e: DragEvent, ideaId: string, sectionKey: string) {
+    didDrag = true;
     draggingId = ideaId;
+    draggingFromSection = sectionKey;
     if (e.dataTransfer) {
       e.dataTransfer.effectAllowed = 'move';
       e.dataTransfer.setData('text/plain', ideaId);
@@ -82,7 +103,16 @@
 
   function onDragEnd() {
     draggingId = null;
+    draggingFromSection = null;
     dropTarget = null;
+  }
+
+  function openIdeaFromCard(id: string) {
+    if (didDrag) {
+      didDrag = false;
+      return;
+    }
+    openIdea(id);
   }
 
   function onDragOver(e: DragEvent, sectionKey: string) {
@@ -98,14 +128,20 @@
   function onDrop(e: DragEvent, sectionKey: string) {
     e.preventDefault();
     dropTarget = null;
-    if (!draggingId) return;
-    const idea = ideas.find((i) => i.id === draggingId);
-    if (!idea || idea.status === sectionKey) {
+    if (!draggingId || draggingFromSection === sectionKey) {
       draggingId = null;
+      draggingFromSection = null;
+      return;
+    }
+    const idea = ideas.find((i) => i.id === draggingId);
+    if (!idea) {
+      draggingId = null;
+      draggingFromSection = null;
       return;
     }
     ideas = ideas.map((i) => (i.id === draggingId ? { ...i, status: sectionKey } : i));
     draggingId = null;
+    draggingFromSection = null;
     save();
   }
 </script>
@@ -176,13 +212,14 @@
 
       <div
         class="flex w-56 shrink-0 flex-col rounded-xl transition-all {isDropping
-          ? 'scale-[1.01] ring-2 ring-cork-500/50'
+          ? 'scale-[1.01]'
           : ''}"
         style="background: {section.bg};"
         ondragover={(e) => onDragOver(e, section.key)}
         ondragleave={(e) => onDragLeave(e, section.key)}
         ondrop={(e) => onDrop(e, section.key)}
-        role="list"
+        role="region"
+        aria-label={section.label}
       >
         <div class="border-b px-3 py-2.5 {section.dark ? 'border-white/10' : 'border-cork-300/30'}">
           <div class="flex items-center gap-2">
@@ -201,62 +238,37 @@
         <div class="flex-1 space-y-2 overflow-y-auto p-2 [scrollbar-width:none]">
           {#each sectionIdeas as idea (idea.id)}
             <div
-              class="group rounded-lg bg-white/60 p-3 text-left transition-all duration-200 hover:shadow-md {draggingId ===
+              class="group cursor-pointer rounded-lg bg-white/60 p-3 text-left transition-all duration-200 hover:shadow-md {draggingId ===
               idea.id
-                ? 'z-10 scale-105 rotate-2 shadow-xl ring-2 ring-cork-500/30'
+                ? 'z-10 scale-105 rotate-1 shadow-xl'
                 : ''}"
               style="box-shadow: 0 1px 3px rgba(0,0,0,.06);"
-              draggable={draftMode === 'edit'}
-              role="listitem"
-              ondragstart={(e) => onDragStart(e, idea.id)}
+              draggable="true"
+              role="button"
+              tabindex="0"
+              ondragstart={(e) => onDragStart(e, idea.id, section.key)}
               ondragend={onDragEnd}
+              onclick={() => openIdeaFromCard(idea.id)}
+              onkeydown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  openIdeaFromCard(idea.id);
+                }
+              }}
             >
-              <div class="mb-0.5 flex items-center justify-between">
-                <span class="font-mono text-[9px] text-cork-400">{idea.id.slice(0, 8)}</span>
-                {#if draftMode === 'edit'}
-                  <button
-                    type="button"
-                    class="cursor-pointer text-cork-300 opacity-0 transition-opacity group-hover:opacity-100 hover:text-red-500"
-                    onclick={() => deleteIdea(idea.id)}
-                  >
-                    <X class="size-3" />
-                  </button>
-                {/if}
-              </div>
-              {#if draftMode === 'edit'}
-                <input
-                  value={idea.title}
-                  class="w-full rounded border border-transparent bg-transparent p-0 font-display text-sm leading-tight text-cork-800 transition-colors outline-none hover:border-cork-300/50 focus:border-cork-500/60 focus:bg-white/50 focus:px-1 focus:py-0.5"
-                  oninput={(e) => updateIdeaField(idea.id, 'title', e.currentTarget.value)}
-                />
-                <textarea
-                  value={idea.description}
-                  placeholder="Description..."
-                  rows="1"
-                  class="mt-1 w-full resize-none rounded border border-transparent bg-transparent p-0 text-[10px] text-cork-500 transition-colors outline-none hover:border-cork-300/50 focus:border-cork-500/60 focus:bg-white/50 focus:px-1 focus:py-0.5"
-                  oninput={(e) => updateIdeaField(idea.id, 'description', e.currentTarget.value)}
-                ></textarea>
-              {:else}
-                <h3 class="font-display text-sm leading-tight text-cork-800">{idea.title}</h3>
-                {#if idea.description}
-                  <p class="mt-1 line-clamp-2 text-[10px] text-cork-500">{idea.description}</p>
-                {/if}
-              {/if}
-
+              <span class="mb-1 block font-mono text-[9px] text-cork-400">
+                {idea.id.slice(0, 8)}
+              </span>
+              <h3 class="font-sans text-sm leading-snug font-semibold text-cork-800">
+                {idea.title}
+              </h3>
               <div class="mt-2 flex items-center justify-between gap-1 text-[9px] text-cork-400">
                 <span>{formatDate(idea.createdAt)}</span>
-                <div class="flex items-center gap-1">
-                  {#if idea.proposer}
-                    <span class="rounded bg-cork-200/80 px-1 py-0.5 font-medium"
-                      >{idea.proposer}</span
-                    >
-                  {/if}
-                  {#if idea.okrCode}
-                    <span class="rounded bg-cork-200/80 px-1 py-0.5 font-medium"
-                      >{idea.okrCode}</span
-                    >
-                  {/if}
-                </div>
+                {#if idea.proposer}
+                  <span class="rounded bg-cork-200/80 px-1.5 py-0.5 font-medium">
+                    {idea.proposer}
+                  </span>
+                {/if}
               </div>
             </div>
           {/each}
@@ -275,3 +287,132 @@
     {/each}
   </div>
 </div>
+
+<Dialog.Root
+  bind:open={detailsOpen}
+  onOpenChange={(open) => {
+    if (!open) selectedIdeaId = null;
+  }}
+>
+  <Dialog.Content
+    class="border-cork-300 bg-cork-50 text-cork-800 sm:max-w-lg"
+    showCloseButton={false}
+  >
+    {#if selectedIdea}
+      <button
+        type="button"
+        class="absolute top-4 right-4 inline-flex size-8 cursor-pointer items-center justify-center rounded-md text-cork-500 transition-colors hover:bg-cork-100 hover:text-cork-800"
+        onclick={closeIdea}
+        aria-label="Close"
+      >
+        <X class="size-4" />
+      </button>
+      <Dialog.Header>
+        <Dialog.Title class="pr-8 font-display text-2xl text-cork-800">
+          {selectedIdea.title}
+        </Dialog.Title>
+        <Dialog.Description class="sr-only">Details for {selectedIdea.title}</Dialog.Description>
+      </Dialog.Header>
+
+      {#if draftMode === 'edit'}
+        <div class="space-y-3">
+          <label class="block">
+            <span class="text-xs font-medium text-cork-600">Title</span>
+            <input
+              value={selectedIdea.title}
+              class="mt-1 w-full rounded-lg border border-cork-300 bg-white/60 px-3 py-2 text-sm outline-none focus:border-cork-500"
+              oninput={(e) => updateIdeaField(selectedIdea.id, 'title', e.currentTarget.value)}
+            />
+          </label>
+          <label class="block">
+            <span class="sr-only">Description</span>
+            <textarea
+              value={selectedIdea.description}
+              placeholder="Description"
+              rows="5"
+              class="w-full resize-y rounded-lg border border-cork-300 bg-white/60 px-3 py-2 text-sm outline-none placeholder:text-cork-400 focus:border-cork-500"
+              oninput={(e) =>
+                updateIdeaField(selectedIdea.id, 'description', e.currentTarget.value)}
+            ></textarea>
+          </label>
+          <div class="grid gap-3 sm:grid-cols-2">
+            <label class="block">
+              <span class="text-xs font-medium text-cork-600">Status</span>
+              <select
+                value={selectedIdea.status}
+                class="mt-1 w-full rounded-lg border border-cork-300 bg-white/60 px-3 py-2 text-sm outline-none focus:border-cork-500"
+                onchange={(e) => updateIdeaField(selectedIdea.id, 'status', e.currentTarget.value)}
+              >
+                {#each IDEA_SECTIONS as section (section.key)}
+                  <option value={section.key}>{section.label}</option>
+                {/each}
+              </select>
+            </label>
+            <label class="block">
+              <span class="text-xs font-medium text-cork-600">Proposer</span>
+              <input
+                value={selectedIdea.proposer}
+                class="mt-1 w-full rounded-lg border border-cork-300 bg-white/60 px-3 py-2 text-sm outline-none focus:border-cork-500"
+                oninput={(e) => updateIdeaField(selectedIdea.id, 'proposer', e.currentTarget.value)}
+              />
+            </label>
+          </div>
+          <label class="block">
+            <span class="text-xs font-medium text-cork-600">OKR code</span>
+            <input
+              value={selectedIdea.okrCode}
+              class="mt-1 w-full rounded-lg border border-cork-300 bg-white/60 px-3 py-2 text-sm outline-none focus:border-cork-500"
+              oninput={(e) => updateIdeaField(selectedIdea.id, 'okrCode', e.currentTarget.value)}
+            />
+          </label>
+        </div>
+      {:else}
+        <div class="space-y-5">
+          <p class="text-sm leading-relaxed whitespace-pre-wrap text-cork-700">
+            {selectedIdea.description || 'No description provided.'}
+          </p>
+          <div class="grid grid-cols-2 gap-3 text-xs">
+            <div class="rounded-lg bg-cork-100/80 p-3">
+              <p class="text-[9px] font-semibold tracking-wider text-cork-400 uppercase">
+                Proposer
+              </p>
+              <p class="mt-1 font-medium text-cork-700">{selectedIdea.proposer || 'AI'}</p>
+            </div>
+            <div class="rounded-lg bg-cork-100/80 p-3">
+              <p class="text-[9px] font-semibold tracking-wider text-cork-400 uppercase">Created</p>
+              <p class="mt-1 font-medium text-cork-700">{formatDate(selectedIdea.createdAt)}</p>
+            </div>
+            {#if selectedIdea.okrCode}
+              <div class="col-span-2 rounded-lg bg-cork-100/80 p-3">
+                <p class="text-[9px] font-semibold tracking-wider text-cork-400 uppercase">
+                  OKR code
+                </p>
+                <p class="mt-1 font-medium text-cork-700">{selectedIdea.okrCode}</p>
+              </div>
+            {/if}
+          </div>
+        </div>
+      {/if}
+
+      {#if draftMode === 'edit'}
+        <Dialog.Footer class="flex-row justify-between gap-2">
+          <button
+            type="button"
+            class="inline-flex cursor-pointer items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium text-red-600 hover:bg-red-50"
+            onclick={() => deleteIdea(selectedIdea.id)}
+          >
+            <Trash2 class="size-3.5" />
+            Delete
+          </button>
+          <button
+            type="button"
+            class="cursor-pointer rounded-lg bg-cork-700 px-4 py-2 text-xs font-medium text-cork-50 hover:bg-cork-800"
+            onclick={closeIdea}
+          >
+            Done
+          </button>
+        </Dialog.Footer>
+      {/if}
+    {/if}
+  </Dialog.Content>
+</Dialog.Root>

@@ -3,6 +3,7 @@ import { kanbanCard, kanbanActivity } from '$lib/server/db/schema.js';
 import { eq } from 'drizzle-orm';
 import { json } from '@sveltejs/kit';
 import { assertProjectAccess } from '$lib/server/access.js';
+import { syncKanbanCardToBacklog } from '$lib/server/epic-kanban-sync.js';
 
 export async function PATCH({ params, request, locals }) {
   const cardId = Number(params.id);
@@ -23,6 +24,8 @@ export async function PATCH({ params, request, locals }) {
     .update(kanbanCard)
     .set({ columnId, updatedAt: new Date() })
     .where(eq(kanbanCard.id, cardId));
+
+  await syncKanbanCardToBacklog(cardId, { done: columnId === 'col-done' }, actor);
 
   // Log activity if the column actually changed
   if (oldColumn !== columnId) {

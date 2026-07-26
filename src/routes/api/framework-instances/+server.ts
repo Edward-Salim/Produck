@@ -3,6 +3,7 @@ import { frameworkInstance } from '$lib/server/db/schema.js';
 import { asc, eq } from 'drizzle-orm';
 import { json } from '@sveltejs/kit';
 import { assertProjectAccess } from '$lib/server/access.js';
+import { syncBacklogToKanban } from '$lib/server/epic-kanban-sync.js';
 import type { RequestHandler } from './$types.js';
 
 export const GET: RequestHandler = async ({ url, locals }) => {
@@ -71,6 +72,10 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
       if (!row) return json({ error: 'Instance not found' }, { status: 404 });
 
+      if (row.templateId === 'backlog') {
+        await syncBacklogToKanban(row.projectId, (row.values ?? {}) as Record<string, unknown>);
+      }
+
       return json({
         instance: {
           id: `db-${row.id}`,
@@ -94,6 +99,10 @@ export const POST: RequestHandler = async ({ request, locals }) => {
         updatedBy: displayName
       })
       .returning();
+
+    if (row.templateId === 'backlog') {
+      await syncBacklogToKanban(row.projectId, (row.values ?? {}) as Record<string, unknown>);
+    }
 
     return json({
       instance: {

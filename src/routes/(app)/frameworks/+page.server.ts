@@ -21,6 +21,7 @@ export const load: PageServerLoad = async ({ cookies, locals, url }) => {
       workspaceId: 0,
       projectId: 0,
       projectName: '',
+      epicKanbanSyncEnabled: false,
       fintechPicks: [] as { companyId: string }[],
       displayName
     };
@@ -34,6 +35,7 @@ export const load: PageServerLoad = async ({ cookies, locals, url }) => {
       workspaceId,
       projectId: 0,
       projectName: '',
+      epicKanbanSyncEnabled: false,
       fintechPicks: [] as { companyId: string }[],
       displayName
     };
@@ -42,7 +44,10 @@ export const load: PageServerLoad = async ({ cookies, locals, url }) => {
   await assertProjectAccess(locals, projectId);
 
   const [activeProject] = await db
-    .select({ name: project.name })
+    .select({
+      name: project.name,
+      epicKanbanSyncEnabled: project.epicKanbanSyncEnabled
+    })
     .from(project)
     .where(eq(project.id, projectId));
 
@@ -56,6 +61,7 @@ export const load: PageServerLoad = async ({ cookies, locals, url }) => {
     workspaceId,
     projectId,
     projectName: activeProject?.name ?? '',
+    epicKanbanSyncEnabled: activeProject?.epicKanbanSyncEnabled ?? false,
     fintechPicks,
     displayName
   };

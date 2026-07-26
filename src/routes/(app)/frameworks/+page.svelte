@@ -1,6 +1,7 @@
 <script lang="ts">
-  import { browser } from '$app/environment';
-  import { page } from '$app/state';
+  import { navigating, page } from '$app/state';
+  import { invalidateAll } from '$app/navigation';
+  import { onMount } from 'svelte';
   import { getFullscreen, toggleFullscreen } from '$lib/stores/fullscreen.svelte.js';
   import { FRAMEWORK_TEMPLATES, type FrameworkTemplate } from '$lib/frameworks/templates.js';
   import {
@@ -14,6 +15,8 @@
     FlaskConical,
     Info,
     Layers3,
+    Link2,
+    LoaderCircle,
     Maximize,
     Minimize,
     Plus,
@@ -37,6 +40,7 @@
   import LeanCanvasEditor from '$lib/components/frameworks/LeanCanvasEditor.svelte';
   import BusinessModelCanvasEditor from '$lib/components/frameworks/BusinessModelCanvasEditor.svelte';
   import OrganogramEditor from '$lib/components/frameworks/OrganogramEditor.svelte';
+  import SitemapEditor from '$lib/components/frameworks/SitemapEditor.svelte';
   import type { FrameworkInstance } from '$lib/components/frameworks/types.js';
   import type { Component } from 'svelte';
   import * as Dialog from '$lib/components/ui/dialog/index.js';
@@ -49,22 +53,23 @@
       workspaceId: number;
       projectId: number;
       projectName: string;
+      epicKanbanSyncEnabled: boolean;
       fintechPicks: { companyId: string }[];
       currentUser?: { displayName?: string };
     };
   }>();
 
   let projectId = $derived(page.url.searchParams.get('project') ?? String(data.projectId));
-  let storageKey = $derived(
-    `produck_framework_instances_v1_ws_${data.workspaceId}_proj_${projectId}`
-  );
-  let viewStateKey = $derived(`produck_framework_view_ws_${data.workspaceId}_proj_${projectId}`);
-  let deletedTemplateIdsKey = $derived(
-    `produck_framework_deleted_templates_ws_${data.workspaceId}_proj_${projectId}`
-  );
 
-  let instances = $state<FrameworkInstance[]>([]);
-  let initialized = $state(false);
+  const locallyDeletedTemplateIds = new Set<string>();
+  let instances = $derived.by<FrameworkInstance[]>(() => [
+    ...new Map(
+      (data.frameworkInstances as FrameworkInstance[])
+        .filter((instance) => !locallyDeletedTemplateIds.has(instance.templateId))
+        .map((instance) => [instance.templateId, instance])
+    ).values()
+  ]);
+  let contextSwitching = $state(false);
   let selectedInstanceId = $state<string | null>(null);
   let selectedCategory = $state<'all' | FrameworkTemplate['category']>('all');
   let view = $state<FrameworkView>('templates');
@@ -78,9 +83,28 @@
   let fullscreen = $derived(getFullscreen());
   let showHelp = $state(false);
   let showKanbanHistory = $state(false);
+  let syncUpdating = $state(false);
+  let syncConfirmationOpen = $state(false);
+  let syncError = $state('');
+  let isFrameworkLoading = $derived(
+    contextSwitching ||
+      (navigating.to?.url.pathname === '/frameworks' &&
+        navigating.to.url.searchParams.get('project') !== page.url.searchParams.get('project'))
+  );
 
   const templates = FRAMEWORK_TEMPLATES;
-  const templateIds = new Set(templates.map((t) => t.id));
+
+  onMount(() => {
+    const startContextSwitch = () => (contextSwitching = true);
+    const endContextSwitch = () => (contextSwitching = false);
+    window.addEventListener('produck:context-switch-start', startContextSwitch);
+    window.addEventListener('produck:context-switch-end', endContextSwitch);
+
+    return () => {
+      window.removeEventListener('produck:context-switch-start', startContextSwitch);
+      window.removeEventListener('produck:context-switch-end', endContextSwitch);
+    };
+  });
 
   function handleKeydown(e: KeyboardEvent) {
     if (
@@ -143,6 +167,42 @@
   );
 
   let existingTemplateIds = $derived(new Set(instances.map((i) => i.templateId)));
+  let showEpicKanbanSync = $derived(
+    (selectedTemplate?.id === 'backlog' || selectedTemplate?.id === 'kanban') &&
+      existingTemplateIds.has('backlog') &&
+      existingTemplateIds.has('kanban')
+  );
+
+  function requestEpicKanbanSync() {
+    syncError = '';
+    syncConfirmationOpen = true;
+  }
+
+  async function toggleEpicKanbanSync() {
+    if (syncUpdating) return;
+    syncUpdating = true;
+    syncError = '';
+    try {
+      const response = await fetch('/api/epic-kanban-sync', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          projectId: Number(projectId),
+          enabled: !data.epicKanbanSyncEnabled
+        })
+      });
+      if (!response.ok) {
+        syncError = 'Could not update synchronization. Please try again.';
+        return;
+      }
+      syncConfirmationOpen = false;
+      await invalidateAll();
+    } catch {
+      syncError = 'Could not update synchronization. Please try again.';
+    } finally {
+      syncUpdating = false;
+    }
+  }
 
   // ── Custom editor map ──
   const CUSTOM_EDITORS: Record<
@@ -157,6 +217,7 @@
       fintechPicks?: { companyId: string }[];
     }>
   > = {
+    sitemap: SitemapEditor,
     'fintech-landscape': FintechLandscapeEditor,
     'value-proposition-canvas': ValuePropositionCanvasEditor,
     'lean-canvas': LeanCanvasEditor,
@@ -174,21 +235,15 @@
 
   function saveInstances(next: FrameworkInstance[]) {
     instances = next;
-    if (browser) localStorage.setItem(storageKey, JSON.stringify(next));
   }
 
   function getDeletedTemplateIds(): Set<string> {
-    if (!browser) return new Set();
-    try {
-      const parsed = JSON.parse(localStorage.getItem(deletedTemplateIdsKey) ?? '[]');
-      return new Set(Array.isArray(parsed) ? parsed.filter((id) => typeof id === 'string') : []);
-    } catch {
-      return new Set();
-    }
+    return new Set(locallyDeletedTemplateIds);
   }
 
   function saveDeletedTemplateIds(next: Set<string>) {
-    if (browser) localStorage.setItem(deletedTemplateIdsKey, JSON.stringify([...next]));
+    locallyDeletedTemplateIds.clear();
+    for (const id of next) locallyDeletedTemplateIds.add(id);
   }
 
   function clearDeletedTemplate(templateId: string) {
@@ -243,7 +298,7 @@
     } else if (template.id === 'assumption-test') {
       emptyValues.assumptions = JSON.stringify([]);
     } else if (template.id === 'kanban') {
-      // Kanban fetches from DB directly — localStorage values are not used
+      // Kanban fetches from DB directly.
     } else if (template.id === 'value-proposition-canvas') {
       emptyValues.valuePropositionCanvas = JSON.stringify({
         customerJobs: '',
@@ -325,7 +380,6 @@
           }
           instances = instances.map((i) => (i.id === instance.id ? { ...i, id: dbId } : i));
           if (selectedInstanceId === instance.id) selectedInstanceId = dbId;
-          localStorage.setItem(storageKey, JSON.stringify(instances));
         }
       })
       .catch(() => {
@@ -361,7 +415,6 @@
     selectedInstanceId = next[0]?.id ?? null;
     view = 'templates';
     deleteTargetId = null;
-    if (browser) localStorage.removeItem(viewStateKey);
 
     // Delete from DB if it's a DB-backed instance
     if (targetId.startsWith('db-')) {
@@ -415,7 +468,6 @@
               i.id === updated.id ? { ...i, id: json.instance.id } : i
             );
             if (selectedInstanceId === updated.id) selectedInstanceId = json.instance.id;
-            localStorage.setItem(storageKey, JSON.stringify(instances));
           }
         }
       })
@@ -423,111 +475,6 @@
         /* best-effort */
       });
   }
-
-  function mergeServerInstance(serverInstance: FrameworkInstance, local?: FrameworkInstance) {
-    // Keep local edits when they exist; server data only fills in missing templates.
-    // Local values and timestamps are preserved so editing one draft
-    // doesn't reset or re-stamp all the others.
-    if (!local) return serverInstance;
-    return { ...local, updatedBy: local.updatedBy ?? serverInstance.updatedBy };
-  }
-
-  function selectInstanceAfterRefresh(next: FrameworkInstance[]) {
-    if (selectedInstanceId && next.some((i) => i.id === selectedInstanceId)) {
-      return selectedInstanceId;
-    }
-
-    if (browser) {
-      try {
-        const savedView = localStorage.getItem(viewStateKey);
-        const savedInstanceId = savedView ? JSON.parse(savedView).instanceId : null;
-        if (savedInstanceId && next.some((i) => i.id === savedInstanceId)) {
-          return savedInstanceId;
-        }
-      } catch {
-        /* ignore */
-      }
-    }
-
-    return next[0]?.id ?? null;
-  }
-
-  // React to project switches by re-initializing instances from server data + localStorage.
-  $effect(() => {
-    const deletedTemplateIds = getDeletedTemplateIds();
-    const serverInstances = (data.frameworkInstances as FrameworkInstance[]).filter(
-      (instance) => !deletedTemplateIds.has(instance.templateId)
-    );
-    const key = storageKey;
-    if (!browser) {
-      instances = serverInstances;
-      selectedInstanceId = selectInstanceAfterRefresh(serverInstances);
-      initialized = true;
-      return;
-    }
-    const raw = localStorage.getItem(key);
-    if (!raw) {
-      instances = serverInstances;
-      if (serverInstances.length > 0) localStorage.setItem(key, JSON.stringify(serverInstances));
-      selectedInstanceId = selectInstanceAfterRefresh(serverInstances);
-      initialized = true;
-      return;
-    }
-    try {
-      const parsed = (JSON.parse(raw) as FrameworkInstance[]).filter(
-        (instance) => !deletedTemplateIds.has(instance.templateId)
-      );
-      // Deduplicate by templateId (last wins: saved framework instances override derived data).
-      const dedupedServerInstances = [
-        ...new Map(serverInstances.map((s) => [s.templateId, s])).values()
-      ];
-      const serverTemplates = new Set(dedupedServerInstances.map((s) => s.templateId));
-      const merged = [
-        ...dedupedServerInstances.map((serverInstance) => {
-          const local = parsed.find((p) => p.templateId === serverInstance.templateId);
-          return local ? mergeServerInstance(serverInstance, local) : serverInstance;
-        }),
-        ...parsed.filter((i) => templateIds.has(i.templateId) && !serverTemplates.has(i.templateId))
-      ];
-      instances = merged;
-      selectedInstanceId = selectInstanceAfterRefresh(merged);
-      localStorage.setItem(key, JSON.stringify(merged));
-    } catch {
-      localStorage.removeItem(key);
-      instances = serverInstances;
-      if (serverInstances.length > 0) localStorage.setItem(key, JSON.stringify(serverInstances));
-      selectedInstanceId = selectInstanceAfterRefresh(serverInstances);
-    }
-    initialized = true;
-  });
-
-  // Restore last view state after initialization
-  $effect(() => {
-    if (!browser || !initialized) return;
-    const savedView = localStorage.getItem(viewStateKey);
-    if (savedView) {
-      try {
-        const vs = JSON.parse(savedView);
-        if (
-          vs.view === 'editor' &&
-          vs.instanceId &&
-          instances.some((i) => i.id === vs.instanceId)
-        ) {
-          view = vs.view;
-          selectedInstanceId = vs.instanceId;
-        }
-      } catch {
-        /* ignore */
-      }
-    }
-  });
-
-  // Persist view state
-  $effect(() => {
-    if (browser && initialized && view && selectedInstanceId) {
-      localStorage.setItem(viewStateKey, JSON.stringify({ view, instanceId: selectedInstanceId }));
-    }
-  });
 
   let EditorComponent = $derived(
     selectedTemplate ? (CUSTOM_EDITORS[selectedTemplate.id] ?? null) : null
@@ -561,6 +508,22 @@
               </h2>
             </div>
             <div class="flex items-center gap-2">
+              {#if showEpicKanbanSync}
+                <button
+                  type="button"
+                  class="flex h-9 shrink-0 cursor-pointer items-center gap-1.5 rounded-lg border px-3 text-xs font-semibold transition-colors disabled:cursor-wait disabled:opacity-60 {data.epicKanbanSyncEnabled
+                    ? 'border-cork-600 bg-cork-700 text-cork-50 hover:bg-cork-800'
+                    : 'border-cork-300 bg-cork-50/60 text-cork-500 hover:bg-cork-200/60 hover:text-cork-700'}"
+                  disabled={syncUpdating}
+                  title={data.epicKanbanSyncEnabled
+                    ? 'Disable Epics and Kanban synchronization'
+                    : 'Enable Epics and Kanban synchronization'}
+                  onclick={requestEpicKanbanSync}
+                >
+                  <Link2 class="size-3.5" />
+                  Sync {data.epicKanbanSyncEnabled ? 'on' : 'off'}
+                </button>
+              {/if}
               {#if selectedTemplate.id === 'kanban'}
                 <button
                   type="button"
@@ -603,7 +566,11 @@
     </div>
   {:else}
     <div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_16rem]">
-      <section class="min-w-0">
+      <section
+        class="min-w-0 transition-opacity duration-200 {isFrameworkLoading
+          ? 'pointer-events-none opacity-45'
+          : ''}"
+      >
         {#if view === 'templates'}
           <div class="mb-3">
             <div class="flex flex-wrap gap-1.5">
@@ -678,7 +645,7 @@
                     <img
                       src={template.coverImage}
                       alt=""
-                      class="absolute inset-0 h-full w-full scale-[1.22] object-contain transition-transform transition-opacity {added
+                      class="absolute inset-0 h-full w-full scale-[1.22] object-contain transition-opacity transition-transform {added
                         ? 'opacity-35 grayscale-[35%]'
                         : 'group-hover:opacity-25'}"
                     />
@@ -728,6 +695,22 @@
                   </h2>
                 </div>
                 <div class="flex items-center gap-2">
+                  {#if showEpicKanbanSync}
+                    <button
+                      type="button"
+                      class="flex h-9 shrink-0 cursor-pointer items-center gap-1.5 rounded-lg border px-3 text-xs font-semibold transition-colors disabled:cursor-wait disabled:opacity-60 {data.epicKanbanSyncEnabled
+                        ? 'border-cork-600 bg-cork-700 text-cork-50 hover:bg-cork-800'
+                        : 'border-cork-300 bg-cork-50/60 text-cork-500 hover:bg-cork-200/60 hover:text-cork-700'}"
+                      disabled={syncUpdating}
+                      title={data.epicKanbanSyncEnabled
+                        ? 'Disable Epics and Kanban synchronization'
+                        : 'Enable Epics and Kanban synchronization'}
+                      onclick={requestEpicKanbanSync}
+                    >
+                      <Link2 class="size-3.5" />
+                      Sync {data.epicKanbanSyncEnabled ? 'on' : 'off'}
+                    </button>
+                  {/if}
                   {#if selectedTemplate.id === 'kanban'}
                     <button
                       type="button"
@@ -810,105 +793,189 @@
       <!-- Draft sidebar -->
       <aside
         class="h-fit rounded-xl border border-cork-300/50 bg-cork-50/60 p-2.5 shadow-sm lg:sticky lg:top-20"
+        aria-busy={isFrameworkLoading}
       >
-        <div>
-          <div class="space-y-1">
-            <button
-              type="button"
-              class="flex w-full cursor-pointer items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm font-medium transition-colors {view ===
-              'templates'
-                ? 'bg-cork-700 text-cork-50 shadow-sm'
-                : 'text-cork-700 hover:bg-cork-200/60 hover:text-cork-900'}"
-              onclick={() => (view = 'templates')}
-            >
-              <Layers3 class="size-4 shrink-0" />
-              <span class="truncate">Template library</span>
-            </button>
-          </div>
-        </div>
-
-        <div class="mt-3 border-t border-cork-300/40 pt-3">
-          <div class="flex items-center justify-between px-2 pb-1.5">
-            <p class="text-[10px] font-semibold tracking-wider text-cork-400 uppercase">
-              Drafts ({instances.length})
-            </p>
-            <button
-              type="button"
-              class="cursor-pointer rounded p-0.5 text-cork-400 transition-colors hover:bg-cork-200/50 hover:text-cork-600"
-              onclick={() => (draftSort = draftSort === 'modified' ? 'name' : 'modified')}
-              title={draftSort === 'modified' ? 'Sorted: latest modified' : 'Sorted: alphabetical'}
-            >
-              <ArrowDownUp class="size-3" />
-            </button>
-          </div>
-          {#if instances.length === 0}
-            <p class="rounded-lg px-2 py-3 text-center text-xs text-cork-400">No drafts yet</p>
-          {:else}
-            <div class="space-y-1 pr-1">
-              {#each paginatedInstances as instance (instance.id)}
-                <div
-                  class="group rounded-lg px-2 py-1.5 transition-colors {selectedInstance?.id ===
-                    instance.id && view === 'editor'
-                    ? 'bg-cork-200/90 text-cork-900 shadow-sm'
-                    : 'text-cork-600 hover:bg-cork-200/50 hover:text-cork-800'}"
-                >
-                  <div class="flex items-center gap-1.5">
-                    <button
-                      type="button"
-                      class="min-w-0 flex-1 cursor-pointer text-left"
-                      onclick={() => openDraft(instance.id)}
-                    >
-                      <span class="block truncate text-xs leading-tight font-medium text-current"
-                        >{instance.title}</span
-                      >
-                      <span class="mt-0.5 block text-[9px] text-cork-400">
-                        {formatUpdatedAt(instance.updatedAt)}
-                        {#if instance.updatedBy}
-                          <span class="opacity-50">·</span> {instance.updatedBy}
-                        {/if}
-                      </span>
-                    </button>
-                    <button
-                      type="button"
-                      class="flex size-6 shrink-0 cursor-pointer items-center justify-center rounded text-cork-300 opacity-0 transition-all group-hover:opacity-100 hover:bg-red-50 hover:text-red-500"
-                      title="Delete draft"
-                      onclick={() => confirmDelete(instance.id)}
-                    >
-                      <Trash2 class="size-3.5" />
-                    </button>
-                  </div>
-                </div>
-              {/each}
+        {#if isFrameworkLoading}
+          <div class="flex min-h-44 flex-col justify-center px-2 py-5" aria-live="polite">
+            <div class="flex items-center gap-2 text-cork-600">
+              <LoaderCircle class="size-4 animate-spin" />
+              <span class="text-sm font-medium">Loading frameworks</span>
             </div>
-            {#if totalDraftPages > 1}
-              <div
-                class="mt-2 flex items-center justify-between gap-1 border-t border-cork-300/40 pt-2"
+            <p class="mt-1 pl-6 text-[10px] text-cork-400">Fetching the selected project…</p>
+            <div class="mt-5 space-y-2.5">
+              <div class="h-8 animate-pulse rounded-lg bg-cork-200/70"></div>
+              <div class="h-8 animate-pulse rounded-lg bg-cork-200/55"></div>
+              <div class="h-8 animate-pulse rounded-lg bg-cork-200/40"></div>
+            </div>
+          </div>
+        {:else}
+          <div>
+            <div class="space-y-1">
+              <button
+                type="button"
+                class="flex w-full cursor-pointer items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm font-medium transition-colors {view ===
+                'templates'
+                  ? 'bg-cork-700 text-cork-50 shadow-sm'
+                  : 'text-cork-700 hover:bg-cork-200/60 hover:text-cork-900'}"
+                onclick={() => (view = 'templates')}
               >
-                <button
-                  type="button"
-                  class="cursor-pointer rounded p-0.5 text-cork-500 transition-colors hover:bg-cork-200/50 hover:text-cork-700 disabled:cursor-default disabled:opacity-30"
-                  disabled={draftPage === 0}
-                  onclick={() => (draftPage = Math.max(0, draftPage - 1))}
-                >
-                  <ChevronLeft class="size-3.5" />
-                </button>
-                <span class="text-[9px] text-cork-400">{draftPage + 1} / {totalDraftPages}</span>
-                <button
-                  type="button"
-                  class="cursor-pointer rounded p-0.5 text-cork-500 transition-colors hover:bg-cork-200/50 hover:text-cork-700 disabled:cursor-default disabled:opacity-30"
-                  disabled={draftPage >= totalDraftPages - 1}
-                  onclick={() => (draftPage = Math.min(totalDraftPages - 1, draftPage + 1))}
-                >
-                  <ChevronRight class="size-3.5" />
-                </button>
+                <Layers3 class="size-4 shrink-0" />
+                <span class="truncate">Template library</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="mt-3 border-t border-cork-300/40 pt-3">
+            <div class="flex items-center justify-between px-2 pb-1.5">
+              <p class="text-[10px] font-semibold tracking-wider text-cork-400 uppercase">
+                Drafts ({instances.length})
+              </p>
+              <button
+                type="button"
+                class="cursor-pointer rounded p-0.5 text-cork-400 transition-colors hover:bg-cork-200/50 hover:text-cork-600"
+                onclick={() => (draftSort = draftSort === 'modified' ? 'name' : 'modified')}
+                title={draftSort === 'modified'
+                  ? 'Sorted: latest modified'
+                  : 'Sorted: alphabetical'}
+              >
+                <ArrowDownUp class="size-3" />
+              </button>
+            </div>
+            {#if instances.length === 0}
+              <p class="rounded-lg px-2 py-3 text-center text-xs text-cork-400">No drafts yet</p>
+            {:else}
+              <div class="space-y-1 pr-1">
+                {#each paginatedInstances as instance (instance.id)}
+                  <div
+                    class="group rounded-lg px-2 py-1.5 transition-colors {selectedInstance?.id ===
+                      instance.id && view === 'editor'
+                      ? 'bg-cork-200/90 text-cork-900 shadow-sm'
+                      : 'text-cork-600 hover:bg-cork-200/50 hover:text-cork-800'}"
+                  >
+                    <div class="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        class="min-w-0 flex-1 cursor-pointer text-left"
+                        onclick={() => openDraft(instance.id)}
+                      >
+                        <span class="block truncate text-xs leading-tight font-medium text-current"
+                          >{instance.title}</span
+                        >
+                        <span class="mt-0.5 block text-[9px] text-cork-400">
+                          {formatUpdatedAt(instance.updatedAt)}
+                          {#if instance.updatedBy}
+                            <span class="opacity-50">·</span> {instance.updatedBy}
+                          {/if}
+                        </span>
+                      </button>
+                      <button
+                        type="button"
+                        class="flex size-6 shrink-0 cursor-pointer items-center justify-center rounded text-cork-300 opacity-0 transition-all group-hover:opacity-100 hover:bg-red-50 hover:text-red-500"
+                        title="Delete draft"
+                        onclick={() => confirmDelete(instance.id)}
+                      >
+                        <Trash2 class="size-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                {/each}
               </div>
+              {#if totalDraftPages > 1}
+                <div
+                  class="mt-2 flex items-center justify-between gap-1 border-t border-cork-300/40 pt-2"
+                >
+                  <button
+                    type="button"
+                    class="cursor-pointer rounded p-0.5 text-cork-500 transition-colors hover:bg-cork-200/50 hover:text-cork-700 disabled:cursor-default disabled:opacity-30"
+                    disabled={draftPage === 0}
+                    onclick={() => (draftPage = Math.max(0, draftPage - 1))}
+                  >
+                    <ChevronLeft class="size-3.5" />
+                  </button>
+                  <span class="text-[9px] text-cork-400">{draftPage + 1} / {totalDraftPages}</span>
+                  <button
+                    type="button"
+                    class="cursor-pointer rounded p-0.5 text-cork-500 transition-colors hover:bg-cork-200/50 hover:text-cork-700 disabled:cursor-default disabled:opacity-30"
+                    disabled={draftPage >= totalDraftPages - 1}
+                    onclick={() => (draftPage = Math.min(totalDraftPages - 1, draftPage + 1))}
+                  >
+                    <ChevronRight class="size-3.5" />
+                  </button>
+                </div>
+              {/if}
             {/if}
-          {/if}
-        </div>
+          </div>
+        {/if}
       </aside>
     </div>
   {/if}
 </div>
+
+<!-- Epic ↔ Kanban synchronization confirmation -->
+<Dialog.Root
+  open={syncConfirmationOpen}
+  onOpenChange={(open) => {
+    if (!open && !syncUpdating) syncConfirmationOpen = false;
+  }}
+>
+  <Dialog.Content class="border-cork-300 bg-cork-50 text-cork-800 sm:max-w-md">
+    <Dialog.Header>
+      <Dialog.Title class="text-cork-800">
+        {data.epicKanbanSyncEnabled ? 'Turn off synchronization?' : 'Enable synchronization?'}
+      </Dialog.Title>
+      <Dialog.Description class="text-cork-500">
+        {#if data.epicKanbanSyncEnabled}
+          Epics and Kanban will stop updating each other.
+        {:else}
+          Epics will be used for the first synchronization.
+        {/if}
+      </Dialog.Description>
+    </Dialog.Header>
+
+    {#if data.epicKanbanSyncEnabled}
+      <div class="space-y-2 rounded-lg bg-cork-100/70 px-3 py-2.5 text-xs text-cork-600">
+        <p>Existing data stays unchanged, but later edits can diverge.</p>
+        <p>Re-enabling may rewrite shared Kanban fields from Epics again.</p>
+      </div>
+    {:else}
+      <div class="space-y-2 rounded-lg bg-cork-100/70 px-3 py-2.5 text-xs text-cork-600">
+        <p>
+          <strong class="text-cork-700">May be rewritten:</strong> Kanban title, assignee, and Done position.
+        </p>
+        <p>
+          <strong class="text-cork-700">Stays separate:</strong> acceptance criteria, priority, type,
+          estimates, and blocking details.
+        </p>
+        <p>After enabling, shared changes update both frameworks.</p>
+      </div>
+    {/if}
+
+    {#if syncError}
+      <p class="text-xs text-red-600" role="alert">{syncError}</p>
+    {/if}
+
+    <Dialog.Footer class="flex-row justify-end gap-2">
+      <button
+        type="button"
+        class="cursor-pointer rounded-lg border border-cork-300 px-3 py-1.5 text-sm text-cork-600 transition-colors hover:bg-cork-200/50 disabled:cursor-wait disabled:opacity-60"
+        disabled={syncUpdating}
+        onclick={() => (syncConfirmationOpen = false)}
+      >
+        Cancel
+      </button>
+      <button
+        type="button"
+        class="cursor-pointer rounded-lg px-3 py-1.5 text-sm font-medium text-white transition-colors disabled:cursor-wait disabled:opacity-60 {data.epicKanbanSyncEnabled
+          ? 'bg-red-600 hover:bg-red-700'
+          : 'bg-cork-700 hover:bg-cork-800'}"
+        disabled={syncUpdating}
+        onclick={toggleEpicKanbanSync}
+      >
+        {syncUpdating ? 'Updating…' : data.epicKanbanSyncEnabled ? 'Turn off' : 'Enable sync'}
+      </button>
+    </Dialog.Footer>
+  </Dialog.Content>
+</Dialog.Root>
 
 <!-- Delete confirmation dialog -->
 <Dialog.Root

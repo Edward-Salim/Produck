@@ -308,6 +308,7 @@ export const project = pgTable('project', {
   name: text('name').notNull(),
   shortName: text('short_name'),
   levels: integer('levels').notNull().default(2),
+  epicKanbanSyncEnabled: boolean('epic_kanban_sync_enabled').notNull().default(false),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
 });
@@ -647,6 +648,9 @@ export const kanbanCard = pgTable('kanban_card', {
   projectId: integer('project_id')
     .notNull()
     .references(() => project.id, { onDelete: 'cascade' }),
+  ticketId: integer('ticket_id')
+    .unique()
+    .references(() => ticket.id, { onDelete: 'set null' }),
   columnId: text('column_id').notNull().default('col-todo'),
   title: text('title').notNull(),
   description: text('description'),
@@ -663,7 +667,8 @@ export const kanbanCard = pgTable('kanban_card', {
 });
 
 export const kanbanCardRelations = relations(kanbanCard, ({ one }) => ({
-  project: one(project, { fields: [kanbanCard.projectId], references: [project.id] })
+  project: one(project, { fields: [kanbanCard.projectId], references: [project.id] }),
+  ticket: one(ticket, { fields: [kanbanCard.ticketId], references: [ticket.id] })
 }));
 
 // ── Kanban Activity Log ────────────────────────────────

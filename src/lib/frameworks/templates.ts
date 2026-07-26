@@ -9,7 +9,8 @@ import {
   NotebookPen,
   Puzzle,
   Route,
-  TrendingUp
+  TrendingUp,
+  Workflow
 } from '@lucide/svelte';
 import type { Component } from 'svelte';
 import assumptionTestCover from '$lib/assets/framework-cards/assumption-test.png';
@@ -25,6 +26,7 @@ import valuePropositionCanvasCover from '$lib/assets/framework-cards/value-propo
 import leanCanvasCover from '$lib/assets/framework-cards/lean-canvas.png';
 import businessModelCanvasCover from '$lib/assets/framework-cards/business-model-canvas.png';
 import organogramCover from '$lib/assets/framework-cards/organogram.png';
+import sitemapCover from '$lib/assets/framework-cards/sitemap.png';
 
 export type FrameworkField = {
   id: string;
@@ -47,6 +49,26 @@ export type FrameworkTemplate = {
 };
 
 export const FRAMEWORK_TEMPLATES: FrameworkTemplate[] = [
+  {
+    id: 'sitemap',
+    name: 'Sitemap',
+    category: 'Strategy',
+    description:
+      'Visualize a product’s page or screen hierarchy from database-backed route data.',
+    icon: Workflow,
+    fields: [],
+    instructions:
+      'This read-only diagram is maintained by developers. Populate it from verified application routes through seed or database updates; use aliases for user-facing names and paths for the underlying route identifiers.',
+    terminology: [
+      { term: 'Root', definition: 'the product entry point at the top of the hierarchy.' },
+      { term: 'Destination', definition: 'an implemented page, screen, or application state.' },
+      { term: 'Section', definition: 'a database-defined grouping of related destinations.' },
+      { term: 'Alias', definition: 'the user-facing name stored for a destination.' },
+      { term: 'Path', definition: 'the URL, route, or state identifier used by the product.' }
+    ],
+    coverGradient: 'linear-gradient(135deg, #edf5ef 0%, #dbe7dc 50%, #cad8ca 100%)',
+    coverImage: sitemapCover
+  },
   {
     id: 'fintech-landscape',
     name: 'Fintech Map',

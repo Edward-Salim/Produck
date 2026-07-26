@@ -1,0 +1,86 @@
+<div class="card-content front-card">
+  <div id="hanzi" class="hanzi-display">{{Hanzi}}</div>
+  <div id="hidden-pinyin" style="display:none;">{{Pinyin}}</div>
+</div>
+
+<script>
+  (function () {
+    var hanziEl = document.getElementById("hanzi");
+    var pinyinEl = document.getElementById("hidden-pinyin");
+    if (!hanziEl || !pinyinEl) return;
+
+    var hanziText = hanziEl.textContent || "";
+    var pinyinText = pinyinEl.textContent || "";
+    var syllables = [];
+    var syllablePattern = /([A-Za-züÜvV:]+)([1-5])/g;
+    var match;
+
+    while ((match = syllablePattern.exec(pinyinText)) !== null) {
+      syllables.push({ text: match[1], tone: match[2] });
+    }
+
+    var toneMarks = {
+      a: ["ā", "á", "ǎ", "à"], e: ["ē", "é", "ě", "è"], i: ["ī", "í", "ǐ", "ì"],
+      o: ["ō", "ó", "ǒ", "ò"], u: ["ū", "ú", "ǔ", "ù"], v: ["ǖ", "ǘ", "ǚ", "ǜ"], ü: ["ǖ", "ǘ", "ǚ", "ǜ"]
+    };
+
+    function markSyllable(syllable, tone) {
+      var toneNumber = parseInt(tone, 10);
+      var text = syllable.replace(/u:/gi, "v");
+      if (!toneNumber || toneNumber === 5) return text.replace(/v/gi, "ü");
+
+      var lower = text.toLowerCase();
+      var index = -1;
+      var vowel = "";
+
+      if (lower.indexOf("a") !== -1) { vowel = "a"; index = lower.indexOf("a"); }
+      else if (lower.indexOf("e") !== -1) { vowel = "e"; index = lower.indexOf("e"); }
+      else if (lower.indexOf("ou") !== -1) { vowel = "o"; index = lower.indexOf("o"); }
+      else {
+        for (var i = lower.length - 1; i >= 0; i--) {
+          if ("aeiouvü".indexOf(lower[i]) !== -1) {
+            vowel = lower[i];
+            index = i;
+            break;
+          }
+        }
+      }
+
+      if (index === -1) return text.replace(/v/gi, "ü");
+      return (text.slice(0, index) + toneMarks[vowel][toneNumber - 1] + text.slice(index + 1)).replace(/v/gi, "ü");
+    }
+
+    var lastHanziIndex = -1;
+    for (var j = hanziText.length - 1; j >= 0; j--) {
+      if (/[㐀-鿿]/.test(hanziText[j])) {
+        lastHanziIndex = j;
+        break;
+      }
+    }
+
+    var output = "";
+    var toneIndex = 0;
+
+    for (var k = 0; k <= lastHanziIndex; k++) {
+      var character = hanziText[k];
+
+      if (/[㐀-鿿]/.test(character)) {
+        var syllable = syllables[toneIndex] || { text: "", tone: "5" };
+        var marked = markSyllable(syllable.text, syllable.tone);
+        output += "<span class='hanzi-unit'>";
+        output += "<span class='hanzi-glyph tone" + syllable.tone + "'>" + character + "</span>";
+        output += "<span class='character-pinyin tone" + syllable.tone + "'>" + marked + "</span>";
+        output += "</span>";
+        toneIndex++;
+      } else {
+        output += "<span class='hanzi-punctuation'>" + character + "</span>";
+      }
+    }
+
+    if (lastHanziIndex < hanziText.length - 1) {
+      output += "<span class='homograph-hint'>" + hanziText.slice(lastHanziIndex + 1) + "</span>";
+    }
+
+    hanziEl.innerHTML = output;
+  })();
+</script>

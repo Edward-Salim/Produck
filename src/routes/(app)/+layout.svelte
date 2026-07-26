@@ -148,14 +148,24 @@
     data.workspaces.find((w) => String(w.id) === selectedWorkspaceId)?.name ?? 'Workspace'
   );
 
+  function announceContextSwitch(state: 'start' | 'end') {
+    window.dispatchEvent(new Event(`produck:context-switch-${state}`));
+  }
+
   async function switchWorkspace(id: string | undefined) {
     if (!id || id === selectedWorkspaceId) return;
-    await fetch('/api/workspace', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ workspaceId: id })
-    });
-    window.location.reload();
+    announceContextSwitch('start');
+    try {
+      const response = await fetch('/api/workspace', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ workspaceId: id })
+      });
+      if (!response.ok) throw new Error('Failed to switch workspace');
+      window.location.reload();
+    } catch {
+      announceContextSwitch('end');
+    }
   }
 
   // ── Project ──
@@ -174,8 +184,9 @@
     sessionStorage.removeItem('produck_show_landing');
   });
 
-  function switchProject(id: string | undefined) {
-    if (!id) return;
+  async function switchProject(id: string | undefined) {
+    if (!id || id === selectedProjectId) return;
+    announceContextSwitch('start');
     document.cookie = `active_project=${id};path=/;max-age=${60 * 60 * 24 * 365};samesite=lax`;
     // Persist to DB for cross-device sync (non-blocking)
     fetch('/api/preferences', {
@@ -185,7 +196,11 @@
     });
     const url = new URL(page.url);
     url.searchParams.set('project', id);
-    goto(url.toString());
+    try {
+      await goto(url.toString(), { invalidateAll: true });
+    } finally {
+      announceContextSwitch('end');
+    }
   }
 
   let selectedProject = $derived(data.projects.find((p) => String(p.id) === selectedProjectId));

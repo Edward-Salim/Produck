@@ -2,6 +2,7 @@
   import type { KanbanCard, KanbanColumn } from '$lib/types/story-map.js';
   import type { FrameworkInstance } from './types.js';
   import { browser } from '$app/environment';
+  import { invalidateAll } from '$app/navigation';
   import { Ban, Bug, ClipboardList, Columns3, Search, Sparkles, Wrench, X } from '@lucide/svelte';
   import EmptyState from '$lib/components/ui/empty-state.svelte';
   import { SvelteSet } from 'svelte/reactivity';
@@ -77,41 +78,26 @@
     });
   });
 
-  // ── Module-level cache so switching templates doesn't re-fetch from scratch ──
-  const columnCache = new Map<string, KanbanColumn[]>();
-
   let columns = $state<KanbanColumn[]>([]);
   let loading = $state(false);
 
   async function loadKanban() {
-    if (!columnCache.has(projectId ?? '')) {
-      columns = [];
-      loading = true;
-    }
+    columns = [];
+    loading = true;
 
     try {
       const res = await fetch(`/api/kanban?projectId=${projectId}`);
       const data = await res.json();
       if (data.columns && Array.isArray(data.columns) && data.columns.length > 0) {
         columns = data.columns;
-        columnCache.set(projectId ?? '', data.columns);
-      } else if (!columnCache.has(projectId ?? '')) {
+      } else {
         columns = DEFAULT_COLUMNS.map((c) => ({ ...c, cards: [] }));
       }
     } catch {
-      if (!columnCache.has(projectId ?? '')) {
-        columns = DEFAULT_COLUMNS.map((c) => ({ ...c, cards: [] }));
-      }
+      columns = DEFAULT_COLUMNS.map((c) => ({ ...c, cards: [] }));
     }
     loading = false;
   }
-
-  // Update cache whenever columns change locally (moves, assigns, blocks)
-  $effect(() => {
-    if (columns.length > 0 && projectId) {
-      columnCache.set(projectId, columns);
-    }
-  });
 
   $effect(() => {
     if (projectId) loadKanban();
@@ -217,11 +203,12 @@
     // Persist to DB
     const numericId = cardId.replace('KC-', '');
     try {
-      await fetch(`/api/kanban/${numericId}/assignee`, {
+      const response = await fetch(`/api/kanban/${numericId}/assignee`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ assignee: name })
       });
+      if (response.ok) await invalidateAll();
     } catch {
       /* best-effort */
     }
@@ -454,11 +441,12 @@
 
     // Persist to DB
     try {
-      await fetch(`/api/kanban/${numericId}/move`, {
+      const response = await fetch(`/api/kanban/${numericId}/move`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ columnId: toColId })
       });
+      if (response.ok) await invalidateAll();
     } catch {
       /* best-effort */
     }
@@ -646,7 +634,7 @@
                 >
                   <!-- Title + ID -->
                   <span class="font-mono text-[10px] text-gray-400">{card.id}</span>
-                  <h3 class="font-display text-sm leading-tight text-cork-800">{card.title}</h3>
+                  <h3 class="text-sm leading-snug font-semibold text-cork-800">{card.title}</h3>
 
                   <!-- Description: hidden by default, click toggles full -->
                   {#if card.description && expandedCards.has(card.id)}

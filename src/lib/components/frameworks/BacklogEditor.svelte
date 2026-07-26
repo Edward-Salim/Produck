@@ -60,6 +60,8 @@
     }));
   });
 
+  let ticketCount = $derived(localEpics.reduce((total, epic) => total + epic.stories.length, 0));
+
   let allPics = $derived.by(() => {
     const pics = new SvelteSet<string>();
     for (const epic of localEpics) {
@@ -117,11 +119,6 @@
       hour: '2-digit',
       minute: '2-digit'
     });
-  }
-
-  function isAllACDone(story: BacklogStory): boolean {
-    if (story.acceptanceCriteria.length === 0) return false;
-    return story.checkedAcs.length >= story.acceptanceCriteria.length;
   }
 
   function toggleAC(storyId: string, story: BacklogStory, index: number) {
@@ -238,14 +235,14 @@
               class="size-3.5"
             />{/if}
         </button>
-        <span>Ticket</span>
+        <span>Ticket ({ticketCount})</span>
       </div>
       <button
         type="button"
         class="hidden cursor-pointer items-center gap-1 text-left transition-colors hover:text-cork-700 md:flex"
         onclick={togglePrioritySort}
       >
-        Priority<span class="text-[8px]">{prioritySortDir === 'asc' ? '▼' : '▲'}</span>
+        PRIORITY<span class="text-[8px]">{prioritySortDir === 'asc' ? '▼' : '▲'}</span>
       </button>
       <span class="hidden md:block">PIC</span>
       <span class="text-center">Status</span>
@@ -276,8 +273,7 @@
       {#each epic.stories as story (story.id)}
         {@const hasAC = story.acceptanceCriteria.length > 0}
         {@const isExpanded = expandedStories.has(story.id)}
-        {@const allDone = isAllACDone(story)}
-        {@const isDone = story.done || allDone}
+        {@const isDone = story.done}
         {@const kano = KANO[story.kano as keyof typeof KANO]}
 
         <div
