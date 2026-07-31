@@ -69,11 +69,14 @@ export interface DataFile {
 
 // ── Idea Bank ──
 
+export type IdeaCategory = 'learning' | 'catalog' | 'community' | 'growth' | 'monetization';
+
 export interface IdeaItem {
   id: string;
   title: string;
   description: string;
   status: string;
+  category?: IdeaCategory;
   proposer: string;
   okrCode: string;
   createdAt: string;

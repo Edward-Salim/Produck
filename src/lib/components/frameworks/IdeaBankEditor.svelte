@@ -1,9 +1,17 @@
 <script lang="ts">
   import { IDEA_SECTIONS } from '$lib/constants/colors.js';
-  import type { IdeaItem } from '$lib/types/story-map.js';
-  import { Plus, Trash2, X } from '@lucide/svelte';
-  import * as Dialog from '$lib/components/ui/dialog/index.js';
+  import type { IdeaCategory, IdeaItem } from '$lib/types/story-map.js';
+  import { Plus, X } from '@lucide/svelte';
+  import { SvelteMap, SvelteSet } from 'svelte/reactivity';
   import type { FrameworkInstance } from './types.js';
+
+  const IDEA_CATEGORIES: { key: IdeaCategory; label: string }[] = [
+    { key: 'learning', label: 'Learning' },
+    { key: 'catalog', label: 'Catalog' },
+    { key: 'community', label: 'Community' },
+    { key: 'growth', label: 'Growth' },
+    { key: 'monetization', label: 'Monetization' }
+  ];
 
   let {
     instance,
@@ -19,10 +27,11 @@
   let addStatus = $state('triage');
   let newTitle = $state('');
   let newDescription = $state('');
-  let selectedIdeaId = $state<string | null>(null);
-  let detailsOpen = $state(false);
+  let expandedIdeaId = $state<string | null>(null);
   let ideas = $derived(parseIdeas(instance.values.ideas));
-  let selectedIdea = $derived(ideas.find((idea) => idea.id === selectedIdeaId) ?? null);
+  const activeCategories = new SvelteSet<IdeaCategory>();
+  const columnScrollRefs = new SvelteMap<string, HTMLElement>();
+  let showColumnFade = $state<Record<string, boolean>>({});
 
   function parseIdeas(value: string | undefined): IdeaItem[] {
     try {
@@ -37,11 +46,50 @@
   }
 
   function ideasForSection(status: string): IdeaItem[] {
-    return ideas.filter((i) => i.status === status);
+    return ideas.filter(
+      (i) =>
+        i.status === status &&
+        (activeCategories.size === 0 || (i.category && activeCategories.has(i.category)))
+    );
+  }
+
+  function toggleCategory(category: IdeaCategory) {
+    if (activeCategories.has(category)) activeCategories.delete(category);
+    else activeCategories.add(category);
+  }
+
+  function checkColumnOverflow(sectionKey: string) {
+    const column = columnScrollRefs.get(sectionKey);
+    if (!column) return;
+    const hasMoreBelow = column.scrollHeight - column.scrollTop - column.clientHeight > 4;
+    if (showColumnFade[sectionKey] !== hasMoreBelow) {
+      showColumnFade = { ...showColumnFade, [sectionKey]: hasMoreBelow };
+    }
+  }
+
+  function scrollSpy(sectionKey: string) {
+    return (node: HTMLElement) => {
+      columnScrollRefs.set(sectionKey, node);
+      const updateFade = () => requestAnimationFrame(() => checkColumnOverflow(sectionKey));
+      const observer = new MutationObserver(updateFade);
+      observer.observe(node, { childList: true, subtree: true });
+      window.addEventListener('resize', updateFade);
+      updateFade();
+
+      return () => {
+        observer.disconnect();
+        window.removeEventListener('resize', updateFade);
+        columnScrollRefs.delete(sectionKey);
+      };
+    };
   }
 
   function formatDate(iso: string): string {
     return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+  }
+
+  function categoryLabel(category: IdeaCategory | undefined): string {
+    return IDEA_CATEGORIES.find((item) => item.key === category)?.label ?? '';
   }
 
   function addIdea() {
@@ -51,6 +99,7 @@
       title: newTitle.trim(),
       description: newDescription.trim(),
       status: addStatus,
+      category: 'learning',
       proposer: 'AI',
       okrCode: '',
       createdAt: new Date().toISOString()
@@ -59,29 +108,6 @@
     newTitle = '';
     newDescription = '';
     showAdd = false;
-    save();
-  }
-
-  function updateIdeaField(id: string, field: keyof IdeaItem, value: string) {
-    ideas = ideas.map((i) => (i.id === id ? { ...i, [field]: value } : i));
-    save();
-  }
-
-  function openIdea(id: string) {
-    selectedIdeaId = id;
-    detailsOpen = true;
-  }
-
-  function closeIdea() {
-    detailsOpen = false;
-  }
-
-  function deleteIdea(id: string) {
-    ideas = ideas.filter((i) => i.id !== id);
-    if (selectedIdeaId === id) {
-      detailsOpen = false;
-      selectedIdeaId = null;
-    }
     save();
   }
 
@@ -112,7 +138,7 @@
       didDrag = false;
       return;
     }
-    openIdea(id);
+    expandedIdeaId = expandedIdeaId === id ? null : id;
   }
 
   function onDragOver(e: DragEvent, sectionKey: string) {
@@ -202,9 +228,36 @@
     </div>
   {/if}
 
+  <div class="flex flex-wrap items-center gap-1.5 px-1">
+    <span class="mr-1 text-[10px] font-semibold tracking-wide text-cork-500 uppercase">Type</span>
+    {#each IDEA_CATEGORIES as category (category.key)}
+      <button
+        type="button"
+        class="cursor-pointer rounded-md border px-2 py-1 text-[10px] font-medium transition-colors {activeCategories.has(
+          category.key
+        )
+          ? 'border-cork-700 bg-cork-700 text-white'
+          : 'border-cork-300/70 bg-white/50 text-cork-600 hover:border-cork-500 hover:bg-white/80'}"
+        aria-pressed={activeCategories.has(category.key)}
+        onclick={() => toggleCategory(category.key)}
+      >
+        {category.label}
+      </button>
+    {/each}
+    {#if activeCategories.size > 0}
+      <button
+        type="button"
+        class="cursor-pointer px-1.5 py-1 text-[10px] font-medium text-cork-500 hover:text-cork-800"
+        onclick={() => activeCategories.clear()}
+      >
+        Clear
+      </button>
+    {/if}
+  </div>
+
   <div
     class="flex gap-3 overflow-x-auto [scrollbar-width:none]"
-    style="min-height: calc(100vh - 300px);"
+    style="height: max(24rem, calc(100vh - 340px));"
   >
     {#each IDEA_SECTIONS as section (section.key)}
       {@const sectionIdeas = ideasForSection(section.key)}
@@ -230,189 +283,86 @@
               >({sectionIdeas.length})</span
             >
           </div>
-          <p class="mt-0.5 text-[9px] {section.dark ? 'text-white/40' : 'text-cork-400'}">
+          <p class="mt-0.5 text-[9px] {section.dark ? 'text-white/75' : 'text-cork-600'}">
             {section.desc}
           </p>
         </div>
 
-        <div class="flex-1 space-y-2 overflow-y-auto p-2 [scrollbar-width:none]">
-          {#each sectionIdeas as idea (idea.id)}
-            <div
-              class="group cursor-pointer rounded-lg bg-white/60 p-3 text-left transition-all duration-200 hover:shadow-md {draggingId ===
-              idea.id
-                ? 'z-10 scale-105 rotate-1 shadow-xl'
-                : ''}"
-              style="box-shadow: 0 1px 3px rgba(0,0,0,.06);"
-              draggable="true"
-              role="button"
-              tabindex="0"
-              ondragstart={(e) => onDragStart(e, idea.id, section.key)}
-              ondragend={onDragEnd}
-              onclick={() => openIdeaFromCard(idea.id)}
-              onkeydown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  openIdeaFromCard(idea.id);
-                }
-              }}
-            >
-              <span class="mb-1 block font-mono text-[9px] text-cork-400">
-                {idea.id.slice(0, 8)}
-              </span>
-              <h3 class="font-sans text-sm leading-snug font-semibold text-cork-800">
-                {idea.title}
-              </h3>
-              <div class="mt-2 flex items-center justify-between gap-1 text-[9px] text-cork-400">
-                <span>{formatDate(idea.createdAt)}</span>
-                {#if idea.proposer}
-                  <span class="rounded bg-cork-200/80 px-1.5 py-0.5 font-medium">
-                    {idea.proposer}
-                  </span>
+        <div class="relative min-h-0 flex-1">
+          <div
+            class="h-full space-y-2 overflow-y-auto p-2 [scrollbar-width:none]"
+            {@attach scrollSpy(section.key)}
+            onscroll={() => checkColumnOverflow(section.key)}
+          >
+            {#each sectionIdeas as idea (idea.id)}
+              <div
+                class="group cursor-pointer rounded-lg bg-white/60 p-3 text-left transition-all duration-200 hover:shadow-md {draggingId ===
+                idea.id
+                  ? 'z-10 scale-105 rotate-1 shadow-xl'
+                  : ''}"
+                style="box-shadow: 0 1px 3px rgba(0,0,0,.06);"
+                draggable="true"
+                role="button"
+                tabindex="0"
+                aria-expanded={expandedIdeaId === idea.id}
+                ondragstart={(e) => onDragStart(e, idea.id, section.key)}
+                ondragend={onDragEnd}
+                onclick={() => openIdeaFromCard(idea.id)}
+                onkeydown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    openIdeaFromCard(idea.id);
+                  }
+                }}
+              >
+                <div class="mb-1 flex items-center justify-between gap-2 text-[9px] text-cork-400">
+                  <span class="font-mono">{idea.id.slice(0, 8)}</span>
+                  {#if idea.category}
+                    <span class="font-semibold tracking-wide uppercase">
+                      {categoryLabel(idea.category)}
+                    </span>
+                  {/if}
+                </div>
+                <h3 class="font-sans text-sm leading-snug font-semibold text-cork-800">
+                  {idea.title}
+                </h3>
+                {#if idea.description && expandedIdeaId === idea.id}
+                  <p class="mt-2 text-xs leading-relaxed whitespace-pre-wrap text-cork-600">
+                    {idea.description}
+                  </p>
                 {/if}
+                <div class="mt-2 flex items-center justify-between gap-1 text-[9px] text-cork-400">
+                  <span>{formatDate(idea.createdAt)}</span>
+                  {#if idea.proposer}
+                    <span class="rounded bg-cork-200/80 px-1.5 py-0.5 font-medium">
+                      {idea.proposer}
+                    </span>
+                  {/if}
+                </div>
               </div>
-            </div>
-          {/each}
+            {/each}
 
-          {#if sectionIdeas.length === 0}
-            <p
-              class="py-4 text-center text-[10px] italic {section.dark
-                ? 'text-white/40'
-                : 'text-cork-400'}"
-            >
-              No ideas
-            </p>
+            {#if sectionIdeas.length === 0}
+              <p
+                class="py-4 text-center text-[10px] italic {section.dark
+                  ? 'text-white/40'
+                  : 'text-cork-400'}"
+              >
+                No ideas
+              </p>
+            {/if}
+          </div>
+
+          {#if showColumnFade[section.key]}
+            <div
+              class="pointer-events-none absolute inset-x-0 bottom-0 h-10 rounded-b-xl bg-gradient-to-t {section.dark
+                ? 'from-black/30 to-transparent'
+                : 'from-black/15 to-transparent'}"
+              aria-hidden="true"
+            ></div>
           {/if}
         </div>
       </div>
     {/each}
   </div>
 </div>
-
-<Dialog.Root
-  bind:open={detailsOpen}
-  onOpenChange={(open) => {
-    if (!open) selectedIdeaId = null;
-  }}
->
-  <Dialog.Content
-    class="border-cork-300 bg-cork-50 text-cork-800 sm:max-w-lg"
-    showCloseButton={false}
-  >
-    {#if selectedIdea}
-      <button
-        type="button"
-        class="absolute top-4 right-4 inline-flex size-8 cursor-pointer items-center justify-center rounded-md text-cork-500 transition-colors hover:bg-cork-100 hover:text-cork-800"
-        onclick={closeIdea}
-        aria-label="Close"
-      >
-        <X class="size-4" />
-      </button>
-      <Dialog.Header>
-        <Dialog.Title class="pr-8 font-display text-2xl text-cork-800">
-          {selectedIdea.title}
-        </Dialog.Title>
-        <Dialog.Description class="sr-only">Details for {selectedIdea.title}</Dialog.Description>
-      </Dialog.Header>
-
-      {#if draftMode === 'edit'}
-        <div class="space-y-3">
-          <label class="block">
-            <span class="text-xs font-medium text-cork-600">Title</span>
-            <input
-              value={selectedIdea.title}
-              class="mt-1 w-full rounded-lg border border-cork-300 bg-white/60 px-3 py-2 text-sm outline-none focus:border-cork-500"
-              oninput={(e) => updateIdeaField(selectedIdea.id, 'title', e.currentTarget.value)}
-            />
-          </label>
-          <label class="block">
-            <span class="sr-only">Description</span>
-            <textarea
-              value={selectedIdea.description}
-              placeholder="Description"
-              rows="5"
-              class="w-full resize-y rounded-lg border border-cork-300 bg-white/60 px-3 py-2 text-sm outline-none placeholder:text-cork-400 focus:border-cork-500"
-              oninput={(e) =>
-                updateIdeaField(selectedIdea.id, 'description', e.currentTarget.value)}
-            ></textarea>
-          </label>
-          <div class="grid gap-3 sm:grid-cols-2">
-            <label class="block">
-              <span class="text-xs font-medium text-cork-600">Status</span>
-              <select
-                value={selectedIdea.status}
-                class="mt-1 w-full rounded-lg border border-cork-300 bg-white/60 px-3 py-2 text-sm outline-none focus:border-cork-500"
-                onchange={(e) => updateIdeaField(selectedIdea.id, 'status', e.currentTarget.value)}
-              >
-                {#each IDEA_SECTIONS as section (section.key)}
-                  <option value={section.key}>{section.label}</option>
-                {/each}
-              </select>
-            </label>
-            <label class="block">
-              <span class="text-xs font-medium text-cork-600">Proposer</span>
-              <input
-                value={selectedIdea.proposer}
-                class="mt-1 w-full rounded-lg border border-cork-300 bg-white/60 px-3 py-2 text-sm outline-none focus:border-cork-500"
-                oninput={(e) => updateIdeaField(selectedIdea.id, 'proposer', e.currentTarget.value)}
-              />
-            </label>
-          </div>
-          <label class="block">
-            <span class="text-xs font-medium text-cork-600">OKR code</span>
-            <input
-              value={selectedIdea.okrCode}
-              class="mt-1 w-full rounded-lg border border-cork-300 bg-white/60 px-3 py-2 text-sm outline-none focus:border-cork-500"
-              oninput={(e) => updateIdeaField(selectedIdea.id, 'okrCode', e.currentTarget.value)}
-            />
-          </label>
-        </div>
-      {:else}
-        <div class="space-y-5">
-          <p class="text-sm leading-relaxed whitespace-pre-wrap text-cork-700">
-            {selectedIdea.description || 'No description provided.'}
-          </p>
-          <div class="grid grid-cols-2 gap-3 text-xs">
-            <div class="rounded-lg bg-cork-100/80 p-3">
-              <p class="text-[9px] font-semibold tracking-wider text-cork-400 uppercase">
-                Proposer
-              </p>
-              <p class="mt-1 font-medium text-cork-700">{selectedIdea.proposer || 'AI'}</p>
-            </div>
-            <div class="rounded-lg bg-cork-100/80 p-3">
-              <p class="text-[9px] font-semibold tracking-wider text-cork-400 uppercase">Created</p>
-              <p class="mt-1 font-medium text-cork-700">{formatDate(selectedIdea.createdAt)}</p>
-            </div>
-            {#if selectedIdea.okrCode}
-              <div class="col-span-2 rounded-lg bg-cork-100/80 p-3">
-                <p class="text-[9px] font-semibold tracking-wider text-cork-400 uppercase">
-                  OKR code
-                </p>
-                <p class="mt-1 font-medium text-cork-700">{selectedIdea.okrCode}</p>
-              </div>
-            {/if}
-          </div>
-        </div>
-      {/if}
-
-      {#if draftMode === 'edit'}
-        <Dialog.Footer class="flex-row justify-between gap-2">
-          <button
-            type="button"
-            class="inline-flex cursor-pointer items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium text-red-600 hover:bg-red-50"
-            onclick={() => deleteIdea(selectedIdea.id)}
-          >
-            <Trash2 class="size-3.5" />
-            Delete
-          </button>
-          <button
-            type="button"
-            class="cursor-pointer rounded-lg bg-cork-700 px-4 py-2 text-xs font-medium text-cork-50 hover:bg-cork-800"
-            onclick={closeIdea}
-          >
-            Done
-          </button>
-        </Dialog.Footer>
-      {/if}
-    {/if}
-  </Dialog.Content>
-</Dialog.Root>

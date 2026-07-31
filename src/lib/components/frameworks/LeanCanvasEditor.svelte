@@ -3,12 +3,15 @@
 
   type LeanCanvasKey =
     | 'problem'
+    | 'existingAlternatives'
     | 'solution'
     | 'keyMetrics'
     | 'uniqueValueProposition'
+    | 'highLevelConcept'
     | 'unfairAdvantage'
     | 'channels'
     | 'customerSegments'
+    | 'earlyAdopters'
     | 'costStructure'
     | 'revenueStreams';
 
@@ -20,8 +23,14 @@
     prompt: string;
     placeholder: string;
     area: string;
-    tone: string;
-    display: 'pills' | 'note';
+    display: 'list' | 'note';
+    secondary?: {
+      id: LeanCanvasKey;
+      title: string;
+      prompt: string;
+      placeholder: string;
+      display: 'list' | 'note';
+    };
   };
 
   let {
@@ -34,12 +43,15 @@
 
   const blankCanvas: LeanCanvasDraft = {
     problem: '',
+    existingAlternatives: '',
     solution: '',
     keyMetrics: '',
     uniqueValueProposition: '',
+    highLevelConcept: '',
     unfairAdvantage: '',
     channels: '',
     customerSegments: '',
+    earlyAdopters: '',
     costStructure: '',
     revenueStreams: ''
   };
@@ -48,83 +60,95 @@
     {
       id: 'problem',
       title: 'Problem',
-      prompt: 'Top 1-3 customer problems.',
+      prompt: 'What are the top three problems?',
       placeholder: '1. ...\n2. ...\n3. ...',
       area: 'problem',
-      tone: 'border-cork-300/70 bg-cork-100/45',
-      display: 'pills'
+      display: 'list',
+      secondary: {
+        id: 'existingAlternatives',
+        title: 'Existing Alternatives',
+        prompt: 'How are they solved today?',
+        placeholder: 'Current tools, workarounds, or substitutes...',
+        display: 'list'
+      }
     },
     {
       id: 'solution',
       title: 'Solution',
-      prompt: 'Smallest solution that addresses the problem.',
-      placeholder: 'What will we build or offer first?',
+      prompt: 'What is the smallest testable solution?',
+      placeholder: 'The minimum solution early adopters can try...',
       area: 'solution',
-      tone: 'border-cork-300/70 bg-cork-50/65',
       display: 'note'
     },
     {
       id: 'keyMetrics',
       title: 'Key Metrics',
-      prompt: 'Numbers that show progress.',
-      placeholder: 'Activation, retention, conversion, revenue...',
+      prompt: 'How will success be measured?',
+      placeholder: 'Activation, retention, conversion...',
       area: 'metrics',
-      tone: 'border-cork-300/70 bg-cork-100/55',
-      display: 'pills'
+      display: 'list'
     },
     {
       id: 'uniqueValueProposition',
       title: 'Unique Value Proposition',
-      prompt: 'Clear, compelling reason to choose this.',
-      placeholder: 'For [customer], we help [outcome] without [pain].',
+      prompt: 'Why should customers choose this?',
+      placeholder: 'Why should the customer choose this?',
       area: 'uvp',
-      tone: 'border-amber-300/60 bg-amber-50/45',
-      display: 'note'
+      display: 'note',
+      secondary: {
+        id: 'highLevelConcept',
+        title: 'High-Level Concept',
+        prompt: 'What familiar idea explains it?',
+        placeholder: 'X for Y...',
+        display: 'note'
+      }
     },
     {
       id: 'unfairAdvantage',
       title: 'Unfair Advantage',
-      prompt: 'What is hard to copy?',
+      prompt: 'What cannot be copied or bought?',
       placeholder: 'Data, distribution, brand, insight, network...',
       area: 'unfair',
-      tone: 'border-cork-300/70 bg-cork-100/45',
-      display: 'pills'
+      display: 'list'
     },
     {
       id: 'channels',
       title: 'Channels',
-      prompt: 'How customers discover or receive it.',
+      prompt: 'How will customers be reached?',
       placeholder: 'Sales, SEO, partners, community, app store...',
       area: 'channels',
-      tone: 'border-cork-300/65 bg-cork-50/65',
-      display: 'pills'
+      display: 'list'
     },
     {
       id: 'customerSegments',
       title: 'Customer Segments',
-      prompt: 'Who has this problem first?',
+      prompt: 'Who has these problems?',
       placeholder: 'Early adopters, user roles, buyer segment...',
       area: 'segments',
-      tone: 'border-cork-300/70 bg-cork-50/65',
-      display: 'pills'
+      display: 'list',
+      secondary: {
+        id: 'earlyAdopters',
+        title: 'Early Adopters',
+        prompt: 'Who will try it first?',
+        placeholder: 'The first users most likely to try it...',
+        display: 'list'
+      }
     },
     {
       id: 'costStructure',
       title: 'Cost Structure',
-      prompt: 'Main costs to create and deliver value.',
+      prompt: 'What will it cost?',
       placeholder: 'People, infrastructure, acquisition, operations...',
       area: 'cost',
-      tone: 'border-cork-300/70 bg-cork-100/55',
-      display: 'pills'
+      display: 'list'
     },
     {
       id: 'revenueStreams',
       title: 'Revenue Streams',
-      prompt: 'How money or value comes back.',
+      prompt: 'How will it make money?',
       placeholder: 'Subscription, transaction fee, services, ads...',
       area: 'revenue',
-      tone: 'border-amber-300/60 bg-amber-50/45',
-      display: 'pills'
+      display: 'list'
     }
   ];
 
@@ -137,63 +161,84 @@
     }
   });
 
-  function pillItems(value: string, placeholder: string) {
+  function bulletItems(value: string, placeholder: string) {
     const source = value.trim() || placeholder;
     return source
-      .split(/\n|,/)
+      .split(/\n/)
       .map((item) => item.replace(/^\s*(?:\d+\.|[-*])\s*/, '').trim())
       .filter(Boolean);
   }
 </script>
 
-<div class="overflow-hidden rounded-xl border border-cork-300/40 bg-cork-50">
-  <div
-    class="lean-canvas-grid grid gap-2 bg-[#fbf4e9] p-3 md:p-4 lg:grid-cols-[1.15fr_1fr_1.25fr_1fr_1.15fr]"
-  >
-    {#each sections as section (section.id)}
-      <section
-        class="min-h-44 rounded-lg border p-3 shadow-sm {section.tone} {section.id ===
-          'uniqueValueProposition'
-          ? 'lg:min-h-80'
-          : ''}"
-        data-area={section.area}
-      >
-        <div class="mb-2 flex items-start justify-between gap-3">
-          <div>
-            <h4 class="font-display text-base leading-none text-cork-800">{section.title}</h4>
-            <p class="mt-1 text-[10px] leading-snug text-cork-500">{section.prompt}</p>
-          </div>
-        </div>
-        <div
-          class="min-h-28 rounded-md border border-cork-300/35 bg-cork-50/55 p-2 lg:min-h-[calc(100%-3.5rem)]"
+<div class="lean-canvas-grid grid gap-2 lg:grid-cols-[1.15fr_1fr_1.25fr_1fr_1.15fr]">
+  {#each sections as section (section.id)}
+    <section
+      class="flex min-h-44 flex-col rounded-lg border border-cork-300/70 bg-cork-50/65 p-3 shadow-sm {section.id ===
+      'uniqueValueProposition'
+        ? 'lg:min-h-80'
+        : ''}"
+      data-area={section.area}
+    >
+      <div class="mb-3">
+        <h4 class="font-display text-base leading-tight text-cork-800">{section.title}</h4>
+        <p class="mt-1 text-xs leading-relaxed text-cork-500">{section.prompt}</p>
+      </div>
+      {#if section.display === 'list'}
+        <ul
+          class="space-y-2 pl-5 text-xs leading-relaxed marker:text-cork-400 {canvas[
+            section.id
+          ].trim()
+            ? 'list-disc text-cork-700'
+            : 'list-disc text-cork-400'}"
         >
-          {#if section.display === 'pills'}
-            <div class="flex flex-wrap gap-1.5">
-              {#each pillItems(canvas[section.id], section.placeholder) as item, index (index)}
-                <span
-                  class="rounded-full border px-2.5 py-1 text-xs leading-snug {canvas[
-                    section.id
-                  ].trim()
-                    ? 'border-cork-300/70 bg-cork-50 text-cork-700'
-                    : 'border-cork-300/45 bg-cork-100/50 text-cork-400'}"
-                >
-                  {item}
-                </span>
+          {#each bulletItems(canvas[section.id], section.placeholder) as item, index (index)}
+            <li>{item}</li>
+          {/each}
+        </ul>
+      {:else}
+        <p
+          class="text-xs leading-relaxed whitespace-pre-wrap {canvas[section.id].trim()
+            ? 'text-cork-700'
+            : 'text-cork-400'}"
+        >
+          {canvas[section.id].trim() || section.placeholder}
+        </p>
+      {/if}
+      {#if section.secondary}
+        <div class="mt-auto pt-5">
+          <div class="mb-2">
+            <h5 class="font-display text-sm leading-tight text-cork-800">
+              {section.secondary.title}
+            </h5>
+            <p class="mt-1 text-xs leading-relaxed text-cork-500">{section.secondary.prompt}</p>
+          </div>
+          {#if section.secondary.display === 'list'}
+            <ul
+              class="space-y-2 pl-5 text-xs leading-relaxed marker:text-cork-400 {canvas[
+                section.secondary.id
+              ].trim()
+                ? 'list-disc text-cork-700'
+                : 'list-disc text-cork-400'}"
+            >
+              {#each bulletItems(canvas[section.secondary.id], section.secondary.placeholder) as item, index (index)}
+                <li>{item}</li>
               {/each}
-            </div>
+            </ul>
           {:else}
             <p
-              class="whitespace-pre-wrap text-sm leading-relaxed {canvas[section.id].trim()
+              class="text-xs leading-relaxed whitespace-pre-wrap {canvas[
+                section.secondary.id
+              ].trim()
                 ? 'text-cork-700'
                 : 'text-cork-400'}"
             >
-              {canvas[section.id].trim() || section.placeholder}
+              {canvas[section.secondary.id].trim() || section.secondary.placeholder}
             </p>
           {/if}
         </div>
-      </section>
-    {/each}
-  </div>
+      {/if}
+    </section>
+  {/each}
 </div>
 
 <style>

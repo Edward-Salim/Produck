@@ -1,6 +1,6 @@
 <script lang="ts">
   import { navigating, page } from '$app/state';
-  import { invalidateAll } from '$app/navigation';
+  import { invalidateAll, replaceState } from '$app/navigation';
   import { onMount } from 'svelte';
   import { getFullscreen, toggleFullscreen } from '$lib/stores/fullscreen.svelte.js';
   import { FRAMEWORK_TEMPLATES, type FrameworkTemplate } from '$lib/frameworks/templates.js';
@@ -39,6 +39,7 @@
   import ValuePropositionCanvasEditor from '$lib/components/frameworks/ValuePropositionCanvasEditor.svelte';
   import LeanCanvasEditor from '$lib/components/frameworks/LeanCanvasEditor.svelte';
   import BusinessModelCanvasEditor from '$lib/components/frameworks/BusinessModelCanvasEditor.svelte';
+  import MarketSizingEditor from '$lib/components/frameworks/MarketSizingEditor.svelte';
   import OrganogramEditor from '$lib/components/frameworks/OrganogramEditor.svelte';
   import SitemapEditor from '$lib/components/frameworks/SitemapEditor.svelte';
   import type { FrameworkInstance } from '$lib/components/frameworks/types.js';
@@ -46,6 +47,7 @@
   import * as Dialog from '$lib/components/ui/dialog/index.js';
 
   type FrameworkView = 'templates' | 'editor';
+  type MarketSizingCurrency = 'USD' | 'IDR';
 
   let { data } = $props<{
     data: {
@@ -83,6 +85,7 @@
   let fullscreen = $derived(getFullscreen());
   let showHelp = $state(false);
   let showKanbanHistory = $state(false);
+  let marketSizingCurrency = $state<MarketSizingCurrency>('USD');
   let syncUpdating = $state(false);
   let syncConfirmationOpen = $state(false);
   let syncError = $state('');
@@ -95,6 +98,18 @@
   const templates = FRAMEWORK_TEMPLATES;
 
   onMount(() => {
+    const requestedFramework = page.url.searchParams.get('framework');
+    const requestedInstance = requestedFramework
+      ? instances.find(
+          (instance) =>
+            instance.templateId === requestedFramework || instance.id === requestedFramework
+        )
+      : null;
+    if (requestedInstance) {
+      selectedInstanceId = requestedInstance.id;
+      view = 'editor';
+    }
+
     const startContextSwitch = () => (contextSwitching = true);
     const endContextSwitch = () => (contextSwitching = false);
     window.addEventListener('produck:context-switch-start', startContextSwitch);
@@ -204,6 +219,10 @@
     }
   }
 
+  function toggleMarketSizingCurrency() {
+    marketSizingCurrency = marketSizingCurrency === 'USD' ? 'IDR' : 'USD';
+  }
+
   // ── Custom editor map ──
   const CUSTOM_EDITORS: Record<
     string,
@@ -215,6 +234,7 @@
       projectName?: string;
       showHistory?: boolean;
       fintechPicks?: { companyId: string }[];
+      currency?: MarketSizingCurrency;
     }>
   > = {
     sitemap: SitemapEditor,
@@ -222,6 +242,7 @@
     'value-proposition-canvas': ValuePropositionCanvasEditor,
     'lean-canvas': LeanCanvasEditor,
     'business-model-canvas': BusinessModelCanvasEditor,
+    'market-sizing': MarketSizingEditor,
     organogram: OrganogramEditor,
     'idea-bank': IdeaBankEditor,
     'story-map': StoryMapEditor,
@@ -244,6 +265,18 @@
   function saveDeletedTemplateIds(next: Set<string>) {
     locallyDeletedTemplateIds.clear();
     for (const id of next) locallyDeletedTemplateIds.add(id);
+  }
+
+  function setFrameworkUrl(templateId: string | null) {
+    const url = new URL(page.url);
+    if (templateId) url.searchParams.set('framework', templateId);
+    else url.searchParams.delete('framework');
+    replaceState(url, page.state);
+  }
+
+  function openTemplateLibrary() {
+    view = 'templates';
+    setFrameworkUrl(null);
   }
 
   function clearDeletedTemplate(templateId: string) {
@@ -311,12 +344,15 @@
     } else if (template.id === 'lean-canvas') {
       emptyValues.leanCanvas = JSON.stringify({
         problem: '',
+        existingAlternatives: '',
         solution: '',
         keyMetrics: '',
         uniqueValueProposition: '',
+        highLevelConcept: '',
         unfairAdvantage: '',
         channels: '',
         customerSegments: '',
+        earlyAdopters: '',
         costStructure: '',
         revenueStreams: ''
       });
@@ -331,6 +367,17 @@
         customerSegments: '',
         costStructure: '',
         revenueStreams: ''
+      });
+    } else if (template.id === 'market-sizing') {
+      emptyValues.marketSizing = JSON.stringify({
+        tamEstimate: '',
+        tamCalculation: '',
+        samEstimate: '',
+        samCalculation: '',
+        somEstimate: '',
+        somCalculation: '',
+        assumptions: '',
+        sources: ''
       });
     } else if (template.id === 'organogram') {
       emptyValues.organogram = JSON.stringify({});
@@ -350,6 +397,7 @@
     saveInstances([instance, ...instances]);
     selectedInstanceId = instance.id;
     view = 'editor';
+    setFrameworkUrl(template.id);
     draftPage = 0;
 
     // Persist to DB
@@ -391,6 +439,8 @@
     selectedInstanceId = id;
     view = 'editor';
     draftPage = 0;
+    const instance = instances.find((item) => item.id === id);
+    if (instance) setFrameworkUrl(instance.templateId);
   }
 
   function confirmDelete(id: string) {
@@ -414,6 +464,7 @@
     saveInstances(next);
     selectedInstanceId = next[0]?.id ?? null;
     view = 'templates';
+    setFrameworkUrl(null);
     deleteTargetId = null;
 
     // Delete from DB if it's a DB-backed instance
@@ -442,7 +493,7 @@
     };
     saveInstances(instances.map((i) => (i.id === selectedInstance.id ? updated : i)));
 
-    // Persist to DB — all instances, not just db- prefixed ones
+    // Persist to DB: all instances, not just db-prefixed ones
     const pid = projectId;
     const body: Record<string, unknown> = {
       projectId: Number(pid),
@@ -508,6 +559,17 @@
               </h2>
             </div>
             <div class="flex items-center gap-2">
+              {#if selectedTemplate.id === 'market-sizing'}
+                <button
+                  type="button"
+                  class="h-9 min-w-14 cursor-pointer rounded-lg border border-cork-300 bg-cork-50/60 px-3 text-xs font-semibold text-cork-600 transition-colors hover:bg-cork-200/60 hover:text-cork-800"
+                  title="Switch currency"
+                  aria-label="Toggle market size currency"
+                  onclick={toggleMarketSizingCurrency}
+                >
+                  {marketSizingCurrency}
+                </button>
+              {/if}
               {#if showEpicKanbanSync}
                 <button
                   type="button"
@@ -559,6 +621,7 @@
             {projectId}
             projectName={data.projectName}
             fintechPicks={data.fintechPicks}
+            currency={marketSizingCurrency}
             bind:showHistory={showKanbanHistory}
           />
         </div>
@@ -695,6 +758,17 @@
                   </h2>
                 </div>
                 <div class="flex items-center gap-2">
+                  {#if selectedTemplate.id === 'market-sizing'}
+                    <button
+                      type="button"
+                      class="h-9 min-w-14 cursor-pointer rounded-lg border border-cork-300 bg-cork-50/60 px-3 text-xs font-semibold text-cork-600 transition-colors hover:bg-cork-200/60 hover:text-cork-800"
+                      title="Switch currency"
+                      aria-label="Toggle market size currency"
+                      onclick={toggleMarketSizingCurrency}
+                    >
+                      {marketSizingCurrency}
+                    </button>
+                  {/if}
                   {#if showEpicKanbanSync}
                     <button
                       type="button"
@@ -753,6 +827,7 @@
                   {projectId}
                   projectName={data.projectName}
                   fintechPicks={data.fintechPicks}
+                  currency={marketSizingCurrency}
                   bind:showHistory={showKanbanHistory}
                 />
               </div>
@@ -817,7 +892,7 @@
                 'templates'
                   ? 'bg-cork-700 text-cork-50 shadow-sm'
                   : 'text-cork-700 hover:bg-cork-200/60 hover:text-cork-900'}"
-                onclick={() => (view = 'templates')}
+                onclick={openTemplateLibrary}
               >
                 <Layers3 class="size-4 shrink-0" />
                 <span class="truncate">Template library</span>
@@ -1018,11 +1093,17 @@
     if (!open) showHelp = false;
   }}
 >
-  <Dialog.Content class="border-cork-300 bg-cork-50 text-cork-800 sm:max-w-lg">
-    <Dialog.Header>
-      <Dialog.Title class="text-cork-800">{selectedTemplate?.name ?? 'Draft'} — Guide</Dialog.Title>
+  <Dialog.Content
+    class="flex max-h-[calc(100dvh-2rem)] flex-col overflow-hidden border-cork-300 bg-cork-50 text-cork-800 sm:max-w-lg"
+  >
+    <Dialog.Header class="shrink-0">
+      <Dialog.Title class="text-cork-800">
+        {selectedTemplate?.name ?? 'Draft'} Guide
+      </Dialog.Title>
     </Dialog.Header>
-    <div class="space-y-4 text-sm">
+    <div
+      class="help-modal-scroll min-h-0 space-y-4 overflow-y-auto overscroll-contain pr-2 text-sm"
+    >
       {#if selectedTemplate?.instructions}
         <div>
           <h4 class="mb-1.5 text-xs font-semibold tracking-wide text-cork-500 uppercase">
@@ -1049,3 +1130,31 @@
     </div>
   </Dialog.Content>
 </Dialog.Root>
+
+<style>
+  .help-modal-scroll {
+    scrollbar-color: rgba(92, 75, 58, 0.42) transparent;
+    scrollbar-gutter: stable;
+    scrollbar-width: thin;
+  }
+
+  .help-modal-scroll::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .help-modal-scroll::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .help-modal-scroll::-webkit-scrollbar-thumb {
+    border: 2px solid transparent;
+    border-radius: 999px;
+    background: rgba(92, 75, 58, 0.36);
+    background-clip: content-box;
+  }
+
+  .help-modal-scroll::-webkit-scrollbar-thumb:hover {
+    background: rgba(92, 75, 58, 0.58);
+    background-clip: content-box;
+  }
+</style>

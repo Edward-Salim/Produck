@@ -9,6 +9,7 @@ import {
   NotebookPen,
   Puzzle,
   Route,
+  Target,
   TrendingUp,
   Workflow
 } from '@lucide/svelte';
@@ -25,6 +26,7 @@ import fintechLandscapeCover from '$lib/assets/framework-cards/fintech-landscape
 import valuePropositionCanvasCover from '$lib/assets/framework-cards/value-proposition-canvas.png';
 import leanCanvasCover from '$lib/assets/framework-cards/lean-canvas.png';
 import businessModelCanvasCover from '$lib/assets/framework-cards/business-model-canvas.png';
+import marketSizingCover from '$lib/assets/framework-cards/market-sizing.png';
 import organogramCover from '$lib/assets/framework-cards/organogram.png';
 import sitemapCover from '$lib/assets/framework-cards/sitemap.png';
 
@@ -53,8 +55,7 @@ export const FRAMEWORK_TEMPLATES: FrameworkTemplate[] = [
     id: 'sitemap',
     name: 'Sitemap',
     category: 'Strategy',
-    description:
-      'Visualize a product’s page or screen hierarchy from database-backed route data.',
+    description: 'Visualize a product’s page or screen hierarchy from database-backed route data.',
     icon: Workflow,
     fields: [],
     instructions:
@@ -114,19 +115,39 @@ export const FRAMEWORK_TEMPLATES: FrameworkTemplate[] = [
     name: 'Lean Canvas',
     category: 'Strategy',
     description:
-      'A one-page fill-in-the-blanks business model covering problem, solution, customers, metrics, costs, and revenue.',
+      'A one-page startup hypothesis map for testing problems, early adopters, solutions, metrics, costs, and revenue.',
     icon: Columns3,
     fields: [],
     instructions:
-      'Fill each box with short bullets. Start with Problem and Customer Segments, then define the Unique Value Proposition. Add the smallest Solution, Key Metrics, Channels, Cost Structure, Revenue Streams, and any Unfair Advantage. Keep every box concise enough to scan in one page.',
+      'Use the Lean Canvas as a living startup hypothesis. List up to three Problems and the Existing Alternatives used today. Narrow Customer Segments to the Early Adopters most likely to try an unproven product. Define a small, replaceable MVP in Solution and choose a few actionable Key Metrics. State a benefit-led Unique Value Proposition and a one-line “X for Y” High-Level Concept. Add focused Channels and an honest Unfair Advantage. Record fixed and variable Costs and realistic Revenue Streams. Validate with interviews and experiments, then update the canvas when evidence changes.',
     terminology: [
       { term: 'Problem', definition: 'top customer problems worth solving.' },
+      {
+        term: 'Existing Alternative',
+        definition: 'tool, competitor, or workaround customers use today.'
+      },
       { term: 'Customer Segment', definition: 'specific group that has the problem.' },
+      {
+        term: 'Early Adopter',
+        definition: 'narrow customer subset most willing to try and shape an unproven solution.'
+      },
       { term: 'UVP', definition: 'Unique Value Proposition: why customers should choose this.' },
-      { term: 'Solution', definition: 'smallest offer or feature set that addresses the problem.' },
-      { term: 'Key Metric', definition: 'signal that shows the model is working.' },
+      {
+        term: 'High-Level Concept',
+        definition: 'one-line “X for Y” analogy that makes the idea immediately familiar.'
+      },
+      {
+        term: 'Solution',
+        definition: 'small, replaceable MVP that tests how to address the problem.'
+      },
+      { term: 'Key Metric', definition: 'actionable signal that shows the model is working.' },
       { term: 'Channel', definition: 'route to reach, acquire, or deliver value to customers.' },
-      { term: 'Unfair Advantage', definition: 'edge that competitors cannot easily copy.' }
+      {
+        term: 'Unfair Advantage',
+        definition: 'edge competitors cannot easily copy, buy, or reproduce.'
+      },
+      { term: 'Cost Structure', definition: 'fixed and variable costs required to operate.' },
+      { term: 'Revenue Stream', definition: 'how the startup earns money and at what price.' }
     ],
     coverGradient: 'linear-gradient(135deg, #f7f1df 0%, #e5dcc8 50%, #d3c8b4 100%)',
     coverImage: leanCanvasCover
@@ -154,6 +175,45 @@ export const FRAMEWORK_TEMPLATES: FrameworkTemplate[] = [
     ],
     coverGradient: 'linear-gradient(135deg, #f2f5e8 0%, #dde6d2 50%, #cbd8bf 100%)',
     coverImage: businessModelCanvasCover
+  },
+  {
+    id: 'market-sizing',
+    name: 'Market Sizing',
+    category: 'Strategy',
+    description:
+      'Estimate TAM, SAM, and SOM to separate the full market from the reachable and realistic initial opportunity.',
+    icon: Target,
+    fields: [],
+    instructions:
+      'Define one market and timeframe. Calculate TAM as total customers multiplied by annual revenue per customer. Narrow TAM to the customers the current product can reasonably target to find SAM. Estimate SOM from the customers the business can realistically acquire and convert. Use broad market data for context, then validate with customer counts, pricing, conversion, and acquisition data. Keep assumptions visible, use recent sources, and use SOM for revenue planning.',
+    terminology: [
+      {
+        term: 'TAM',
+        definition: 'maximum potential demand for the product category.'
+      },
+      {
+        term: 'SAM',
+        definition: 'part of TAM the current product can reasonably target.'
+      },
+      {
+        term: 'SOM',
+        definition: 'part of SAM the business can realistically convert.'
+      },
+      {
+        term: 'Top-Down Estimate',
+        definition: 'broad market data narrowed by relevant constraints.'
+      },
+      {
+        term: 'Bottom-Up Estimate',
+        definition: 'customer count multiplied by annual revenue per customer.'
+      },
+      {
+        term: 'Assumption',
+        definition: 'unverified input that materially changes the result.'
+      }
+    ],
+    coverGradient: 'linear-gradient(135deg, #edf5e9 0%, #dce8d4 50%, #cad9c2 100%)',
+    coverImage: marketSizingCover
   },
   {
     id: 'organogram',

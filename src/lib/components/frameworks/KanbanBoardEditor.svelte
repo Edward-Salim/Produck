@@ -6,6 +6,7 @@
   import { Ban, Bug, ClipboardList, Columns3, Search, Sparkles, Wrench, X } from '@lucide/svelte';
   import EmptyState from '$lib/components/ui/empty-state.svelte';
   import { SvelteSet } from 'svelte/reactivity';
+  import { DropdownMenu } from 'bits-ui';
 
   let {
     onUpdate,
@@ -186,9 +187,6 @@
     expandedCards = new SvelteSet(expandedCards);
   }
 
-  // ── Assignee picker ──
-  let pickerCardId = $state<string | null>(null);
-
   async function setAssignee(cardId: string, colId: string, name: string) {
     columns = columns.map((c) => {
       if (c.id !== colId) return c;
@@ -197,7 +195,6 @@
         cards: c.cards.map((card) => (card.id === cardId ? { ...card, assignee: name } : card))
       };
     });
-    pickerCardId = null;
     onUpdate({});
 
     // Persist to DB
@@ -212,10 +209,6 @@
     } catch {
       /* best-effort */
     }
-  }
-
-  function closePicker() {
-    pickerCardId = null;
   }
 
   // ── Block modal ──
@@ -671,64 +664,43 @@
                       <span class="text-gray-400">{card.storyPoints} SP</span>
                     {/if}
                     <div class="flex-1"></div>
-                    <!-- svelte-ignore a11y_click_events_have_key_events -->
-                    <span
-                      class="relative cursor-pointer rounded-full px-1.5 py-0.5 font-medium"
-                      style="background: {card.assignee
-                        ? assigneeColor(card.assignee) + '22'
-                        : '#e5e7eb'}; color: {card.assignee
-                        ? assigneeColor(card.assignee)
-                        : '#9ca3af'};"
-                      onclick={(e) => {
-                        e.stopPropagation();
-                        pickerCardId = pickerCardId === card.id ? null : card.id;
-                      }}
-                      role="button"
-                      tabindex="-1"
-                    >
-                      {card.assignee || 'Assign'}
-                      {#if pickerCardId === card.id}
-                        <!-- backdrop -->
-                        <!-- svelte-ignore a11y_click_events_have_key_events -->
-                        <span
-                          class="fixed inset-0 z-10"
-                          role="button"
-                          tabindex="-1"
-                          onclick={(e) => {
-                            e.stopPropagation();
-                            closePicker();
-                          }}
-                        ></span>
-                        <!-- svelte-ignore a11y_click_events_have_key_events -->
-                        <div
-                          class="absolute bottom-full left-1/2 z-20 mb-1 -translate-x-1/2 rounded-lg border border-gray-200 bg-white py-1 shadow-lg"
-                          role="listbox"
-                          tabindex="-1"
-                          onclick={(e) => e.stopPropagation()}
+                    <DropdownMenu.Root>
+                      <DropdownMenu.Trigger
+                        class="cursor-pointer rounded-full px-1.5 py-0.5 font-medium outline-none"
+                        style="background: {card.assignee
+                          ? assigneeColor(card.assignee) + '22'
+                          : '#e5e7eb'}; color: {card.assignee
+                          ? assigneeColor(card.assignee)
+                          : '#9ca3af'};"
+                        onclick={(e) => e.stopPropagation()}
+                      >
+                        {card.assignee || 'Assign'}
+                      </DropdownMenu.Trigger>
+                      <DropdownMenu.Portal>
+                        <DropdownMenu.Content
+                          side="right"
+                          align="end"
+                          sideOffset={6}
+                          collisionPadding={8}
+                          class="z-50 min-w-24 rounded-lg border border-gray-200 bg-white p-1 shadow-lg"
                         >
-                          {#each ['Kelvin', 'Edward'] as opt}
-                            <button
-                              class="block w-full cursor-pointer px-3 py-1 text-left text-[10px] whitespace-nowrap text-cork-700 hover:bg-cork-100"
-                              onclick={(e) => {
-                                e.stopPropagation();
-                                setAssignee(card.id, col.id, opt);
-                              }}
+                          {#each ['Kelvin', 'Edward'] as opt (opt)}
+                            <DropdownMenu.Item
+                              class="block cursor-pointer rounded-md px-3 py-1 text-left text-[10px] whitespace-nowrap text-cork-700 outline-none hover:bg-cork-100 data-highlighted:bg-cork-100"
+                              onSelect={() => setAssignee(card.id, col.id, opt)}
                             >
                               {opt}
-                            </button>
+                            </DropdownMenu.Item>
                           {/each}
-                          <button
-                            class="block w-full cursor-pointer px-3 py-1 text-left text-[10px] whitespace-nowrap text-cork-400 hover:bg-cork-100"
-                            onclick={(e) => {
-                              e.stopPropagation();
-                              setAssignee(card.id, col.id, '');
-                            }}
+                          <DropdownMenu.Item
+                            class="block cursor-pointer rounded-md px-3 py-1 text-left text-[10px] whitespace-nowrap text-cork-400 outline-none hover:bg-cork-100 data-highlighted:bg-cork-100"
+                            onSelect={() => setAssignee(card.id, col.id, '')}
                           >
                             Unassign
-                          </button>
-                        </div>
-                      {/if}
-                    </span>
+                          </DropdownMenu.Item>
+                        </DropdownMenu.Content>
+                      </DropdownMenu.Portal>
+                    </DropdownMenu.Root>
                   </div>
                 </div>
               {/each}
