@@ -1,16 +1,11 @@
 <script lang="ts">
-  import {
-    bookShelfCapacity,
-    bookShelfSlots,
-    bookShelfSpan,
-    fitBookShelves
-  } from '$lib/data/book-shelves.js';
+  import { bookShelfCapacity, bookShelfSpan, fitBookShelves } from '$lib/data/book-shelves.js';
   import type { PageData } from './$types.js';
 
   let { data }: { data: PageData } = $props();
   let rackWidth = $state<number>();
   const shelves = $derived(fitBookShelves(data.shelves, rackWidth));
-  const minimumSlots = $derived(Math.min(3, bookShelfCapacity(rackWidth)));
+  const shelfSlots = $derived(bookShelfCapacity(rackWidth));
 </script>
 
 <svelte:head>
@@ -22,24 +17,28 @@
   <nav aria-label="Book library" class="bookcase" bind:clientWidth={rackWidth}>
     {#each shelves as shelf, index (index)}
       <div class="shelf-row">
-        <div
-          class="book-row"
-          style={`--book-count: ${Math.max(minimumSlots, bookShelfSlots(shelf, rackWidth))};`}
-        >
+        <div class="book-row" style={`--book-count: ${shelfSlots};`}>
           {#each shelf as book, bookIndex (book.id)}
             <a
               href={`/books/${book.id}`}
               aria-label={`Open ${book.title}`}
               title={book.title}
-              class="book focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-cork-700"
-              style={`--book-span: ${bookShelfSpan(book, rackWidth)}; --tilt: ${[-2, 1, -1.5][(index + bookIndex) % 3]}deg;`}
+              class={[
+                'book focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-cork-700',
+                {
+                  'trim-cover':
+                    book.id === 'user-story-mapping' ||
+                    book.id === 'storytelling-with-data' ||
+                    book.id === 'paytech',
+                  'landscape-book': book.id === 'paytech'
+                }
+              ]}
+              style={`--book-span: ${bookShelfSpan(book, rackWidth)}; --landscape-width: ${bookShelfCapacity(rackWidth) > 1 ? '135%' : '100%'}; --tilt: ${[-2, 1, -1.5][(index + bookIndex) % 3]}deg;`}
             >
               <img
                 src={book.cover}
                 alt={`${book.title} cover`}
-                width={book.shelfSpan === 2 ? 400 : 128}
-                height={book.shelfSpan === 2 ? 310 : 192}
-                class={`h-auto w-full rounded-sm object-contain object-bottom ${book.shelfSpan === 2 ? 'aspect-auto' : 'aspect-[2/3]'}`}
+                class="block h-auto w-full rounded-[inherit]"
               />
             </a>
           {/each}
@@ -48,7 +47,9 @@
         <div class="shelf" aria-hidden="true"></div>
       </div>
     {/each}
-    <div class="base" aria-hidden="true"></div>
+    <div class="base">
+      <p class="engraving">Make something people want.</p>
+    </div>
   </nav>
 </div>
 
@@ -123,6 +124,7 @@
 
   .book-row {
     --book-gap: clamp(0.4rem, 1.25vw, 1rem);
+    --book-width: 7rem;
     display: grid;
     grid-template-columns: repeat(var(--book-count), minmax(0, 1fr));
     min-height: clamp(6.5rem, 20vw, 11rem);
@@ -136,7 +138,9 @@
     display: block;
     grid-column: span var(--book-span);
     width: 100%;
-    max-width: calc(8.5rem * var(--book-span) + (var(--book-span) - 1) * var(--book-gap));
+    max-width: calc(
+      var(--book-width) * var(--book-span) + (var(--book-span) - 1) * var(--book-gap)
+    );
     min-width: 0;
     border-radius: 2px;
     transform: rotate(var(--tilt));
@@ -150,6 +154,28 @@
 
   .book:hover {
     transform: translateY(-5px) rotate(var(--tilt));
+  }
+
+  .trim-cover {
+    overflow: hidden;
+  }
+
+  .trim-cover img {
+    transform: scale(1.025);
+  }
+
+  .landscape-book {
+    z-index: 1;
+    width: var(--landscape-width);
+    max-width: calc(var(--book-width) * 1.35);
+  }
+
+  .landscape-book:first-child {
+    justify-self: start;
+  }
+
+  .landscape-book:last-child:not(:first-child) {
+    justify-self: end;
   }
 
   .retaining-rail {
@@ -190,10 +216,27 @@
   }
 
   .base {
-    height: clamp(1.75rem, 5vw, 2.5rem);
+    display: flex;
+    min-height: clamp(1.75rem, 4vw, 2.25rem);
+    align-items: center;
+    justify-content: center;
+    padding: 0.25rem 0.75rem;
     border-bottom: 2px solid #b98a54;
     background: var(--wood-grain), linear-gradient(90deg, #c79863, #dbb383 45%, #cfa373);
     box-shadow: inset 0 4px 5px rgb(94 59 28 / 0.12);
+  }
+
+  .engraving {
+    margin: 0;
+    color: #76512f;
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: clamp(0.7rem, 1.8vw, 0.9rem);
+    font-style: italic;
+    line-height: 1.2;
+    text-align: center;
+    text-shadow:
+      0 1px 0 rgb(255 237 204 / 0.65),
+      0 -1px 0 rgb(86 51 23 / 0.2);
   }
 
   @media (prefers-reduced-motion: reduce) {
