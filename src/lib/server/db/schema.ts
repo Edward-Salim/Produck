@@ -7,9 +7,17 @@ import {
   jsonb,
   timestamp,
   bigint,
-  uniqueIndex
+  uniqueIndex,
+  check,
+  customType
 } from 'drizzle-orm/pg-core';
 import { relations, sql } from 'drizzle-orm';
+import type {
+  BookAuthorPortrait,
+  BookChapterSummary,
+  BookPartSummary,
+  BookSummary
+} from '$lib/data/book-summaries.js';
 
 // ── App User & Access ────────────────────────────────
 
@@ -201,6 +209,61 @@ export const fintechPick = pgTable('fintech_pick', {
 export const fintechPickRelations = relations(fintechPick, ({ one }) => ({
   project: one(project, { fields: [fintechPick.projectId], references: [project.id] })
 }));
+
+// ── Book Library ──────────────────────────────────────
+
+const bytea = customType<{ data: Buffer; driverData: Buffer }>({
+  dataType: () => 'bytea'
+});
+
+export const libraryBookAsset = pgTable(
+  'library_book_asset',
+  {
+    id: text('id').primaryKey(),
+    contentType: text('content_type').notNull(),
+    data: bytea('data').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    check('library_book_asset_id_check', sql`${table.id} ~ '^[a-f0-9]{64}$'`),
+    check(
+      'library_book_asset_type_check',
+      sql`${table.contentType} in ('image/jpeg', 'image/png', 'image/webp', 'image/gif')`
+    ),
+    check('library_book_asset_size_check', sql`octet_length(${table.data}) between 1 and 4194304`)
+  ]
+);
+
+export const libraryBook = pgTable(
+  'library_book',
+  {
+    id: text('id').primaryKey(),
+    title: text('title').notNull(),
+    subtitle: text('subtitle').notNull().default(''),
+    author: text('author').notNull(),
+    authorImagePath: text('author_image_path'),
+    authorPortraits: jsonb('author_portraits')
+      .$type<BookAuthorPortrait[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    edition: text('edition'),
+    coverPath: text('cover_path').notNull(),
+    shelfSpan: integer('shelf_span').$type<1 | 2>().notNull().default(1),
+    source: jsonb('source').$type<BookSummary['source']>().notNull(),
+    parts: jsonb('parts')
+      .$type<BookPartSummary[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    chapters: jsonb('chapters')
+      .$type<BookChapterSummary[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    sortOrder: integer('sort_order').notNull().default(0),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [check('library_book_shelf_span_check', sql`${table.shelfSpan} in (1, 2)`)]
+);
 
 // ── PM Book ───────────────────────────────────────────
 

@@ -197,6 +197,41 @@
       "when": 1783478400000,
       "tag": "0027_chinese_song_lyric_verified",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1791541298718,
+      "tag": "0031_book_library",
+      "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1791552624000,
+      "tag": "0032_book_author_portrait",
+      "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1791558000000,
+      "tag": "0033_book_author_portraits",
+      "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1791565200000,
+      "tag": "0034_book_shelf_span",
+      "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1792022400000,
+      "tag": "0035_book_assets",
+      "breakpoints": true
     }
   ]
 }

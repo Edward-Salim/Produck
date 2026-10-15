@@ -13,6 +13,7 @@
     Layers3,
     Wrench,
     BookOpen,
+    LibraryBig,
     WalletCards,
     GaugeCircle,
     Rss,
@@ -209,7 +210,7 @@
   );
 
   // Main page routes for Ctrl+Tab navigation (no tools)
-  const NAV_PAGES = ['/frameworks', '/chinese-learning'];
+  const NAV_PAGES = ['/frameworks', '/chinese-learning', '/books'];
 
   function getCurrentPageIndex(): number {
     return NAV_PAGES.findIndex((p) => page.url.pathname.startsWith(p));
@@ -318,6 +319,17 @@
           <Sidebar.GroupLabel>Learn</Sidebar.GroupLabel>
           <Sidebar.GroupContent>
             <Sidebar.Menu>
+              <Sidebar.MenuItem>
+                <Sidebar.MenuButton
+                  size="sm"
+                  isActive={page.url.pathname.startsWith('/books')}
+                  tooltipContent="Book Summaries"
+                >
+                  {#snippet child({ props })}
+                    <a href="/books" {...props}><LibraryBig /><span>Book Summaries</span></a>
+                  {/snippet}
+                </Sidebar.MenuButton>
+              </Sidebar.MenuItem>
               <Sidebar.MenuItem>
                 <Sidebar.MenuButton
                   size="sm"
@@ -583,6 +595,7 @@
     {@const noAccess = !data.isAdmin && data.workspaces.length === 0 && data.projects.length === 0}
     {@const isWorkRoute =
       !page.url.pathname.startsWith('/tools') &&
+      !page.url.pathname.startsWith('/books') &&
       !page.url.pathname.startsWith('/artifacts') &&
       !page.url.pathname.startsWith('/jobs')}
     {#if noAccess && isWorkRoute}

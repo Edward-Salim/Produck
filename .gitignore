@@ -11,6 +11,11 @@ ACCOUNTS.md
 .wrangler
 /.svelte-kit
 /build
+/output/
+/tmp/
+
+# Incomplete browser downloads
+*.crdownload
 
 # OS
 .DS_Store
@@ -23,6 +28,7 @@ Thumbs.db
 !.env.test
 
 # Private local data
+/*.pdf
 *.private.ts
 *.private.json
 *.private.sql
