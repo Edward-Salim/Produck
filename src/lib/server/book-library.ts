@@ -1,10 +1,10 @@
-import { asc, eq } from 'drizzle-orm';
+import { asc, eq, isNotNull } from 'drizzle-orm';
 import { dev } from '$app/environment';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { BookLibraryItem, BookSummary } from '$lib/data/book-summaries.js';
 import { db } from './db/index.js';
-import { libraryBook } from './db/schema.js';
+import { libraryBook, libraryBookPdf } from './db/schema.js';
 
 export async function getBookLibrary(): Promise<BookLibraryItem[]> {
   return db
@@ -12,9 +12,11 @@ export async function getBookLibrary(): Promise<BookLibraryItem[]> {
       id: libraryBook.id,
       title: libraryBook.title,
       cover: libraryBook.coverPath,
-      shelfSpan: libraryBook.shelfSpan
+      shelfSpan: libraryBook.shelfSpan,
+      hasDownload: isNotNull(libraryBookPdf.bookId).mapWith(Boolean)
     })
     .from(libraryBook)
+    .leftJoin(libraryBookPdf, eq(libraryBook.id, libraryBookPdf.bookId))
     .orderBy(asc(libraryBook.sortOrder), asc(libraryBook.id));
 }
 

@@ -85,7 +85,7 @@
     <p class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-cork-500">
       <span>{book.author}</span>
       {#if book.edition}
-        <span class="text-xs text-cork-400">{book.edition.replace(/\bedition\b/i, 'ed.')}</span>
+        <span class="text-cork-400">{book.edition.replace(/\bedition\b/i, 'ed.')}</span>
       {/if}
     </p>
   </header>

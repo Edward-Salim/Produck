@@ -1,11 +1,24 @@
 <script lang="ts">
   import { bookShelfCapacity, bookShelfSpan, fitBookShelves } from '$lib/data/book-shelves.js';
   import type { PageData } from './$types.js';
+  import { longPress } from '$lib/attachments/long-press.js';
+  import type { BookLibraryItem } from '$lib/data/book-summaries.js';
 
   let { data }: { data: PageData } = $props();
   let rackWidth = $state<number>();
   const shelves = $derived(fitBookShelves(data.shelves, rackWidth));
   const shelfSlots = $derived(bookShelfCapacity(rackWidth));
+  let downloadStatus = $state('');
+
+  function downloadBook(book: BookLibraryItem) {
+    const link = document.createElement('a');
+    link.href = `/api/books/${book.id}/download`;
+    link.download = '';
+    document.body.append(link);
+    link.click();
+    link.remove();
+    downloadStatus = `Download started for ${book.title}.`;
+  }
 </script>
 
 <svelte:head>
@@ -22,15 +35,20 @@
             <a
               href={`/books/${book.id}`}
               aria-label={`Open ${book.title}`}
-              title={book.title}
+              title={book.hasDownload
+                ? `${book.title}: click to read, hold or Alt+Enter to download PDF`
+                : book.title}
+              {@attach book.hasDownload && longPress(() => downloadBook(book))}
               class={[
                 'book focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-cork-700',
                 {
                   'trim-cover':
                     book.id === 'user-story-mapping' ||
                     book.id === 'storytelling-with-data' ||
+                    book.id === 'founders-dilemmas' ||
                     book.id === 'paytech',
-                  'landscape-book': book.id === 'paytech'
+                  'landscape-book': book.id === 'paytech',
+                  'downloadable-book': book.hasDownload
                 }
               ]}
               style={`--book-span: ${bookShelfSpan(book, rackWidth)}; --landscape-width: ${bookShelfCapacity(rackWidth) > 1 ? '135%' : '100%'}; --tilt: ${[-2, 1, -1.5][(index + bookIndex) % 3]}deg;`}
@@ -38,6 +56,7 @@
               <img
                 src={book.cover}
                 alt={`${book.title} cover`}
+                draggable="false"
                 class="block h-auto w-full rounded-[inherit]"
               />
             </a>
@@ -48,9 +67,10 @@
       </div>
     {/each}
     <div class="base">
-      <p class="engraving">Make something people want.</p>
+      <p class="engraving">Make something people want</p>
     </div>
   </nav>
+  <p class="sr-only" role="status">{downloadStatus}</p>
 </div>
 
 <style>
@@ -158,6 +178,12 @@
 
   .trim-cover {
     overflow: hidden;
+  }
+
+  .downloadable-book {
+    -webkit-touch-callout: none;
+    user-select: none;
+    touch-action: pan-y;
   }
 
   .trim-cover img {

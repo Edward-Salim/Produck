@@ -265,6 +265,31 @@ export const libraryBook = pgTable(
   (table) => [check('library_book_shelf_span_check', sql`${table.shelfSpan} in (1, 2)`)]
 );
 
+export const libraryBookPdf = pgTable(
+  'library_book_pdf',
+  {
+    bookId: text('book_id')
+      .primaryKey()
+      .references(() => libraryBook.id, { onDelete: 'cascade' }),
+    filename: text('filename').notNull(),
+    sha256: text('sha256').notNull(),
+    byteLength: integer('byte_length').notNull(),
+    data: bytea('data').notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    check('library_book_pdf_digest_check', sql`${table.sha256} ~ '^[a-f0-9]{64}$'`),
+    check(
+      'library_book_pdf_size_check',
+      sql`${table.byteLength} = octet_length(${table.data}) and ${table.byteLength} between 5 and 20000000`
+    ),
+    check(
+      'library_book_pdf_signature_check',
+      sql`substring(${table.data} from 1 for 5) = decode('255044462d', 'hex')`
+    )
+  ]
+);
+
 // ── PM Book ───────────────────────────────────────────
 
 export const pmBook = pgTable('pm_book', {
