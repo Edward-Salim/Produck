@@ -394,6 +394,17 @@
       0 -1px 0 rgb(86 51 23 / 0.2);
   }
 
+  @media (width < 48rem) {
+    .shelf-controls {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 0;
+    }
+
+    .shelf-arrow {
+      display: none;
+    }
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .book,
     .shelf-track,
