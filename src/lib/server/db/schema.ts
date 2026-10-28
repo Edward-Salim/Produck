@@ -278,18 +278,20 @@ export const libraryBookPdf = pgTable(
     filename: text('filename').notNull(),
     sha256: text('sha256').notNull(),
     byteLength: integer('byte_length').notNull(),
-    data: bytea('data').notNull(),
+    data: bytea('data'),
+    blobKey: text('blob_key'),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
   },
   (table) => [
     check('library_book_pdf_digest_check', sql`${table.sha256} ~ '^[a-f0-9]{64}$'`),
     check(
       'library_book_pdf_size_check',
-      sql`${table.byteLength} = octet_length(${table.data}) and ${table.byteLength} between 5 and 20000000`
+      sql`(${table.data} is not null and ${table.blobKey} is null and ${table.byteLength} = octet_length(${table.data}) and ${table.byteLength} between 5 and 20000000)
+        or (${table.data} is null and ${table.blobKey} is not null and ${table.blobKey} = ${table.sha256} and ${table.byteLength} between 5 and 500000000)`
     ),
     check(
       'library_book_pdf_signature_check',
-      sql`substring(${table.data} from 1 for 5) = decode('255044462d', 'hex')`
+      sql`${table.data} is null or substring(${table.data} from 1 for 5) = decode('255044462d', 'hex')`
     )
   ]
 );
