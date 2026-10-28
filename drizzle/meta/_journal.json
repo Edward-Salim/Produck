@@ -239,6 +239,13 @@
       "when": 1792281600000,
       "tag": "0036_book_pdfs",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1793149200000,
+      "tag": "0037_book_shelf_category",
+      "breakpoints": true
     }
   ]
 }

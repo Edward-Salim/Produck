@@ -13,6 +13,7 @@ export async function getBookLibrary(): Promise<BookLibraryItem[]> {
       title: libraryBook.title,
       cover: libraryBook.coverPath,
       shelfSpan: libraryBook.shelfSpan,
+      shelfCategory: libraryBook.shelfCategory,
       hasDownload: isNotNull(libraryBookPdf.bookId).mapWith(Boolean)
     })
     .from(libraryBook)

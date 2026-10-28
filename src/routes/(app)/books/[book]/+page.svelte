@@ -1,6 +1,7 @@
 <script lang="ts">
   import { ArrowLeft, BookOpen, Clock3, FileText } from '@lucide/svelte';
   import { Tabs } from 'bits-ui';
+  import { page } from '$app/state';
   import SummaryText from '$lib/components/books/SummaryText.svelte';
   import type { BookSummaryBlock } from '$lib/data/book-summaries.js';
   import type { PageData } from './$types.js';
@@ -56,7 +57,7 @@
 <div class="mx-auto max-w-2xl px-2 py-2 sm:py-6 md:px-0">
   <div class="flex items-center justify-between gap-4">
     <a
-      href="/books"
+      href={page.url.searchParams.get('shelf') === 'misc' ? '/books?shelf=misc' : '/books'}
       aria-label="Back to library"
       class="inline-flex shrink-0 text-cork-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cork-700"
     >

@@ -249,6 +249,7 @@ export const libraryBook = pgTable(
     edition: text('edition'),
     coverPath: text('cover_path').notNull(),
     shelfSpan: integer('shelf_span').$type<1 | 2>().notNull().default(1),
+    shelfCategory: text('shelf_category').$type<'work' | 'misc'>().notNull().default('work'),
     source: jsonb('source').$type<BookSummary['source']>().notNull(),
     parts: jsonb('parts')
       .$type<BookPartSummary[]>()
@@ -262,7 +263,10 @@ export const libraryBook = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
   },
-  (table) => [check('library_book_shelf_span_check', sql`${table.shelfSpan} in (1, 2)`)]
+  (table) => [
+    check('library_book_shelf_span_check', sql`${table.shelfSpan} in (1, 2)`),
+    check('library_book_shelf_category_check', sql`${table.shelfCategory} in ('work', 'misc')`)
+  ]
 );
 
 export const libraryBookPdf = pgTable(

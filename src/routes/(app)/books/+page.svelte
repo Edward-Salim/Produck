@@ -1,14 +1,35 @@
 <script lang="ts">
+  import { ChevronLeft, ChevronRight } from '@lucide/svelte';
+  import { replaceState } from '$app/navigation';
+  import { page } from '$app/state';
   import { bookShelfCapacity, bookShelfSpan, fitBookShelves } from '$lib/data/book-shelves.js';
   import type { PageData } from './$types.js';
   import { longPress } from '$lib/attachments/long-press.js';
+  import { horizontalSwipe } from '$lib/attachments/horizontal-swipe.js';
   import type { BookLibraryItem } from '$lib/data/book-summaries.js';
 
   let { data }: { data: PageData } = $props();
   let rackWidth = $state<number>();
-  const shelves = $derived(fitBookShelves(data.shelves, rackWidth));
+  const categories = ['work', 'misc'] as const;
+  const activeCategory = $derived(
+    page.state.bookShelf ?? (page.url.searchParams.get('shelf') === 'misc' ? 'misc' : 'work')
+  );
+  const shelves = $derived({
+    work: fitBookShelves(data.shelves.work, rackWidth),
+    misc: fitBookShelves(data.shelves.misc, rackWidth)
+  });
+  const rowCount = $derived(Math.max(3, shelves.work.length, shelves.misc.length));
   const shelfSlots = $derived(bookShelfCapacity(rackWidth));
   let downloadStatus = $state('');
+
+  function showShelf(direction: 'previous' | 'next') {
+    const category = direction === 'next' ? 'misc' : 'work';
+    if (category === activeCategory) return;
+    const url = new URL(page.url);
+    if (category === 'misc') url.searchParams.set('shelf', 'misc');
+    else url.searchParams.delete('shelf');
+    replaceState(url, { ...page.state, bookShelf: category });
+  }
 
   function downloadBook(book: BookLibraryItem) {
     const link = document.createElement('a');
@@ -27,53 +48,156 @@
 </svelte:head>
 
 <div class="library-backdrop -mx-4 -mt-6 -mb-6 md:-mx-6">
-  <nav aria-label="Book library" class="bookcase" bind:clientWidth={rackWidth}>
-    {#each shelves as shelf, index (index)}
-      <div class="shelf-row">
-        <div class="book-row" style={`--book-count: ${shelfSlots};`}>
-          {#each shelf as book, bookIndex (book.id)}
-            <a
-              href={`/books/${book.id}`}
-              aria-label={`Open ${book.title}`}
-              title={book.hasDownload
-                ? `${book.title}: click to read, hold or Alt+Enter to download PDF`
-                : book.title}
-              {@attach book.hasDownload && longPress(() => downloadBook(book))}
-              class={[
-                'book focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-cork-700',
-                {
-                  'trim-cover':
-                    book.id === 'user-story-mapping' ||
-                    book.id === 'storytelling-with-data' ||
-                    book.id === 'founders-dilemmas' ||
-                    book.id === 'paytech',
-                  'landscape-book': book.id === 'paytech',
-                  'downloadable-book': book.hasDownload
-                }
-              ]}
-              style={`--book-span: ${bookShelfSpan(book, rackWidth)}; --landscape-width: ${bookShelfCapacity(rackWidth) > 1 ? '135%' : '100%'}; --tilt: ${[-2, 1, -1.5][(index + bookIndex) % 3]}deg;`}
-            >
-              <img
-                src={book.cover}
-                alt={`${book.title} cover`}
-                draggable="false"
-                class="block h-auto w-full rounded-[inherit]"
-              />
-            </a>
-          {/each}
-        </div>
-        <div class="retaining-rail" aria-hidden="true"></div>
-        <div class="shelf" aria-hidden="true"></div>
+  <h1 class="sr-only">Books</h1>
+  <p class="sr-only" role="status">{activeCategory === 'work' ? 'Work' : 'Misc'} book shelf</p>
+  <div class="shelf-controls">
+    <button
+      type="button"
+      onclick={() => showShelf('previous')}
+      aria-label="Previous shelf: Work"
+      disabled={activeCategory === 'work'}
+      aria-controls="library-shelves"
+      class="shelf-arrow"
+    >
+      <ChevronLeft size={20} aria-hidden="true" />
+    </button>
+    <div
+      class="shelf-viewport"
+      bind:clientWidth={rackWidth}
+      {@attach horizontalSwipe((direction) =>
+        showShelf(direction === 'left' ? 'next' : 'previous')
+      )}
+    >
+      <div id="library-shelves" class={['shelf-track', { 'show-misc': activeCategory === 'misc' }]}>
+        {#each categories as category (category)}
+          <nav
+            aria-label={`${category === 'work' ? 'Work' : 'Misc'} book shelf`}
+            aria-hidden={activeCategory !== category}
+            inert={activeCategory !== category}
+            class="bookcase"
+            style={`--shelf-rows: ${rowCount};`}
+          >
+            {#each Array.from({ length: rowCount }, (_, index) => shelves[category][index] ?? []) as shelf, index (index)}
+              <div class="shelf-row">
+                <div class="book-row" style={`--book-count: ${shelfSlots};`}>
+                  {#each shelf as book, bookIndex (book.id)}
+                    <a
+                      href={`/books/${book.id}${category === 'misc' ? '?shelf=misc' : ''}`}
+                      aria-label={`Open ${book.title}`}
+                      title={book.hasDownload
+                        ? `${book.title}: click to read, hold or Alt+Enter to download PDF`
+                        : book.title}
+                      {@attach book.hasDownload && longPress(() => downloadBook(book))}
+                      class={[
+                        'book focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-cork-700',
+                        {
+                          'trim-cover':
+                            book.id === 'user-story-mapping' ||
+                            book.id === 'storytelling-with-data' ||
+                            book.id === 'founders-dilemmas' ||
+                            book.id === 'psychology-of-money' ||
+                            book.id === 'art-of-spending-money' ||
+                            book.id === 'atomic-habits' ||
+                            book.id === 'paytech',
+                          'landscape-book': book.id === 'paytech',
+                          'downloadable-book': book.hasDownload
+                        }
+                      ]}
+                      style={`--book-span: ${bookShelfSpan(book, rackWidth)}; --landscape-width: ${bookShelfCapacity(rackWidth) > 1 ? '135%' : '100%'}; --tilt: ${[-2, 1, -1.5][(index + bookIndex) % 3]}deg;`}
+                    >
+                      <img
+                        src={book.cover}
+                        alt={`${book.title} cover`}
+                        draggable="false"
+                        class="block h-auto w-full rounded-[inherit]"
+                      />
+                    </a>
+                  {/each}
+                </div>
+                <div class="retaining-rail" aria-hidden="true"></div>
+                <div class="shelf" aria-hidden="true"></div>
+              </div>
+            {/each}
+            <div class="base">
+              <p class="engraving">
+                {category === 'work' ? 'Make something people want' : 'Follow your curiosity'}
+              </p>
+            </div>
+          </nav>
+        {/each}
       </div>
-    {/each}
-    <div class="base">
-      <p class="engraving">Make something people want</p>
     </div>
-  </nav>
+    <button
+      type="button"
+      onclick={() => showShelf('next')}
+      aria-label="Next shelf: Misc"
+      disabled={activeCategory === 'misc'}
+      aria-controls="library-shelves"
+      class="shelf-arrow"
+    >
+      <ChevronRight size={20} aria-hidden="true" />
+    </button>
+  </div>
   <p class="sr-only" role="status">{downloadStatus}</p>
 </div>
 
 <style>
+  .shelf-controls {
+    display: grid;
+    grid-template-columns: 2rem minmax(0, 1fr) 2rem;
+    max-width: 48rem;
+    align-items: center;
+    gap: clamp(0.25rem, 1vw, 0.75rem);
+    margin: 1.5rem auto 2rem;
+  }
+
+  .shelf-arrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    justify-self: center;
+    width: 2.75rem;
+    height: 2.75rem;
+    border-radius: 999px;
+    color: var(--color-cork-600);
+    cursor: pointer;
+    transition: background 180ms ease;
+  }
+
+  .shelf-arrow:hover:not(:disabled) {
+    background: var(--color-cork-200);
+  }
+
+  .shelf-arrow:disabled {
+    opacity: 0.25;
+    cursor: default;
+  }
+
+  .shelf-arrow:focus-visible {
+    outline: 2px solid var(--color-cork-700);
+    outline-offset: 4px;
+  }
+
+  .shelf-viewport {
+    width: 100%;
+    max-width: 42rem;
+    justify-self: center;
+    overflow: hidden;
+    padding-block: 0.75rem;
+    touch-action: pan-y pinch-zoom;
+  }
+
+  .shelf-track {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 200%;
+    transition: transform 420ms cubic-bezier(0.22, 0.68, 0, 1);
+  }
+
+  .shelf-track.show-misc {
+    transform: translateX(-50%);
+  }
+
   .library-backdrop {
     min-height: calc(100dvh - 2.75rem);
     padding: 1.5rem 1rem;
@@ -102,9 +226,11 @@
     );
     position: relative;
     isolation: isolate;
+    display: grid;
+    grid-template-rows: repeat(var(--shelf-rows), 1fr) auto;
     width: 100%;
     max-width: 42rem;
-    margin: 1.5rem auto 2rem;
+    margin: 0;
     padding-inline: var(--post-width);
   }
 
@@ -135,6 +261,8 @@
 
   .shelf-row {
     position: relative;
+    display: flex;
+    flex-direction: column;
     padding-top: clamp(1.25rem, 4vw, 2rem);
   }
 
@@ -146,6 +274,7 @@
     --book-gap: clamp(0.4rem, 1.25vw, 1rem);
     --book-width: 7rem;
     display: grid;
+    flex: 1;
     grid-template-columns: repeat(var(--book-count), minmax(0, 1fr));
     min-height: clamp(6.5rem, 20vw, 11rem);
     align-items: end;
@@ -266,7 +395,9 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .book {
+    .book,
+    .shelf-track,
+    .shelf-arrow {
       transition: none;
     }
   }
