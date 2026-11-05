@@ -47,6 +47,7 @@
       pages: part.pages,
       chapterRange: part.chapterRange,
       summary: part.summary,
+      stories: part.stories,
       readingMinutes: estimateReadingMinutes(part.summary),
       sourceUrl: undefined
     })),
@@ -57,6 +58,7 @@
       pages: chapter.pages,
       chapterRange: undefined,
       summary: chapter.summary,
+      stories: chapter.stories,
       readingMinutes: estimateReadingMinutes(chapter.summary),
       sourceUrl: book.source.chapterUrl
     }))
@@ -192,57 +194,59 @@
           </span>
         {/if}
       </div>
-      <div class="mt-5 space-y-4 text-justify text-sm leading-[25px] text-cork-700">
-        {#each section.summary as block, blockIndex (blockIndex)}
-          {#if typeof block === 'string'}
-            <p><SummaryText text={block} /></p>
-          {:else if block.type === 'image'}
-            <figure class="py-2">
-              <img
-                src={block.src}
-                alt={block.alt}
-                width={block.width}
-                height={block.height}
-                loading="lazy"
-                class="mx-auto h-auto w-full max-w-md mix-blend-multiply"
-              />
-              <figcaption class="mt-2 text-center text-xs text-cork-500">
-                {block.caption}
-              </figcaption>
-            </figure>
-          {:else}
-            <svelte:element
-              this={block.type === 'numbered' ? 'ol' : 'ul'}
-              role="list"
-              class={block.type === 'numbered'
-                ? 'list-none space-y-2 pl-0'
-                : 'list-none space-y-1.5 pl-0'}
-            >
-              {#each block.items as item, index (index)}
-                <li class="flex items-start gap-3">
-                  {#if block.type === 'numbered'}
-                    <span
-                      aria-hidden="true"
-                      class="mt-[2.5px] flex size-5 shrink-0 items-center justify-center rounded-full border border-cork-300/70 text-center text-[10px] leading-none font-medium text-cork-600"
-                      >{index + 1}</span
-                    >
-                  {:else}
-                    <span
-                      aria-hidden="true"
-                      class="flex h-[25px] w-5 shrink-0 items-center justify-center"
-                    >
-                      <span class="size-1 rounded-full bg-current"></span>
+      {#key `${book.id}:${section.id}`}
+        <div class="mt-5 space-y-4 text-justify text-sm leading-[25px] text-cork-700">
+          {#each section.summary as block, blockIndex (blockIndex)}
+            {#if typeof block === 'string'}
+              <p><SummaryText text={block} stories={section.stories} /></p>
+            {:else if block.type === 'image'}
+              <figure class="py-2">
+                <img
+                  src={block.src}
+                  alt={block.alt}
+                  width={block.width}
+                  height={block.height}
+                  loading="lazy"
+                  class="mx-auto h-auto w-full max-w-md mix-blend-multiply"
+                />
+                <figcaption class="mt-2 text-center text-xs text-cork-500">
+                  {block.caption}
+                </figcaption>
+              </figure>
+            {:else}
+              <svelte:element
+                this={block.type === 'numbered' ? 'ol' : 'ul'}
+                role="list"
+                class={block.type === 'numbered'
+                  ? 'list-none space-y-2 pl-0'
+                  : 'list-none space-y-1.5 pl-0'}
+              >
+                {#each block.items as item, index (index)}
+                  <li class="flex items-start gap-3">
+                    {#if block.type === 'numbered'}
+                      <span
+                        aria-hidden="true"
+                        class="mt-[2.5px] flex size-5 shrink-0 items-center justify-center rounded-full border border-cork-300/70 text-center text-[10px] leading-none font-medium text-cork-600"
+                        >{index + 1}</span
+                      >
+                    {:else}
+                      <span
+                        aria-hidden="true"
+                        class="flex h-[25px] w-5 shrink-0 items-center justify-center"
+                      >
+                        <span class="size-1 rounded-full bg-current"></span>
+                      </span>
+                    {/if}
+                    <span class="min-w-0">
+                      <SummaryText text={item} stories={section.stories} label />
                     </span>
-                  {/if}
-                  <span class="min-w-0">
-                    <SummaryText text={item} label />
-                  </span>
-                </li>
-              {/each}
-            </svelte:element>
-          {/if}
-        {/each}
-      </div>
+                  </li>
+                {/each}
+              </svelte:element>
+            {/if}
+          {/each}
+        </div>
+      {/key}
     </article>
 
     {#key book.id}

@@ -99,6 +99,10 @@
                             book.id === 'psychology-of-money' ||
                             book.id === 'art-of-spending-money' ||
                             book.id === 'atomic-habits' ||
+                            book.id === 'lean-product-playbook' ||
+                            book.id === 'good-strategy-bad-strategy' ||
+                            book.id === 'never-split-the-difference' ||
+                            book.id === 'measure-what-matters' ||
                             book.id === 'paytech',
                           'landscape-book': book.id === 'paytech',
                           'downloadable-book': book.hasDownload

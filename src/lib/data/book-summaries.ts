@@ -1,3 +1,9 @@
+export type BookStory = {
+  phrase: string;
+  title: string;
+  summary: string;
+};
+
 export type BookChapterSummary = {
   number: number;
   label?: string;
@@ -5,6 +11,7 @@ export type BookChapterSummary = {
   pages: string;
   gist: string;
   summary: string[];
+  stories?: BookStory[];
   takeaways: { title: string; description: string }[];
   example: { situation: string; application: string };
   reflection: string;
@@ -22,6 +29,7 @@ export type BookPartSummary = {
   pages: string;
   chapterRange: string;
   summary: BookSummaryBlock[];
+  stories?: BookStory[];
 };
 
 export type BookAuthorPortrait = {

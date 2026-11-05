@@ -1,5 +1,16 @@
 <script lang="ts">
-  let { text, label = false }: { text: string; label?: boolean } = $props();
+  import type { BookStory } from '$lib/data/book-summaries.js';
+  import StoryPopover from './StoryPopover.svelte';
+
+  let {
+    text,
+    label = false,
+    stories = []
+  }: {
+    text: string;
+    label?: boolean;
+    stories?: BookStory[];
+  } = $props();
 
   const segments = $derived.by(() => {
     const result = text
@@ -17,12 +28,42 @@
       }
     }
 
-    return result;
+    const availableStories = stories.filter((story) => story.phrase.length > 0);
+    return result.flatMap((segment) => {
+      const pieces: { text: string; bold: boolean; story?: BookStory }[] = [];
+      let remaining = segment.text;
+
+      while (remaining) {
+        let next: { index: number; story: BookStory } | undefined;
+        for (const story of availableStories) {
+          const index = remaining.indexOf(story.phrase);
+          if (
+            index >= 0 &&
+            (!next ||
+              index < next.index ||
+              (index === next.index && story.phrase.length > next.story.phrase.length))
+          ) {
+            next = { index, story };
+          }
+        }
+        if (!next) {
+          pieces.push({ ...segment, text: remaining });
+          break;
+        }
+        if (next.index > 0) pieces.push({ ...segment, text: remaining.slice(0, next.index) });
+        pieces.push({ ...segment, text: next.story.phrase, story: next.story });
+        remaining = remaining.slice(next.index + next.story.phrase.length);
+      }
+
+      return pieces;
+    });
   });
 </script>
 
-{#each segments as segment}
-  {#if segment.bold}
+{#each segments as segment, index (index)}
+  {#if segment.story}
+    <StoryPopover story={segment.story} bold={segment.bold} />
+  {:else if segment.bold}
     <strong class="font-semibold">{segment.text}</strong>
   {:else}
     {segment.text}
