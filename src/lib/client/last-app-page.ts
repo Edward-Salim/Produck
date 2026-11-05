@@ -1,3 +1,5 @@
+import { getDeprecatedFeature } from '../constants/deprecated-features.js';
+
 const storageKey = 'produck_last_app_page';
 const maxAgeMs = 30 * 24 * 60 * 60 * 1000;
 
@@ -7,7 +9,12 @@ type LastAppPage = {
 };
 
 function isSafeAppPath(path: string) {
-  return path.startsWith('/') && !path.startsWith('//') && path !== '/login';
+  return (
+    path.startsWith('/') &&
+    !path.startsWith('//') &&
+    path !== '/login' &&
+    !getDeprecatedFeature(path)
+  );
 }
 
 export function getLastAppPagePath() {

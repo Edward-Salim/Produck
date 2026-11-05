@@ -472,7 +472,7 @@
       category: 'product',
       href: 'https://produck.fun/',
       description:
-        'Personal website and daily life workspace spanning PM artifacts, OKRs, story maps, fintech research, job tracking, finance tracking, RSS trend summaries, and AI-assisted application workflows.',
+        'Personal website and daily life workspace spanning PM artifacts, OKRs, story maps, fintech research, book summaries, finance tracking, RSS trend summaries, and AI-assisted application workflows.',
       tech: ['SvelteKit', 'PostgreSQL', 'Drizzle ORM', 'Bun'],
       isSelf: true,
       image: null

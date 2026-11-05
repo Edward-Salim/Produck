@@ -35,3 +35,9 @@ Import Lucide icons individually, for example `import BookOpen from '@lucide/sve
 | `pnpm test`      | Run tests with Node.js TypeScript support |
 | `pnpm db:push`   | Push schema to Neon                       |
 | `pnpm db:studio` | Open Drizzle Studio                       |
+
+## Deprecated features
+
+Job Board (`/jobs`) and Chinese Learning (`/chinese-learning`, including HSK, reading, and lyrics) are deprecated and no longer maintained. They are hidden from the sidebar and keyboard navigation, and excluded from last-page resume. Direct links still work and display a deprecation notice.
+
+Their routes, components, server code, APIs, database tables, and assets are retained. Legacy Chinese learning URLs still redirect to the existing pages. To restore them, update `src/lib/constants/deprecated-features.ts` and re-add their navigation entries in `src/routes/(app)/+layout.svelte`.

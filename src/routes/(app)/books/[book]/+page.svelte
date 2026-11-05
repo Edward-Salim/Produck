@@ -81,12 +81,22 @@
   }
 
   function focusCurrentSection(event: Event) {
+    event.preventDefault();
     const current = contentsPanel?.querySelector<HTMLButtonElement>('[aria-current="true"]');
-    if (current) {
-      event.preventDefault();
-      current.focus({ preventScroll: true });
-      current.scrollIntoView({ block: 'nearest' });
-    }
+    (current ?? contentsPanel)?.focus({ preventScroll: true });
+    const list = current?.closest<HTMLElement>('.sections-scroll');
+    if (!current || !list) return;
+
+    requestAnimationFrame(() => {
+      if (!current.isConnected || !list.isConnected) return;
+      const itemBounds = current.getBoundingClientRect();
+      const listBounds = list.getBoundingClientRect();
+      if (itemBounds.top < listBounds.top) {
+        list.scrollTop += itemBounds.top - listBounds.top;
+      } else if (itemBounds.bottom > listBounds.bottom) {
+        list.scrollTop += itemBounds.bottom - listBounds.bottom;
+      }
+    });
   }
 
   async function handleContentsClose(event: Event) {
@@ -243,9 +253,9 @@
         <Popover.Trigger
           aria-label="Show sections"
           title="Sections"
-          class="fixed right-5 bottom-[max(1.25rem,env(safe-area-inset-bottom))] z-40 flex size-12 cursor-pointer items-center justify-center rounded-full bg-cork-800 text-cork-50 shadow-lg transition-colors hover:bg-cork-700 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-cork-700 md:right-8"
+          class="fixed right-5 bottom-[max(1.25rem,env(safe-area-inset-bottom))] z-40 flex size-12 cursor-pointer items-center justify-center rounded-lg bg-cork-100 text-cork-800 shadow-sm transition-colors hover:bg-cork-200 hover:text-cork-600 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-cork-700 md:right-8"
         >
-          <List class="size-5" aria-hidden="true" />
+          <List class="size-6 drop-shadow-md" aria-hidden="true" />
         </Popover.Trigger>
         <Popover.Portal>
           <Popover.Content

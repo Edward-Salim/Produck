@@ -6,6 +6,7 @@
   import { page } from '$app/state';
   import { goto } from '$app/navigation';
   import { saveLastAppPagePath, clearLastAppPagePath } from '$lib/client/last-app-page.js';
+  import { getDeprecatedFeature } from '$lib/constants/deprecated-features.js';
   import { getFullscreen } from '$lib/stores/fullscreen.svelte.js';
 
   let fullscreen = $derived(getFullscreen());
@@ -16,12 +17,10 @@
   import WalletCards from '@lucide/svelte/icons/wallet-cards';
   import GaugeCircle from '@lucide/svelte/icons/circle-gauge';
   import Rss from '@lucide/svelte/icons/rss';
-  import Briefcase from '@lucide/svelte/icons/briefcase';
   import LogOut from '@lucide/svelte/icons/log-out';
   import EllipsisVertical from '@lucide/svelte/icons/ellipsis-vertical';
   import Shield from '@lucide/svelte/icons/shield';
   import Trash2 from '@lucide/svelte/icons/trash-2';
-  import Languages from '@lucide/svelte/icons/languages';
   import { DropdownMenu } from 'bits-ui';
   import * as Dialog from '$lib/components/ui/dialog/index.js';
   import { progressColor } from '$lib/constants/colors.js';
@@ -207,8 +206,9 @@
     selectedProject?.shortName ?? selectedProject?.name ?? 'Select project'
   );
 
-  // Main page routes for Ctrl+Tab navigation (no tools)
-  const NAV_PAGES = ['/frameworks', '/chinese-learning', '/books'];
+  // Active main page routes for Alt+Arrow navigation (no tools).
+  const NAV_PAGES = ['/frameworks', '/books'];
+  const deprecatedFeature = $derived(getDeprecatedFeature(page.url.pathname));
 
   function getCurrentPageIndex(): number {
     return NAV_PAGES.findIndex((p) => page.url.pathname.startsWith(p));
@@ -307,6 +307,17 @@
                   {/snippet}
                 </Sidebar.MenuButton>
               </Sidebar.MenuItem>
+              <Sidebar.MenuItem>
+                <Sidebar.MenuButton
+                  size="sm"
+                  isActive={page.url.pathname.startsWith('/artifacts')}
+                  tooltipContent="PM Toolkit"
+                >
+                  {#snippet child({ props })}
+                    <a href="/artifacts" {...props}><BookOpen /><span>PM Toolkit</span></a>
+                  {/snippet}
+                </Sidebar.MenuButton>
+              </Sidebar.MenuItem>
             </Sidebar.Menu>
           </Sidebar.GroupContent>
         </Sidebar.Group>
@@ -314,7 +325,7 @@
         <Sidebar.Separator />
 
         <Sidebar.Group>
-          <Sidebar.GroupLabel>Learn</Sidebar.GroupLabel>
+          <Sidebar.GroupLabel>Knowledge</Sidebar.GroupLabel>
           <Sidebar.GroupContent>
             <Sidebar.Menu>
               <Sidebar.MenuItem>
@@ -331,13 +342,11 @@
               <Sidebar.MenuItem>
                 <Sidebar.MenuButton
                   size="sm"
-                  isActive={page.url.pathname.startsWith('/chinese-learning')}
-                  tooltipContent="Chinese Learning"
+                  isActive={page.url.pathname.startsWith('/trends')}
+                  tooltipContent="Trends"
                 >
                   {#snippet child({ props })}
-                    <a href="/chinese-learning" {...props}
-                      ><Languages /><span>Chinese Learning</span></a
-                    >
+                    <a href="/trends" {...props}><Rss /><span>Trends</span></a>
                   {/snippet}
                 </Sidebar.MenuButton>
               </Sidebar.MenuItem>
@@ -348,42 +357,8 @@
         <Sidebar.Separator />
 
         <Sidebar.Group>
-          <Sidebar.GroupLabel>Research</Sidebar.GroupLabel>
           <Sidebar.GroupContent>
             <Sidebar.Menu>
-              <Sidebar.MenuItem>
-                <Sidebar.MenuButton
-                  size="sm"
-                  isActive={page.url.pathname.startsWith('/artifacts')}
-                  tooltipContent="PM Toolkit"
-                >
-                  {#snippet child({ props })}
-                    <a href="/artifacts" {...props}><BookOpen /><span>PM Toolkit</span></a>
-                  {/snippet}
-                </Sidebar.MenuButton>
-              </Sidebar.MenuItem>
-              <Sidebar.MenuItem>
-                <Sidebar.MenuButton
-                  size="sm"
-                  isActive={page.url.pathname.startsWith('/trends')}
-                  tooltipContent="Trends"
-                >
-                  {#snippet child({ props })}
-                    <a href="/trends" {...props}><Rss /><span>Trends</span></a>
-                  {/snippet}
-                </Sidebar.MenuButton>
-              </Sidebar.MenuItem>
-              <Sidebar.MenuItem>
-                <Sidebar.MenuButton
-                  size="sm"
-                  isActive={page.url.pathname.startsWith('/jobs')}
-                  tooltipContent="PM Job Board"
-                >
-                  {#snippet child({ props })}
-                    <a href="/jobs" {...props}><Briefcase /><span>Job Board</span></a>
-                  {/snippet}
-                </Sidebar.MenuButton>
-              </Sidebar.MenuItem>
               <Sidebar.MenuItem>
                 <Sidebar.MenuButton
                   size="sm"
@@ -397,15 +372,6 @@
                   {/snippet}
                 </Sidebar.MenuButton>
               </Sidebar.MenuItem>
-            </Sidebar.Menu>
-          </Sidebar.GroupContent>
-        </Sidebar.Group>
-
-        <Sidebar.Separator />
-
-        <Sidebar.Group>
-          <Sidebar.GroupContent>
-            <Sidebar.Menu>
               <Sidebar.MenuItem>
                 <Sidebar.MenuButton
                   size="sm"
@@ -607,6 +573,13 @@
       </div>
     {:else}
       <div class="px-4 pt-6 pb-6 md:px-6">
+        {#if deprecatedFeature}
+          <p
+            class="mb-6 rounded-lg border border-cork-300 bg-cork-100 px-4 py-3 text-sm text-cork-600"
+          >
+            {deprecatedFeature.name} is deprecated and no longer maintained.
+          </p>
+        {/if}
         {@render children()}
       </div>
     {/if}
