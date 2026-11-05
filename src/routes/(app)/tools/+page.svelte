@@ -1,5 +1,9 @@
 <script lang="ts">
-  import { Scissors, WandSparkles, FileText, BriefcaseBusiness, Shuffle } from '@lucide/svelte';
+  import Scissors from '@lucide/svelte/icons/scissors';
+  import WandSparkles from '@lucide/svelte/icons/wand-sparkles';
+  import FileText from '@lucide/svelte/icons/file-text';
+  import BriefcaseBusiness from '@lucide/svelte/icons/briefcase-business';
+  import Shuffle from '@lucide/svelte/icons/shuffle';
 </script>
 
 <svelte:head>

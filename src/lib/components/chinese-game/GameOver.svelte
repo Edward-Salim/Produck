@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { Home, RotateCcw } from '@lucide/svelte';
+  import Home from '@lucide/svelte/icons/house';
+  import RotateCcw from '@lucide/svelte/icons/rotate-ccw';
   import type { GameEngine } from './game-engine.svelte.js';
 
   let { engine }: { engine: GameEngine } = $props();

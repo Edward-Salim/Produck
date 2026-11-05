@@ -1,6 +1,10 @@
 <script lang="ts">
   import { tick, onMount } from 'svelte';
-  import { Heart, Send, ArrowRight, SkipForward, Lightbulb } from '@lucide/svelte';
+  import Heart from '@lucide/svelte/icons/heart';
+  import Send from '@lucide/svelte/icons/send';
+  import ArrowRight from '@lucide/svelte/icons/arrow-right';
+  import SkipForward from '@lucide/svelte/icons/skip-forward';
+  import Lightbulb from '@lucide/svelte/icons/lightbulb';
   import { pinyin as makePinyin } from 'pinyin-pro';
   import type { GameEngine } from './game-engine.svelte.js';
   import { isPunct } from './game-engine.svelte.js';

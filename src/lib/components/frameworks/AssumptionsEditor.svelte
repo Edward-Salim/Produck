@@ -2,15 +2,13 @@
   import type { StaticAssumption } from '$lib/types/story-map.js';
   import type { FrameworkInstance } from './types.js';
   import { ASSUMPTION_STATUS, RISK_META } from '$lib/constants/colors.js';
-  import {
-    FlaskConical,
-    Heart,
-    Wrench,
-    MousePointerClick,
-    BriefcaseBusiness,
-    Plus,
-    X
-  } from '@lucide/svelte';
+  import FlaskConical from '@lucide/svelte/icons/flask-conical';
+  import Heart from '@lucide/svelte/icons/heart';
+  import Wrench from '@lucide/svelte/icons/wrench';
+  import MousePointerClick from '@lucide/svelte/icons/mouse-pointer-click';
+  import BriefcaseBusiness from '@lucide/svelte/icons/briefcase-business';
+  import Plus from '@lucide/svelte/icons/plus';
+  import X from '@lucide/svelte/icons/x';
   import EmptyState from '$lib/components/ui/empty-state.svelte';
 
   let {

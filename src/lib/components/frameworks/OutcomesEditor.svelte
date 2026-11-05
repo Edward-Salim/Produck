@@ -1,6 +1,9 @@
 <script lang="ts">
   import type { FrameworkInstance } from './types.js';
-  import { Target, ChevronRight, ChevronsDownUp, ChevronsUpDown } from '@lucide/svelte';
+  import Target from '@lucide/svelte/icons/target';
+  import ChevronRight from '@lucide/svelte/icons/chevron-right';
+  import ChevronsDownUp from '@lucide/svelte/icons/chevrons-down-up';
+  import ChevronsUpDown from '@lucide/svelte/icons/chevrons-up-down';
   import { progressColor } from '$lib/constants/colors.js';
 
   let {

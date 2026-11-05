@@ -112,6 +112,6 @@ export async function processApplicationCoverLetterJob(
       .set({ status: 'failed', error: message, updatedAt: new Date() })
       .where(eq(applicationCoverLetterJob.id, jobId));
 
-    throw new Error(message);
+    throw new Error(message, { cause: err });
   }
 }

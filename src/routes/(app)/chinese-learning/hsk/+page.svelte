@@ -1,5 +1,8 @@
 <script lang="ts">
-  import { ArrowLeft, Info, Search, X } from '@lucide/svelte';
+  import ArrowLeft from '@lucide/svelte/icons/arrow-left';
+  import Info from '@lucide/svelte/icons/info';
+  import Search from '@lucide/svelte/icons/search';
+  import X from '@lucide/svelte/icons/x';
   import { onMount } from 'svelte';
   import InkWashBg from '$lib/components/chinese-game/InkWashBg.svelte';
   import HskGrammarGlossaryModal from '$lib/components/chinese-game/HskGrammarGlossaryModal.svelte';

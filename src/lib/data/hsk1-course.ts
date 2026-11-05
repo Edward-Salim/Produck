@@ -525,11 +525,7 @@ const bookTopicGuides: Record<string, BookTopicGuide> = {
     summary:
       'The modal particle “了” (1) is placed at the end of a sentence or at a pause within a sentence to indicate a change or a new situation. For negative responses, the adverb “没” is used, and “了” is omitted at the end of the sentence.',
     pattern: '…了；negative: 没 + verb',
-    examples: [
-      '下雨了。',
-      '十二点了，吃午饭吧。',
-      { a: '弟弟起来了吗？', b: '还没起来呢。' }
-    ]
+    examples: ['下雨了。', '十二点了，吃午饭吧。', { a: '弟弟起来了吗？', b: '还没起来呢。' }]
   },
   '“太……了”格式 · 太……了 Pattern': {
     summary: 'The “太……了” pattern expresses a very high or intense degree of exclamation.',
@@ -675,14 +671,91 @@ export const topicTables: Record<string, TopicTable[]> = {
           'jiǔ\n九\n9'
         ],
         ['shí\n十\n10', 'shíyī\n十一\n11', '', '', '', '', '', '', '', 'shíjiǔ\n十九\n19'],
-        ['èrshí\n二十\n20', '', 'èrshí’èr\n二十二\n22', '', '', '', '', '', 'èrshíbā\n二十八\n28', ''],
-        ['sānshí\n三十\n30', '', '', 'sānshísān\n三十三\n33', '', '', '', 'sānshíqī\n三十七\n37', '', ''],
-        ['sìshí\n四十\n40', '', '', '', 'sìshísì\n四十四\n44', '', 'sìshíliù\n四十六\n46', '', '', ''],
+        [
+          'èrshí\n二十\n20',
+          '',
+          'èrshí’èr\n二十二\n22',
+          '',
+          '',
+          '',
+          '',
+          '',
+          'èrshíbā\n二十八\n28',
+          ''
+        ],
+        [
+          'sānshí\n三十\n30',
+          '',
+          '',
+          'sānshísān\n三十三\n33',
+          '',
+          '',
+          '',
+          'sānshíqī\n三十七\n37',
+          '',
+          ''
+        ],
+        [
+          'sìshí\n四十\n40',
+          '',
+          '',
+          '',
+          'sìshísì\n四十四\n44',
+          '',
+          'sìshíliù\n四十六\n46',
+          '',
+          '',
+          ''
+        ],
         ['wǔshí\n五十\n50', '', '', '', '', 'wǔshíwǔ\n五十五\n55', '', '', '', ''],
-        ['liùshí\n六十\n60', '', '', '', 'liùshísì\n六十四\n64', '', 'liùshíliù\n六十六\n66', '', '', ''],
-        ['qīshí\n七十\n70', '', '', 'qīshísān\n七十三\n73', '', '', '', 'qīshíqī\n七十七\n77', '', ''],
-        ['bāshí\n八十\n80', '', 'bāshí’èr\n八十二\n82', '', '', '', '', '', 'bāshíbā\n八十八\n88', ''],
-        ['jiǔshí\n九十\n90', 'jiǔshíyī\n九十一\n91', '', '', '', '', '', '', '', 'jiǔshíjiǔ\n九十九\n99']
+        [
+          'liùshí\n六十\n60',
+          '',
+          '',
+          '',
+          'liùshísì\n六十四\n64',
+          '',
+          'liùshíliù\n六十六\n66',
+          '',
+          '',
+          ''
+        ],
+        [
+          'qīshí\n七十\n70',
+          '',
+          '',
+          'qīshísān\n七十三\n73',
+          '',
+          '',
+          '',
+          'qīshíqī\n七十七\n77',
+          '',
+          ''
+        ],
+        [
+          'bāshí\n八十\n80',
+          '',
+          'bāshí’èr\n八十二\n82',
+          '',
+          '',
+          '',
+          '',
+          '',
+          'bāshíbā\n八十八\n88',
+          ''
+        ],
+        [
+          'jiǔshí\n九十\n90',
+          'jiǔshíyī\n九十一\n91',
+          '',
+          '',
+          '',
+          '',
+          '',
+          '',
+          '',
+          'jiǔshíjiǔ\n九十九\n99'
+        ]
       ]
     },
     {
@@ -691,11 +764,7 @@ export const topicTables: Record<string, TopicTable[]> = {
       readAloud: true,
       headers: [],
       rows: [
-        [
-          'yìbǎi\n一百\n100',
-          'èrbǎi líng bā\n二百零八\n208',
-          'jiǔbǎi jiǔshíjiǔ\n九百九十九\n999'
-        ],
+        ['yìbǎi\n一百\n100', 'èrbǎi líng bā\n二百零八\n208', 'jiǔbǎi jiǔshíjiǔ\n九百九十九\n999'],
         [
           'yìqiān\n一千\n1000',
           'yìqiān wǔbǎi èrshíbā\n一千五百二十八\n1528',
@@ -784,8 +853,7 @@ export const topicTables: Record<string, TopicTable[]> = {
   ],
   '时间的表达（2）': [
     {
-      title:
-        '（1）使用“点、分”表达时间点 · Using “点” and “分” to express specific times',
+      title: '（1）使用“点、分”表达时间点 · Using “点” and “分” to express specific times',
       zh: '“点、分”表示具体时间点，整点使用“点”，不是整点使用“分”，“分”可以省略。但是，当时间为“十分”时，不能省略“分”；当时间为十分钟以下时，要读出“零”。',
       en: 'The words “点” and “分” are used to indicate specific points in time. “点” is used for whole hours, while “分” is used when minutes are involved. The word “分” can be omitted. However, when the time is exactly ten minutes, “分” cannot be omitted. For times less than ten minutes, “零” must be pronounced.',
       readAloud: true,

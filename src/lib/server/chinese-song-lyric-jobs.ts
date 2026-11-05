@@ -213,7 +213,7 @@ export async function processChineseSongLyricImportJob(
       .set({ status: 'failed', error: message, updatedAt: new Date() })
       .where(eq(chineseSongLyricImportJob.id, jobId));
 
-    throw new Error(message);
+    throw new Error(message, { cause: err });
   }
 }
 

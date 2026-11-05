@@ -1,19 +1,17 @@
 <script lang="ts">
-  import {
-    BookOpen,
-    List,
-    ArrowUpDown,
-    Bookmark,
-    Compass,
-    Telescope,
-    FlaskConical,
-    Rocket,
-    ChartBar,
-    Settings,
-    BrainCircuit,
-    ChevronLeft,
-    ChevronRight
-  } from '@lucide/svelte';
+  import BookOpen from '@lucide/svelte/icons/book-open';
+  import List from '@lucide/svelte/icons/list';
+  import ArrowUpDown from '@lucide/svelte/icons/arrow-up-down';
+  import Bookmark from '@lucide/svelte/icons/bookmark';
+  import Compass from '@lucide/svelte/icons/compass';
+  import Telescope from '@lucide/svelte/icons/telescope';
+  import FlaskConical from '@lucide/svelte/icons/flask-conical';
+  import Rocket from '@lucide/svelte/icons/rocket';
+  import ChartBar from '@lucide/svelte/icons/chart-bar';
+  import Settings from '@lucide/svelte/icons/settings';
+  import BrainCircuit from '@lucide/svelte/icons/brain-circuit';
+  import ChevronLeft from '@lucide/svelte/icons/chevron-left';
+  import ChevronRight from '@lucide/svelte/icons/chevron-right';
   import type { Component } from 'svelte';
   import * as Dialog from '$lib/components/ui/dialog/index.js';
   import { invalidateAll } from '$app/navigation';

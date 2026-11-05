@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { ImagePlus } from '@lucide/svelte';
+  import ImagePlus from '@lucide/svelte/icons/image-plus';
 
   let { onupload }: { onupload: (file: File) => void } = $props();
 

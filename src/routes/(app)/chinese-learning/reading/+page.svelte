@@ -2,7 +2,12 @@
   import { onDestroy, onMount } from 'svelte';
   import { fly } from 'svelte/transition';
   import { goto } from '$app/navigation';
-  import { Check, Eye, EyeOff, Home, Languages, RotateCcw } from '@lucide/svelte';
+  import Check from '@lucide/svelte/icons/check';
+  import Eye from '@lucide/svelte/icons/eye';
+  import EyeOff from '@lucide/svelte/icons/eye-off';
+  import Home from '@lucide/svelte/icons/house';
+  import Languages from '@lucide/svelte/icons/languages';
+  import RotateCcw from '@lucide/svelte/icons/rotate-ccw';
   import InkWashBg from '$lib/components/chinese-game/InkWashBg.svelte';
   import '$lib/components/chinese-game/game.css';
 

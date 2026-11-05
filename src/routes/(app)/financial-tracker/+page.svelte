@@ -1,31 +1,41 @@
 <script lang="ts">
+  import LedgerSortButton from './LedgerSortButton.svelte';
+  import { ledgerAccount, nextLedgerSort, sortLedgerEntries } from './ledger-sorting.js';
+  import InvestmentHistoryChart from './InvestmentHistoryChart.svelte';
+  import type {
+    LedgerSortKey,
+    LedgerSortDirection,
+    InvestmentHistoryChartDatum
+  } from './financial-tracker-types.js';
+  import {
+    createInvestmentForecast,
+    type ForecastMode,
+    type ReturnProfileKey,
+    type InvestmentForecastRow,
+    type MonthlyInvestmentForecastRow,
+    forecastCurrentAge,
+    defaultInflationRate,
+    returnProfiles
+  } from './investment-forecast.js';
   import { onMount, untrack } from 'svelte';
   import { MediaQuery } from 'svelte/reactivity';
   import { enhance } from '$app/forms';
   import * as Dialog from '$lib/components/ui/dialog/index.js';
-  import {
-    ArrowDown,
-    ArrowDownRight,
-    ArrowUp,
-    ArrowUpRight,
-    ArrowUpDown,
-    Banknote,
-    CalendarDays,
-    ChartColumn,
-    Check,
-    ChevronDown,
-    CircleDollarSign,
-    Eye,
-    EyeOff,
-    GitCompareArrows,
-    PiggyBank,
-    ReceiptText,
-    Search,
-    WalletCards
-  } from '@lucide/svelte';
-  import { Area, Axis, Chart, Grid, Highlight, Spline, Svg, Tooltip } from 'layerchart';
-  import { scaleTime } from 'd3-scale';
-  import { curveMonotoneX } from 'd3-shape';
+  import ArrowDownRight from '@lucide/svelte/icons/arrow-down-right';
+  import ArrowUpRight from '@lucide/svelte/icons/arrow-up-right';
+  import Banknote from '@lucide/svelte/icons/banknote';
+  import CalendarDays from '@lucide/svelte/icons/calendar-days';
+  import ChartColumn from '@lucide/svelte/icons/chart-column';
+  import Check from '@lucide/svelte/icons/check';
+  import ChevronDown from '@lucide/svelte/icons/chevron-down';
+  import CircleDollarSign from '@lucide/svelte/icons/circle-dollar-sign';
+  import Eye from '@lucide/svelte/icons/eye';
+  import EyeOff from '@lucide/svelte/icons/eye-off';
+  import GitCompareArrows from '@lucide/svelte/icons/git-compare-arrows';
+  import PiggyBank from '@lucide/svelte/icons/piggy-bank';
+  import ReceiptText from '@lucide/svelte/icons/receipt-text';
+  import Search from '@lucide/svelte/icons/search';
+  import WalletCards from '@lucide/svelte/icons/wallet-cards';
   import bcaLogo from '$lib/assets/fintech_logos/indonesia/bca.svg';
   import bankJagoLogo from '$lib/assets/fintech_logos/indonesia/bank_jago.png';
   import bniLogo from '$lib/assets/fintech_logos/indonesia/bni.svg';
@@ -102,17 +112,6 @@
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
   });
-
-  type LedgerSortKey =
-    | 'date'
-    | 'description'
-    | 'kind'
-    | 'category'
-    | 'account'
-    | 'paymentType'
-    | 'amount';
-  type SortDirection = 'asc' | 'desc';
-  type LedgerSortDirection = SortDirection | null;
   type ReconciliationTermKey =
     | 'starting-liquid'
     | 'liquid-debits'
@@ -138,9 +137,9 @@
     side: 'debit' | 'credit';
     amount: number;
   };
-  type ForecastMode = 'optimistic' | 'pessimistic';
+
   type InvestmentCurrencyMode = 'idr' | 'usd';
-  type ReturnProfileKey = 'vti' | 'sp500' | 'gold' | 'conservative';
+
   type BudgetPerformanceRow = CategoryRow & {
     share: number;
     allocationShare: number;
@@ -156,32 +155,6 @@
   type InvestmentGroup = {
     label: string;
     rows: string[];
-  };
-  type InvestmentForecastRow = TrackerData['investmentForecast'][number] & {
-    monthlyInvestment: number;
-    investmentContributionRate: number;
-    extraMonthlyInvestment: number;
-    realOptimistic: number;
-    realPessimist: number;
-    optimisticMonthlyGain: number;
-    pessimisticMonthlyGain: number;
-    optimisticYearlyGain: number;
-    pessimisticYearlyGain: number;
-    optimisticReturn: number;
-    pessimisticReturn: number;
-    salaryGrowth: number;
-  };
-  type MonthlyInvestmentForecastRow = InvestmentForecastRow & {
-    month: string;
-    monthIndex: number;
-    calendarYear: number;
-    age: number;
-  };
-  type InvestmentHistoryChartDatum = TrackerData['monthlyInvestmentHistory'][number] & {
-    date: Date;
-    label: string;
-    valueLabel: string;
-    growthLabel: string;
   };
   const selectedMonthStorageKey = 'financial-tracker:selected-month';
   const selectedViewStorageKey = 'financial-tracker:selected-view';
@@ -294,175 +267,17 @@
   let categories: CategoryRow[] = $derived(trackerData.categories);
   let mayCategories: CategoryRow[] = $derived(trackerData.mayCategories);
   let juneCategories: CategoryRow[] = $derived(trackerData.juneCategories);
-  const forecastBaseYear = 2026;
-  const forecastCurrentAge = 22;
-  const forecastCurrentMonthIndex = 5;
-  const forecastCurrentMonthlySalary = 8_000_000;
+
   const defaultForecastRetirementAge = 40;
   const minForecastRetirementAge = 25;
   const maxForecastRetirementAge = 71;
   const forecastLifeExpectancyAge = 71;
   const millionaireTarget = 1_000_000_000;
-  const defaultSalaryGrowthRate = 0.07;
-  const defaultInvestmentContributionRate = 0.3;
-  const defaultInflationRate = 0.03;
-  const returnProfiles: Record<
-    ReturnProfileKey,
-    { label: string; optimistic: number; pessimistic: number }
-  > = {
-    vti: { label: 'VTI', optimistic: 0.09, pessimistic: 0.06 },
-    sp500: { label: 'S&P 500', optimistic: 0.1, pessimistic: 0.06 },
-    gold: { label: 'Gold', optimistic: 0.076, pessimistic: 0.03 },
-    conservative: { label: 'Conservative', optimistic: 0.05, pessimistic: 0.03 }
-  };
+
   const returnProfileOptions = Object.entries(returnProfiles) as [
     ReturnProfileKey,
     (typeof returnProfiles)[ReturnProfileKey]
   ][];
-  const salaryGrowthByYear = new Map([
-    [-1, 0],
-    [0, 0.5],
-    [1, 0.35],
-    [2, 0.25],
-    [3, 0.18],
-    [4, 0.14],
-    [5, 0.1],
-    [6, 0.08]
-  ]);
-  const investmentContributionRateByYear = new Map([
-    [-1, 0.5],
-    [0, 0.45],
-    [1, 0.4],
-    [2, 0.35],
-    [3, 0.32],
-    [4, 0.3]
-  ]);
-  const monthLabels = [
-    'Jan',
-    'Feb',
-    'Mar',
-    'Apr',
-    'May',
-    'Jun',
-    'Jul',
-    'Aug',
-    'Sep',
-    'Oct',
-    'Nov',
-    'Dec'
-  ];
-
-  function forecastCalendarYear(relativeYear: number) {
-    return forecastBaseYear + relativeYear + 1;
-  }
-
-  function forecastAge(relativeYear: number) {
-    return forecastCurrentAge + relativeYear + 1;
-  }
-
-  function isRetiredForecastYear(relativeYear: number) {
-    return forecastAge(relativeYear) >= forecastRetirementAge;
-  }
-
-  function investmentGrowthForYear() {
-    return returnProfiles[selectedReturnProfile];
-  }
-
-  function defaultSalaryGrowthForYear(relativeYear: number) {
-    return salaryGrowthByYear.get(relativeYear) ?? defaultSalaryGrowthRate;
-  }
-
-  function investmentContributionRateForYear(relativeYear: number) {
-    if (isRetiredForecastYear(relativeYear) || forecastRowMuted(relativeYear)) return 0;
-
-    const override = forecastInvestmentContributionOverrides[relativeYear];
-    return (
-      override ??
-      investmentContributionRateByYear.get(relativeYear) ??
-      defaultInvestmentContributionRate
-    );
-  }
-
-  function roundProjectedMonthlySalary(value: number) {
-    return Math.round(value / 1_000_000) * 1_000_000;
-  }
-
-  function extraMonthlyInvestmentForYear(relativeYear: number) {
-    return forecastExtraInvestmentOverrides[relativeYear] ?? 0;
-  }
-
-  function projectedForecastMonthlySalary(relativeYear: number): number {
-    if (isRetiredForecastYear(relativeYear)) return 0;
-
-    const override = forecastSalaryOverrides[relativeYear];
-    if (override !== undefined) return Math.round(override);
-
-    if (relativeYear < 0) return forecastCurrentMonthlySalary;
-
-    return roundProjectedMonthlySalary(
-      projectedForecastMonthlySalary(relativeYear - 1) *
-        (1 + defaultSalaryGrowthForYear(relativeYear))
-    );
-  }
-
-  function forecastMonthlySalary(relativeYear: number): number {
-    if (forecastRowMuted(relativeYear)) return 0;
-    return projectedForecastMonthlySalary(relativeYear);
-  }
-
-  function salaryGrowthForForecastYear(relativeYear: number) {
-    if (relativeYear < 0 || isRetiredForecastYear(relativeYear)) return 0;
-
-    if (forecastRowMuted(relativeYear)) return 0;
-
-    const previousSalary = projectedForecastMonthlySalary(relativeYear - 1);
-    return previousSalary > 0
-      ? projectedForecastMonthlySalary(relativeYear) / previousSalary - 1
-      : 0;
-  }
-
-  function forecastMonthlyContribution(relativeYear: number) {
-    return Math.round(
-      forecastMonthlySalary(relativeYear) * investmentContributionRateForYear(relativeYear)
-    );
-  }
-
-  function currentYearMonthlyExtraInvestment(monthIndex: number) {
-    return currentYearMonthlyExtraInvestmentOverrides[monthIndex] ?? 0;
-  }
-
-  function currentYearTotalExtraInvestment() {
-    return monthLabels
-      .slice(forecastCurrentMonthIndex)
-      .reduce(
-        (sum, _month, offset) =>
-          sum + currentYearMonthlyExtraInvestment(forecastCurrentMonthIndex + offset),
-        0
-      );
-  }
-
-  function currentYearMonthlyContribution(monthIndex: number) {
-    return Math.round(
-      forecastMonthlySalary(-1) * investmentContributionRateForYear(-1) +
-        currentYearMonthlyExtraInvestment(monthIndex)
-    );
-  }
-
-  function currentYearForecastMonthContribution(monthIndex: number) {
-    return currentYearMonthlyContribution(monthIndex);
-  }
-
-  function compoundMonth(balance: number, annualReturn: number, monthlyContribution: number) {
-    return (balance + monthlyContribution) * (1 + annualReturn) ** (1 / 12);
-  }
-
-  function monthlyInvestmentGain(balance: number, annualReturn: number, monthlyContribution = 0) {
-    return Math.round((balance + monthlyContribution) * ((1 + annualReturn) ** (1 / 12) - 1));
-  }
-
-  function yearlyInvestmentGain(balance: number, annualReturn: number, months = 12) {
-    return Math.round(balance * ((1 + annualReturn) ** (months / 12) - 1));
-  }
 
   function percent(value: number, maximumFractionDigits = 0) {
     return `${new Intl.NumberFormat('id-ID', { maximumFractionDigits }).format(value * 100)}%`;
@@ -668,14 +483,6 @@
     }).format(new Date(`${monthKey}-01T00:00:00.000Z`));
   }
 
-  function displayedShortMonthLabel(value: Date | number | string) {
-    return new Intl.DateTimeFormat('en-US', {
-      month: 'short',
-      year: '2-digit',
-      timeZone: 'UTC'
-    }).format(new Date(value));
-  }
-
   function accountingMonthEditDeadline(monthKey: string) {
     const [monthName, yearText] = monthKey.toLowerCase().split('-');
     const monthIndex = accountingMonthIndexes[monthName];
@@ -746,10 +553,6 @@
     row: InvestmentForecastRow | MonthlyInvestmentForecastRow
   ) {
     return row.salary - displayedForecastMonthlyInvestment(row);
-  }
-
-  function forecastRowMuted(relativeYear: number) {
-    return Boolean(mutedForecastRows[relativeYear]);
   }
 
   function toggleForecastRowMuted(relativeYear: number) {
@@ -916,203 +719,49 @@
       };
     });
   });
-  let investmentHistoryYDomain = $derived.by(() => {
-    if (investmentHistoryChartRows.length === 0) return undefined;
-
-    const values = investmentHistoryChartRows.map((row) => row.portfolioValue);
-    const minValue = Math.min(...values);
-    const maxValue = Math.max(...values);
-    const valueRange = Math.max(maxValue - minValue, 1);
-    const domainPadding = Math.max(valueRange * 1.35, maxValue * 0.035, 1);
-
-    return [Math.max(0, minValue - domainPadding), maxValue + domainPadding] as [number, number];
-  });
   let forecastFinalRelativeYear = $derived(
     Math.max(
       forecastLifeExpectancyAge - forecastCurrentAge - 1,
       ...baseInvestmentForecast.map((row) => row.year)
     )
   );
-  let investmentForecast = $derived.by(() => {
-    const rows: InvestmentForecastRow[] = [];
-    let optimisticBalance = totalInvestments;
-    let pessimisticBalance = totalInvestments;
-    const currentYearInvestmentGrowth = investmentGrowthForYear();
-    let currentYearTotalContribution = 0;
 
-    for (let monthIndex = forecastCurrentMonthIndex; monthIndex < 12; monthIndex += 1) {
-      const monthlyContribution = currentYearForecastMonthContribution(monthIndex);
-      currentYearTotalContribution += monthlyContribution;
-      optimisticBalance = compoundMonth(
-        optimisticBalance,
-        currentYearInvestmentGrowth.optimistic,
-        monthlyContribution
-      );
-      pessimisticBalance = compoundMonth(
-        pessimisticBalance,
-        currentYearInvestmentGrowth.pessimistic,
-        monthlyContribution
-      );
-    }
+  let forecastRetirementAge = $state(
+    initialTrackerData.forecastPreferences.retirementAge ?? defaultForecastRetirementAge
+  );
+  let selectedReturnProfile = $state<ReturnProfileKey>(
+    initialTrackerData.forecastPreferences.returnProfile
+  );
+  let forecastInvestmentContributionOverrides = $state<Record<number, number | undefined>>(
+    yearlyForecastOverrideMap(initialTrackerData, 'investmentContributionRate')
+  );
+  let forecastSalaryOverrides = $state<Record<number, number | undefined>>(
+    yearlyForecastOverrideMap(initialTrackerData, 'salary')
+  );
+  let forecastExtraInvestmentOverrides = $state<Record<number, number | undefined>>(
+    yearlyForecastOverrideMap(initialTrackerData, 'extraMonthlyInvestment')
+  );
+  let currentYearMonthlyExtraInvestmentOverrides = $state<Record<number, number | undefined>>(
+    monthlyForecastExtraOverrideMap(initialTrackerData)
+  );
+  let mutedForecastRows = $state<Record<number, boolean>>({});
 
-    rows.push({
-      year: -1,
-      optimistic: Math.round(optimisticBalance),
-      pessimist: Math.round(pessimisticBalance),
-      realOptimistic: Math.round(
-        optimisticBalance / (1 + defaultInflationRate) ** ((12 - forecastCurrentMonthIndex) / 12)
-      ),
-      realPessimist: Math.round(
-        pessimisticBalance / (1 + defaultInflationRate) ** ((12 - forecastCurrentMonthIndex) / 12)
-      ),
-      salary: forecastMonthlySalary(-1),
-      monthlyInvestment: forecastMonthlyContribution(-1),
-      investmentContributionRate: investmentContributionRateForYear(-1),
-      extraMonthlyInvestment: currentYearTotalExtraInvestment(),
-      optimisticMonthlyGain: monthlyInvestmentGain(
-        optimisticBalance,
-        currentYearInvestmentGrowth.optimistic
-      ),
-      pessimisticMonthlyGain: monthlyInvestmentGain(
-        pessimisticBalance,
-        currentYearInvestmentGrowth.pessimistic
-      ),
-      optimisticYearlyGain: Math.round(
-        optimisticBalance - totalInvestments - currentYearTotalContribution
-      ),
-      pessimisticYearlyGain: Math.round(
-        pessimisticBalance - totalInvestments - currentYearTotalContribution
-      ),
-      optimisticReturn: currentYearInvestmentGrowth.optimistic,
-      pessimisticReturn: currentYearInvestmentGrowth.pessimistic,
-      salaryGrowth: salaryGrowthForForecastYear(-1)
-    });
+  const forecast = $derived(
+    createInvestmentForecast({
+      totalInvestments,
+      forecastFinalRelativeYear,
+      forecastRetirementAge,
+      selectedReturnProfile,
+      forecastInvestmentContributionOverrides,
+      forecastSalaryOverrides,
+      forecastExtraInvestmentOverrides,
+      currentYearMonthlyExtraInvestmentOverrides,
+      mutedForecastRows
+    })
+  );
+  const investmentForecast = $derived(forecast.investmentForecast);
+  const currentYearMonthlyForecast = $derived(forecast.currentYearMonthlyForecast);
 
-    for (let relativeYear = 0; relativeYear <= forecastFinalRelativeYear; relativeYear += 1) {
-      const monthlySalary = forecastMonthlySalary(relativeYear);
-      const monthlyContribution = forecastMonthlyContribution(relativeYear);
-      const oneTimeExtraInvestment = extraMonthlyInvestmentForYear(relativeYear);
-      const investmentGrowth = investmentGrowthForYear();
-      const optimisticYearStartBalance = optimisticBalance;
-      const pessimisticYearStartBalance = pessimisticBalance;
-
-      for (let monthIndex = 0; monthIndex < 12; monthIndex += 1) {
-        const forecastMonthContribution =
-          monthlyContribution + (monthIndex === 0 ? oneTimeExtraInvestment : 0);
-        optimisticBalance = compoundMonth(
-          optimisticBalance,
-          investmentGrowth.optimistic,
-          forecastMonthContribution
-        );
-        pessimisticBalance = compoundMonth(
-          pessimisticBalance,
-          investmentGrowth.pessimistic,
-          forecastMonthContribution
-        );
-      }
-
-      rows.push({
-        year: relativeYear,
-        optimistic: Math.round(optimisticBalance),
-        pessimist: Math.round(pessimisticBalance),
-        realOptimistic: Math.round(
-          optimisticBalance / (1 + defaultInflationRate) ** (relativeYear + 1)
-        ),
-        realPessimist: Math.round(
-          pessimisticBalance / (1 + defaultInflationRate) ** (relativeYear + 1)
-        ),
-        salary: monthlySalary,
-        monthlyInvestment: monthlyContribution,
-        investmentContributionRate: investmentContributionRateForYear(relativeYear),
-        extraMonthlyInvestment: extraMonthlyInvestmentForYear(relativeYear),
-        optimisticMonthlyGain: monthlyInvestmentGain(
-          optimisticBalance,
-          investmentGrowth.optimistic
-        ),
-        pessimisticMonthlyGain: monthlyInvestmentGain(
-          pessimisticBalance,
-          investmentGrowth.pessimistic
-        ),
-        optimisticYearlyGain: yearlyInvestmentGain(
-          optimisticYearStartBalance,
-          investmentGrowth.optimistic
-        ),
-        pessimisticYearlyGain: yearlyInvestmentGain(
-          pessimisticYearStartBalance,
-          investmentGrowth.pessimistic
-        ),
-        optimisticReturn: investmentGrowth.optimistic,
-        pessimisticReturn: investmentGrowth.pessimistic,
-        salaryGrowth: salaryGrowthForForecastYear(relativeYear)
-      });
-    }
-
-    return rows;
-  });
-  let currentYearMonthlyForecast = $derived.by(() => {
-    const rows: MonthlyInvestmentForecastRow[] = [];
-    let optimisticBalance = totalInvestments;
-    let pessimisticBalance = totalInvestments;
-    const monthlySalary = forecastMonthlySalary(-1);
-    const investmentGrowth = investmentGrowthForYear();
-
-    for (let monthIndex = forecastCurrentMonthIndex; monthIndex < 12; monthIndex += 1) {
-      const monthlyContribution = currentYearForecastMonthContribution(monthIndex);
-      const optimisticMonthlyGain = monthlyInvestmentGain(
-        optimisticBalance,
-        investmentGrowth.optimistic,
-        monthlyContribution
-      );
-      const pessimisticMonthlyGain = monthlyInvestmentGain(
-        pessimisticBalance,
-        investmentGrowth.pessimistic,
-        monthlyContribution
-      );
-      optimisticBalance = compoundMonth(
-        optimisticBalance,
-        investmentGrowth.optimistic,
-        monthlyContribution
-      );
-      pessimisticBalance = compoundMonth(
-        pessimisticBalance,
-        investmentGrowth.pessimistic,
-        monthlyContribution
-      );
-      rows.push({
-        year: -1,
-        month: monthLabels[monthIndex],
-        monthIndex,
-        calendarYear: forecastBaseYear,
-        age: forecastCurrentAge,
-        optimistic: Math.round(optimisticBalance),
-        pessimist: Math.round(pessimisticBalance),
-        realOptimistic: Math.round(
-          optimisticBalance /
-            (1 + defaultInflationRate) ** ((monthIndex - forecastCurrentMonthIndex + 1) / 12)
-        ),
-        realPessimist: Math.round(
-          pessimisticBalance /
-            (1 + defaultInflationRate) ** ((monthIndex - forecastCurrentMonthIndex + 1) / 12)
-        ),
-        salary: monthlySalary,
-        monthlyInvestment: monthlyContribution,
-        investmentContributionRate: investmentContributionRateForYear(-1),
-        extraMonthlyInvestment: currentYearMonthlyExtraInvestment(monthIndex),
-        optimisticMonthlyGain,
-        pessimisticMonthlyGain,
-        optimisticYearlyGain: yearlyInvestmentGain(optimisticBalance, investmentGrowth.optimistic),
-        pessimisticYearlyGain: yearlyInvestmentGain(
-          pessimisticBalance,
-          investmentGrowth.pessimistic
-        ),
-        optimisticReturn: investmentGrowth.optimistic,
-        pessimisticReturn: investmentGrowth.pessimistic,
-        salaryGrowth: salaryGrowthForForecastYear(-1)
-      });
-    }
-
-    return rows;
-  });
   let millionaireForecastYear = $derived(
     investmentForecast.find((row) => forecastRealValue(row) >= millionaireTarget)?.year
   );
@@ -1207,30 +856,11 @@
   let forecastAssumptionsOpen = $state(false);
   const isMobile = new MediaQuery('max-width: 519px');
   const LEDGER_PREVIEW_COUNT = 15;
-
-  let selectedReturnProfile = $state<ReturnProfileKey>(
-    initialTrackerData.forecastPreferences.returnProfile
-  );
-  let forecastRetirementAge = $state(
-    initialTrackerData.forecastPreferences.retirementAge ?? defaultForecastRetirementAge
-  );
   let returnProfileMenuOpen = $state(false);
   let focusedForecastSalaryYear = $state<number | null>(null);
   let focusedForecastExtraInvestmentYear = $state<number | null>(null);
   let focusedCurrentYearMonthlyExtraInvestmentMonth = $state<number | null>(null);
-  let mutedForecastRows = $state<Record<number, boolean>>({});
-  let forecastInvestmentContributionOverrides = $state<Record<number, number | undefined>>(
-    yearlyForecastOverrideMap(initialTrackerData, 'investmentContributionRate')
-  );
-  let forecastSalaryOverrides = $state<Record<number, number | undefined>>(
-    yearlyForecastOverrideMap(initialTrackerData, 'salary')
-  );
-  let forecastExtraInvestmentOverrides = $state<Record<number, number | undefined>>(
-    yearlyForecastOverrideMap(initialTrackerData, 'extraMonthlyInvestment')
-  );
-  let currentYearMonthlyExtraInvestmentOverrides = $state<Record<number, number | undefined>>(
-    monthlyForecastExtraOverrideMap(initialTrackerData)
-  );
+
   let preferencesLoaded = $state(false);
   let ledgerSortKey = $state<LedgerSortKey>('date');
   let ledgerSortDirection = $state<LedgerSortDirection>('desc');
@@ -1508,15 +1138,6 @@
 
   function total<T extends Record<K, number>, K extends keyof T>(rows: T[], key: K) {
     return rows.reduce((sum, row) => sum + row[key], 0);
-  }
-
-  function ledgerAccount(entry: LedgerEntry) {
-    if (entry.kind === 'income') return entry.toAccount ?? '-';
-    if (entry.kind === 'transfer')
-      return `${entry.fromAccount ?? '-'} -> ${entry.toAccount ?? '-'}`;
-    if (entry.kind === 'debt-payment')
-      return `${entry.fromAccount ?? '-'} -> ${entry.toAccount ?? '-'}`;
-    return entry.fromAccount ?? '-';
   }
 
   function accountIsLiquid(account?: string) {
@@ -1940,58 +1561,10 @@
     return [...rows.values()];
   }
 
-  function ledgerSortValue(entry: LedgerEntry, key: LedgerSortKey) {
-    if (key === 'date') return Date.parse(entry.date);
-    if (key === 'account') return ledgerAccount(entry);
-    return entry[key];
-  }
-
   function setLedgerSort(key: LedgerSortKey) {
-    const defaultDirection = key === 'date' || key === 'amount' ? 'desc' : 'asc';
-
-    if (ledgerSortKey === key) {
-      if (ledgerSortDirection === defaultDirection) {
-        ledgerSortDirection = defaultDirection === 'asc' ? 'desc' : 'asc';
-        return;
-      }
-
-      if (ledgerSortDirection !== null) {
-        ledgerSortDirection = null;
-        return;
-      }
-
-      ledgerSortDirection = defaultDirection;
-      return;
-    }
-
-    ledgerSortKey = key;
-    ledgerSortDirection = defaultDirection;
-  }
-
-  function sortLedgerEntries(
-    entries: LedgerEntry[],
-    key: LedgerSortKey,
-    direction: LedgerSortDirection
-  ) {
-    if (direction === null) return entries;
-
-    const modifier = direction === 'asc' ? 1 : -1;
-
-    return [...entries].sort((first, second) => {
-      const firstValue = ledgerSortValue(first, key);
-      const secondValue = ledgerSortValue(second, key);
-
-      if (typeof firstValue === 'number' && typeof secondValue === 'number') {
-        return (firstValue - secondValue) * modifier;
-      }
-
-      return (
-        String(firstValue).localeCompare(String(secondValue), 'id-ID', {
-          numeric: true,
-          sensitivity: 'base'
-        }) * modifier
-      );
-    });
+    const next = nextLedgerSort(ledgerSortKey, ledgerSortDirection, key);
+    ledgerSortKey = next.key;
+    ledgerSortDirection = next.direction;
   }
 
   function reimbursementTargetOptions(entry: LedgerEntry) {
@@ -2117,21 +1690,6 @@
       amount: term.operator === '-' ? -term.value : term.value,
       meta: term.operator || '+'
     }));
-  }
-
-  function mergeRows(rowSets: CategoryRow[][]) {
-    const rows = new Map<string, CategoryRow>();
-    for (const rowSet of rowSets) {
-      for (const row of rowSet) {
-        const existing = rows.get(row.label);
-        rows.set(row.label, {
-          label: row.label,
-          planned: (existing?.planned ?? 0) + row.planned,
-          actual: (existing?.actual ?? 0) + row.actual
-        });
-      }
-    }
-    return [...rows.values()];
   }
 
   function entriesForMonth(monthKey: string) {
@@ -3018,68 +2576,7 @@
             </div>
           {/if}
         </div>
-        <div class="investment-history">
-          <div class="investment-history-title">
-            <span>Monthly Growth</span>
-            <span>Month-close values</span>
-          </div>
-          {#if investmentHistoryChartRows.length > 0}
-            <div class="investment-history-chart" aria-label="Monthly portfolio growth chart">
-              <Chart
-                data={investmentHistoryChartRows}
-                x="date"
-                y="portfolioValue"
-                xScale={scaleTime()}
-                yDomain={investmentHistoryYDomain}
-                padding={{ top: 14, right: 18, bottom: 28, left: 18 }}
-                tooltip={{ mode: 'bisect-x' }}
-              >
-                <Svg>
-                  <Grid y classes={{ line: 'investment-history-grid-line' }} />
-                  <Area curve={curveMonotoneX} class="investment-history-area" />
-                  <Spline curve={curveMonotoneX} class="investment-history-line" />
-                  <Axis
-                    placement="bottom"
-                    ticks={investmentHistoryChartRows.map((row) => row.date)}
-                    format={displayedShortMonthLabel}
-                    tickLength={0}
-                    classes={{
-                      rule: 'investment-history-axis-rule',
-                      tick: 'investment-history-axis-tick',
-                      tickLabel: 'investment-history-axis-label'
-                    }}
-                  />
-                  <Highlight
-                    lines={{ class: 'investment-history-highlight-line' }}
-                    points={{ class: 'investment-history-highlight-point', r: 3.2 }}
-                  />
-                </Svg>
-
-                <Tooltip.Root
-                  anchor="top"
-                  variant="none"
-                  classes={{ container: 'investment-history-tooltip-container' }}
-                  let:data
-                >
-                  <div class="investment-history-tooltip">
-                    <span>{data.label}</span>
-                    <strong>{data.valueLabel}</strong>
-                    <em
-                      class:positive-growth={data.monthlyGrowth >= 0}
-                      class:negative-growth={data.monthlyGrowth < 0}
-                    >
-                      {data.growthLabel}
-                    </em>
-                  </div>
-                </Tooltip.Root>
-              </Chart>
-            </div>
-          {:else}
-            <p class="investment-history-empty">
-              No snapshots yet. Refresh prices to start history.
-            </p>
-          {/if}
-        </div>
+        <InvestmentHistoryChart rows={investmentHistoryChartRows} />
       </div>
 
       <div class="panel min-w-0">
@@ -3201,13 +2698,14 @@
                 <tr
                   class:forecast-current-row={row.year < 0}
                   class:forecast-millionaire-row={row.year === millionaireForecastYear}
-                  class:forecast-retirement-row={forecastAge(row.year) === forecastRetirementAge}
-                  class:forecast-muted-row={forecastRowMuted(row.year)}
+                  class:forecast-retirement-row={forecast.forecastAge(row.year) ===
+                    forecastRetirementAge}
+                  class:forecast-muted-row={forecast.forecastRowMuted(row.year)}
                 >
                   <td>
-                    <span>{forecastCalendarYear(row.year)}</span>
+                    <span>{forecast.forecastCalendarYear(row.year)}</span>
                   </td>
-                  <td>{forecastAge(row.year)}</td>
+                  <td>{forecast.forecastAge(row.year)}</td>
                   <td class="currency-col">Rp</td>
                   <td>
                     <form
@@ -3222,9 +2720,10 @@
                         class="forecast-input forecast-salary-input"
                         type="text"
                         inputmode="numeric"
-                        disabled={isRetiredForecastYear(row.year) || forecastRowMuted(row.year)}
+                        disabled={forecast.isRetiredForecastYear(row.year) ||
+                          forecast.forecastRowMuted(row.year)}
                         value={displayedForecastSalaryInput(row)}
-                        aria-label={`Monthly salary for ${forecastCalendarYear(row.year)}`}
+                        aria-label={`Monthly salary for ${forecast.forecastCalendarYear(row.year)}`}
                         onfocus={(event) => {
                           focusedForecastSalaryYear = row.year;
                           event.currentTarget.value = String(row.salary);
@@ -3255,9 +2754,10 @@
                           min="0"
                           max="100"
                           step="1"
-                          disabled={isRetiredForecastYear(row.year) || forecastRowMuted(row.year)}
+                          disabled={forecast.isRetiredForecastYear(row.year) ||
+                            forecast.forecastRowMuted(row.year)}
                           value={Math.round(row.investmentContributionRate * 100)}
-                          aria-label={`Investment percentage for ${forecastCalendarYear(row.year)}`}
+                          aria-label={`Investment percentage for ${forecast.forecastCalendarYear(row.year)}`}
                           oninput={(event) =>
                             setForecastInvestmentContributionRate(
                               row.year,
@@ -3296,7 +2796,7 @@
                           type="text"
                           inputmode="numeric"
                           value={displayedForecastMoneyInput(row.year, row.extraMonthlyInvestment)}
-                          aria-label={`One-time extra investment for ${forecastCalendarYear(row.year)}`}
+                          aria-label={`One-time extra investment for ${forecast.forecastCalendarYear(row.year)}`}
                           onfocus={(event) => {
                             focusedForecastExtraInvestmentYear = row.year;
                             event.currentTarget.value = String(row.extraMonthlyInvestment);
@@ -3318,7 +2818,7 @@
                   <td class="currency-col">Rp</td>
                   <td
                     class="forecast-contribution forecast-mute-toggle-cell"
-                    title={forecastRowMuted(row.year)
+                    title={forecast.forecastRowMuted(row.year)
                       ? 'Double-click to restore this forecast row'
                       : 'Double-click to temporarily zero this forecast row'}
                     ondblclick={() => toggleForecastRowMuted(row.year)}
@@ -3342,7 +2842,10 @@
                 </tr>
                 {#if row.year < 0}
                   {#each currentYearMonthlyForecast as monthRow (monthRow.month)}
-                    <tr class="forecast-month-row" class:forecast-muted-row={forecastRowMuted(-1)}>
+                    <tr
+                      class="forecast-month-row"
+                      class:forecast-muted-row={forecast.forecastRowMuted(-1)}
+                    >
                       <td>{monthRow.month}</td>
                       <td></td>
                       <td class="currency-col"></td>
@@ -3391,7 +2894,7 @@
                       <td class="currency-col">Rp</td>
                       <td
                         class="forecast-contribution forecast-mute-toggle-cell"
-                        title={forecastRowMuted(-1)
+                        title={forecast.forecastRowMuted(-1)
                           ? 'Double-click to restore the current-year row'
                           : 'Double-click to temporarily zero the current-year row'}
                         ondblclick={() => toggleForecastRowMuted(-1)}
@@ -3450,24 +2953,12 @@
 
 {#snippet LedgerSortHead(label: string, key: LedgerSortKey, cls = '')}
   <th class={cls}>
-    <button
-      type="button"
-      class="sort-button"
-      class:active={ledgerSortKey === key && ledgerSortDirection !== null}
-      aria-label={`Sort ledger by ${label}`}
-      onclick={() => setLedgerSort(key)}
-    >
-      <span>{label.toUpperCase()}</span>
-      {#if ledgerSortKey === key && ledgerSortDirection !== null}
-        {#if ledgerSortDirection === 'asc'}
-          <ArrowUp class="size-3" />
-        {:else}
-          <ArrowDown class="size-3" />
-        {/if}
-      {:else}
-        <ArrowUpDown class="size-3 opacity-55" />
-      {/if}
-    </button>
+    <LedgerSortButton
+      {label}
+      selected={ledgerSortKey === key}
+      direction={ledgerSortDirection}
+      onsort={() => setLedgerSort(key)}
+    />
   </th>
 {/snippet}
 
@@ -4859,23 +4350,8 @@
     background: white;
   }
 
-  .sort-button {
-    display: inline-flex;
-    width: 100%;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 0.22rem;
-    font: inherit;
-    color: inherit;
-    cursor: pointer;
-  }
-
-  .tracker-table th:first-child .sort-button {
+  .tracker-table th:first-child :global(.sort-button) {
     justify-content: flex-start;
-  }
-
-  .sort-button.active {
-    color: #ffffff;
   }
 
   .category-form {
@@ -5676,132 +5152,6 @@
   .portfolio-gain-percent,
   .portfolio-gain-amount {
     font-weight: 800;
-  }
-
-  .investment-history {
-    display: grid;
-    gap: 0.45rem;
-    border-top: 1px solid rgba(31, 82, 122, 0.12);
-    padding-top: 0.6rem;
-  }
-
-  .investment-history-title {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 0.75rem;
-    color: var(--color-cork-900);
-    font-size: 0.7rem;
-    font-weight: 800;
-  }
-
-  .investment-history-title span:last-child {
-    color: var(--color-cork-400);
-    font-size: 0.6rem;
-    font-weight: 700;
-  }
-
-  .investment-history-chart {
-    position: relative;
-    height: 11.4rem;
-    border: 1px solid rgba(31, 82, 122, 0.1);
-    border-radius: 7px;
-    background: linear-gradient(180deg, rgba(255, 253, 249, 0.86), rgba(255, 253, 249, 0.48));
-    padding: 0.25rem 0.34rem 0.12rem;
-  }
-
-  :global(.investment-history-area) {
-    fill: #1f527a;
-    fill-opacity: 0.08;
-    stroke: none;
-  }
-
-  :global(.investment-history-line) {
-    fill: none;
-    stroke: #1f527a;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-    stroke-width: 2.4;
-  }
-
-  :global(.investment-history-grid-line) {
-    stroke: rgba(31, 82, 122, 0.08);
-    stroke-dasharray: 2 3;
-    stroke-width: 1;
-  }
-
-  :global(.investment-history-axis-rule),
-  :global(.investment-history-axis-tick) {
-    stroke: transparent;
-  }
-
-  :global(.investment-history-axis-label) {
-    fill: var(--color-cork-400);
-    font-size: 0.6rem;
-    font-weight: 800;
-  }
-
-  :global(.investment-history-highlight-line) {
-    stroke: rgba(31, 82, 122, 0.22);
-    stroke-dasharray: 3 3;
-    stroke-width: 1.1;
-  }
-
-  :global(.investment-history-highlight-point) {
-    fill: #1f527a;
-    stroke: white;
-    stroke-width: 4;
-    paint-order: stroke;
-  }
-
-  :global(.investment-history-tooltip-container) {
-    border: 1px solid rgba(31, 82, 122, 0.14);
-    border-radius: 7px;
-    background: rgba(255, 253, 249, 0.96);
-    box-shadow: 0 12px 30px rgba(31, 82, 122, 0.16);
-    padding: 0.45rem 0.55rem;
-  }
-
-  .investment-history-tooltip {
-    display: grid;
-    gap: 0.16rem;
-    min-width: 9.4rem;
-    color: var(--color-cork-500);
-    font-size: 0.6rem;
-    line-height: 1.2;
-  }
-
-  .investment-history-tooltip span {
-    color: var(--color-cork-400);
-    font-weight: 700;
-  }
-
-  .investment-history-tooltip strong {
-    color: var(--color-cork-900);
-    font-size: 0.8rem;
-    font-weight: 800;
-  }
-
-  .investment-history-tooltip em {
-    font-style: normal;
-    font-weight: 800;
-  }
-
-  .investment-history-tooltip .positive-growth {
-    color: #15803d;
-  }
-
-  .investment-history-tooltip .negative-growth {
-    color: #b91c1c;
-  }
-
-  .investment-history-empty {
-    border: 1px dashed rgba(31, 82, 122, 0.18);
-    border-radius: 6px;
-    padding: 0.6rem;
-    color: var(--color-cork-400);
-    font-size: 0.6rem;
-    text-align: center;
   }
 
   @media (max-width: 520px) {

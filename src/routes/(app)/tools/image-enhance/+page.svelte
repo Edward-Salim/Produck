@@ -2,7 +2,9 @@
   import ImageUploader from '$lib/components/bg-remove/ImageUploader.svelte';
   import UpscaleEditor, { setPendingResult } from '$lib/components/upscale/UpscaleEditor.svelte';
   import { getHistory, removeHistoryItem } from '$lib/utils/image-cache.js';
-  import { Download, ImagePlus, X } from '@lucide/svelte';
+  import Download from '@lucide/svelte/icons/download';
+  import ImagePlus from '@lucide/svelte/icons/image-plus';
+  import X from '@lucide/svelte/icons/x';
   import ArrowLeft from '@lucide/svelte/icons/arrow-left';
 
   let file = $state<File | null>(null);

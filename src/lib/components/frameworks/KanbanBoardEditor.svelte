@@ -3,7 +3,14 @@
   import type { FrameworkInstance } from './types.js';
   import { browser } from '$app/environment';
   import { invalidateAll } from '$app/navigation';
-  import { Ban, Bug, ClipboardList, Columns3, Search, Sparkles, Wrench, X } from '@lucide/svelte';
+  import Ban from '@lucide/svelte/icons/ban';
+  import Bug from '@lucide/svelte/icons/bug';
+  import ClipboardList from '@lucide/svelte/icons/clipboard-list';
+  import Columns3 from '@lucide/svelte/icons/columns-3';
+  import Search from '@lucide/svelte/icons/search';
+  import Sparkles from '@lucide/svelte/icons/sparkles';
+  import Wrench from '@lucide/svelte/icons/wrench';
+  import X from '@lucide/svelte/icons/x';
   import EmptyState from '$lib/components/ui/empty-state.svelte';
   import { SvelteSet } from 'svelte/reactivity';
   import { DropdownMenu } from 'bits-ui';

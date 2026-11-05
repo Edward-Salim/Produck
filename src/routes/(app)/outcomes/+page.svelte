@@ -1,5 +1,8 @@
 <script lang="ts">
-  import { ChevronRight, ChevronsDownUp, ChevronsUpDown, Target } from '@lucide/svelte';
+  import ChevronRight from '@lucide/svelte/icons/chevron-right';
+  import ChevronsDownUp from '@lucide/svelte/icons/chevrons-down-up';
+  import ChevronsUpDown from '@lucide/svelte/icons/chevrons-up-down';
+  import Target from '@lucide/svelte/icons/target';
   import EmptyState from '$lib/components/ui/empty-state.svelte';
   import * as Select from '$lib/components/ui/select/index.js';
   import { invalidateAll } from '$app/navigation';

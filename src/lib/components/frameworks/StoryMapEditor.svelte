@@ -2,7 +2,8 @@
   import StoryMapBoard from '$lib/components/story-map/StoryMapBoard.svelte';
   import type { StoryMapData } from '$lib/types/story-map.js';
   import type { FrameworkInstance } from './types.js';
-  import { Plus, X } from '@lucide/svelte';
+  import Plus from '@lucide/svelte/icons/plus';
+  import X from '@lucide/svelte/icons/x';
 
   let {
     instance,

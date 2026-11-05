@@ -2,19 +2,17 @@
   import type { BacklogEpic, BacklogStory } from '$lib/types/story-map.js';
   import type { FrameworkInstance } from './types.js';
   import { KANO, KANO_ORDER } from '$lib/constants/colors.js';
-  import {
-    CircleCheck,
-    Circle,
-    ChevronRight,
-    ChevronsDownUp,
-    ChevronsUpDown,
-    Square,
-    SquareCheck,
-    ClipboardList,
-    Plus,
-    X,
-    Trash2
-  } from '@lucide/svelte';
+  import CircleCheck from '@lucide/svelte/icons/circle-check';
+  import Circle from '@lucide/svelte/icons/circle';
+  import ChevronRight from '@lucide/svelte/icons/chevron-right';
+  import ChevronsDownUp from '@lucide/svelte/icons/chevrons-down-up';
+  import ChevronsUpDown from '@lucide/svelte/icons/chevrons-up-down';
+  import Square from '@lucide/svelte/icons/square';
+  import SquareCheck from '@lucide/svelte/icons/square-check';
+  import ClipboardList from '@lucide/svelte/icons/clipboard-list';
+  import Plus from '@lucide/svelte/icons/plus';
+  import X from '@lucide/svelte/icons/x';
+  import Trash2 from '@lucide/svelte/icons/trash-2';
   import EmptyState from '$lib/components/ui/empty-state.svelte';
   import { SvelteSet } from 'svelte/reactivity';
 

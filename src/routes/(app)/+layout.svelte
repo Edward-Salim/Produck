@@ -9,21 +9,19 @@
   import { getFullscreen } from '$lib/stores/fullscreen.svelte.js';
 
   let fullscreen = $derived(getFullscreen());
-  import {
-    Layers3,
-    Wrench,
-    BookOpen,
-    LibraryBig,
-    WalletCards,
-    GaugeCircle,
-    Rss,
-    Briefcase,
-    LogOut,
-    EllipsisVertical,
-    Shield,
-    Trash2,
-    Languages
-  } from '@lucide/svelte';
+  import Layers3 from '@lucide/svelte/icons/layers';
+  import Wrench from '@lucide/svelte/icons/wrench';
+  import BookOpen from '@lucide/svelte/icons/book-open';
+  import LibraryBig from '@lucide/svelte/icons/library-big';
+  import WalletCards from '@lucide/svelte/icons/wallet-cards';
+  import GaugeCircle from '@lucide/svelte/icons/circle-gauge';
+  import Rss from '@lucide/svelte/icons/rss';
+  import Briefcase from '@lucide/svelte/icons/briefcase';
+  import LogOut from '@lucide/svelte/icons/log-out';
+  import EllipsisVertical from '@lucide/svelte/icons/ellipsis-vertical';
+  import Shield from '@lucide/svelte/icons/shield';
+  import Trash2 from '@lucide/svelte/icons/trash-2';
+  import Languages from '@lucide/svelte/icons/languages';
   import { DropdownMenu } from 'bits-ui';
   import * as Dialog from '$lib/components/ui/dialog/index.js';
   import { progressColor } from '$lib/constants/colors.js';

@@ -1,17 +1,15 @@
 <script lang="ts">
-  import {
-    ArrowLeft,
-    Copy,
-    Download,
-    Eye,
-    Files,
-    FilePenLine,
-    FileText,
-    LoaderCircle,
-    MessageCircle,
-    RefreshCw,
-    Trash2
-  } from '@lucide/svelte';
+  import ArrowLeft from '@lucide/svelte/icons/arrow-left';
+  import Copy from '@lucide/svelte/icons/copy';
+  import Download from '@lucide/svelte/icons/download';
+  import Eye from '@lucide/svelte/icons/eye';
+  import Files from '@lucide/svelte/icons/files';
+  import FilePenLine from '@lucide/svelte/icons/file-pen-line';
+  import FileText from '@lucide/svelte/icons/file-text';
+  import LoaderCircle from '@lucide/svelte/icons/loader-circle';
+  import MessageCircle from '@lucide/svelte/icons/message-circle';
+  import RefreshCw from '@lucide/svelte/icons/refresh-cw';
+  import Trash2 from '@lucide/svelte/icons/trash-2';
   import { onMount } from 'svelte';
   import Skeleton from '$lib/components/ui/skeleton/skeleton.svelte';
   import { buildApplicationPdfFilename } from '$lib/application-filename.js';

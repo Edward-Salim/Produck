@@ -75,7 +75,8 @@
 
     const deltaX = swipeLastX - swipeStartX;
     const deltaY = Math.abs(swipeLastY - swipeStartY);
-    const horizontalEnough = Math.abs(deltaX) >= SWIPE_THRESHOLD && Math.abs(deltaX) > deltaY * 1.25;
+    const horizontalEnough =
+      Math.abs(deltaX) >= SWIPE_THRESHOLD && Math.abs(deltaX) > deltaY * 1.25;
     const verticalEnough = deltaY > SWIPE_VERTICAL_LIMIT && deltaY > Math.abs(deltaX);
 
     if (!verticalEnough && horizontalEnough) {

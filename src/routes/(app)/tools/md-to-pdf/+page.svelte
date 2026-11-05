@@ -1,6 +1,9 @@
 <script lang="ts">
   import { marked } from 'marked';
-  import { Download, LoaderCircle, PenLine, Eye } from '@lucide/svelte';
+  import Download from '@lucide/svelte/icons/download';
+  import LoaderCircle from '@lucide/svelte/icons/loader-circle';
+  import PenLine from '@lucide/svelte/icons/pen-line';
+  import Eye from '@lucide/svelte/icons/eye';
   import ArrowLeft from '@lucide/svelte/icons/arrow-left';
   import { MD_ALERT_COLORS } from '$lib/constants/colors.js';
 

@@ -418,7 +418,8 @@ async function callDeepSeek(env: ChineseSongLyricsEnv, prompt: string) {
   } catch (err) {
     if (err instanceof Error && err.name === 'AbortError') {
       throw new Error(
-        `DeepSeek timed out after ${Math.round(DEEPSEEK_TIMEOUT_MS / 1000)} seconds.`
+        `DeepSeek timed out after ${Math.round(DEEPSEEK_TIMEOUT_MS / 1000)} seconds.`,
+        { cause: err }
       );
     }
     throw err;

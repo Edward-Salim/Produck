@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { FrameworkInstance } from './types.js';
-  import { Route } from '@lucide/svelte';
+  import Route from '@lucide/svelte/icons/route';
   import { GAIN_COLOR, PAIN_COLOR, PHASE_COLORS } from '$lib/constants/colors.js';
 
   let {

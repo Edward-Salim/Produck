@@ -1,6 +1,8 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { Music, Volume2, Lightbulb } from '@lucide/svelte';
+  import Music from '@lucide/svelte/icons/music';
+  import Volume2 from '@lucide/svelte/icons/volume-2';
+  import Lightbulb from '@lucide/svelte/icons/lightbulb';
   import type { GameEngine } from './game-engine.svelte.js';
   import { levelColorConfig, MASTERY_REQUIRED_SUCCESSES } from './game-engine.svelte.js';
   import hanziModeCard from '$lib/assets/tool-cards/chinese-hanzi-mode.png';

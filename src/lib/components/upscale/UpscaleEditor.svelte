@@ -7,7 +7,10 @@
 </script>
 
 <script lang="ts">
-  import { Download, LoaderCircle, ImagePlus, X } from '@lucide/svelte';
+  import Download from '@lucide/svelte/icons/download';
+  import LoaderCircle from '@lucide/svelte/icons/loader-circle';
+  import ImagePlus from '@lucide/svelte/icons/image-plus';
+  import X from '@lucide/svelte/icons/x';
   import {
     saveToCache,
     getHistory,

@@ -2,17 +2,15 @@
   import { onMount, untrack } from 'svelte';
   import { goto, replaceState } from '$app/navigation';
   import { fade, fly } from 'svelte/transition';
-  import {
-    ArrowUp,
-    CornerDownLeft,
-    Expand,
-    ListMusic,
-    LoaderCircle,
-    Music2,
-    Search,
-    WandSparkles,
-    X
-  } from '@lucide/svelte';
+  import ArrowUp from '@lucide/svelte/icons/arrow-up';
+  import CornerDownLeft from '@lucide/svelte/icons/corner-down-left';
+  import Expand from '@lucide/svelte/icons/expand';
+  import ListMusic from '@lucide/svelte/icons/list-music';
+  import LoaderCircle from '@lucide/svelte/icons/loader-circle';
+  import Music2 from '@lucide/svelte/icons/music-2';
+  import Search from '@lucide/svelte/icons/search';
+  import WandSparkles from '@lucide/svelte/icons/wand-sparkles';
+  import X from '@lucide/svelte/icons/x';
   import ArrowLeft from '@lucide/svelte/icons/arrow-left';
   import { pinyin as makePinyin } from 'pinyin-pro';
   import InkWashBg from '$lib/components/chinese-game/InkWashBg.svelte';
@@ -102,7 +100,8 @@
   });
 
   $effect(() => {
-    selectedId;
+    // Track song changes so repeat navigation resets for each selection.
+    void selectedId;
     returnRepeatAnchor = '';
     returnTargetAnchor = '';
     highlightedRepeatTargetAnchors = [];
@@ -110,9 +109,10 @@
   });
 
   $effect(() => {
-    selectedId;
-    filteredSongs;
-    songListOpen;
+    // Reposition the active song when the selection, results, or mobile list changes.
+    void selectedId;
+    void filteredSongs;
+    void songListOpen;
     window.requestAnimationFrame(() => {
       const targets = [
         {

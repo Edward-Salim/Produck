@@ -86,7 +86,8 @@ async function generateWithDeepSeek(
   } catch (err) {
     if (err instanceof Error && err.name === 'AbortError') {
       throw new Error(
-        `DeepSeek generation timed out after ${Math.round(timeoutMs / 1000)} seconds`
+        `DeepSeek generation timed out after ${Math.round(timeoutMs / 1000)} seconds`,
+        { cause: err }
       );
     }
     throw err;
@@ -184,7 +185,7 @@ function parseGeneratedJson<T>(text: string, label: string): T {
     return JSON.parse(extractJsonObject(text)) as T;
   } catch (err) {
     const detail = err instanceof Error ? err.message : 'invalid JSON';
-    throw new Error(`${label} returned malformed JSON: ${detail}`);
+    throw new Error(`${label} returned malformed JSON: ${detail}`, { cause: err });
   }
 }
 

@@ -1,15 +1,13 @@
 <script lang="ts">
   import * as Dialog from '$lib/components/ui/dialog/index.js';
   import { pushState, invalidateAll } from '$app/navigation';
-  import {
-    Rss,
-    ExternalLink,
-    ChevronLeft,
-    ChevronRight,
-    Search,
-    X,
-    ImageOff
-  } from '@lucide/svelte';
+  import Rss from '@lucide/svelte/icons/rss';
+  import ExternalLink from '@lucide/svelte/icons/external-link';
+  import ChevronLeft from '@lucide/svelte/icons/chevron-left';
+  import ChevronRight from '@lucide/svelte/icons/chevron-right';
+  import Search from '@lucide/svelte/icons/search';
+  import X from '@lucide/svelte/icons/x';
+  import ImageOff from '@lucide/svelte/icons/image-off';
 
   let { data } = $props();
 

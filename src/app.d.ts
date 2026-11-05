@@ -16,6 +16,7 @@ declare global {
     }
     // interface PageData {}
     interface PageState {
+      articleDetail?: boolean;
       bookShelf?: 'work' | 'misc';
     }
     // interface Platform {}

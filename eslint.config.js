@@ -24,6 +24,23 @@ export default defineConfig(
       // see: https://typescript-eslint.io/troubleshooting/faqs/eslint/#i-get-errors-from-the-no-undef-rule-about-global-variables-not-being-defined-even-though-there-are-no-typescript-errors
       'no-undef': 'off',
       'no-empty': ['error', { allowEmptyCatch: true }],
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              name: '@lucide/svelte',
+              allowTypeImports: true,
+              message: 'Import each icon from @lucide/svelte/icons/<name> to keep dev startup fast.'
+            },
+            {
+              name: '@lucide/svelte/icons',
+              allowTypeImports: true,
+              message: 'Import each icon from @lucide/svelte/icons/<name> to keep dev startup fast.'
+            }
+          ]
+        }
+      ],
       '@typescript-eslint/no-explicit-any': 'off',
       '@typescript-eslint/no-unused-vars': [
         'error',

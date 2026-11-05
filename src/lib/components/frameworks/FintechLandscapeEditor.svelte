@@ -1,5 +1,7 @@
 <script lang="ts">
-  import { LayoutGrid, Columns3, Swords } from '@lucide/svelte';
+  import LayoutGrid from '@lucide/svelte/icons/layout-grid';
+  import Columns3 from '@lucide/svelte/icons/columns-3';
+  import Swords from '@lucide/svelte/icons/swords';
   import * as Select from '$lib/components/ui/select/index.js';
   import EmptyState from '$lib/components/ui/empty-state.svelte';
   import { invalidateAll } from '$app/navigation';
@@ -16,7 +18,11 @@
   import { STAR_COLOR } from '$lib/constants/colors.js';
   import type { FrameworkInstance } from './types.js';
 
-  let { projectId, projectName, fintechPicks = [] } = $props<{
+  let {
+    projectId,
+    projectName,
+    fintechPicks = []
+  } = $props<{
     instance?: FrameworkInstance;
     draftMode?: 'edit' | 'view';
     onUpdate?: (values: Record<string, string>, title?: string) => void;

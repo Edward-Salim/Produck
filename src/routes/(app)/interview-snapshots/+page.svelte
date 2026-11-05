@@ -1,5 +1,10 @@
 <script lang="ts">
-  import { MessageSquare, Calendar, SlidersHorizontal, Check, FileText, X } from '@lucide/svelte';
+  import MessageSquare from '@lucide/svelte/icons/message-square';
+  import Calendar from '@lucide/svelte/icons/calendar';
+  import SlidersHorizontal from '@lucide/svelte/icons/sliders-horizontal';
+  import Check from '@lucide/svelte/icons/check';
+  import FileText from '@lucide/svelte/icons/file-text';
+  import X from '@lucide/svelte/icons/x';
   import { invalidateAll } from '$app/navigation';
   import * as Dialog from '$lib/components/ui/dialog/index.js';
   import type { SnapshotRow } from './+page.server.js';

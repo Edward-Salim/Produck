@@ -4,27 +4,25 @@
   import { onMount } from 'svelte';
   import { getFullscreen, toggleFullscreen } from '$lib/stores/fullscreen.svelte.js';
   import { FRAMEWORK_TEMPLATES, type FrameworkTemplate } from '$lib/frameworks/templates.js';
-  import {
-    ArrowDownUp,
-    CheckCircle2,
-    ChevronLeft,
-    ChevronRight,
-    Circle,
-    Clock,
-    Compass,
-    FlaskConical,
-    Info,
-    Layers3,
-    Link2,
-    LoaderCircle,
-    Maximize,
-    Minimize,
-    Plus,
-    Rocket,
-    Search,
-    Target,
-    Trash2
-  } from '@lucide/svelte';
+  import ArrowDownUp from '@lucide/svelte/icons/arrow-down-up';
+  import CheckCircle2 from '@lucide/svelte/icons/circle-check';
+  import ChevronLeft from '@lucide/svelte/icons/chevron-left';
+  import ChevronRight from '@lucide/svelte/icons/chevron-right';
+  import Circle from '@lucide/svelte/icons/circle';
+  import Clock from '@lucide/svelte/icons/clock';
+  import Compass from '@lucide/svelte/icons/compass';
+  import FlaskConical from '@lucide/svelte/icons/flask-conical';
+  import Info from '@lucide/svelte/icons/info';
+  import Layers3 from '@lucide/svelte/icons/layers';
+  import Link2 from '@lucide/svelte/icons/link-2';
+  import LoaderCircle from '@lucide/svelte/icons/loader-circle';
+  import Maximize from '@lucide/svelte/icons/maximize';
+  import Minimize from '@lucide/svelte/icons/minimize';
+  import Plus from '@lucide/svelte/icons/plus';
+  import Rocket from '@lucide/svelte/icons/rocket';
+  import Search from '@lucide/svelte/icons/search';
+  import Target from '@lucide/svelte/icons/target';
+  import Trash2 from '@lucide/svelte/icons/trash-2';
 
   import type { FrameworkPageInstance } from './+page.server.js';
   import IdeaBankEditor from '$lib/components/frameworks/IdeaBankEditor.svelte';

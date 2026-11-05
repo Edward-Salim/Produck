@@ -137,7 +137,15 @@
   </div>
 </div>
 
-{#snippet OrgCard({ node, featured = false, compact = false }: { node: OrgNode; featured?: boolean; compact?: boolean })}
+{#snippet OrgCard({
+  node,
+  featured = false,
+  compact = false
+}: {
+  node: OrgNode;
+  featured?: boolean;
+  compact?: boolean;
+})}
   <article
     class="rounded-lg border p-3 text-center shadow-sm {node.tone} {featured
       ? 'ring-1 ring-cork-500/20'

@@ -1,96 +1,94 @@
 <script lang="ts">
-  import {
-    Activity as ActivityIcon,
-    Archive,
-    AudioLines,
-    Bath,
-    BadgeCheck,
-    Bike,
-    BicepsFlexed,
-    BookOpen,
-    Bookmark,
-    Briefcase,
-    BriefcaseBusiness,
-    Brain,
-    Brush,
-    Camera,
-    Car,
-    CarFront,
-    Captions,
-    ChevronDown,
-    ClockCheck,
-    Coffee,
-    CookingPot,
-    Dice5,
-    Disc3,
-    Drum,
-    Dumbbell,
-    Eye,
-    Feather,
-    FileImage,
-    FileVideoCamera,
-    Film,
-    Flower2,
-    FolderOpen,
-    Footprints,
-    Gamepad,
-    Gamepad2,
-    Gauge,
-    GlassWater,
-    Hammer,
-    Hand,
-    HandHeart,
-    HandFist,
-    HardDrive,
-    HeartHandshake,
-    HeartPulse,
-    Headphones,
-    Home,
-    Image,
-    Languages,
-    Leaf,
-    MailCheck,
-    MessageCircleCheck,
-    MessageCircle,
-    MicVocal,
-    Monitor,
-    Moon,
-    Mountain,
-    Music,
-    Newspaper,
-    NotebookPen,
-    NotebookText,
-    Origami,
-    Palette,
-    PenLine,
-    PersonStanding,
-    Pill,
-    Puzzle,
-    Quote,
-    Radio,
-    Receipt,
-    Repeat,
-    Route,
-    Send,
-    Shirt,
-    ShoppingBasket,
-    Shuffle,
-    Smile,
-    Soup,
-    Sparkles,
-    Sprout,
-    Stethoscope,
-    Sun,
-    Target,
-    Timer,
-    Trash,
-    Utensils,
-    Users,
-    Waves,
-    Wind,
-    X,
-    Zap
-  } from '@lucide/svelte';
+  import ActivityIcon from '@lucide/svelte/icons/activity';
+  import Archive from '@lucide/svelte/icons/archive';
+  import AudioLines from '@lucide/svelte/icons/audio-lines';
+  import Bath from '@lucide/svelte/icons/bath';
+  import BadgeCheck from '@lucide/svelte/icons/badge-check';
+  import Bike from '@lucide/svelte/icons/bike';
+  import BicepsFlexed from '@lucide/svelte/icons/biceps-flexed';
+  import BookOpen from '@lucide/svelte/icons/book-open';
+  import Bookmark from '@lucide/svelte/icons/bookmark';
+  import Briefcase from '@lucide/svelte/icons/briefcase';
+  import BriefcaseBusiness from '@lucide/svelte/icons/briefcase-business';
+  import Brain from '@lucide/svelte/icons/brain';
+  import Brush from '@lucide/svelte/icons/brush';
+  import Camera from '@lucide/svelte/icons/camera';
+  import Car from '@lucide/svelte/icons/car';
+  import CarFront from '@lucide/svelte/icons/car-front';
+  import Captions from '@lucide/svelte/icons/captions';
+  import ChevronDown from '@lucide/svelte/icons/chevron-down';
+  import ClockCheck from '@lucide/svelte/icons/clock-check';
+  import Coffee from '@lucide/svelte/icons/coffee';
+  import CookingPot from '@lucide/svelte/icons/cooking-pot';
+  import Dice5 from '@lucide/svelte/icons/dice-5';
+  import Disc3 from '@lucide/svelte/icons/disc-3';
+  import Drum from '@lucide/svelte/icons/drum';
+  import Dumbbell from '@lucide/svelte/icons/dumbbell';
+  import Eye from '@lucide/svelte/icons/eye';
+  import Feather from '@lucide/svelte/icons/feather';
+  import FileImage from '@lucide/svelte/icons/file-image';
+  import FileVideoCamera from '@lucide/svelte/icons/file-video-camera';
+  import Film from '@lucide/svelte/icons/film';
+  import Flower2 from '@lucide/svelte/icons/flower-2';
+  import FolderOpen from '@lucide/svelte/icons/folder-open';
+  import Footprints from '@lucide/svelte/icons/footprints';
+  import Gamepad from '@lucide/svelte/icons/gamepad';
+  import Gamepad2 from '@lucide/svelte/icons/gamepad-2';
+  import Gauge from '@lucide/svelte/icons/gauge';
+  import GlassWater from '@lucide/svelte/icons/glass-water';
+  import Hammer from '@lucide/svelte/icons/hammer';
+  import Hand from '@lucide/svelte/icons/hand';
+  import HandHeart from '@lucide/svelte/icons/hand-heart';
+  import HandFist from '@lucide/svelte/icons/hand-fist';
+  import HardDrive from '@lucide/svelte/icons/hard-drive';
+  import HeartHandshake from '@lucide/svelte/icons/heart-handshake';
+  import HeartPulse from '@lucide/svelte/icons/heart-pulse';
+  import Headphones from '@lucide/svelte/icons/headphones';
+  import Home from '@lucide/svelte/icons/house';
+  import Image from '@lucide/svelte/icons/image';
+  import Languages from '@lucide/svelte/icons/languages';
+  import Leaf from '@lucide/svelte/icons/leaf';
+  import MailCheck from '@lucide/svelte/icons/mail-check';
+  import MessageCircleCheck from '@lucide/svelte/icons/message-circle-check';
+  import MessageCircle from '@lucide/svelte/icons/message-circle';
+  import MicVocal from '@lucide/svelte/icons/mic-vocal';
+  import Monitor from '@lucide/svelte/icons/monitor';
+  import Moon from '@lucide/svelte/icons/moon';
+  import Mountain from '@lucide/svelte/icons/mountain';
+  import Music from '@lucide/svelte/icons/music';
+  import Newspaper from '@lucide/svelte/icons/newspaper';
+  import NotebookPen from '@lucide/svelte/icons/notebook-pen';
+  import NotebookText from '@lucide/svelte/icons/notebook-text';
+  import Origami from '@lucide/svelte/icons/origami';
+  import Palette from '@lucide/svelte/icons/palette';
+  import PenLine from '@lucide/svelte/icons/pen-line';
+  import PersonStanding from '@lucide/svelte/icons/person-standing';
+  import Pill from '@lucide/svelte/icons/pill';
+  import Puzzle from '@lucide/svelte/icons/puzzle';
+  import Quote from '@lucide/svelte/icons/quote';
+  import Radio from '@lucide/svelte/icons/radio';
+  import Receipt from '@lucide/svelte/icons/receipt';
+  import Repeat from '@lucide/svelte/icons/repeat';
+  import Route from '@lucide/svelte/icons/route';
+  import Send from '@lucide/svelte/icons/send';
+  import Shirt from '@lucide/svelte/icons/shirt';
+  import ShoppingBasket from '@lucide/svelte/icons/shopping-basket';
+  import Shuffle from '@lucide/svelte/icons/shuffle';
+  import Smile from '@lucide/svelte/icons/smile';
+  import Soup from '@lucide/svelte/icons/soup';
+  import Sparkles from '@lucide/svelte/icons/sparkles';
+  import Sprout from '@lucide/svelte/icons/sprout';
+  import Stethoscope from '@lucide/svelte/icons/stethoscope';
+  import Sun from '@lucide/svelte/icons/sun';
+  import Target from '@lucide/svelte/icons/target';
+  import Timer from '@lucide/svelte/icons/timer';
+  import Trash from '@lucide/svelte/icons/trash';
+  import Utensils from '@lucide/svelte/icons/utensils';
+  import Users from '@lucide/svelte/icons/users';
+  import Waves from '@lucide/svelte/icons/waves';
+  import Wind from '@lucide/svelte/icons/wind';
+  import X from '@lucide/svelte/icons/x';
+  import Zap from '@lucide/svelte/icons/zap';
   import { onMount } from 'svelte';
   import { fade, fly, scale } from 'svelte/transition';
 

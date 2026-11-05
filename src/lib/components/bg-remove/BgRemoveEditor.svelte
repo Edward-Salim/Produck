@@ -5,15 +5,13 @@
 </script>
 
 <script lang="ts">
-  import {
-    Download,
-    Eraser,
-    Paintbrush,
-    LoaderCircle,
-    ImagePlus,
-    Sparkles,
-    Scissors
-  } from '@lucide/svelte';
+  import Download from '@lucide/svelte/icons/download';
+  import Eraser from '@lucide/svelte/icons/eraser';
+  import Paintbrush from '@lucide/svelte/icons/paintbrush';
+  import LoaderCircle from '@lucide/svelte/icons/loader-circle';
+  import ImagePlus from '@lucide/svelte/icons/image-plus';
+  import Sparkles from '@lucide/svelte/icons/sparkles';
+  import Scissors from '@lucide/svelte/icons/scissors';
 
   let { file, onreset: _onreset }: { file: File; onreset: () => void } = $props();
 

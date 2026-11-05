@@ -1,7 +1,8 @@
 <script lang="ts">
   import { IDEA_SECTIONS } from '$lib/constants/colors.js';
   import type { IdeaCategory, IdeaItem } from '$lib/types/story-map.js';
-  import { Plus, X } from '@lucide/svelte';
+  import Plus from '@lucide/svelte/icons/plus';
+  import X from '@lucide/svelte/icons/x';
   import { SvelteMap, SvelteSet } from 'svelte/reactivity';
   import type { FrameworkInstance } from './types.js';
 

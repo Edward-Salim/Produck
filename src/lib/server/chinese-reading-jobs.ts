@@ -110,7 +110,7 @@ export async function processChineseReadingJob(
       .set({ status: 'failed', error: message, updatedAt: new Date() })
       .where(eq(chineseReadingJob.id, jobId));
 
-    throw new Error(message);
+    throw new Error(message, { cause: err });
   }
 }
 

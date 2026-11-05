@@ -2,15 +2,13 @@
   import { invalidateAll } from '$app/navigation';
   import { onMount } from 'svelte';
   import * as Dialog from '$lib/components/ui/dialog/index.js';
-  import {
-    Briefcase,
-    CheckCheck,
-    RefreshCw,
-    ExternalLink,
-    MapPin,
-    Globe,
-    Building2
-  } from '@lucide/svelte';
+  import Briefcase from '@lucide/svelte/icons/briefcase';
+  import CheckCheck from '@lucide/svelte/icons/check-check';
+  import RefreshCw from '@lucide/svelte/icons/refresh-cw';
+  import ExternalLink from '@lucide/svelte/icons/external-link';
+  import MapPin from '@lucide/svelte/icons/map-pin';
+  import Globe from '@lucide/svelte/icons/globe';
+  import Building2 from '@lucide/svelte/icons/building-2';
   import bytedanceLogo from '$lib/assets/company-logos/bytedance.png';
   import seaLogo from '$lib/assets/company-logos/sea.png';
   import grabLogo from '$lib/assets/company-logos/grab.png';

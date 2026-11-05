@@ -1,6 +1,9 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
-  import { LoaderCircle, LogIn, Eye, EyeOff } from '@lucide/svelte';
+  import LoaderCircle from '@lucide/svelte/icons/loader-circle';
+  import LogIn from '@lucide/svelte/icons/log-in';
+  import Eye from '@lucide/svelte/icons/eye';
+  import EyeOff from '@lucide/svelte/icons/eye-off';
   import logoProduck from '$lib/assets/brand/logo-produck.png';
   import { getLastAppPagePath } from '$lib/client/last-app-page.js';
 

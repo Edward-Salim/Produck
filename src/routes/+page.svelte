@@ -3,21 +3,19 @@
   import { goto } from '$app/navigation';
   import { reveal } from '$lib/actions/reveal';
   import { getLastAppPagePath } from '$lib/client/last-app-page.js';
-  import {
-    GraduationCap,
-    Briefcase,
-    Trophy,
-    Code,
-    Languages,
-    ArrowUpRight,
-    LogIn,
-    LayoutDashboard,
-    FileText,
-    Wrench,
-    BookOpen,
-    Heart,
-    Mic
-  } from '@lucide/svelte';
+  import GraduationCap from '@lucide/svelte/icons/graduation-cap';
+  import Briefcase from '@lucide/svelte/icons/briefcase';
+  import Trophy from '@lucide/svelte/icons/trophy';
+  import Code from '@lucide/svelte/icons/code';
+  import Languages from '@lucide/svelte/icons/languages';
+  import ArrowUpRight from '@lucide/svelte/icons/arrow-up-right';
+  import LogIn from '@lucide/svelte/icons/log-in';
+  import LayoutDashboard from '@lucide/svelte/icons/layout-dashboard';
+  import FileText from '@lucide/svelte/icons/file-text';
+  import Wrench from '@lucide/svelte/icons/wrench';
+  import BookOpen from '@lucide/svelte/icons/book-open';
+  import Heart from '@lucide/svelte/icons/heart';
+  import Mic from '@lucide/svelte/icons/mic';
 
   // Static assets & SVGs from SVGL CLI
   import edwardAvatar from '$lib/assets/profile/edward.jpg?enhanced';
@@ -1980,7 +1978,7 @@
                     {page.label}
                   </p>
                   <div class="flex gap-1.5">
-                    {#each Array(3) as _, ring}
+                    {#each Array(3) as _}
                       <span
                         class="size-2 rounded-full border border-amber-500/25 bg-black"
                         aria-hidden="true"
@@ -1990,7 +1988,7 @@
                 </div>
 
                 <div class="relative grid grid-cols-1 items-start gap-2 sm:grid-cols-2">
-                  {#each page.items as { item, index } (item.role + item.organization + item.period)}
+                  {#each page.items as { item } (item.role + item.organization + item.period)}
                     {@const proof = item.attachments?.find((att) => att.image)}
                     {@const coverImage = item.coverImage ?? proof?.image}
                     <article
@@ -2052,7 +2050,7 @@
                     </article>
                   {/each}
 
-                  {#each Array(Math.max(0, 4 - page.items.length)) as _, emptyIndex}
+                  {#each Array(Math.max(0, 4 - page.items.length)) as _}
                     <div
                       class="hidden overflow-hidden bg-white/[0.025] p-1 shadow-inner shadow-white/5 sm:block"
                       aria-hidden="true"

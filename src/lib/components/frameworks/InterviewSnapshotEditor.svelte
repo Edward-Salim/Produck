@@ -1,7 +1,9 @@
 <script lang="ts">
   import type { FrameworkInstance } from './types.js';
   import * as Dialog from '$lib/components/ui/dialog/index.js';
-  import { Check, FileText, SlidersHorizontal } from '@lucide/svelte';
+  import Check from '@lucide/svelte/icons/check';
+  import FileText from '@lucide/svelte/icons/file-text';
+  import SlidersHorizontal from '@lucide/svelte/icons/sliders-horizontal';
   import personaMan1 from '$lib/assets/personas/man-1.png';
   import personaMan2 from '$lib/assets/personas/man-2.png';
   import personaWoman1 from '$lib/assets/personas/woman-1.png';

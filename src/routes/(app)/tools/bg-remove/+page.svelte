@@ -1,7 +1,12 @@
 <script lang="ts">
   import ImageUploader from '$lib/components/bg-remove/ImageUploader.svelte';
   import BgRemoveEditor from '$lib/components/bg-remove/BgRemoveEditor.svelte';
-  import { Eraser, Paintbrush, Download, ImagePlus, Sparkles, Scissors } from '@lucide/svelte';
+  import Eraser from '@lucide/svelte/icons/eraser';
+  import Paintbrush from '@lucide/svelte/icons/paintbrush';
+  import Download from '@lucide/svelte/icons/download';
+  import ImagePlus from '@lucide/svelte/icons/image-plus';
+  import Sparkles from '@lucide/svelte/icons/sparkles';
+  import Scissors from '@lucide/svelte/icons/scissors';
   import ArrowLeft from '@lucide/svelte/icons/arrow-left';
 
   let file = $state<File | null>(null);

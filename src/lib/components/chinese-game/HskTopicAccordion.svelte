@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { ChevronRight } from '@lucide/svelte';
+  import ChevronRight from '@lucide/svelte/icons/chevron-right';
   import { onMount, tick } from 'svelte';
   import { slide } from 'svelte/transition';
   import ElegantCurlyText from './ElegantCurlyText.svelte';
@@ -116,7 +116,7 @@
       .normalize('NFD')
       .replace(/\p{M}/gu, '')
       .toLocaleLowerCase()
-      .replace(/[“”‘’'"·，。！？：；（）()\[\]{}+→/\\…—–-]/g, ' ')
+      .replace(/[“”‘’'"·，。！？：；（）()[\]{}+→/\\…—–-]/g, ' ')
       .replace(/\s+/g, ' ')
       .trim();
   }
@@ -380,9 +380,12 @@
                         </p>
                       {/if}
                       {#if tableSection.rows.length}
+                        <!-- Keyboard focus lets users scroll wide tables without a pointer. -->
+                        <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
                         <div
                           class="max-w-full touch-pan-x overflow-x-auto overscroll-x-contain rounded-lg border border-cork-200 bg-white [-webkit-overflow-scrolling:touch]"
                           tabindex="0"
+                          role="region"
                           aria-label={`${tableSection.title ?? chineseTitle} table; swipe horizontally to see more columns`}
                         >
                           {#if tableSection.fluidColumns}

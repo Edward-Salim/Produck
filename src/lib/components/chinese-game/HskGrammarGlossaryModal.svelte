@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { X } from '@lucide/svelte';
+  import X from '@lucide/svelte/icons/x';
 
   type GrammarTerm = {
     term: string;
@@ -50,7 +50,8 @@
     {
       term: 'Preposition',
       chinese: '介词',
-      definition: 'A word introducing information such as place, direction, time, or the person involved.',
+      definition:
+        'A word introducing information such as place, direction, time, or the person involved.',
       example: '我在医院工作。',
       breakdown: '在医院 · at the hospital'
     },
@@ -106,7 +107,8 @@
     {
       term: 'Modal verb',
       chinese: '能愿动词',
-      definition: 'A verb placed before another verb to express ability, intention, permission, or possibility.',
+      definition:
+        'A verb placed before another verb to express ability, intention, permission, or possibility.',
       example: '我会说汉语。',
       breakdown: '会 (can/know how to) + 说 (speak)'
     },
@@ -143,7 +145,7 @@
       onclick={onClose}
       aria-label="Close grammar terms"
     ></button>
-    <section
+    <div
       role="dialog"
       aria-modal="true"
       aria-labelledby="grammar-glossary-title"
@@ -183,7 +185,7 @@
           </article>
         {/each}
       </div>
-    </section>
+    </div>
   </div>
 {/if}
 

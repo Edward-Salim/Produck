@@ -1,18 +1,16 @@
-import {
-  ClipboardList,
-  Columns3,
-  FlaskConical,
-  Lightbulb,
-  Landmark,
-  MapPinned,
-  Network,
-  NotebookPen,
-  Puzzle,
-  Route,
-  Target,
-  TrendingUp,
-  Workflow
-} from '@lucide/svelte';
+import ClipboardList from '@lucide/svelte/icons/clipboard-list';
+import Columns3 from '@lucide/svelte/icons/columns-3';
+import FlaskConical from '@lucide/svelte/icons/flask-conical';
+import Lightbulb from '@lucide/svelte/icons/lightbulb';
+import Landmark from '@lucide/svelte/icons/landmark';
+import MapPinned from '@lucide/svelte/icons/map-pinned';
+import Network from '@lucide/svelte/icons/network';
+import NotebookPen from '@lucide/svelte/icons/notebook-pen';
+import Puzzle from '@lucide/svelte/icons/puzzle';
+import Route from '@lucide/svelte/icons/route';
+import Target from '@lucide/svelte/icons/target';
+import TrendingUp from '@lucide/svelte/icons/trending-up';
+import Workflow from '@lucide/svelte/icons/workflow';
 import type { Component } from 'svelte';
 import assumptionTestCover from '$lib/assets/framework-cards/assumption-test.png';
 import epicsCover from '$lib/assets/framework-cards/epics.png';
