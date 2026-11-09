@@ -30,6 +30,9 @@
     if (category === 'misc') url.searchParams.set('shelf', 'misc');
     else url.searchParams.delete('shelf');
     replaceState(url, { ...page.state, bookShelf: category });
+    document
+      .querySelector<HTMLElement>('[data-slot="sidebar-inset"]')
+      ?.scrollTo({ top: 0, behavior: 'instant' });
   }
 
   function downloadBook(book: BookLibraryItem) {

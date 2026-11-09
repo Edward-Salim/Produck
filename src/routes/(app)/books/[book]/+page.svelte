@@ -6,6 +6,7 @@
   import List from '@lucide/svelte/icons/list';
   import { Popover } from 'bits-ui';
   import { tick } from 'svelte';
+  import { afterNavigate } from '$app/navigation';
   import { page } from '$app/state';
   import SummaryText from '$lib/components/books/SummaryText.svelte';
   import type { BookSummaryBlock } from '$lib/data/book-summaries.js';
@@ -30,20 +31,20 @@
     return Math.max(1, Math.ceil(wordCount / 200));
   }
 
-  function sectionMenuTitle(title: string, number: number, chapterRange = '') {
+  function sectionMenuNumber(number: number, chapterRange = '') {
     const chapterNumber = chapterRange.match(/\bChapter (\d+)\b/i)?.[1];
-    const unnumbered = /^(Introduction|Conclusion|Postscript|Endnote|Appendix|Checklists)\b/i.test(
-      chapterRange
-    );
-    const prefix = chapterNumber ?? (!unnumbered && number > 0 ? number : undefined);
-    return prefix === undefined ? title : `${prefix}. ${title}`;
+    const unnumbered =
+      /^(Introduction|Preface|Conclusion|Epilogue|Postscript|Endnote|Appendix|Checklists)\b/i.test(
+        chapterRange
+      );
+    return chapterNumber ?? (!unnumbered && number > 0 ? String(number) : undefined);
   }
 
   const sections = $derived([
     ...(book.parts ?? []).map((part) => ({
       id: `part-${part.number}`,
       title: part.title,
-      menuTitle: sectionMenuTitle(part.title, part.number, part.chapterRange),
+      menuNumber: sectionMenuNumber(part.number, part.chapterRange),
       pages: part.pages,
       chapterRange: part.chapterRange,
       summary: part.summary,
@@ -54,7 +55,7 @@
     ...book.chapters.map((chapter) => ({
       id: `chapter-${chapter.number}`,
       title: chapter.title,
-      menuTitle: sectionMenuTitle(chapter.title, chapter.number),
+      menuNumber: sectionMenuNumber(chapter.number, chapter.label),
       pages: chapter.pages,
       chapterRange: undefined,
       summary: chapter.summary,
@@ -70,16 +71,37 @@
   let contentsPanel = $state<HTMLDivElement | null>(null);
   let focusSectionOnClose = false;
   const sectionHeadingId = $props.id();
+  const sectionStorageKey = $derived(
+    `produck:book-section:${data.currentUser?.id ?? 'local'}:${book.id}`
+  );
   const activeSection = $derived(
     (selection?.bookId === book.id
       ? sections.find((section) => section.id === selection?.sectionId)
       : undefined) ?? sections[0]
   );
 
+  afterNavigate(() => {
+    let sectionId: string | null = null;
+    try {
+      sectionId = window.localStorage.getItem(sectionStorageKey);
+    } catch {
+      // The reader remains usable when browser storage is unavailable.
+    }
+    selection =
+      sectionId && sections.some((section) => section.id === sectionId)
+        ? { bookId: book.id, sectionId }
+        : null;
+  });
+
   function selectSection(sectionId: string) {
     selection = { bookId: book.id, sectionId };
     focusSectionOnClose = true;
     openBookId = null;
+    try {
+      window.localStorage.setItem(sectionStorageKey, sectionId);
+    } catch {
+      // Selecting a section should still work if its position cannot be saved.
+    }
   }
 
   function focusCurrentSection(event: Event) {
@@ -106,8 +128,23 @@
     event.preventDefault();
     focusSectionOnClose = false;
     await tick();
-    sectionHeading?.focus({ preventScroll: true });
-    sectionHeading?.scrollIntoView({ block: 'start', behavior: 'instant' });
+    if (!sectionHeading) return;
+    sectionHeading.focus({ preventScroll: true });
+    const scroller = sectionHeading.closest<HTMLElement>('[data-slot="sidebar-inset"]');
+    if (!scroller) {
+      sectionHeading.scrollIntoView({ block: 'start', behavior: 'instant' });
+      return;
+    }
+    const toolbarHeight = scroller.querySelector<HTMLElement>(':scope > header')?.offsetHeight ?? 0;
+    scroller.scrollTo({
+      top:
+        scroller.scrollTop +
+        sectionHeading.getBoundingClientRect().top -
+        scroller.getBoundingClientRect().top -
+        toolbarHeight -
+        16,
+      behavior: 'instant'
+    });
   }
 </script>
 
@@ -156,12 +193,12 @@
   {#if activeSection}
     {@const section = activeSection}
     <hr class="mb-6 border-cork-300/50" />
-    <article aria-labelledby={sectionHeadingId} class="pb-20">
+    <article aria-labelledby={sectionHeadingId} class="min-h-svh pb-20">
       <h2
         id={sectionHeadingId}
         bind:this={sectionHeading}
         tabindex="-1"
-        class="scroll-mt-36 text-xl font-medium text-cork-800 outline-none"
+        class="text-xl font-medium text-cork-800 outline-none"
       >
         {section.title}
       </h2>
@@ -278,23 +315,33 @@
               aria-label="Book sections"
               class="sections-scroll min-h-0 overflow-y-auto overscroll-contain p-1.5"
             >
-              <ol class="space-y-0.5">
+              <ul role="list" class="list-none space-y-0.5">
                 {#each sections as item (item.id)}
                   <li>
                     <button
                       type="button"
                       aria-current={item.id === activeSection.id ? 'true' : undefined}
                       onclick={() => selectSection(item.id)}
-                      class="w-full cursor-pointer rounded-lg px-2.5 py-1.5 text-left text-sm leading-5 transition-colors hover:bg-cork-200/50 focus-visible:outline-2 focus-visible:outline-cork-700 {item.id ===
+                      class="flex w-full cursor-pointer items-start gap-2.5 rounded-lg px-2.5 py-1.5 text-left text-sm leading-5 transition-colors hover:bg-cork-200/50 focus-visible:outline-2 focus-visible:outline-cork-700 {item.id ===
                       activeSection.id
                         ? 'bg-cork-200/70 text-cork-900'
                         : 'text-cork-700'}"
                     >
-                      {item.menuTitle}
+                      <span class="flex size-5 shrink-0 items-center justify-center">
+                        {#if item.menuNumber}
+                          <span
+                            class="flex size-5 items-center justify-center rounded-full border border-cork-300/70 text-[10px] leading-none font-medium tabular-nums"
+                            >{item.menuNumber}</span
+                          >
+                        {:else}
+                          <span aria-hidden="true" class="size-1 rounded-full bg-current"></span>
+                        {/if}
+                      </span>
+                      <span class="min-w-0 flex-1">{item.title}</span>
                     </button>
                   </li>
                 {/each}
-              </ol>
+              </ul>
             </nav>
           </Popover.Content>
         </Popover.Portal>
