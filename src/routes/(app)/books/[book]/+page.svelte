@@ -33,7 +33,7 @@
   }
 
   function sectionMenuNumber(number: number, chapterRange = '') {
-    const chapterNumber = chapterRange.match(/\bChapter (\d+)\b/i)?.[1];
+    const chapterNumber = chapterRange.match(/\b(?:Chapter|Section) (\d+(?:\.\d+)*)\b/i)?.[1];
     const unnumbered =
       /^(Introduction|Preface|Conclusion|Epilogue|Postscript|Endnote|Appendix|Checklists)\b/i.test(
         chapterRange
