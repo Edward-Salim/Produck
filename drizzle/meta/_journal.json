@@ -260,6 +260,13 @@
       "when": 1794290400000,
       "tag": "0039_book_epubs",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1794303065331,
+      "tag": "0040_financial_tracker_planning",
+      "breakpoints": true
     }
   ]
 }

@@ -1,3 +1,5 @@
+import type { FinancialTrackerPlan } from '$lib/financial-tracker-plan.js';
+
 export type MoneyRow = {
   label: string;
   planned: number;
@@ -24,6 +26,7 @@ export type WalletRow = {
   hasAccountNumber?: boolean;
   balanceProvided?: boolean;
   transactionsProvided?: boolean;
+  lastUpdatedAt?: string;
   note?: string;
 };
 
@@ -31,6 +34,7 @@ export type WalletMonthState = {
   balance?: number;
   minimumHold?: number;
   updated: boolean;
+  lastUpdatedAt?: string;
 };
 
 export type WalletMonthStates = Record<string, Record<string, WalletMonthState>>;
@@ -110,22 +114,24 @@ export type DetailRow = {
 };
 
 export type LedgerEntry = {
+  status?: 'recorded' | 'pending';
   id: string;
   monthKey: string;
   date: string;
   description: string;
-  kind: 'income' | 'expense' | 'bill' | 'debt-payment' | 'transfer';
+  kind: 'income' | 'expense' | 'bill' | 'debt-payment' | 'transfer' | 'opening-balance';
   category: string;
   amount: number;
   fromAccount?: string;
   toAccount?: string;
   reimbursesEntryId?: string;
-  paymentType: 'cash' | 'paylater' | 'transfer';
+  paymentType: 'cash' | 'paylater' | 'transfer' | 'other';
 };
 
 export type TrackerData = {
   usdIdrRate?: number;
   monthlyAllocation: number;
+  financialPlan: FinancialTrackerPlan | null;
   budgetCategoryOptions: BudgetCategoryOption[];
   walletMonthStates: WalletMonthStates;
   categories: CategoryRow[];
@@ -155,6 +161,7 @@ export type TrackerData = {
 export const emptyTrackerData: TrackerData = {
   usdIdrRate: undefined,
   monthlyAllocation: 0,
+  financialPlan: null,
   budgetCategoryOptions: [],
   walletMonthStates: {},
   categories: [],

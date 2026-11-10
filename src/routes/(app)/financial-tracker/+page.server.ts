@@ -1,5 +1,6 @@
 import { error } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
+import { calculateMonthlyPlan } from '$lib/financial-tracker-plan.js';
 import {
   financialTrackerBudgetCategory,
   financialTrackerCategoryRow,
@@ -17,7 +18,7 @@ import {
   financialTrackerWallet,
   financialTrackerWalletMonthStatus
 } from '$lib/server/db/schema';
-import { and, asc, eq } from 'drizzle-orm';
+import { and, asc, eq, sql } from 'drizzle-orm';
 import {
   assertFinancialTrackerAccess,
   fetchUsdIdrRate,
@@ -173,21 +174,19 @@ function buildMonthlyInvestmentHistory(
   });
 }
 
-export const load: PageServerLoad = async ({ locals }) => {
+export const load: PageServerLoad = ({ locals }) => {
   const user = locals.session?.user;
   if (!user) throw error(401, 'Unauthorized');
 
   assertFinancialTrackerAccess(user);
 
-  const ownerEmail = user.email.toLowerCase();
-  let usdIdrRate: number | undefined;
+  const trackerData = loadTrackerData(user.email.toLowerCase());
+  // Mark failures handled while SvelteKit starts streaming the loading state.
+  void trackerData.catch(() => {});
+  return { trackerData };
+};
 
-  try {
-    usdIdrRate = await fetchUsdIdrRate();
-  } catch (fxError) {
-    console.error('Financial tracker USD/IDR rate fetch failed.', fxError);
-  }
-
+async function loadTrackerData(ownerEmail: string): Promise<TrackerData | null> {
   const [
     budgetCategories,
     summaries,
@@ -203,7 +202,8 @@ export const load: PageServerLoad = async ({ locals }) => {
     forecastPreferences,
     forecastOverrides,
     settings,
-    walletMonthStates
+    walletMonthStates,
+    usdIdrRate
   ] = await Promise.all([
     db
       .select()
@@ -282,11 +282,15 @@ export const load: PageServerLoad = async ({ locals }) => {
     db
       .select()
       .from(financialTrackerWalletMonthStatus)
-      .where(eq(financialTrackerWalletMonthStatus.ownerEmail, ownerEmail))
+      .where(eq(financialTrackerWalletMonthStatus.ownerEmail, ownerEmail)),
+    fetchUsdIdrRate().catch((fxError) => {
+      console.error('Financial tracker USD/IDR rate fetch failed.', fxError);
+      return undefined;
+    })
   ]);
 
   if (summaries.length === 0 && ledgerEntries.length === 0) {
-    return { trackerData: null };
+    return null;
   }
 
   const rowsFor = (monthKey: string, section: string): CategoryRow[] =>
@@ -330,6 +334,7 @@ export const load: PageServerLoad = async ({ locals }) => {
   const trackerData: TrackerData = {
     usdIdrRate,
     monthlyAllocation: settings[0]?.monthlyAllocation ?? 3000000,
+    financialPlan: settings[0]?.financialPlan ?? null,
     budgetCategoryOptions: budgetCategories.map((row) => ({
       label: row.label,
       allocationShare: row.allocationShare
@@ -339,7 +344,8 @@ export const load: PageServerLoad = async ({ locals }) => {
       states[row.monthKey][row.walletLabel] = {
         balance: row.balance ?? undefined,
         minimumHold: row.minimumHold ?? undefined,
-        updated: Boolean(row.balanceProvided && row.transactionsProvided)
+        updated: Boolean(row.balanceProvided && row.transactionsProvided),
+        lastUpdatedAt: row.updatedAt.toISOString()
       };
       return states;
     }, {}),
@@ -400,7 +406,8 @@ export const load: PageServerLoad = async ({ locals }) => {
         fromAccount: row.fromAccount ?? undefined,
         toAccount: row.toAccount ?? undefined,
         reimbursesEntryId: row.reimbursesEntryId ?? undefined,
-        paymentType: row.paymentType as LedgerEntry['paymentType']
+        paymentType: row.paymentType as LedgerEntry['paymentType'],
+        status: row.status as LedgerEntry['status']
       })
     ),
     ledgerMonthKeys: ledgerMonths.map((row) => row.monthKey),
@@ -487,8 +494,8 @@ export const load: PageServerLoad = async ({ locals }) => {
     )
   };
 
-  return { trackerData };
-};
+  return trackerData;
+}
 
 export const actions: Actions = {
   forecastPreferences: async ({ request, locals }) => {
@@ -648,6 +655,7 @@ export const actions: Actions = {
 
     if (walletRows.length === 0) throw error(404, 'Wallet not found.');
 
+    const updatedAt = new Date();
     await db
       .insert(financialTrackerWalletMonthStatus)
       .values({
@@ -656,7 +664,7 @@ export const actions: Actions = {
         walletLabel: label,
         balance,
         minimumHold: minimumHold ?? 0,
-        updatedAt: new Date()
+        updatedAt
       })
       .onConflictDoUpdate({
         target: [
@@ -667,11 +675,11 @@ export const actions: Actions = {
         set: {
           balance,
           minimumHold: minimumHold ?? 0,
-          updatedAt: new Date()
+          updatedAt
         }
       });
 
-    return { ok: true };
+    return { ok: true, lastUpdatedAt: updatedAt.toISOString() };
   },
   ledgerCategory: async ({ request, locals }) => {
     const user = locals.session?.user;
@@ -791,38 +799,6 @@ export const actions: Actions = {
 
     return { ok: true };
   },
-  budgetShare: async ({ request, locals }) => {
-    const user = locals.session?.user;
-    if (!user) throw error(401, 'Unauthorized');
-    assertFinancialTrackerAccess(user);
-
-    const formData = await request.formData();
-    const label = String(formData.get('label') ?? '').trim();
-    const share = Number(formData.get('share'));
-
-    if (!label) throw error(400, 'Budget category is required.');
-    if (!Number.isInteger(share) || share < 0 || share > 100) {
-      throw error(400, 'Share must be a whole number from 0 to 100.');
-    }
-
-    const updatedRows = await db
-      .update(financialTrackerBudgetCategory)
-      .set({
-        allocationShare: share,
-        updatedAt: new Date()
-      })
-      .where(
-        and(
-          eq(financialTrackerBudgetCategory.ownerEmail, user.email.toLowerCase()),
-          eq(financialTrackerBudgetCategory.label, label)
-        )
-      )
-      .returning({ id: financialTrackerBudgetCategory.id });
-
-    if (updatedRows.length === 0) throw error(404, 'Budget category not found.');
-
-    return { ok: true };
-  },
   monthlyAllocation: async ({ request, locals }) => {
     const user = locals.session?.user;
     if (!user) throw error(401, 'Unauthorized');
@@ -830,10 +806,63 @@ export const actions: Actions = {
 
     const formData = await request.formData();
     const monthlyAllocation = Number(formData.get('monthlyAllocation'));
+    const monthKey = String(formData.get('monthKey') ?? '').trim();
     const ownerEmail = user.email.toLowerCase();
 
-    if (!Number.isInteger(monthlyAllocation) || monthlyAllocation < 0) {
+    if (!Number.isSafeInteger(monthlyAllocation) || monthlyAllocation < 0) {
       throw error(400, 'Monthly allocation must be a positive whole rupiah amount.');
+    }
+
+    if (!/^(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)-\d{4}$/.test(monthKey)) {
+      throw error(400, 'Budget month is invalid.');
+    }
+    const [setting] = await db
+      .select()
+      .from(financialTrackerSetting)
+      .where(eq(financialTrackerSetting.ownerEmail, ownerEmail));
+    if (setting?.financialPlan) {
+      const [summary] = await db
+        .select({ id: financialTrackerMonthlySummary.id })
+        .from(financialTrackerMonthlySummary)
+        .where(
+          and(
+            eq(financialTrackerMonthlySummary.ownerEmail, ownerEmail),
+            eq(financialTrackerMonthlySummary.monthKey, monthKey)
+          )
+        );
+      if (!summary) throw error(404, 'Budget month not found.');
+      const plan = calculateMonthlyPlan(
+        {
+          ...setting.financialPlan,
+          monthlyAllocations: {
+            ...setting.financialPlan.monthlyAllocations,
+            [monthKey]: monthlyAllocation
+          }
+        },
+        monthKey,
+        setting.monthlyAllocation
+      );
+      const plannedSavings = plan?.savingsGoal ?? 0;
+      const plannedCosts = monthlyAllocation - plannedSavings;
+      await db.transaction(async (tx) => {
+        await tx
+          .update(financialTrackerSetting)
+          .set({
+            financialPlan: sql`jsonb_set(${financialTrackerSetting.financialPlan}, '{monthlyAllocations}', coalesce(${financialTrackerSetting.financialPlan}->'monthlyAllocations', '{}'::jsonb) || jsonb_build_object(${monthKey}::text, ${monthlyAllocation}::bigint))`,
+            updatedAt: new Date()
+          })
+          .where(eq(financialTrackerSetting.id, setting.id));
+        await tx
+          .update(financialTrackerMonthlySummary)
+          .set({
+            expensesPlanned: plannedCosts,
+            savingsPlanned: plannedSavings,
+            leftoverPlanned: sql`${financialTrackerMonthlySummary.rolloverPlanned} + ${financialTrackerMonthlySummary.incomePlanned} - ${plannedCosts} - ${financialTrackerMonthlySummary.billsPlanned} - ${plannedSavings} - ${financialTrackerMonthlySummary.debtPlanned}`,
+            updatedAt: new Date()
+          })
+          .where(eq(financialTrackerMonthlySummary.id, summary.id));
+      });
+      return { ok: true };
     }
 
     const updatedRows = await db

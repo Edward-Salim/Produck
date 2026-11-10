@@ -12,6 +12,7 @@ import {
   customType
 } from 'drizzle-orm/pg-core';
 import { relations, sql } from 'drizzle-orm';
+import type { FinancialTrackerPlan } from '$lib/financial-tracker-plan.js';
 import type {
   BookAuthorPortrait,
   BookChapterSummary,
@@ -1090,6 +1091,7 @@ export const financialTrackerSetting = pgTable('financial_tracker_setting', {
   id: serial('id').primaryKey(),
   ownerEmail: text('owner_email').notNull(),
   monthlyAllocation: money('monthly_allocation').notNull().default(3000000),
+  financialPlan: jsonb('financial_plan').$type<FinancialTrackerPlan>(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
 });
 
@@ -1236,6 +1238,7 @@ export const financialTrackerLedgerEntry = pgTable('financial_tracker_ledger_ent
   toAccount: text('to_account'),
   reimbursesEntryId: text('reimburses_entry_id'),
   paymentType: text('payment_type').notNull(),
+  status: text('status').notNull().default('recorded'),
   sortOrder: integer('sort_order').notNull().default(0),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
 });
