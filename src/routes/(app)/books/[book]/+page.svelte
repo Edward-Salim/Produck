@@ -294,7 +294,7 @@
         <Popover.Trigger
           aria-label="Show sections"
           title="Sections"
-          class="fixed right-5 bottom-[max(1.25rem,env(safe-area-inset-bottom))] z-40 flex size-12 cursor-pointer items-center justify-center rounded-lg bg-cork-100 text-cork-800 shadow-sm transition-colors hover:bg-cork-200 hover:text-cork-600 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-cork-700 md:right-8"
+          class="fixed bottom-[max(1.25rem,env(safe-area-inset-bottom))] left-5 z-40 flex size-12 cursor-pointer items-center justify-center rounded-lg bg-cork-100 text-cork-800 shadow-sm transition-colors hover:bg-cork-200 hover:text-cork-600 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-cork-700 md:left-8"
         >
           <List class="size-6 drop-shadow-md" aria-hidden="true" />
         </Popover.Trigger>
@@ -302,7 +302,7 @@
           <Popover.Content
             bind:ref={contentsPanel}
             side="top"
-            align="end"
+            align="start"
             sideOffset={12}
             collisionPadding={16}
             aria-label="Book sections"
