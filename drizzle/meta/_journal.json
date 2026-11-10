@@ -253,6 +253,13 @@
       "when": 1793206800000,
       "tag": "0038_large_book_pdfs",
       "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1794290400000,
+      "tag": "0039_book_epubs",
+      "breakpoints": true
     }
   ]
 }
