@@ -14,6 +14,7 @@
 
   let { data }: { data: PageData } = $props();
   const book = $derived(data.book);
+  const sourceIsEpub = $derived(book.source.filename.toLowerCase().endsWith('.epub'));
   const authorPortraits = $derived(
     book.authorPortraits?.length
       ? book.authorPortraits
@@ -222,12 +223,12 @@
             class="inline-flex items-center gap-1.5 underline underline-offset-4 hover:text-cork-700"
           >
             <FileText class="size-3.5" aria-hidden="true" />
-            <span>pp. {section.pages}</span>
+            <span>{sourceIsEpub ? 'EPUB' : `pp. ${section.pages}`}</span>
           </a>
         {:else}
           <span class="inline-flex items-center gap-1.5" title="Source">
             <FileText class="size-3.5" aria-hidden="true" />
-            <span>pp. {section.pages}</span>
+            <span>{sourceIsEpub ? 'EPUB' : `pp. ${section.pages}`}</span>
           </span>
         {/if}
       </div>

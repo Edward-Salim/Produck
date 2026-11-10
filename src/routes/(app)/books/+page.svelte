@@ -89,7 +89,7 @@
                       href={`/books/${book.id}${category === 'misc' ? '?shelf=misc' : ''}`}
                       aria-label={`Open ${book.title}`}
                       title={book.hasDownload
-                        ? `${book.title}: click to read, hold or Alt+Enter to download PDF`
+                        ? `${book.title}: click to read, hold or Alt+Enter to download original`
                         : book.title}
                       {@attach book.hasDownload && longPress(() => downloadBook(book))}
                       class={[

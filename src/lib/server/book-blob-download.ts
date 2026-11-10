@@ -1,4 +1,4 @@
-import { pdfDownloadHeaders } from './book-download.ts';
+import { bookDownloadHeaders } from './book-download.ts';
 
 type BlobEntry = {
   data: ReadableStream<Uint8Array> | null;
@@ -24,9 +24,9 @@ export async function serveBookBlob(
       headers: { allow: 'GET, HEAD', 'cache-control': 'private, no-store' }
     });
   const match = new URL(request.url).pathname.match(/^\/api\/books\/([a-z0-9-]+)\/file$/);
-  if (!match) return failure('PDF not found', 404);
+  if (!match) return failure('Book file not found', 404);
   const metadataResponse = await services.getMetadata(match[1]);
-  if (!metadataResponse.ok) return failure('PDF is not available', metadataResponse.status);
+  if (!metadataResponse.ok) return failure('Book file is not available', metadataResponse.status);
   const file = await metadataResponse.json();
   if (
     typeof file.filename !== 'string' ||
@@ -36,8 +36,8 @@ export async function serveBookBlob(
     file.byteLength < 5 ||
     file.byteLength > 500_000_000
   )
-    return failure('PDF not found', 404);
-  const headers = pdfDownloadHeaders(file);
+    return failure('Book file not found', 404);
+  const headers = bookDownloadHeaders(file);
   const sessionCookie = metadataResponse.headers.get('set-cookie');
   if (sessionCookie) headers.set('set-cookie', sessionCookie);
   if (request.method === 'HEAD') return new Response(null, { headers });
@@ -48,7 +48,7 @@ export async function serveBookBlob(
     blob.metadata.byteLength !== file.byteLength
   ) {
     await blob?.data?.cancel();
-    return failure('Original PDF changed. Please try again.', 404);
+    return failure('Original book file changed. Please try again.', 404);
   }
   return new Response(blob.data, { headers });
 }

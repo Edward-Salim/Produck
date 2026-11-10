@@ -291,7 +291,11 @@ export const libraryBookPdf = pgTable(
     ),
     check(
       'library_book_pdf_signature_check',
-      sql`${table.data} is null or substring(${table.data} from 1 for 5) = decode('255044462d', 'hex')`
+      sql`${table.data} is null
+        or substring(${table.data} from 1 for 5) = decode('255044462d', 'hex')
+        or (lower(${table.filename}) like '%.epub'
+          and substring(${table.data} from 1 for 4) = decode('504b0304', 'hex')
+          and substring(${table.data} from 31 for 28) = decode('6d696d65747970656170706c69636174696f6e2f657075622b7a6970', 'hex'))`
     )
   ]
 );

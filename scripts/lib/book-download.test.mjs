@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createHash } from 'node:crypto';
 import { longPress, LONG_PRESS_MS } from '../../src/lib/attachments/long-press.ts';
-import { pdfDownloadHeaders, streamPdf } from '../../src/lib/server/book-download.ts';
+import { bookDownloadHeaders, streamBookFile } from '../../src/lib/server/book-download.ts';
 
 function element() {
   const document = Object.assign(new EventTarget(), { defaultView: new EventTarget() });
@@ -87,7 +87,7 @@ test('modified clicks keep browser behavior and keyboard download avoids navigat
 test('PDF streaming preserves every byte while limiting each emitted chunk', async () => {
   const data = Buffer.alloc(200_003);
   for (let index = 0; index < data.length; index++) data[index] = index % 251;
-  const reader = streamPdf(data).getReader();
+  const reader = streamBookFile(data).getReader();
   const chunks = [];
   for (;;) {
     const { done, value } = await reader.read();
@@ -104,7 +104,7 @@ test('PDF streaming preserves every byte while limiting each emitted chunk', asy
 });
 
 test('download headers preserve Unicode filenames and neutralize header and path characters', () => {
-  const headers = pdfDownloadHeaders({
+  const headers = bookDownloadHeaders({
     filename: 'A\r\n"/\\: 创始人.pdf',
     byteLength: 123,
     sha256: 'a'.repeat(64)
@@ -117,4 +117,16 @@ test('download headers preserve Unicode filenames and neutralize header and path
   assert.equal(headers.get('content-type'), 'application/pdf');
   assert.equal(headers.get('content-length'), '123');
   assert.equal(headers.get('cache-control'), 'private, no-store');
+});
+
+test('EPUB originals download with their native media type and unchanged extension', () => {
+  const headers = bookDownloadHeaders({
+    filename: 'Decisive - Chip Heath and Dan Heath.epub',
+    byteLength: 2199134,
+    sha256: 'b'.repeat(64)
+  });
+  assert.equal(headers.get('content-type'), 'application/epub+zip');
+  assert.match(headers.get('content-disposition'), /\.epub/);
+  assert.equal(headers.get('content-length'), '2199134');
+  assert.equal(headers.get('x-content-type-options'), 'nosniff');
 });

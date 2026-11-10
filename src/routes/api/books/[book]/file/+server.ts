@@ -20,7 +20,7 @@ const download: RequestHandler = async ({ request, locals }) => {
         (await getLocalBookPdfStore()).getWithMetadata(key, { type: 'stream' })
     });
   }
-  error(404, 'Large PDF downloads are served by the Netlify edge function.');
+  error(404, 'Large book downloads are served by the Netlify edge function.');
 };
 
 export const GET = download;

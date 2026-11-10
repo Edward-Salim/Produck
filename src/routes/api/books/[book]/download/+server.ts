@@ -2,7 +2,7 @@ import { error, json, redirect } from '@sveltejs/kit';
 import { and, eq } from 'drizzle-orm';
 import { db } from '$lib/server/db/index.js';
 import { libraryBookPdf } from '$lib/server/db/schema.js';
-import { pdfDownloadHeaders, streamPdf } from '$lib/server/book-download.js';
+import { bookDownloadHeaders, streamBookFile } from '$lib/server/book-download.js';
 import { getBookPdfMetadata } from '$lib/server/book-pdf.js';
 import type { RequestHandler } from './$types.js';
 
@@ -10,9 +10,9 @@ const download: RequestHandler = async ({ params, locals, request, url }) => {
   if (!locals.session?.user?.id) error(401, 'Unauthorized');
 
   const file = await getBookPdfMetadata(params.book);
-  if (!file) error(404, 'Original PDF is not available');
+  if (!file) error(404, 'Original book file is not available');
 
-  const headers = pdfDownloadHeaders(file);
+  const headers = bookDownloadHeaders(file);
   if (request.method === 'HEAD') return new Response(null, { headers });
   if (url.searchParams.get('metadata') === '1')
     return json(file, {
@@ -25,9 +25,9 @@ const download: RequestHandler = async ({ params, locals, request, url }) => {
     .from(libraryBookPdf)
     .where(and(eq(libraryBookPdf.bookId, params.book), eq(libraryBookPdf.sha256, file.sha256)))
     .limit(1);
-  if (!pdf?.data) error(404, 'Original PDF changed. Please try again.');
+  if (!pdf?.data) error(404, 'Original book file changed. Please try again.');
 
-  return new Response(streamPdf(new Uint8Array(pdf.data)), { headers });
+  return new Response(streamBookFile(new Uint8Array(pdf.data)), { headers });
 };
 
 export const GET = download;
