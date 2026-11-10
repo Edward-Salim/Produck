@@ -6,6 +6,7 @@ export type BookStory = {
 
 export type BookChapterSummary = {
   number: number;
+  group?: string;
   label?: string;
   title: string;
   pages: string;
@@ -24,6 +25,7 @@ export type BookSummaryBlock =
 
 export type BookPartSummary = {
   number: number;
+  group?: string;
   label: string;
   title: string;
   pages: string;

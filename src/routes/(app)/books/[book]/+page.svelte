@@ -45,6 +45,7 @@
     ...(book.parts ?? []).map((part) => ({
       id: `part-${part.number}`,
       title: part.title,
+      group: part.group,
       menuNumber: sectionMenuNumber(part.number, part.chapterRange),
       pages: part.pages,
       chapterRange: part.chapterRange,
@@ -56,6 +57,7 @@
     ...book.chapters.map((chapter) => ({
       id: `chapter-${chapter.number}`,
       title: chapter.title,
+      group: chapter.group,
       menuNumber: sectionMenuNumber(chapter.number, chapter.label),
       pages: chapter.pages,
       chapterRange: undefined,
@@ -317,8 +319,20 @@
               class="sections-scroll min-h-0 overflow-y-auto overscroll-contain p-1.5"
             >
               <ul role="list" class="list-none space-y-0.5">
-                {#each sections as item (item.id)}
-                  <li>
+                {#each sections as item, index (item.id)}
+                  {@const startsGroup = index === 0 || item.group !== sections[index - 1].group}
+                  <li
+                    class={startsGroup && index > 0
+                      ? 'mt-2 border-t border-cork-300/70 pt-2'
+                      : undefined}
+                  >
+                    {#if startsGroup && item.group}
+                      <h2
+                        class="px-2.5 pt-1 pb-1.5 text-xs leading-relaxed font-medium text-cork-600"
+                      >
+                        {item.group}
+                      </h2>
+                    {/if}
                     <button
                       type="button"
                       aria-current={item.id === activeSection.id ? 'true' : undefined}
