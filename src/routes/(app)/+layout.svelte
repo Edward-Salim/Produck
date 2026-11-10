@@ -8,6 +8,7 @@
   import { saveLastAppPagePath, clearLastAppPagePath } from '$lib/client/last-app-page.js';
   import { getDeprecatedFeature } from '$lib/constants/deprecated-features.js';
   import { getFullscreen } from '$lib/stores/fullscreen.svelte.js';
+  import { autoHideReaderTopbar } from '$lib/attachments/reader-topbar.js';
 
   let fullscreen = $derived(getFullscreen());
   import Layers3 from '@lucide/svelte/icons/layers';
@@ -460,7 +461,10 @@
 
   <Sidebar.Inset class="flex h-svh flex-col overflow-y-auto bg-cork-100 [scrollbar-gutter:stable]">
     {#if !fullscreen}
-      <header class="sticky top-0 z-50 border-b border-cork-200 bg-cork-100">
+      <header
+        class="reader-topbar sticky top-0 z-50 border-b border-cork-200 bg-cork-100"
+        {@attach autoHideReaderTopbar(page.url.pathname)}
+      >
         <div class="flex items-center gap-2 px-4 py-1.5 md:gap-3">
           <Sidebar.Trigger class="cursor-pointer text-cork-500 hover:text-cork-800" />
           <button
@@ -733,4 +737,20 @@
 {/if}
 
 <style>
+  @media (max-width: 767px) {
+    .reader-topbar {
+      transition: transform 180ms ease;
+    }
+
+    .reader-topbar[data-scroll-hidden] {
+      transform: translateY(-100%);
+      pointer-events: none;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .reader-topbar {
+      transition: none;
+    }
+  }
 </style>
