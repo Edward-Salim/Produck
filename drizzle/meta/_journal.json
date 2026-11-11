@@ -267,6 +267,13 @@
       "when": 1794303065331,
       "tag": "0040_financial_tracker_planning",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1794387600000,
+      "tag": "0041_book_cover_zoom",
+      "breakpoints": true
     }
   ]
 }

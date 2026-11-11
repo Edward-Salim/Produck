@@ -95,23 +95,13 @@
                       class={[
                         'book focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-cork-700',
                         {
-                          'trim-cover':
-                            book.id === 'user-story-mapping' ||
-                            book.id === 'storytelling-with-data' ||
-                            book.id === 'founders-dilemmas' ||
-                            book.id === 'psychology-of-money' ||
-                            book.id === 'art-of-spending-money' ||
-                            book.id === 'atomic-habits' ||
-                            book.id === 'lean-product-playbook' ||
-                            book.id === 'good-strategy-bad-strategy' ||
-                            book.id === 'never-split-the-difference' ||
-                            book.id === 'measure-what-matters' ||
-                            book.id === 'paytech',
+                          'trim-cover': book.coverZoom > 1,
                           'landscape-book': book.id === 'paytech',
                           'downloadable-book': book.hasDownload
                         }
                       ]}
                       style={`--book-span: ${bookShelfSpan(book, rackWidth)}; --landscape-width: ${bookShelfCapacity(rackWidth) > 1 ? '135%' : '100%'}; --tilt: ${[-2, 1, -1.5][(index + bookIndex) % 3]}deg;`}
+                      style:--cover-zoom={book.coverZoom}
                     >
                       <img
                         src={book.cover}
@@ -324,7 +314,7 @@
   }
 
   .trim-cover img {
-    transform: scale(1.025);
+    transform: scale(var(--cover-zoom));
   }
 
   .landscape-book {

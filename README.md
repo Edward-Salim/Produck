@@ -36,6 +36,13 @@ Import Lucide icons individually, for example `import BookOpen from '@lucide/sve
 | `pnpm db:push`   | Push schema to Neon                       |
 | `pnpm db:studio` | Open Drizzle Studio                       |
 
+## Book cover zoom
+
+Bookshelf cover zoom is stored in `library_book.cover_zoom`. Use `1` for the original
+cover or `1.025` for a 2.5% zoom. Values from `1` to `2` are supported. Update the
+database directly, then refresh the bookshelf to see the change. No redeploy is needed
+once the app version supporting this setting is deployed.
+
 ## Deprecated features
 
 Job Board (`/jobs`) and Chinese Learning (`/chinese-learning`, including HSK, reading, and lyrics) are deprecated and no longer maintained. They are hidden from the sidebar and keyboard navigation, and excluded from last-page resume. Direct links still work and display a deprecation notice.

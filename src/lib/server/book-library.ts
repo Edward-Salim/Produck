@@ -12,6 +12,7 @@ export async function getBookLibrary(): Promise<BookLibraryItem[]> {
       id: libraryBook.id,
       title: libraryBook.title,
       cover: libraryBook.coverPath,
+      coverZoom: libraryBook.coverZoom,
       shelfSpan: libraryBook.shelfSpan,
       shelfCategory: libraryBook.shelfCategory,
       hasDownload: isNotNull(libraryBookPdf.bookId).mapWith(Boolean)

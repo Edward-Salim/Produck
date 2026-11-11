@@ -56,6 +56,7 @@ export type BookSummary = {
 
 export type BookLibraryItem = Pick<BookSummary, 'id' | 'title' | 'cover'> & {
   shelfCategory: 'work' | 'misc';
+  coverZoom: number;
   shelfSpan?: 1 | 2;
   hasDownload?: boolean;
 };

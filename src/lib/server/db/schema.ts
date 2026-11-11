@@ -2,6 +2,7 @@ import {
   pgTable,
   serial,
   integer,
+  doublePrecision,
   text,
   boolean,
   jsonb,
@@ -249,6 +250,7 @@ export const libraryBook = pgTable(
       .default(sql`'[]'::jsonb`),
     edition: text('edition'),
     coverPath: text('cover_path').notNull(),
+    coverZoom: doublePrecision('cover_zoom').notNull().default(1),
     shelfSpan: integer('shelf_span').$type<1 | 2>().notNull().default(1),
     shelfCategory: text('shelf_category').$type<'work' | 'misc'>().notNull().default('work'),
     source: jsonb('source').$type<BookSummary['source']>().notNull(),
@@ -265,6 +267,7 @@ export const libraryBook = pgTable(
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
   },
   (table) => [
+    check('library_book_cover_zoom_check', sql`${table.coverZoom} between 1 and 2`),
     check('library_book_shelf_span_check', sql`${table.shelfSpan} in (1, 2)`),
     check('library_book_shelf_category_check', sql`${table.shelfCategory} in ('work', 'misc')`)
   ]
