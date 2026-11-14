@@ -2,6 +2,12 @@ import { error } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
 import { calculateMonthlyPlan } from '$lib/financial-tracker-plan.js';
 import {
+  pocketWalletLabels,
+  getPocketWalletBank,
+  isPocketBank,
+  summarizePocketBalances
+} from '$lib/financial-tracker-pockets.js';
+import {
   financialTrackerBudgetCategory,
   financialTrackerCategoryRow,
   financialTrackerDebtSchedule,
@@ -18,7 +24,7 @@ import {
   financialTrackerWallet,
   financialTrackerWalletMonthStatus
 } from '$lib/server/db/schema';
-import { and, asc, eq, sql } from 'drizzle-orm';
+import { and, asc, eq, inArray, sql } from 'drizzle-orm';
 import {
   assertFinancialTrackerAccess,
   fetchUsdIdrRate,
@@ -632,8 +638,16 @@ export const actions: Actions = {
     const balance = parseOptionalMoney(formData.get('balance'));
     const minimumHold = parseOptionalMoney(formData.get('minimumHold'));
     const ownerEmail = user.email.toLowerCase();
+    const pocketBank = getPocketWalletBank(label);
+    const isPocket = pocketBank !== undefined;
 
     if (!label) throw error(400, 'Wallet label is required.');
+    if (isPocketBank(label)) {
+      throw error(
+        400,
+        `${label} balance is calculated from its pockets. Edit the pocket balances instead.`
+      );
+    }
     if (!monthKey || monthKey === 'all') throw error(400, 'Wallet month is required.');
     assertWalletMonthEditable(monthKey);
     if (balance === undefined || balance === null) {
@@ -642,6 +656,9 @@ export const actions: Actions = {
     if (minimumHold === undefined) {
       throw error(400, 'Wallet minimum hold must be a positive whole rupiah amount.');
     }
+    if (isPocket && !/^\d+(?:\.\d{3})*$/.test(String(formData.get('balance') ?? '').trim())) {
+      throw error(400, 'Pocket balance must be a non-negative whole rupiah amount.');
+    }
 
     const walletRows = await db
       .select({ id: financialTrackerWallet.id })
@@ -649,35 +666,101 @@ export const actions: Actions = {
       .where(
         and(
           eq(financialTrackerWallet.ownerEmail, ownerEmail),
-          eq(financialTrackerWallet.label, label)
+          eq(financialTrackerWallet.label, pocketBank ?? label)
         )
       );
 
     if (walletRows.length === 0) throw error(404, 'Wallet not found.');
 
     const updatedAt = new Date();
-    await db
-      .insert(financialTrackerWalletMonthStatus)
-      .values({
-        ownerEmail,
-        monthKey,
-        walletLabel: label,
-        balance,
-        minimumHold: minimumHold ?? 0,
-        updatedAt
-      })
-      .onConflictDoUpdate({
-        target: [
-          financialTrackerWalletMonthStatus.ownerEmail,
-          financialTrackerWalletMonthStatus.monthKey,
-          financialTrackerWalletMonthStatus.walletLabel
-        ],
-        set: {
+    await db.transaction(async (tx) => {
+      if (pocketBank) {
+        const locked = await tx
+          .select({ id: financialTrackerWallet.id })
+          .from(financialTrackerWallet)
+          .where(
+            and(
+              eq(financialTrackerWallet.ownerEmail, ownerEmail),
+              eq(financialTrackerWallet.id, walletRows[0].id)
+            )
+          )
+          .for('update');
+        if (locked.length === 0) throw error(404, 'Wallet not found.');
+      }
+      await tx
+        .insert(financialTrackerWalletMonthStatus)
+        .values({
+          ownerEmail,
+          monthKey,
+          walletLabel: label,
           balance,
           minimumHold: minimumHold ?? 0,
           updatedAt
+        })
+        .onConflictDoUpdate({
+          target: [
+            financialTrackerWalletMonthStatus.ownerEmail,
+            financialTrackerWalletMonthStatus.monthKey,
+            financialTrackerWalletMonthStatus.walletLabel
+          ],
+          set: {
+            balance,
+            minimumHold: minimumHold ?? 0,
+            updatedAt
+          }
+        });
+
+      if (pocketBank) {
+        const pocketStates = await tx
+          .select({
+            walletLabel: financialTrackerWalletMonthStatus.walletLabel,
+            balance: financialTrackerWalletMonthStatus.balance
+          })
+          .from(financialTrackerWalletMonthStatus)
+          .where(
+            and(
+              eq(financialTrackerWalletMonthStatus.ownerEmail, ownerEmail),
+              eq(financialTrackerWalletMonthStatus.monthKey, monthKey),
+              inArray(
+                financialTrackerWalletMonthStatus.walletLabel,
+                Object.values(pocketWalletLabels[pocketBank])
+              )
+            )
+          );
+        const summary = summarizePocketBalances(
+          pocketBank,
+          Object.fromEntries(
+            pocketStates.map((row) => [row.walletLabel, { balance: row.balance ?? undefined }])
+          )
+        );
+        if (
+          summary.entered === Object.keys(pocketWalletLabels[pocketBank]).length &&
+          summary.total === undefined
+        ) {
+          throw error(400, 'Combined pocket balance is too large.');
         }
-      });
+        if (summary.total !== undefined) {
+          await tx
+            .insert(financialTrackerWalletMonthStatus)
+            .values({
+              ownerEmail,
+              monthKey,
+              walletLabel: pocketBank,
+              balance: summary.total,
+              balanceProvided: true,
+              updatedAt
+            })
+            .onConflictDoUpdate({
+              target: [
+                financialTrackerWalletMonthStatus.ownerEmail,
+                financialTrackerWalletMonthStatus.monthKey,
+                financialTrackerWalletMonthStatus.walletLabel
+              ],
+              set: { balance: summary.total, balanceProvided: true, updatedAt }
+            });
+        }
+      }
+    });
 
     return { ok: true, lastUpdatedAt: updatedAt.toISOString() };
   },

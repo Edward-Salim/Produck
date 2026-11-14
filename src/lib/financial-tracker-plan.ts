@@ -9,7 +9,9 @@ export type FinancialTrackerPlan = {
   proration: 'calendar-days-estimate';
   monthlyAllocation?: number;
   monthlySavingsGoal?: number;
+  monthlySavingsGoals?: Record<string, number>;
   categoryPlans?: Record<string, number>;
+  monthlyCategoryPlans?: Record<string, Record<string, number>>;
   monthlyAllocations?: Record<string, number>;
 };
 
@@ -17,6 +19,52 @@ export const rentBudgetCategory = 'Rent';
 export const savingsBudgetCategory = 'Savings';
 
 const months = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+
+export function calculateMealGuide({
+  monthKey,
+  planned,
+  actual = 0,
+  gallonPrice = 25_000,
+  today
+}: {
+  monthKey: string;
+  planned: number;
+  actual?: number;
+  gallonPrice?: number;
+  today: string;
+}) {
+  const selectedMonth = monthIndex(monthKey);
+  if (selectedMonth === undefined) return null;
+  const year = Math.floor(selectedMonth / 12);
+  const month = selectedMonth % 12;
+  const monthDays = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
+  const isCurrentMonth = monthIndex(today.slice(0, 7)) === selectedMonth;
+  const startDay = isCurrentMonth ? Number(today.slice(8, 10)) : 1;
+  if (!Number.isInteger(startDay) || startDay < 1 || startDay > monthDays) return null;
+  const days = monthDays - startDay + 1;
+  const budget = Math.max(0, planned - (isCurrentMonth ? actual : 0));
+  const gallons = Math.ceil(days / 7);
+  const waterReserve = gallons * Math.max(0, gallonPrice);
+  const dailyBudget = Math.max(0, budget - waterReserve) / days;
+  const roundingUnit = dailyBudget >= 25_000 ? 5_000 : 1_000;
+  const target = (share: number) => Math.floor((dailyBudget * share) / roundingUnit) * roundingUnit;
+  const breakfast = target(0.22);
+  const lunch = target(0.38);
+  const dinner = target(0.4);
+  return {
+    days,
+    isCurrentMonth,
+    budget,
+    gallons,
+    gallonPrice,
+    waterReserve,
+    breakfast,
+    lunch,
+    dinner,
+    dailyTarget: breakfast + lunch + dinner,
+    buffer: Math.max(0, budget - waterReserve - days * (breakfast + lunch + dinner))
+  };
+}
 
 function monthIndex(value: string) {
   const iso = /^(\d{4})-(\d{2})$/.exec(value);
@@ -73,7 +121,10 @@ export function calculateMonthlyPlan(
   const rent = selectedMonth >= rentMonth ? plan.monthlyRent : 0;
   const allocation =
     plan.monthlyAllocations?.[monthKey] ?? plan.monthlyAllocation ?? defaultFlexibleBudget;
-  const savingsGoal = Math.min(plan.monthlySavingsGoal ?? 0, Math.max(allocation - rent, 0));
+  const savingsGoal = Math.min(
+    plan.monthlySavingsGoals?.[monthKey] ?? plan.monthlySavingsGoal ?? 0,
+    Math.max(allocation - rent, 0)
+  );
   const flexibleBudget = Math.max(allocation - rent - savingsGoal, 0);
   const year = Math.floor(selectedMonth / 12);
   const month = selectedMonth % 12;
@@ -85,7 +136,7 @@ export function calculateMonthlyPlan(
     rent,
     allocation,
     savingsGoal,
-    categoryPlans: plan.categoryPlans ?? {},
+    categoryPlans: { ...plan.categoryPlans, ...plan.monthlyCategoryPlans?.[monthKey] },
     flexibleBudget,
     plannedCosts: allocation,
     afterPlannedCosts: expectedIncome - allocation,

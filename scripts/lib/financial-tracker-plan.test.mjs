@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   allocateMonthlyBudget,
+  calculateMealGuide,
   calculateMonthlyPlan
 } from '../../src/lib/financial-tracker-plan.ts';
 
@@ -16,6 +17,127 @@ const plan = {
   proration: 'calendar-days-estimate',
   monthlyAllocation: 9_000_000
 };
+
+test('remaining November meals reserve weekly water before setting affordable daily targets', () => {
+  const guide = calculateMealGuide({
+    monthKey: 'nov-2026',
+    planned: 1_250_000,
+    today: '2026-11-14'
+  });
+  assert.equal(guide.days, 17);
+  assert.equal(guide.gallons, 3);
+  assert.equal(guide.waterReserve, 75_000);
+  assert.deepEqual([guide.breakfast, guide.lunch, guide.dinner], [15_000, 25_000, 25_000]);
+  assert.equal(guide.buffer, 70_000);
+  assert.equal(guide.waterReserve + guide.days * guide.dailyTarget + guide.buffer, guide.budget);
+});
+
+test('December meals cover every started week including the fifth gallon and preserve the budget', () => {
+  const guide = calculateMealGuide({
+    monthKey: 'dec-2026',
+    planned: 2_500_000,
+    today: '2026-11-14'
+  });
+  assert.equal(guide.days, 31);
+  assert.equal(guide.gallons, 5);
+  assert.equal(guide.waterReserve, 125_000);
+  assert.deepEqual([guide.breakfast, guide.lunch, guide.dinner], [15_000, 25_000, 30_000]);
+  assert.equal(guide.buffer, 205_000);
+  assert.equal(guide.waterReserve + guide.days * guide.dailyTarget + guide.buffer, 2_500_000);
+});
+
+test('meal guidance uses actual spending, changed water prices, leap months, and exhausted budgets', () => {
+  const guide = calculateMealGuide({
+    monthKey: 'nov-2026',
+    planned: 1_250_000,
+    actual: 250_000,
+    gallonPrice: 30_000,
+    today: '2026-11-14'
+  });
+  assert.equal(guide.budget, 1_000_000);
+  assert.equal(guide.waterReserve, 90_000);
+  assert.ok(guide.waterReserve + guide.days * guide.dailyTarget <= guide.budget);
+  const exhausted = calculateMealGuide({
+    monthKey: 'nov-2026',
+    planned: 50_000,
+    actual: 60_000,
+    today: '2026-11-30'
+  });
+  assert.equal(exhausted.budget, 0);
+  assert.equal(exhausted.dailyTarget, 0);
+  assert.equal(
+    calculateMealGuide({ monthKey: 'feb-2028', planned: 2_000_000, today: '2028-01-01' }).days,
+    29
+  );
+  assert.equal(
+    calculateMealGuide({ monthKey: 'invalid', planned: 1_000_000, today: '2026-11-14' }),
+    null
+  );
+});
+
+test('November overrides keep rent paid, allocate two million to living costs, and preserve December', () => {
+  const regularPlan = {
+    ...plan,
+    monthlySavingsGoal: 2_000_000,
+    categoryPlans: {
+      Meals: 2_500_000,
+      Transportation: 500_000,
+      Utilities: 250_000,
+      'Mobile Data': 60_000
+    }
+  };
+  const novemberCategories = Object.freeze({
+    Meals: 1_250_000,
+    Transportation: 300_000,
+    Utilities: 250_000,
+    'Mobile Data': 60_000,
+    'Personal Care': 50_000,
+    'Fun Money': 40_000,
+    Admin: 20_000,
+    'One-off': 30_000,
+    'Household Supplies': 0,
+    Subscriptions: 0,
+    Health: 0,
+    Learning: 0
+  });
+  const revisedPlan = {
+    ...regularPlan,
+    monthlyAllocations: { 'nov-2026': 4_750_000 },
+    monthlySavingsGoals: { 'nov-2026': 0 },
+    monthlyCategoryPlans: { 'nov-2026': novemberCategories }
+  };
+  const november = calculateMonthlyPlan(revisedPlan, 'nov-2026', 3_000_000);
+  assert.equal(november.allocation, 4_750_000);
+  assert.equal(november.savingsGoal, 0);
+  assert.equal(november.flexibleBudget, 2_000_000);
+  const rows = ['Rent', 'Savings', ...Object.keys(novemberCategories)].map((label) => ({
+    label,
+    planned: 0,
+    actual: label === 'Rent' ? 2_750_000 : 0
+  }));
+  const budget = allocateMonthlyBudget(
+    rows,
+    november.allocation,
+    rows.map((row) => ({ label: row.label, allocationShare: 10 })),
+    november.rent,
+    november.savingsGoal,
+    november.categoryPlans
+  );
+  for (const [label, planned] of Object.entries(novemberCategories))
+    assert.equal(budget.find((row) => row.label === label).planned, planned);
+  assert.equal(budget.find((row) => row.label === 'Rent').actual, 2_750_000);
+  assert.equal(budget.find((row) => row.label === 'Savings').planned, 0);
+  assert.equal(
+    budget.reduce((sum, row) => sum + row.planned, 0),
+    4_750_000
+  );
+  for (const month of ['dec-2026', 'jan-2027']) {
+    assert.deepEqual(
+      calculateMonthlyPlan(revisedPlan, month, 3_000_000),
+      calculateMonthlyPlan(regularPlan, month, 3_000_000)
+    );
+  }
+});
 
 test('November includes rent and living costs but no salary before the first payday', () => {
   const november = calculateMonthlyPlan(plan, 'nov-2026', 3_000_000);

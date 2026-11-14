@@ -1,5 +1,9 @@
 <script lang="ts">
   import LedgerSortButton from './LedgerSortButton.svelte';
+  import PocketSummary from './PocketSummary.svelte';
+  import WalletPocketBalances from './WalletPocketBalances.svelte';
+  import MealBudgetGuide from './MealBudgetGuide.svelte';
+  import { isPocketBank, summarizePocketBalances } from '$lib/financial-tracker-pockets.js';
   import { summarizeDebtProviders } from './debt-summary.js';
   import { monthOpeningBalances } from './opening-balances.js';
   import {
@@ -102,6 +106,14 @@
   const amount = new Intl.NumberFormat('id-ID', {
     maximumFractionDigits: 0
   });
+  const abbreviatedAmount = new Intl.NumberFormat('id-ID', { maximumFractionDigits: 2 });
+  const abbreviatedCurrency = (value: number) => {
+    const magnitude = Math.abs(value);
+    if (magnitude >= 1_000_000_000) return `Rp${abbreviatedAmount.format(value / 1_000_000_000)}M`;
+    if (magnitude >= 1_000_000) return `Rp${abbreviatedAmount.format(value / 1_000_000)}jt`;
+    if (magnitude >= 1_000) return `Rp${amount.format(Math.round(value / 1_000))}rb`;
+    return currency.format(value);
+  };
   const shareAmount = new Intl.NumberFormat('id-ID', {
     maximumFractionDigits: 6
   });
@@ -885,6 +897,16 @@
   let selectedWalletEditDeadlineLabel = $derived(
     selectedWalletEditDeadline ? displayedAccountingDeadline(selectedWalletStatusMonthKey) : '-'
   );
+  let pocketSummaries = $derived({
+    BCA: summarizePocketBalances(
+      'BCA',
+      trackerData.walletMonthStates[selectedWalletStatusMonthKey] ?? {}
+    ),
+    'Bank Jago': summarizePocketBalances(
+      'Bank Jago',
+      trackerData.walletMonthStates[selectedWalletStatusMonthKey] ?? {}
+    )
+  });
   let wallets: TrackerData['wallets'] = $derived(
     baseWallets.map((wallet) => {
       const statusKey = walletStatusKey(selectedWalletStatusMonthKey, wallet.label);
@@ -893,11 +915,16 @@
       const baselineMonthState = trackerData.walletMonthStates['may-2026']?.[wallet.label];
       const selectedBalance = walletMonthBalanceSelections[statusKey];
       const selectedStatus = monthState?.updated ?? false;
+      const pocketSummary = isPocketBank(wallet.label) ? pocketSummaries[wallet.label] : undefined;
 
       return {
         ...wallet,
         balance:
-          selectedBalance?.balance ?? monthState?.balance ?? baselineMonthState?.balance ?? 0,
+          pocketSummary?.total ??
+          selectedBalance?.balance ??
+          monthState?.balance ??
+          baselineMonthState?.balance ??
+          0,
         minimumHold:
           selectedBalance?.minimumHold ??
           monthState?.minimumHold ??
@@ -1022,6 +1049,13 @@
       monthlyPlan?.savingsGoal,
       monthlyPlan?.categoryPlans
     )
+  );
+  let gallonWaterPrice = $derived(
+    [
+      ...(trackerData.expenseDetails.Meals ?? []),
+      ...(trackerData.juneExpenseDetails.Meals ?? []),
+      ...(trackerData.mayExpenseDetails.Meals ?? [])
+    ].find((row) => /gallon|galon/i.test(row.item))?.price ?? 25_000
   );
   let groupedBudgetRows = $derived(groupBudgetPerformanceRows(activeBudgetRows));
   let groupedInvestmentRows = $derived(groupInvestmentRows(investments));
@@ -1918,21 +1952,27 @@
             ><CircleDollarSign class="size-4" /></span
           >
         </div>
-        <p class="metric-value text-emerald-700">{currency.format(totalWallets)}</p>
+        <p class="metric-value text-emerald-700" title={currency.format(totalWallets)}>
+          {abbreviatedCurrency(totalWallets)}
+        </p>
       </div>
       <div class="metric">
         <div class="metric-heading">
           <p class="metric-label">Income</p>
           <span class="metric-icon bg-blue-100 text-blue-700"><ArrowUpRight class="size-4" /></span>
         </div>
-        <p class="metric-value text-cork-900">{currency.format(budgetIncomeActual)}</p>
+        <p class="metric-value text-cork-900" title={currency.format(budgetIncomeActual)}>
+          {abbreviatedCurrency(budgetIncomeActual)}
+        </p>
       </div>
       <div class="metric">
         <div class="metric-heading">
           <p class="metric-label">Spent</p>
           <span class="metric-icon bg-red-100 text-red-700"><ArrowDownRight class="size-4" /></span>
         </div>
-        <p class="metric-value text-cork-900">{currency.format(actualOutflow)}</p>
+        <p class="metric-value text-cork-900" title={currency.format(actualOutflow)}>
+          {abbreviatedCurrency(actualOutflow)}
+        </p>
       </div>
       <div class="metric">
         <div class="metric-heading">
@@ -1941,8 +1981,24 @@
             ><CalendarDays class="size-4" /></span
           >
         </div>
-        <p class="metric-value text-red-700">{currency.format(upcomingDebt)}</p>
+        <p class="metric-value text-red-700" title={currency.format(upcomingDebt)}>
+          {abbreviatedCurrency(upcomingDebt)}
+        </p>
       </div>
+    </section>
+
+    <section
+      class="panel grid gap-2 sm:grid-cols-[auto_minmax(0,1fr)] sm:items-center sm:gap-6"
+      aria-labelledby="pockets-heading"
+    >
+      <h2
+        id="pockets-heading"
+        class="flex items-center gap-2 text-sm font-semibold whitespace-nowrap text-cork-900"
+      >
+        <WalletCards class="size-4 text-cork-500" />
+        Pocket Plan
+      </h2>
+      <PocketSummary rows={activeBudgetRows} categoryIcons={budgetCategoryIcons} />
     </section>
 
     <section class="panel">
@@ -2017,9 +2073,18 @@
                         <span>{row.label}</span>
                       </button>
                       {#if openBudgetDescriptions[row.label]}
-                        <span class="budget-category-desc"
-                          >{budgetCategoryDescription(row.label)}</span
-                        >
+                        <div class="budget-category-desc">
+                          {#if row.label === 'Meals'}
+                            <MealBudgetGuide
+                              monthKey={currentMonth.key}
+                              planned={row.planned}
+                              actual={row.actual}
+                              gallonPrice={gallonWaterPrice}
+                            />
+                          {:else}
+                            {budgetCategoryDescription(row.label)}
+                          {/if}
+                        </div>
                       {/if}
                     </div>
                   </td>
@@ -2153,58 +2218,81 @@
                     </td>
                     <td class="currency-col" data-label="Balance">Rp</td>
                     <td data-label="Balance">
-                      <form
-                        method="POST"
-                        action="?/walletMonthBalance"
-                        class="wallet-money-form"
-                        use:enhance={keepWalletFormState}
-                      >
-                        <input type="hidden" name="label" value={wallet.label} />
-                        <input type="hidden" name="monthKey" value={selectedWalletStatusMonthKey} />
-                        <input type="hidden" name="minimumHold" value={wallet.minimumHold ?? 0} />
-                        <input
-                          class="wallet-money-input"
-                          name="balance"
-                          type="text"
-                          inputmode="numeric"
-                          value={amount.format(wallet.balance)}
-                          aria-label={`${wallet.label} ${selectedWalletStatusMonthLabel} ending balance`}
-                          disabled={!selectedWalletMonthEditable}
-                          title={selectedWalletMonthEditable
-                            ? undefined
-                            : 'Locked one week after month end'}
-                          onfocus={(event) => (event.currentTarget.value = String(wallet.balance))}
-                          onchange={submitWalletMonthBalance}
-                        />
-                      </form>
+                      {#if isPocketBank(wallet.label)}
+                        <div
+                          title={pocketSummaries[wallet.label].total === undefined
+                            ? 'Recorded bank balance; enter both pockets to calculate their total'
+                            : 'Total of actual pocket balances'}
+                        >
+                          <span>{amount.format(wallet.balance)}</span>
+                        </div>
+                      {:else}
+                        <form
+                          method="POST"
+                          action="?/walletMonthBalance"
+                          class="wallet-money-form"
+                          use:enhance={keepWalletFormState}
+                        >
+                          <input type="hidden" name="label" value={wallet.label} />
+                          <input
+                            type="hidden"
+                            name="monthKey"
+                            value={selectedWalletStatusMonthKey}
+                          />
+                          <input type="hidden" name="minimumHold" value={wallet.minimumHold ?? 0} />
+                          <input
+                            class="wallet-money-input"
+                            name="balance"
+                            type="text"
+                            inputmode="numeric"
+                            value={amount.format(wallet.balance)}
+                            aria-label={`${wallet.label} ${selectedWalletStatusMonthLabel} ending balance`}
+                            disabled={!selectedWalletMonthEditable}
+                            title={selectedWalletMonthEditable
+                              ? undefined
+                              : 'Locked one week after month end'}
+                            onfocus={(event) =>
+                              (event.currentTarget.value = String(wallet.balance))}
+                            onchange={submitWalletMonthBalance}
+                          />
+                        </form>
+                      {/if}
                     </td>
                     <td class="currency-col" data-label="Min hold">Rp</td>
                     <td data-label="Min hold">
-                      <form
-                        method="POST"
-                        action="?/walletMonthBalance"
-                        class="wallet-money-form"
-                        use:enhance={keepWalletFormState}
-                      >
-                        <input type="hidden" name="label" value={wallet.label} />
-                        <input type="hidden" name="monthKey" value={selectedWalletStatusMonthKey} />
-                        <input type="hidden" name="balance" value={wallet.balance} />
-                        <input
-                          class="wallet-money-input"
-                          name="minimumHold"
-                          type="text"
-                          inputmode="numeric"
-                          value={amount.format(wallet.minimumHold ?? 0)}
-                          aria-label={`${wallet.label} ${selectedWalletStatusMonthLabel} minimum hold`}
-                          disabled={!selectedWalletMonthEditable}
-                          title={selectedWalletMonthEditable
-                            ? undefined
-                            : 'Locked one week after month end'}
-                          onfocus={(event) =>
-                            (event.currentTarget.value = String(wallet.minimumHold ?? 0))}
-                          onchange={submitWalletMonthBalance}
-                        />
-                      </form>
+                      {#if isPocketBank(wallet.label)}
+                        {amount.format(wallet.minimumHold ?? 0)}
+                      {:else}
+                        <form
+                          method="POST"
+                          action="?/walletMonthBalance"
+                          class="wallet-money-form"
+                          use:enhance={keepWalletFormState}
+                        >
+                          <input type="hidden" name="label" value={wallet.label} />
+                          <input
+                            type="hidden"
+                            name="monthKey"
+                            value={selectedWalletStatusMonthKey}
+                          />
+                          <input type="hidden" name="balance" value={wallet.balance} />
+                          <input
+                            class="wallet-money-input"
+                            name="minimumHold"
+                            type="text"
+                            inputmode="numeric"
+                            value={amount.format(wallet.minimumHold ?? 0)}
+                            aria-label={`${wallet.label} ${selectedWalletStatusMonthLabel} minimum hold`}
+                            disabled={!selectedWalletMonthEditable}
+                            title={selectedWalletMonthEditable
+                              ? undefined
+                              : 'Locked one week after month end'}
+                            onfocus={(event) =>
+                              (event.currentTarget.value = String(wallet.minimumHold ?? 0))}
+                            onchange={submitWalletMonthBalance}
+                          />
+                        </form>
+                      {/if}
                     </td>
                     <td class="currency-col" data-label="Liquid">Rp</td>
                     <td data-label="Liquid">
@@ -2226,6 +2314,18 @@
                       {/if}
                     </td>
                   </tr>
+                  {#if isPocketBank(wallet.label)}
+                    <tr class="table-child-row wallet-pockets-row">
+                      <td colspan="9" class="wallet-pockets-cell">
+                        <WalletPocketBalances
+                          bank={wallet.label}
+                          monthKey={selectedWalletStatusMonthKey}
+                          states={trackerData.walletMonthStates[selectedWalletStatusMonthKey] ?? {}}
+                          editable={selectedWalletMonthEditable}
+                        />
+                      </td>
+                    </tr>
+                  {/if}
                 {/each}
               {/each}
               <tr class="total-row mobile-hide">
@@ -4730,6 +4830,21 @@
     align-items: center;
     min-width: 7rem;
     color: var(--color-cork-900);
+  }
+
+  .wallet-table tr.wallet-pockets-row > td.wallet-pockets-cell {
+    padding: 0.2rem 0.65rem 0.5rem 1.05rem;
+    background: transparent;
+    font-weight: 400;
+    text-align: left;
+    white-space: normal;
+  }
+
+  @media (max-width: 520px) {
+    .wallet-table tr.wallet-pockets-row > td.wallet-pockets-cell {
+      display: block;
+      padding: 0 0.5rem 0.35rem;
+    }
   }
 
   .account-number-cell {
