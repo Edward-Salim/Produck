@@ -4,7 +4,12 @@
   import { onMount } from 'svelte';
   import { getFullscreen, toggleFullscreen } from '$lib/stores/fullscreen.svelte.js';
   import { FRAMEWORK_TEMPLATES, type FrameworkTemplate } from '$lib/frameworks/templates.js';
-  import ArrowDownUp from '@lucide/svelte/icons/arrow-down-up';
+  import {
+    dedupeFrameworkInstances,
+    findFrameworkInstance,
+    frameworkSelectionKey,
+    isRepeatableFramework
+  } from '$lib/frameworks/instances.js';
   import CheckCircle2 from '@lucide/svelte/icons/circle-check';
   import ChevronLeft from '@lucide/svelte/icons/chevron-left';
   import ChevronRight from '@lucide/svelte/icons/chevron-right';
@@ -13,16 +18,15 @@
   import Compass from '@lucide/svelte/icons/compass';
   import FlaskConical from '@lucide/svelte/icons/flask-conical';
   import Info from '@lucide/svelte/icons/info';
+  import Hash from '@lucide/svelte/icons/hash';
   import Layers3 from '@lucide/svelte/icons/layers';
   import Link2 from '@lucide/svelte/icons/link-2';
-  import LoaderCircle from '@lucide/svelte/icons/loader-circle';
   import Maximize from '@lucide/svelte/icons/maximize';
   import Minimize from '@lucide/svelte/icons/minimize';
   import Plus from '@lucide/svelte/icons/plus';
   import Rocket from '@lucide/svelte/icons/rocket';
   import Search from '@lucide/svelte/icons/search';
   import Target from '@lucide/svelte/icons/target';
-  import Trash2 from '@lucide/svelte/icons/trash-2';
 
   import type { FrameworkPageInstance } from './+page.server.js';
   import IdeaBankEditor from '$lib/components/frameworks/IdeaBankEditor.svelte';
@@ -43,6 +47,7 @@
   import type { FrameworkInstance } from '$lib/components/frameworks/types.js';
   import type { Component } from 'svelte';
   import * as Dialog from '$lib/components/ui/dialog/index.js';
+  import { Skeleton } from '$lib/components/ui/skeleton/index.js';
 
   type FrameworkView = 'templates' | 'editor';
   type MarketSizingCurrency = 'USD' | 'IDR';
@@ -61,28 +66,28 @@
 
   let projectId = $derived(page.url.searchParams.get('project') ?? String(data.projectId));
 
-  const locallyDeletedTemplateIds = new Set<string>();
-  let instances = $derived.by<FrameworkInstance[]>(() => [
-    ...new Map(
-      (data.frameworkInstances as FrameworkInstance[])
-        .filter((instance) => !locallyDeletedTemplateIds.has(instance.templateId))
-        .map((instance) => [instance.templateId, instance])
-    ).values()
-  ]);
-  let contextSwitching = $state(false);
-  let selectedInstanceId = $state<string | null>(null);
-  let selectedCategory = $state<'all' | FrameworkTemplate['category']>('all');
-  let view = $state<FrameworkView>('templates');
-  let deleteTargetId = $state<string | null>(null);
-  let deleteTargetTitle = $derived(
-    deleteTargetId ? (instances.find((i) => i.id === deleteTargetId)?.title ?? '') : ''
+  let instances = $derived(
+    dedupeFrameworkInstances(data.frameworkInstances as FrameworkInstance[])
   );
+
+  function requestedInstanceId() {
+    const requestedFramework = page.url.searchParams.get('framework');
+    return findFrameworkInstance(data.frameworkInstances, requestedFramework)?.id ?? null;
+  }
+
+  let contextSwitching = $state(false);
+  let selectedInstanceId = $state<string | null>(requestedInstanceId());
+  let selectedCategory = $state<'all' | FrameworkTemplate['category']>('all');
+  let view = $state<FrameworkView>(requestedInstanceId() ? 'editor' : 'templates');
   let draftPage = $state(0);
-  let draftSort = $state<'modified' | 'name'>('modified');
   const DRAFTS_PER_PAGE = 10;
+  const panelClass = 'rounded-lg border border-cork-300/50 bg-cork-50/60 shadow-sm';
+  const artifactControlClass =
+    'flex h-9 w-full min-w-0 cursor-pointer items-center justify-center rounded-md border outline-none transition-colors disabled:cursor-wait disabled:opacity-60';
   let fullscreen = $derived(getFullscreen());
   let showHelp = $state(false);
   let showKanbanHistory = $state(false);
+  let showStoryMapIds = $state(true);
   let marketSizingCurrency = $state<MarketSizingCurrency>('USD');
   let syncUpdating = $state(false);
   let syncConfirmationOpen = $state(false);
@@ -97,12 +102,7 @@
 
   onMount(() => {
     const requestedFramework = page.url.searchParams.get('framework');
-    const requestedInstance = requestedFramework
-      ? instances.find(
-          (instance) =>
-            instance.templateId === requestedFramework || instance.id === requestedFramework
-        )
-      : null;
+    const requestedInstance = findFrameworkInstance(instances, requestedFramework);
     if (requestedInstance) {
       selectedInstanceId = requestedInstance.id;
       view = 'editor';
@@ -165,10 +165,7 @@
   );
 
   let sortedInstances = $derived(
-    [...instances].sort((a, b) => {
-      if (draftSort === 'name') return a.title.localeCompare(b.title);
-      return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
-    })
+    [...instances].sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
   );
   let totalDraftPages = $derived(Math.max(1, Math.ceil(sortedInstances.length / DRAFTS_PER_PAGE)));
   let paginatedInstances = $derived(
@@ -231,6 +228,7 @@
       projectId?: string;
       projectName?: string;
       showHistory?: boolean;
+      showIds?: boolean;
       fintechPicks?: { companyId: string }[];
       currency?: MarketSizingCurrency;
     }>
@@ -256,18 +254,9 @@
     instances = next;
   }
 
-  function getDeletedTemplateIds(): Set<string> {
-    return new Set(locallyDeletedTemplateIds);
-  }
-
-  function saveDeletedTemplateIds(next: Set<string>) {
-    locallyDeletedTemplateIds.clear();
-    for (const id of next) locallyDeletedTemplateIds.add(id);
-  }
-
-  function setFrameworkUrl(templateId: string | null) {
+  function setFrameworkUrl(selection: string | null) {
     const url = new URL(page.url);
-    if (templateId) url.searchParams.set('framework', templateId);
+    if (selection) url.searchParams.set('framework', selection);
     else url.searchParams.delete('framework');
     replaceState(url, page.state);
   }
@@ -275,12 +264,6 @@
   function openTemplateLibrary() {
     view = 'templates';
     setFrameworkUrl(null);
-  }
-
-  function clearDeletedTemplate(templateId: string) {
-    const deleted = getDeletedTemplateIds();
-    if (!deleted.delete(templateId)) return;
-    saveDeletedTemplateIds(deleted);
   }
 
   function uniqueTitle(name: string): string {
@@ -292,8 +275,6 @@
   }
 
   function createInstance(template: FrameworkTemplate) {
-    clearDeletedTemplate(template.id);
-
     const emptyValues: Record<string, string> = {};
     if (template.id === 'interview-snapshot') {
       emptyValues.snapshots = JSON.stringify([
@@ -318,7 +299,7 @@
       emptyValues.ideas = JSON.stringify([]);
     } else if (template.id === 'story-map') {
       emptyValues.storyMap = JSON.stringify({
-        product: '',
+        product: data.projectName,
         actors: [],
         levels: 2,
         activities: [],
@@ -386,7 +367,7 @@
     const instance: FrameworkInstance = {
       id: crypto.randomUUID(),
       templateId: template.id,
-      title: uniqueTitle(template.name),
+      title: uniqueTitle(template.id === 'story-map' ? 'Story Map' : template.name),
       values: emptyValues,
       updatedAt: new Date().toISOString(),
       updatedBy: data.currentUser?.displayName
@@ -395,7 +376,7 @@
     saveInstances([instance, ...instances]);
     selectedInstanceId = instance.id;
     view = 'editor';
-    setFrameworkUrl(template.id);
+    setFrameworkUrl(frameworkSelectionKey(instance));
     draftPage = 0;
 
     // Persist to DB
@@ -415,17 +396,18 @@
         if (res.ok) {
           const json = await res.json();
           const dbId = json.instance.id;
-          if (
-            getDeletedTemplateIds().has(template.id) ||
-            !instances.some((i) => i.id === instance.id)
-          ) {
+          if (!instances.some((i) => i.id === instance.id)) {
             fetch(`/api/framework-instances?id=${dbId}`, { method: 'DELETE' }).catch(() => {
               /* best-effort */
             });
             return;
           }
           instances = instances.map((i) => (i.id === instance.id ? { ...i, id: dbId } : i));
-          if (selectedInstanceId === instance.id) selectedInstanceId = dbId;
+          if (selectedInstanceId === instance.id) {
+            selectedInstanceId = dbId;
+            if (view === 'editor')
+              setFrameworkUrl(frameworkSelectionKey({ ...instance, id: dbId }));
+          }
         }
       })
       .catch(() => {
@@ -438,46 +420,11 @@
     view = 'editor';
     draftPage = 0;
     const instance = instances.find((item) => item.id === id);
-    if (instance) setFrameworkUrl(instance.templateId);
-  }
-
-  function confirmDelete(id: string) {
-    deleteTargetId = id;
-  }
-
-  function deleteInstance() {
-    if (!deleteTargetId) return;
-    const targetId = deleteTargetId;
-    const target = instances.find((i) => i.id === targetId);
-    if (!target) {
-      deleteTargetId = null;
-      return;
-    }
-
-    const deleted = getDeletedTemplateIds();
-    deleted.add(target.templateId);
-    saveDeletedTemplateIds(deleted);
-
-    const next = instances.filter((i) => i.templateId !== target.templateId);
-    saveInstances(next);
-    selectedInstanceId = next[0]?.id ?? null;
-    view = 'templates';
-    setFrameworkUrl(null);
-    deleteTargetId = null;
-
-    // Delete from DB if it's a DB-backed instance
-    if (targetId.startsWith('db-')) {
-      fetch(`/api/framework-instances?id=${targetId}`, { method: 'DELETE' }).catch(() => {
-        /* best-effort */
-      });
-    }
+    if (instance) setFrameworkUrl(frameworkSelectionKey(instance));
   }
 
   function formatUpdatedAt(iso: string) {
-    const d = new Date(iso);
-    const date = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
-    const time = d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
-    return `${date} ${time}`;
+    return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
   }
 
   function handleUpdate(values: Record<string, string>, title?: string) {
@@ -516,7 +463,12 @@
             instances = instances.map((i) =>
               i.id === updated.id ? { ...i, id: json.instance.id } : i
             );
-            if (selectedInstanceId === updated.id) selectedInstanceId = json.instance.id;
+            if (selectedInstanceId === updated.id) {
+              selectedInstanceId = json.instance.id;
+              if (view === 'editor') {
+                setFrameworkUrl(frameworkSelectionKey({ ...updated, id: json.instance.id }));
+              }
+            }
           }
         }
       })
@@ -531,10 +483,106 @@
 </script>
 
 <svelte:window onkeydown={handleKeydown} />
-<svelte:head><title>Frameworks | Produck</title></svelte:head>
+<svelte:head>
+  <title
+    >{view === 'editor' && selectedInstance ? selectedInstance.title : 'Frameworks'} | Produck</title
+  >
+</svelte:head>
 
-<div class="space-y-5">
-  {#if !fullscreen}
+{#snippet artifactSkeleton()}
+  <div role="status" class="min-h-80 space-y-4">
+    <span class="sr-only">Loading artifact</span>
+    <div aria-hidden="true" class="space-y-4">
+      <Skeleton class="h-4 w-28 bg-cork-200/70 motion-reduce:animate-none" />
+      <Skeleton class="h-64 w-full bg-cork-200/55 motion-reduce:animate-none" />
+    </div>
+  </div>
+{/snippet}
+
+{#snippet artifactControls()}
+  {#if selectedTemplate}
+    <div
+      role="group"
+      aria-label="Artifact controls"
+      class="{panelClass} grid w-full auto-cols-fr grid-flow-col gap-2 p-4"
+    >
+      {#if selectedTemplate.id === 'story-map'}
+        <button
+          type="button"
+          class="{artifactControlClass} border-cork-300/50 text-cork-600 hover:bg-cork-200/60 {showStoryMapIds
+            ? 'bg-cork-200/70'
+            : 'bg-cork-50/60'}"
+          aria-label={showStoryMapIds ? 'Hide IDs' : 'Show IDs'}
+          aria-pressed={showStoryMapIds}
+          title={showStoryMapIds ? 'Hide IDs' : 'Show IDs'}
+          onclick={() => (showStoryMapIds = !showStoryMapIds)}
+        >
+          <Hash class="size-3.5" />
+        </button>
+      {/if}
+      {#if selectedTemplate.id === 'market-sizing'}
+        <button
+          type="button"
+          class="{artifactControlClass} border-cork-300/50 bg-cork-50/60 text-xs font-semibold text-cork-600 hover:border-cork-400/60 hover:bg-cork-200/60 hover:text-cork-800"
+          title="Switch currency"
+          aria-label="Toggle market size currency"
+          onclick={toggleMarketSizingCurrency}
+        >
+          {marketSizingCurrency}
+        </button>
+      {/if}
+      {#if showEpicKanbanSync}
+        <button
+          type="button"
+          class="{artifactControlClass} {data.epicKanbanSyncEnabled
+            ? 'border-cork-600 bg-cork-700 text-cork-50 hover:bg-cork-800'
+            : 'border-cork-300/50 bg-cork-50/60 text-cork-500 hover:border-cork-400/60 hover:bg-cork-200/60 hover:text-cork-800'}"
+          disabled={syncUpdating}
+          title={data.epicKanbanSyncEnabled
+            ? 'Disable Epics and Kanban synchronization'
+            : 'Enable Epics and Kanban synchronization'}
+          aria-label="Epics and Kanban synchronization"
+          aria-pressed={data.epicKanbanSyncEnabled}
+          onclick={requestEpicKanbanSync}
+        >
+          <Link2 class="size-3.5" />
+        </button>
+      {/if}
+      {#if selectedTemplate.id === 'kanban'}
+        <button
+          type="button"
+          class="{artifactControlClass} border-cork-300/50 bg-cork-50/60 text-cork-500 hover:border-cork-400/60 hover:bg-cork-200/60 hover:text-cork-800"
+          title="Activity history"
+          aria-label="History"
+          onclick={() => (showKanbanHistory = true)}><Clock class="size-3.5" /></button
+        >
+      {/if}
+      <button
+        type="button"
+        class="{artifactControlClass} border-cork-300/50 bg-cork-50/60 text-cork-500 hover:border-cork-400/60 hover:bg-cork-200/60 hover:text-cork-800"
+        title="Instructions & terminology"
+        aria-label="Help"
+        onclick={() => (showHelp = true)}><Info class="size-3.5" /></button
+      >
+      <button
+        type="button"
+        class="{artifactControlClass} border-cork-300/50 bg-cork-50/60 text-cork-500 hover:border-cork-400/60 hover:bg-cork-200/60 hover:text-cork-800"
+        title={fullscreen ? 'Exit fullscreen (F)' : 'Fullscreen (F)'}
+        aria-label={fullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
+        onclick={toggleFullscreen}
+      >
+        {#if fullscreen}<Minimize class="size-3.5" />{:else}<Maximize class="size-3.5" />{/if}
+      </button>
+    </div>
+  {/if}
+{/snippet}
+
+{#if view === 'editor' && selectedInstance}
+  <h1 class="sr-only">{selectedInstance.title}</h1>
+{/if}
+
+<div class="artifact-page space-y-5">
+  {#if !fullscreen && view === 'templates'}
     <header>
       <div>
         <h1 class="font-display text-2xl text-cork-800 md:text-4xl">Frameworks</h1>
@@ -547,92 +595,37 @@
 
   {#if fullscreen && selectedInstance && selectedTemplate && view === 'editor'}
     <div style="min-height: 100vh;">
-      <div class="rounded-none border border-cork-300/50 bg-cork-50/50">
-        <!-- Fullscreen editor header -->
-        <div class="border-b border-cork-300/40 p-4">
-          <div class="flex flex-col gap-3 md:flex-row md:items-start">
-            <div class="min-w-0 flex-1">
-              <h2 class="px-2 py-1 font-display text-3xl leading-none text-cork-800">
-                {selectedInstance.title}
-              </h2>
-            </div>
-            <div class="flex items-center gap-2">
-              {#if selectedTemplate.id === 'market-sizing'}
-                <button
-                  type="button"
-                  class="h-9 min-w-14 cursor-pointer rounded-lg border border-cork-300 bg-cork-50/60 px-3 text-xs font-semibold text-cork-600 transition-colors hover:bg-cork-200/60 hover:text-cork-800"
-                  title="Switch currency"
-                  aria-label="Toggle market size currency"
-                  onclick={toggleMarketSizingCurrency}
-                >
-                  {marketSizingCurrency}
-                </button>
-              {/if}
-              {#if showEpicKanbanSync}
-                <button
-                  type="button"
-                  class="flex h-9 shrink-0 cursor-pointer items-center gap-1.5 rounded-lg border px-3 text-xs font-semibold transition-colors disabled:cursor-wait disabled:opacity-60 {data.epicKanbanSyncEnabled
-                    ? 'border-cork-600 bg-cork-700 text-cork-50 hover:bg-cork-800'
-                    : 'border-cork-300 bg-cork-50/60 text-cork-500 hover:bg-cork-200/60 hover:text-cork-700'}"
-                  disabled={syncUpdating}
-                  title={data.epicKanbanSyncEnabled
-                    ? 'Disable Epics and Kanban synchronization'
-                    : 'Enable Epics and Kanban synchronization'}
-                  onclick={requestEpicKanbanSync}
-                >
-                  <Link2 class="size-3.5" />
-                  Sync {data.epicKanbanSyncEnabled ? 'on' : 'off'}
-                </button>
-              {/if}
-              {#if selectedTemplate.id === 'kanban'}
-                <button
-                  type="button"
-                  class="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-cork-300 bg-cork-50/60 text-cork-500 transition-colors hover:bg-cork-200/60 hover:text-cork-700"
-                  title="Activity history"
-                  aria-label="History"
-                  onclick={() => (showKanbanHistory = true)}><Clock class="size-3.5" /></button
-                >
-              {/if}
-              <button
-                type="button"
-                class="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-cork-300 bg-cork-50/60 text-cork-500 transition-colors hover:bg-cork-200/60 hover:text-cork-700"
-                title="Instructions & terminology"
-                aria-label="Help"
-                onclick={() => (showHelp = true)}><Info class="size-3.5" /></button
-              >
-              <button
-                type="button"
-                class="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-cork-300 bg-cork-50/60 text-cork-500 transition-colors hover:bg-cork-200/60 hover:text-cork-700"
-                title="Exit fullscreen (F)"
-                aria-label="Exit fullscreen"
-                onclick={toggleFullscreen}><Minimize class="size-3.5" /></button
-              >
-            </div>
-          </div>
-          <p class="mt-1 px-2 text-xs text-cork-400">{selectedTemplate.description}</p>
-        </div>
-        <div class="p-4">
-          <EditorComponent
-            instance={selectedInstance}
-            draftMode="view"
-            onUpdate={handleUpdate}
-            {projectId}
-            projectName={data.projectName}
-            fintechPicks={data.fintechPicks}
-            currency={marketSizingCurrency}
-            bind:showHistory={showKanbanHistory}
-          />
+      <div class="mx-auto mb-3 w-72 max-w-full px-4">
+        {@render artifactControls()}
+      </div>
+      <div class={panelClass}>
+        <div class="p-4" aria-busy={isFrameworkLoading}>
+          {#if isFrameworkLoading}
+            {@render artifactSkeleton()}
+          {:else}
+            <EditorComponent
+              instance={selectedInstance}
+              draftMode="view"
+              onUpdate={handleUpdate}
+              {projectId}
+              projectName={data.projectName}
+              fintechPicks={data.fintechPicks}
+              currency={marketSizingCurrency}
+              bind:showHistory={showKanbanHistory}
+              showIds={showStoryMapIds}
+            />
+          {/if}
         </div>
       </div>
     </div>
   {:else}
-    <div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_16rem]">
-      <section
-        class="min-w-0 transition-opacity duration-200 {isFrameworkLoading
-          ? 'pointer-events-none opacity-45'
-          : ''}"
-      >
-        {#if view === 'templates'}
+    <div class="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_16rem]">
+      <section class="min-w-0" aria-busy={isFrameworkLoading}>
+        {#if isFrameworkLoading && view === 'editor'}
+          <div class="{panelClass} p-4">
+            {@render artifactSkeleton()}
+          </div>
+        {:else if view === 'templates'}
           <div class="mb-3">
             <div class="flex flex-wrap gap-1.5">
               {#each categories as category (category)}
@@ -678,7 +671,7 @@
                         : Target}
               {@const added = existingTemplateIds.has(template.id)}
               <article
-                class="w-[68vw] max-w-[20rem] shrink-0 snap-start overflow-hidden rounded-lg border border-cork-300/50 bg-cork-50/50 shadow-sm transition-all hover:shadow-md sm:w-[58vw] md:w-[46vw] lg:w-auto lg:max-w-none lg:shrink"
+                class="{panelClass} w-[68vw] max-w-[20rem] shrink-0 snap-start overflow-hidden transition-colors hover:border-cork-400/60 sm:w-[58vw] md:w-[46vw] lg:w-auto lg:max-w-none lg:shrink"
               >
                 <!-- Header: title left, category icon right -->
                 <div class="flex items-center justify-between gap-2 bg-[#f1ece2] px-3 py-2">
@@ -689,14 +682,30 @@
                   >
                     {template.name}
                   </h2>
-                  <CatIcon class="size-3.5 shrink-0 {added ? 'text-cork-500' : 'text-cork-400'}" />
+                  {#if added && isRepeatableFramework(template.id)}
+                    <button
+                      type="button"
+                      class="flex size-6 shrink-0 cursor-pointer items-center justify-center rounded-md text-cork-500 transition-colors hover:bg-cork-200/60 hover:text-cork-800 disabled:cursor-wait disabled:opacity-60"
+                      aria-label="New story map"
+                      title="New story map"
+                      disabled={isFrameworkLoading}
+                      onclick={() => createInstance(template)}
+                    >
+                      <Plus class="size-3.5" />
+                    </button>
+                  {:else}
+                    <CatIcon
+                      class="size-3.5 shrink-0 {added ? 'text-cork-500' : 'text-cork-400'}"
+                    />
+                  {/if}
                 </div>
                 <!-- Cover: icon → + on hover -->
                 <button
                   type="button"
-                  class="group relative mx-3 flex aspect-[9/5] w-[calc(100%-1.5rem)] cursor-pointer items-center justify-center overflow-hidden bg-cork-200/50 {added
+                  class="group relative mx-3 mb-3 flex aspect-[9/5] w-[calc(100%-1.5rem)] cursor-pointer items-center justify-center overflow-hidden bg-cork-200/50 {added
                     ? 'bg-cork-200/70'
                     : ''}"
+                  disabled={isFrameworkLoading}
                   onclick={() =>
                     added
                       ? openDraft(instances.find((i) => i.templateId === template.id)!.id)
@@ -732,89 +741,11 @@
                     />
                   {/if}
                 </button>
-                <!-- Description -->
-                <div class="bg-[#f1ece2] px-3 pt-2 pb-3">
-                  <p
-                    class="line-clamp-2 text-[11px] leading-snug {added
-                      ? 'text-cork-500'
-                      : 'text-cork-500'}"
-                  >
-                    {template.description}
-                  </p>
-                </div>
               </article>
             {/each}
           </div>
         {:else if selectedInstance && selectedTemplate}
-          <div class="rounded-xl border border-cork-300/50 bg-cork-50/50">
-            <!-- Editor header -->
-            <div class="border-b border-cork-300/40 p-4">
-              <div class="flex flex-col gap-3 md:flex-row md:items-start">
-                <div class="min-w-0 flex-1">
-                  <h2 class="px-2 py-1 font-display text-3xl leading-none text-cork-800">
-                    {selectedInstance.title}
-                  </h2>
-                </div>
-                <div class="flex items-center gap-2">
-                  {#if selectedTemplate.id === 'market-sizing'}
-                    <button
-                      type="button"
-                      class="h-9 min-w-14 cursor-pointer rounded-lg border border-cork-300 bg-cork-50/60 px-3 text-xs font-semibold text-cork-600 transition-colors hover:bg-cork-200/60 hover:text-cork-800"
-                      title="Switch currency"
-                      aria-label="Toggle market size currency"
-                      onclick={toggleMarketSizingCurrency}
-                    >
-                      {marketSizingCurrency}
-                    </button>
-                  {/if}
-                  {#if showEpicKanbanSync}
-                    <button
-                      type="button"
-                      class="flex h-9 shrink-0 cursor-pointer items-center gap-1.5 rounded-lg border px-3 text-xs font-semibold transition-colors disabled:cursor-wait disabled:opacity-60 {data.epicKanbanSyncEnabled
-                        ? 'border-cork-600 bg-cork-700 text-cork-50 hover:bg-cork-800'
-                        : 'border-cork-300 bg-cork-50/60 text-cork-500 hover:bg-cork-200/60 hover:text-cork-700'}"
-                      disabled={syncUpdating}
-                      title={data.epicKanbanSyncEnabled
-                        ? 'Disable Epics and Kanban synchronization'
-                        : 'Enable Epics and Kanban synchronization'}
-                      onclick={requestEpicKanbanSync}
-                    >
-                      <Link2 class="size-3.5" />
-                      Sync {data.epicKanbanSyncEnabled ? 'on' : 'off'}
-                    </button>
-                  {/if}
-                  {#if selectedTemplate.id === 'kanban'}
-                    <button
-                      type="button"
-                      class="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-cork-300 bg-cork-50/60 text-cork-500 transition-colors hover:bg-cork-200/60 hover:text-cork-700"
-                      title="Activity history"
-                      aria-label="History"
-                      onclick={() => (showKanbanHistory = true)}><Clock class="size-3.5" /></button
-                    >
-                  {/if}
-                  <button
-                    type="button"
-                    class="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-cork-300 bg-cork-50/60 text-cork-500 transition-colors hover:bg-cork-200/60 hover:text-cork-700"
-                    title="Instructions & terminology"
-                    aria-label="Help"
-                    onclick={() => (showHelp = true)}><Info class="size-3.5" /></button
-                  >
-                  <button
-                    type="button"
-                    class="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-cork-300 bg-cork-50/60 text-cork-500 transition-colors hover:bg-cork-200/60 hover:text-cork-700"
-                    title={fullscreen ? 'Exit fullscreen (F)' : 'Fullscreen (F)'}
-                    aria-label="Toggle fullscreen"
-                    onclick={toggleFullscreen}
-                  >
-                    {#if fullscreen}<Minimize class="size-3.5" />{:else}<Maximize
-                        class="size-3.5"
-                      />{/if}
-                  </button>
-                </div>
-              </div>
-              <p class="mt-1 px-2 text-xs text-cork-400">{selectedTemplate.description}</p>
-            </div>
-
+          <div class={panelClass}>
             <!-- Editor body -->
             {#if EditorComponent}
               <div class="p-4">
@@ -827,6 +758,7 @@
                   fintechPicks={data.fintechPicks}
                   currency={marketSizingCurrency}
                   bind:showHistory={showKanbanHistory}
+                  showIds={showStoryMapIds}
                 />
               </div>
             {:else}
@@ -855,7 +787,7 @@
           </div>
         {:else}
           <div
-            class="flex min-h-80 flex-col items-center justify-center rounded-xl border border-cork-300/50 bg-cork-50/50 px-4 text-center"
+            class="{panelClass} flex min-h-80 flex-col items-center justify-center px-4 text-center"
           >
             <Layers3 class="size-9 text-cork-300" />
             <p class="mt-2 text-sm font-medium text-cork-600">No draft selected</p>
@@ -864,31 +796,15 @@
       </section>
 
       <!-- Draft sidebar -->
-      <aside
-        class="h-fit rounded-xl border border-cork-300/50 bg-cork-50/60 p-2.5 shadow-sm lg:sticky lg:top-20"
-        aria-busy={isFrameworkLoading}
-      >
-        {#if isFrameworkLoading}
-          <div class="flex min-h-44 flex-col justify-center px-2 py-5" aria-live="polite">
-            <div class="flex items-center gap-2 text-cork-600">
-              <LoaderCircle class="size-4 animate-spin" />
-              <span class="text-sm font-medium">Loading frameworks</span>
-            </div>
-            <p class="mt-1 pl-6 text-[10px] text-cork-400">Fetching the selected project…</p>
-            <div class="mt-5 space-y-2.5">
-              <div class="h-8 animate-pulse rounded-lg bg-cork-200/70"></div>
-              <div class="h-8 animate-pulse rounded-lg bg-cork-200/55"></div>
-              <div class="h-8 animate-pulse rounded-lg bg-cork-200/40"></div>
-            </div>
-          </div>
-        {:else}
+      <div class="h-fit space-y-3">
+        <aside class="{panelClass} p-4" aria-busy={isFrameworkLoading}>
           <div>
             <div class="space-y-1">
               <button
                 type="button"
-                class="flex w-full cursor-pointer items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm font-medium transition-colors {view ===
+                class="flex w-full cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors {view ===
                 'templates'
-                  ? 'bg-cork-700 text-cork-50 shadow-sm'
+                  ? 'bg-cork-700 text-cork-50'
                   : 'text-cork-700 hover:bg-cork-200/60 hover:text-cork-900'}"
                 onclick={openTemplateLibrary}
               >
@@ -898,31 +814,26 @@
             </div>
           </div>
 
-          <div class="mt-3 border-t border-cork-300/40 pt-3">
-            <div class="flex items-center justify-between px-2 pb-1.5">
-              <p class="text-[10px] font-semibold tracking-wider text-cork-400 uppercase">
-                Drafts ({instances.length})
-              </p>
-              <button
-                type="button"
-                class="cursor-pointer rounded p-0.5 text-cork-400 transition-colors hover:bg-cork-200/50 hover:text-cork-600"
-                onclick={() => (draftSort = draftSort === 'modified' ? 'name' : 'modified')}
-                title={draftSort === 'modified'
-                  ? 'Sorted: latest modified'
-                  : 'Sorted: alphabetical'}
-              >
-                <ArrowDownUp class="size-3" />
-              </button>
-            </div>
-            {#if instances.length === 0}
+          <div class="mt-3 border-t border-cork-300/50 pt-3">
+            {#if isFrameworkLoading}
+              <div role="status" class="space-y-3 py-1">
+                <span class="sr-only">Loading artifacts</span>
+                {#each [1, 2, 3] as row (row)}
+                  <Skeleton
+                    aria-hidden="true"
+                    class="h-10 w-full bg-cork-200/60 motion-reduce:animate-none"
+                  />
+                {/each}
+              </div>
+            {:else if instances.length === 0}
               <p class="rounded-lg px-2 py-3 text-center text-xs text-cork-400">No drafts yet</p>
             {:else}
-              <div class="space-y-1 pr-1">
+              <div class="space-y-1">
                 {#each paginatedInstances as instance (instance.id)}
                   <div
-                    class="group rounded-lg px-2 py-1.5 transition-colors {selectedInstance?.id ===
+                    class="group rounded-lg px-3 py-2 transition-colors {selectedInstance?.id ===
                       instance.id && view === 'editor'
-                      ? 'bg-cork-200/90 text-cork-900 shadow-sm'
+                      ? 'bg-cork-200/90 text-cork-900'
                       : 'text-cork-600 hover:bg-cork-200/50 hover:text-cork-800'}"
                   >
                     <div class="flex items-center gap-1.5">
@@ -941,21 +852,13 @@
                           {/if}
                         </span>
                       </button>
-                      <button
-                        type="button"
-                        class="flex size-6 shrink-0 cursor-pointer items-center justify-center rounded text-cork-300 opacity-0 transition-all group-hover:opacity-100 hover:bg-red-50 hover:text-red-500"
-                        title="Delete draft"
-                        onclick={() => confirmDelete(instance.id)}
-                      >
-                        <Trash2 class="size-3.5" />
-                      </button>
                     </div>
                   </div>
                 {/each}
               </div>
               {#if totalDraftPages > 1}
                 <div
-                  class="mt-2 flex items-center justify-between gap-1 border-t border-cork-300/40 pt-2"
+                  class="mt-2 flex items-center justify-between gap-1 border-t border-cork-300/50 pt-2"
                 >
                   <button
                     type="button"
@@ -978,8 +881,13 @@
               {/if}
             {/if}
           </div>
+        </aside>
+        {#if view === 'editor' && selectedInstance && selectedTemplate}
+          <div class="flex justify-end">
+            {@render artifactControls()}
+          </div>
         {/if}
-      </aside>
+      </div>
     </div>
   {/if}
 </div>
@@ -1050,40 +958,6 @@
   </Dialog.Content>
 </Dialog.Root>
 
-<!-- Delete confirmation dialog -->
-<Dialog.Root
-  open={deleteTargetId !== null}
-  onOpenChange={(open) => {
-    if (!open) deleteTargetId = null;
-  }}
->
-  <Dialog.Content class="border-cork-300 bg-cork-50 text-cork-800 sm:max-w-sm">
-    <Dialog.Header>
-      <Dialog.Title class="text-cork-800">Delete draft?</Dialog.Title>
-      <Dialog.Description class="text-cork-500">
-        This will permanently delete <strong class="text-cork-700">{deleteTargetTitle}</strong>.
-        This action cannot be undone.
-      </Dialog.Description>
-    </Dialog.Header>
-    <Dialog.Footer class="flex-row justify-end gap-2">
-      <button
-        type="button"
-        class="cursor-pointer rounded-lg border border-cork-300 px-3 py-1.5 text-sm text-cork-600 transition-colors hover:bg-cork-200/50"
-        onclick={() => (deleteTargetId = null)}
-      >
-        Cancel
-      </button>
-      <button
-        type="button"
-        class="cursor-pointer rounded-lg bg-red-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-red-700"
-        onclick={deleteInstance}
-      >
-        Delete
-      </button>
-    </Dialog.Footer>
-  </Dialog.Content>
-</Dialog.Root>
-
 <!-- Help modal with instructions & terminology -->
 <Dialog.Root
   open={showHelp}
@@ -1099,9 +973,7 @@
         {selectedTemplate?.name ?? 'Draft'} Guide
       </Dialog.Title>
     </Dialog.Header>
-    <div
-      class="help-modal-scroll min-h-0 space-y-4 overflow-y-auto overscroll-contain pr-2 text-sm"
-    >
+    <div class="help-modal-scroll min-h-0 space-y-4 overflow-y-auto overscroll-contain text-sm">
       {#if selectedTemplate?.instructions}
         <div>
           <h4 class="mb-1.5 text-xs font-semibold tracking-wide text-cork-500 uppercase">
@@ -1130,29 +1002,18 @@
 </Dialog.Root>
 
 <style>
+  .artifact-page :global(:focus),
+  .artifact-page :global(:focus-visible) {
+    outline: none;
+    --tw-ring-shadow: 0 0 #0000;
+  }
+
   .help-modal-scroll {
-    scrollbar-color: rgba(92, 75, 58, 0.42) transparent;
-    scrollbar-gutter: stable;
-    scrollbar-width: thin;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
   }
 
   .help-modal-scroll::-webkit-scrollbar {
-    width: 8px;
-  }
-
-  .help-modal-scroll::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
-  .help-modal-scroll::-webkit-scrollbar-thumb {
-    border: 2px solid transparent;
-    border-radius: 999px;
-    background: rgba(92, 75, 58, 0.36);
-    background-clip: content-box;
-  }
-
-  .help-modal-scroll::-webkit-scrollbar-thumb:hover {
-    background: rgba(92, 75, 58, 0.58);
-    background-clip: content-box;
+    display: none;
   }
 </style>

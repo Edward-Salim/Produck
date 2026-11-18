@@ -1,4 +1,5 @@
 import { asc, desc, eq } from 'drizzle-orm';
+import { dedupeFrameworkInstances } from '$lib/frameworks/instances.js';
 import { db } from '$lib/server/db/index.js';
 import {
   idea,
@@ -42,6 +43,8 @@ function mapStory(
     asA: s.asA ?? '',
     wantTo: s.wantTo ?? '',
     soThat: s.soThat ?? '',
+    prototypeImages: s.prototypeImages ?? [],
+    fieldNotes: s.fieldNotes ?? [],
     pic: s.pic,
     picColor: s.picColor,
     done: s.done,
@@ -403,9 +406,6 @@ export async function loadFrameworkPageInstances(
     .orderBy(asc(frameworkInstance.updatedAt));
 
   for (const row of userInstances) {
-    const dedupeIdx = frameworkInstances.findIndex((s) => s.templateId === row.templateId);
-    if (dedupeIdx >= 0) frameworkInstances.splice(dedupeIdx, 1);
-
     frameworkInstances.push({
       id: `db-${row.id}`,
       templateId: row.templateId,
@@ -416,5 +416,5 @@ export async function loadFrameworkPageInstances(
     });
   }
 
-  return frameworkInstances;
+  return dedupeFrameworkInstances(frameworkInstances);
 }

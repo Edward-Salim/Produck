@@ -32,6 +32,37 @@ export interface Assumption {
   lastTested: string | null;
 }
 
+/** Percentages of the original image, independent of display size. */
+export interface StoryPrototypeRegion {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+export interface StoryPrototypeImage {
+  id: string;
+  src: string;
+  caption: string;
+  alt: string;
+  width?: number;
+  height?: number;
+  sourcePath?: string;
+  /** Visible record or reference scope; different examples are displayed separately. */
+  example?: string;
+  crop?: StoryPrototypeRegion;
+  highlights?: (StoryPrototypeRegion & { label: string; step?: number })[];
+}
+
+export interface StoryFieldNote {
+  name: string;
+  explain?: boolean;
+  meaning?: string;
+  needed?: string;
+  values?: { label: string; meaning?: string }[];
+  example?: string;
+}
+
 export interface Story {
   id: string;
   title: string;
@@ -48,6 +79,8 @@ export interface Story {
   details?: string[];
   checkedAcs?: StoryCheckedAC[];
   assumptions?: Assumption[];
+  prototypeImages?: StoryPrototypeImage[];
+  fieldNotes?: StoryFieldNote[];
 }
 
 export interface StoryMapData {

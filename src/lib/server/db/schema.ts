@@ -9,11 +9,13 @@ import {
   timestamp,
   bigint,
   uniqueIndex,
+  primaryKey,
   check,
   customType
 } from 'drizzle-orm/pg-core';
 import { relations, sql } from 'drizzle-orm';
 import type { FinancialTrackerPlan } from '$lib/financial-tracker-plan.js';
+import type { StoryFieldNote, StoryPrototypeImage } from '$lib/types/story-map.js';
 import type {
   BookAuthorPortrait,
   BookChapterSummary,
@@ -424,6 +426,33 @@ export const projectRelations = relations(project, ({ one, many }) => ({
   backlogItems: many(backlogItem)
 }));
 
+// ── Story prototype assets ─────────────────────────────
+
+export const storyPrototypeAsset = pgTable(
+  'story_prototype_asset',
+  {
+    projectId: integer('project_id')
+      .notNull()
+      .references(() => project.id, { onDelete: 'cascade' }),
+    id: text('id').notNull(),
+    contentType: text('content_type').notNull(),
+    data: bytea('data').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    primaryKey({ columns: [table.projectId, table.id], name: 'story_prototype_asset_pk' }),
+    check('story_prototype_asset_id_check', sql`${table.id} ~ '^[a-f0-9]{64}$'`),
+    check(
+      'story_prototype_asset_type_check',
+      sql`${table.contentType} in ('image/jpeg', 'image/png', 'image/webp', 'image/gif')`
+    ),
+    check(
+      'story_prototype_asset_size_check',
+      sql`octet_length(${table.data}) between 1 and 10485760`
+    )
+  ]
+);
+
 // ── Actor ──────────────────────────────────────────────
 
 export const actor = pgTable('actor', {
@@ -495,6 +524,14 @@ export const story = pgTable('story', {
   asA: text('as_a'),
   wantTo: text('want_to'),
   soThat: text('so_that'),
+  prototypeImages: jsonb('prototype_images')
+    .$type<StoryPrototypeImage[]>()
+    .notNull()
+    .default(sql`'[]'::jsonb`),
+  fieldNotes: jsonb('field_notes')
+    .$type<StoryFieldNote[]>()
+    .notNull()
+    .default(sql`'[]'::jsonb`),
   pains: jsonb('pains')
     .$type<string[]>()
     .default(sql`'[]'`),

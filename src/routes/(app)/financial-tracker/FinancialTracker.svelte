@@ -2080,6 +2080,9 @@
                               planned={row.planned}
                               actual={row.actual}
                               gallonPrice={gallonWaterPrice}
+                              waterGallons={trackerData.financialPlan?.monthlyWaterGallons?.[
+                                currentMonth.key
+                              ]}
                             />
                           {:else}
                             {budgetCategoryDescription(row.label)}

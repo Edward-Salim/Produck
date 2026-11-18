@@ -1,5 +1,6 @@
 <script lang="ts">
   import { PIC_COLORS, STICKY_GRADIENTS } from '$lib/constants/colors.js';
+  import type { Actor } from '$lib/types/story-map.js';
   type Variant = 'activity' | 'task' | 'story';
 
   let {
@@ -7,18 +8,22 @@
     colorIndex,
     title,
     id,
+    showId = true,
     done = false,
     pic = '',
     picColor = '',
+    actor = undefined,
     onclick = undefined
   }: {
     variant: Variant;
     colorIndex: number;
     title: string;
     id: string;
+    showId?: boolean;
     done?: boolean;
     pic?: string;
     picColor?: string;
+    actor?: Actor;
     onclick?: (() => void) | undefined;
   } = $props();
 
@@ -34,7 +39,7 @@
 
 <button
   type="button"
-  class="relative h-20 w-35 shrink-0 overflow-visible rounded-sm select-none
+  class="relative h-20 w-35 shrink-0 overflow-visible rounded-sm outline-none select-none
 		{variant === 'story'
     ? 'cursor-pointer transition-transform duration-150 hover:scale-105'
     : 'cursor-default'}"
@@ -50,30 +55,31 @@
 	"
   {onclick}
 >
-  <!-- Pushpin dot -->
-  <span
-    class="absolute -top-1 left-1/2 z-0 h-2 w-2 -translate-x-1/2 rounded-full"
-    style="background: radial-gradient(circle,
-			{variant === 'activity'
-      ? '#3cb371, #2e9d5e'
-      : variant === 'task'
-        ? '#5dade2, #3498db'
-        : '#e8c840, #d4b530'});
-			box-shadow: 0 1px 2px rgba(0,0,0,.25);"
-  ></span>
-
   {#if variant === 'story'}
     <!-- Story layout -->
     <div class="flex h-full flex-col px-2.5 pt-2.5 pb-1.5 font-sans text-cork-800">
-      <div
-        class="flex items-start justify-between text-[9px] leading-tight font-semibold tracking-wide opacity-50"
-      >
-        <span>{id}</span>
-        {#if pic}
-          <span class="{picColorClass} font-semibold">{pic}</span>
-        {/if}
-      </div>
-      <p class="mt-0.5 line-clamp-2 text-left text-[11px] leading-snug font-semibold">{title}</p>
+      {#if showId || pic || actor}
+        <div
+          class="flex items-center justify-between gap-1 text-[9px] leading-tight font-semibold tracking-wide"
+        >
+          <span class="inline-flex min-w-0 items-center gap-1">
+            {#if actor}
+              <span
+                class="pointer-events-none text-xs leading-none opacity-30 mix-blend-multiply saturate-50"
+                aria-hidden="true">{actor.emoji}</span
+              >
+              <span class="sr-only">Actor: {actor.label}</span>
+            {/if}
+            {#if showId}<span class="opacity-50">{id}</span>{/if}
+          </span>
+          {#if pic}
+            <span class="{picColorClass} font-semibold opacity-50">{pic}</span>
+          {/if}
+        </div>
+      {/if}
+      <p class="mt-0.5 line-clamp-2 text-left text-[11px] leading-snug font-semibold">
+        {title}
+      </p>
     </div>
 
     {#if done}
@@ -86,7 +92,9 @@
   {:else}
     <!-- Activity / Task layout -->
     <div class="flex h-full flex-col items-center justify-center px-2 font-display text-cork-800">
-      <span class="font-sans text-[9px] font-medium tracking-wide opacity-50">{id}</span>
+      {#if showId}
+        <span class="font-sans text-[9px] font-medium tracking-wide opacity-50">{id}</span>
+      {/if}
       <p class="mt-0.5 text-center text-lg leading-none font-bold break-words">{title}</p>
     </div>
   {/if}

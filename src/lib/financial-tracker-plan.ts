@@ -12,6 +12,7 @@ export type FinancialTrackerPlan = {
   monthlySavingsGoals?: Record<string, number>;
   categoryPlans?: Record<string, number>;
   monthlyCategoryPlans?: Record<string, Record<string, number>>;
+  monthlyWaterGallons?: Record<string, number>;
   monthlyAllocations?: Record<string, number>;
 };
 
@@ -25,12 +26,14 @@ export function calculateMealGuide({
   planned,
   actual = 0,
   gallonPrice = 25_000,
+  waterGallons,
   today
 }: {
   monthKey: string;
   planned: number;
   actual?: number;
   gallonPrice?: number;
+  waterGallons?: number;
   today: string;
 }) {
   const selectedMonth = monthIndex(monthKey);
@@ -43,7 +46,7 @@ export function calculateMealGuide({
   if (!Number.isInteger(startDay) || startDay < 1 || startDay > monthDays) return null;
   const days = monthDays - startDay + 1;
   const budget = Math.max(0, planned - (isCurrentMonth ? actual : 0));
-  const gallons = Math.ceil(days / 7);
+  const gallons = Math.max(0, Math.floor(waterGallons ?? Math.ceil(days / 7)));
   const waterReserve = gallons * Math.max(0, gallonPrice);
   const dailyBudget = Math.max(0, budget - waterReserve) / days;
   const roundingUnit = dailyBudget >= 25_000 ? 5_000 : 1_000;

@@ -32,6 +32,20 @@ test('remaining November meals reserve weekly water before setting affordable da
   assert.equal(guide.waterReserve + guide.days * guide.dailyTarget + guide.buffer, guide.budget);
 });
 
+test('an explicit zero water allowance keeps November food targets after reallocating the water money', () => {
+  const guide = calculateMealGuide({
+    monthKey: 'nov-2026',
+    planned: 1_175_000,
+    waterGallons: 0,
+    today: '2026-11-14'
+  });
+  assert.equal(guide.gallons, 0);
+  assert.equal(guide.waterReserve, 0);
+  assert.equal(guide.dailyTarget, 65_000);
+  assert.equal(guide.buffer, 70_000);
+  assert.equal(guide.days * guide.dailyTarget + guide.buffer, 1_175_000);
+});
+
 test('December meals cover every started week including the fifth gallon and preserve the budget', () => {
   const guide = calculateMealGuide({
     monthKey: 'dec-2026',

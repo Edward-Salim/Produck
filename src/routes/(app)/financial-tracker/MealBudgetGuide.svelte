@@ -5,12 +5,14 @@
     monthKey,
     planned,
     actual = 0,
-    gallonPrice = 25_000
+    gallonPrice = 25_000,
+    waterGallons
   }: {
     monthKey: string;
     planned: number;
     actual?: number;
     gallonPrice?: number;
+    waterGallons?: number;
   } = $props();
 
   const today = new Intl.DateTimeFormat('en-CA', {
@@ -25,7 +27,9 @@
     maximumFractionDigits: 0
   });
   const money = (value: number) => rupiah.format(value).replace(/\s+/g, '');
-  const guide = $derived(calculateMealGuide({ monthKey, planned, actual, gallonPrice, today }));
+  const guide = $derived(
+    calculateMealGuide({ monthKey, planned, actual, gallonPrice, waterGallons, today })
+  );
 </script>
 
 {#if guide}
@@ -37,14 +41,26 @@
           {money(guide.lunch)} for lunch, and {money(guide.dinner)} for dinner.
         </p>
         <p>
-          Reserve {money(guide.waterReserve)} for water at one {money(gallonPrice)} gallon a week. The
-          remaining {money(guide.buffer)} is for snacks, coffee, or a buffer.
+          {#if guide.gallons === 0}
+            No water refill is planned for this month.
+          {:else if waterGallons === undefined}
+            Reserve {money(guide.waterReserve)} for water at one {money(gallonPrice)} gallon a week.
+          {:else}
+            Reserve {money(guide.waterReserve)} for {guide.gallons} water {guide.gallons === 1
+              ? 'gallon'
+              : 'gallons'}.
+          {/if}
+          The remaining {money(guide.buffer)} is for snacks, coffee, or a buffer.
         </p>
       {:else}
         <p>Meals covers daily food, snacks, coffee, drinks, and water.</p>
         <p>
-          One {money(gallonPrice)} water gallon a week needs {money(guide.waterReserve)}. The
-          remaining budget is too tight to set daily meal targets.
+          {#if guide.gallons === 0}
+            No water refill is planned for this month.
+          {:else}
+            Planned water needs {money(guide.waterReserve)}.
+          {/if}
+          The remaining budget is too tight to set daily meal targets.
         </p>
       {/if}
     {:else}

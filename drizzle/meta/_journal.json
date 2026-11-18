@@ -274,6 +274,20 @@
       "when": 1794387600000,
       "tag": "0041_book_cover_zoom",
       "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1794956400000,
+      "tag": "0042_story_prototype_images",
+      "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1794960000000,
+      "tag": "0043_story_field_notes",
+      "breakpoints": true
     }
   ]
 }

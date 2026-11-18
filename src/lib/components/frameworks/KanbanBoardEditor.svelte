@@ -12,6 +12,7 @@
   import Wrench from '@lucide/svelte/icons/wrench';
   import X from '@lucide/svelte/icons/x';
   import EmptyState from '$lib/components/ui/empty-state.svelte';
+  import { Skeleton } from '$lib/components/ui/skeleton/index.js';
   import { SvelteSet } from 'svelte/reactivity';
   import { DropdownMenu } from 'bits-ui';
 
@@ -87,7 +88,7 @@
   });
 
   let columns = $state<KanbanColumn[]>([]);
-  let loading = $state(false);
+  let loading = $state(true);
 
   async function loadKanban() {
     columns = [];
@@ -109,6 +110,7 @@
 
   $effect(() => {
     if (projectId) loadKanban();
+    else loading = false;
   });
 
   // ── History ──
@@ -454,35 +456,24 @@
 </script>
 
 {#if loading}
-  <div style="height: calc(100vh - 96px);" class="flex flex-col overflow-hidden">
-    <div class="flex flex-1 gap-4 overflow-x-auto px-1 pb-2 [scrollbar-width:none]">
-      {#each DEFAULT_COLUMNS as col}
-        <div class="flex w-60 shrink-0 flex-col rounded-xl" style="background: {col.color};">
-          <div class="rounded-t-xl bg-black/5 px-2.5 py-2">
-            <div class="h-5 w-20 animate-pulse rounded bg-black/10"></div>
-          </div>
-          <div class="flex-1 space-y-1.5 p-2.5">
-            {#each Array(col.id === 'col-todo' ? 4 : col.id === 'col-progress' ? 2 : col.id === 'col-done' ? 3 : 1) as _}
-              <div
-                class="animate-pulse rounded-r-lg bg-white px-2.5 py-1.5"
-                style="box-shadow: 0 1px 3px rgba(0,0,0,.06);border-left: 3px solid {col.id ===
-                'col-blocked'
-                  ? '#fca5a5'
-                  : col.id === 'col-done'
-                    ? '#86efac'
-                    : '#cbd5e1'};"
-              >
-                <div class="mb-1 h-3 w-12 rounded bg-gray-200"></div>
-                <div class="h-4 w-full rounded bg-gray-100"></div>
-                <div class="mt-1.5 flex items-center gap-1.5">
-                  <div class="h-3 w-3 rounded bg-gray-200"></div>
-                  <div class="h-3 w-6 rounded bg-gray-200"></div>
-                  <div class="flex-1"></div>
-                  <div class="h-4 w-10 rounded-full bg-gray-200"></div>
-                </div>
-              </div>
-            {/each}
-          </div>
+  <div
+    role="status"
+    aria-busy="true"
+    style="height: calc(100vh - 96px);"
+    class="flex flex-col overflow-hidden"
+  >
+    <span class="sr-only">Loading board</span>
+    <div
+      aria-hidden="true"
+      class="flex flex-1 gap-4 overflow-x-auto px-1 pb-2 [scrollbar-width:none]"
+    >
+      {#each DEFAULT_COLUMNS as col (col.id)}
+        <div
+          class="flex w-60 shrink-0 flex-col gap-4 rounded-lg p-3"
+          style="background: {col.color};"
+        >
+          <Skeleton class="h-4 w-20 bg-black/10 motion-reduce:animate-none" />
+          <Skeleton class="h-24 w-full bg-white/60 motion-reduce:animate-none" />
         </div>
       {/each}
     </div>
@@ -498,7 +489,7 @@
     <!-- Type filter -->
     <div class="flex shrink-0 items-center gap-1.5 px-1 pt-1 pb-1.5">
       <span class="text-[9px] font-semibold tracking-wider text-cork-400 uppercase">Type:</span>
-      {#each TYPE_KEYS as key}
+      {#each TYPE_KEYS as key (key)}
         {@const active = activeTypes.has(key)}
         {@const Icon = typeIcon(key)}
         <button
@@ -550,7 +541,7 @@
               sortOpen = false;
             }}
           >
-            {#each SORT_OPTIONS as opt}
+            {#each SORT_OPTIONS as opt (opt.key)}
               <button
                 class="block w-full cursor-pointer px-3 py-1 text-left text-[10px] whitespace-nowrap {sortMode ===
                 opt.key
@@ -811,7 +802,7 @@
                   />
                 </div>
                 <div class="max-h-36 overflow-y-auto py-1">
-                  {#each filteredBlockableCards as c}
+                  {#each filteredBlockableCards as c (c.id)}
                     <button
                       type="button"
                       class="block w-full cursor-pointer px-3 py-1.5 text-left text-xs {blockedByInput ===
@@ -885,12 +876,20 @@
       </div>
       <div class="mt-3 max-h-80 overflow-y-auto">
         {#if historyLoading}
-          <p class="py-8 text-center text-xs text-cork-400">Loading...</p>
+          <div role="status" aria-busy="true" class="space-y-3 py-2">
+            <span class="sr-only">Loading activity</span>
+            {#each [1, 2, 3] as row (row)}
+              <Skeleton
+                aria-hidden="true"
+                class="h-12 w-full bg-cork-200/60 motion-reduce:animate-none"
+              />
+            {/each}
+          </div>
         {:else if history.length === 0}
           <p class="py-8 text-center text-xs text-cork-400">No activity yet</p>
         {:else}
           <div class="space-y-2">
-            {#each history as entry}
+            {#each history as entry (entry.id)}
               <div class="flex gap-2 rounded-lg bg-cork-50/60 px-3 py-2">
                 <div class="min-w-0 flex-1">
                   <p class="text-xs text-cork-800">
