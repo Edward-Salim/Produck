@@ -1,5 +1,7 @@
 import { json } from '@sveltejs/kit';
+import { read } from '$app/server';
 import { env } from '$env/dynamic/private';
+import portraitUrl from '$lib/assets/profile/edward-cover-letter.jpg?url';
 import { db } from '$lib/server/db/index.js';
 import { appUser } from '$lib/server/db/schema.js';
 import { buildApplicationPdfFilename } from '$lib/application-filename.js';
@@ -418,25 +420,23 @@ function addUriAnnotation(
 async function renderApplicationPdf(
   recipient: string,
   plainText: string,
-  includeCv: boolean
+  includeCv: boolean,
+  assets: App.Platform['env']['ASSETS']
 ): Promise<Uint8Array> {
   const pdf = await PDFDocument.create();
   const page = pdf.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
   const regular = await pdf.embedFont(StandardFonts.TimesRoman);
   const bold = await pdf.embedFont(StandardFonts.TimesRomanBold);
 
-  const cvSourcePath = join(process.cwd(), 'static', 'assets', 'Edward_Salim_CV.pdf');
-  const portraitSourcePath = join(
-    process.cwd(),
-    'src',
-    'lib',
-    'assets',
-    'profile',
-    'edward-cover-letter.jpg'
-  );
+  async function readCv() {
+    if (!assets) return readFile(join('static', 'assets', 'Edward_Salim_CV.pdf'));
+    const response = await assets.fetch('https://produck.fun/assets/Edward_Salim_CV.pdf');
+    if (!response.ok) throw new Error(`Could not load the CV (${response.status}).`);
+    return response.arrayBuffer();
+  }
   const [cvBytes, portraitBytes, signatureBytes] = await Promise.all([
-    includeCv ? readFile(cvSourcePath) : Promise.resolve(undefined),
-    readFile(portraitSourcePath),
+    includeCv ? readCv() : Promise.resolve(undefined),
+    read(portraitUrl).arrayBuffer(),
     readPrivateSignatureImage()
   ]);
 
@@ -599,7 +599,7 @@ async function renderApplicationPdf(
   return pdf.save();
 }
 
-export const POST: RequestHandler = async ({ request, locals }) => {
+export const POST: RequestHandler = async ({ request, locals, platform }) => {
   const authId = locals.session?.user?.id;
   const [caller] = authId ? await db.select().from(appUser).where(eq(appUser.authId, authId)) : [];
   if (caller?.role !== 'admin') return json({ error: 'Forbidden' }, { status: 403 });
@@ -627,7 +627,12 @@ export const POST: RequestHandler = async ({ request, locals }) => {
     );
 
   try {
-    const pdf = await renderApplicationPdf(recipientText, bodyText, includeCv);
+    const pdf = await renderApplicationPdf(
+      recipientText,
+      bodyText,
+      includeCv,
+      platform?.env.ASSETS
+    );
     const filename = buildApplicationPdfFilename({ company, role, includeCv });
 
     return new Response(Buffer.from(pdf), {

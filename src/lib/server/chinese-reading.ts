@@ -1,3 +1,4 @@
+import type { Fetcher } from '@cloudflare/workers-types';
 import { readPlecoLevelFile } from './pleco.js';
 
 export type HskLevel = 1 | 2 | 3 | 4 | 5 | 6 | 7;
@@ -438,21 +439,21 @@ function parsePlecoWords(text: string) {
     .filter((word) => word && [...word].some((char) => HANZI_RE.test(char)));
 }
 
-function loadLevelWords(level: HskLevel) {
+async function loadLevelWords(level: HskLevel, assets?: Fetcher) {
   if (vocabCache[level]) return vocabCache[level];
 
   const label = LEVEL_LABELS[level];
-  const words = parsePlecoWords(readPlecoLevelFile(label));
+  const words = parsePlecoWords(await readPlecoLevelFile(label, assets));
   vocabCache[level] = words;
   return words;
 }
 
-export function getVocabGuard(level: HskLevel): VocabGuard {
+export async function getVocabGuard(level: HskLevel, assets?: Fetcher): Promise<VocabGuard> {
   if (guardCache[level]) return guardCache[level];
 
   const allowed = new Set<string>();
   for (let nextLevel = 1; nextLevel <= level; nextLevel += 1) {
-    for (const word of loadLevelWords(nextLevel as HskLevel) ?? []) {
+    for (const word of await loadLevelWords(nextLevel as HskLevel, assets)) {
       allowed.add(word);
     }
   }

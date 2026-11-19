@@ -216,18 +216,3 @@ export async function processChineseSongLyricImportJob(
     throw new Error(message, { cause: err });
   }
 }
-
-export function getChineseSongLyricImportJobSecret(env: {
-  CHINESE_SONG_LYRIC_JOB_SECRET?: string;
-  CHINESE_READING_JOB_SECRET?: string;
-  APPLICATION_JOB_SECRET?: string;
-  DATABASE_URL?: string;
-}) {
-  return (
-    env.CHINESE_SONG_LYRIC_JOB_SECRET ||
-    env.CHINESE_READING_JOB_SECRET ||
-    env.APPLICATION_JOB_SECRET ||
-    env.DATABASE_URL ||
-    ''
-  );
-}

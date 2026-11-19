@@ -1,0 +1,24 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "produck",
+  "account_id": "897c7f4217b11f967e94b1481071d137",
+  "main": "cloudflare/worker.ts",
+  "compatibility_date": "2026-11-19",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  "preview_urls": false,
+  "routes": [
+    { "pattern": "produck.fun", "custom_domain": true },
+    { "pattern": "www.produck.fun", "custom_domain": true }
+  ],
+  "assets": {
+    "binding": "ASSETS",
+    "directory": ".svelte-kit/cloudflare"
+  },
+  "observability": { "enabled": true },
+  "kv_namespaces": [{ "binding": "BOOK_FILES", "id": "428d4e2c226146a1a678e11505b41828" }],
+  "queues": {
+    "producers": [{ "binding": "JOBS", "queue": "produck-jobs" }],
+    "consumers": [{ "queue": "produck-jobs", "max_batch_size": 1, "max_batch_timeout": 1 }]
+  }
+}

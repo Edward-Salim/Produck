@@ -1,4 +1,5 @@
 import { bookDownloadHeaders } from './book-download.ts';
+import { isBookFileSize } from './book-storage.js';
 
 type BlobEntry = {
   data: ReadableStream<Uint8Array> | null;
@@ -32,9 +33,7 @@ export async function serveBookBlob(
     typeof file.filename !== 'string' ||
     !/^[a-f0-9]{64}$/.test(file.sha256) ||
     file.blobKey !== file.sha256 ||
-    !Number.isSafeInteger(file.byteLength) ||
-    file.byteLength < 5 ||
-    file.byteLength > 500_000_000
+    !isBookFileSize(file.byteLength)
   )
     return failure('Book file not found', 404);
   const headers = bookDownloadHeaders(file);

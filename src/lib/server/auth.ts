@@ -1,6 +1,7 @@
+import { dev } from '$app/environment';
 import { db } from './db/index.js';
 import { authSession, appUser } from './db/schema.js';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { pbkdf2Sync, randomBytes, timingSafeEqual } from 'node:crypto';
 
 const passwordHashAlgorithm = 'pbkdf2_sha512';
@@ -19,36 +20,45 @@ export function hashPassword(password: string): string {
   return `${passwordHashAlgorithm}$${passwordHashIterations}$${salt}$${hash}`;
 }
 
-export function verifyPassword(password: string, stored: string): boolean {
+export async function verifyPassword(password: string, stored: string): Promise<boolean> {
+  if (typeof password !== 'string') return false;
+
+  let iterations = 10_000;
+  let salt: string;
+  let originalHash: string;
   if (stored.startsWith(`${passwordHashAlgorithm}$`)) {
     const parts = stored.split('$');
     if (parts.length !== 4) return false;
-
-    const [, iterationsText, salt, originalHash] = parts;
-    const iterations = Number(iterationsText);
+    const [, iterationsText, parsedSalt, parsedHash] = parts;
+    salt = parsedSalt;
+    originalHash = parsedHash;
+    iterations = Number(iterationsText);
     if (!Number.isSafeInteger(iterations) || iterations <= 0) return false;
-
-    const hash = pbkdf2Sync(password, salt, iterations, passwordKeyLength, 'sha512').toString(
-      'hex'
-    );
-    const hashBuffer = Buffer.from(hash, 'hex');
-    const originalHashBuffer = Buffer.from(originalHash, 'hex');
-    return (
-      hashBuffer.length === originalHashBuffer.length &&
-      timingSafeEqual(hashBuffer, originalHashBuffer)
-    );
+  } else {
+    const parts = stored.split(':');
+    if (parts.length !== 2) return false;
+    [salt, originalHash] = parts;
   }
 
-  const parts = stored.split(':');
-  if (parts.length !== 2) return false;
-  const [salt, originalHash] = parts;
-  const hash = pbkdf2Sync(password, salt, 10_000, passwordKeyLength, 'sha512').toString('hex');
-  const hashBuffer = Buffer.from(hash, 'hex');
-  const originalHashBuffer = Buffer.from(originalHash, 'hex');
-  return (
-    hashBuffer.length === originalHashBuffer.length &&
-    timingSafeEqual(hashBuffer, originalHashBuffer)
-  );
+  if (!/^[a-f0-9]{128}$/i.test(originalHash)) return false;
+  const expected = Buffer.from(originalHash, 'hex');
+  if (dev)
+    return timingSafeEqual(
+      pbkdf2Sync(password, salt, iterations, passwordKeyLength, 'sha512'),
+      expected
+    );
+
+  // Run the existing work factor in Neon to fit the Worker CPU and PBKDF2 limits.
+  // Keep Drizzle errors containing bound credentials out of application logs.
+  try {
+    const [row] = await db.execute<{ digest: string }>(sql`
+      select public.produck_pbkdf2_sha512(${Buffer.from(password)}, ${Buffer.from(salt)}, ${iterations})::text as digest
+    `);
+    const expectedBits = [...expected].map((byte) => byte.toString(2).padStart(8, '0')).join('');
+    return timingSafeEqual(Buffer.from(row.digest), Buffer.from(expectedBits));
+  } catch {
+    throw new Error('Could not verify the password with Neon.');
+  }
 }
 
 // Create user session in database

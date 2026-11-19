@@ -4,11 +4,11 @@ import { createHash } from 'node:crypto';
 import { readFile, stat } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import postgres from 'postgres';
-import { getLocalBookPdfStore } from './lib/book-blob-store.mjs';
+import { publishBookFile } from './lib/book-blob-store.mjs';
 import { inspectBookSource } from './lib/book-source.mjs';
+import { MAX_BOOK_FILE_BYTES } from '../src/lib/server/book-storage.js';
 
 const DATABASE_LIMIT = 20_000_000;
-const MAX_FILE_BYTES = 500_000_000;
 
 const [bookId, input, ...options] = process.argv.slice(2);
 if (
@@ -24,41 +24,22 @@ if (
 const dryRun = options.includes('--dry-run');
 const path = resolve(input);
 const info = await stat(path);
-if (!info.isFile() || info.size < 5 || info.size > MAX_FILE_BYTES) {
+if (!info.isFile() || info.size < 5 || info.size > MAX_BOOK_FILE_BYTES) {
   throw new Error('Source must be a nonempty file no larger than 500 MB.');
 }
 const data = await readFile(path);
-if (data.length > MAX_FILE_BYTES) {
+if (data.length > MAX_BOOK_FILE_BYTES) {
   throw new Error('Source must be no larger than 500 MB.');
 }
 const format = inspectBookSource(data);
 const sha256 = createHash('sha256').update(data).digest('hex');
 const useBlob = data.length > DATABASE_LIMIT;
-async function publishBlob() {
-  const store = await getLocalBookPdfStore();
-  await store.set(sha256, new Blob([data], { type: format.contentType }), {
-    onlyIfNew: true,
-    metadata: { sha256, byteLength: data.length }
-  });
-  const stored = await store.getWithMetadata(sha256, { type: 'stream' });
-  assert.ok(stored?.data, 'Uploaded source not found in Netlify Blobs');
-  assert.equal(stored.metadata.sha256, sha256);
-  assert.equal(stored.metadata.byteLength, data.length);
-  const digest = createHash('sha256');
-  let bytes = 0;
-  for await (const chunk of stored.data) {
-    digest.update(chunk);
-    bytes += chunk.byteLength;
-  }
-  assert.equal(bytes, data.length);
-  assert.equal(digest.digest('hex'), sha256);
-}
 if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is required.');
 const sql = postgres(process.env.DATABASE_URL, { ssl: 'require', max: 1, connect_timeout: 15 });
 try {
   const [existingBook] = await sql`select id from library_book where id = ${bookId}`;
   if (!existingBook) throw new Error(`Book not found: ${bookId}`);
-  if (useBlob && !dryRun) await publishBlob();
+  if (useBlob && !dryRun) await publishBookFile(sha256, data);
   await sql.begin(async (tx) => {
     const [book] = await tx`select title, author from library_book where id = ${bookId} for update`;
     if (!book) throw new Error(`Book not found: ${bookId}`);
@@ -83,7 +64,7 @@ try {
       JSON.stringify({
         book: bookId,
         dryRun,
-        storage: useBlob ? 'netlify-blobs' : 'database',
+        storage: useBlob ? 'cloudflare-kv' : 'database',
         bytes: data.length,
         sha256,
         saved: !dryRun

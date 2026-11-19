@@ -288,6 +288,13 @@
       "when": 1794960000000,
       "tag": "0043_story_field_notes",
       "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1795056600000,
+      "tag": "0044_worker_password_verification",
+      "breakpoints": true
     }
   ]
 }

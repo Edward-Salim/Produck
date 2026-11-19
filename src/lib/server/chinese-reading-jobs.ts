@@ -1,3 +1,4 @@
+import type { Fetcher } from '@cloudflare/workers-types';
 import { and, desc, eq } from 'drizzle-orm';
 import {
   CHINESE_READING_MODEL,
@@ -53,7 +54,8 @@ async function getRecentReadingsToAvoid(
 export async function processChineseReadingJob(
   database: any,
   env: ChineseReadingEnv,
-  jobId: string
+  jobId: string,
+  assets?: Fetcher
 ) {
   await ensureChineseReadingStoryTable(database);
 
@@ -77,7 +79,7 @@ export async function processChineseReadingJob(
 
   try {
     const level = job.level as HskLevel;
-    const guard = getVocabGuard(level);
+    const guard = await getVocabGuard(level, assets);
     const avoidReadings = await getRecentReadingsToAvoid(database, job.userId, level, jobId);
     const result = await generateValidatedReading(env, level, guard, { avoidReadings });
     const model = env.DEEPSEEK_MODEL ?? CHINESE_READING_MODEL;
@@ -112,12 +114,4 @@ export async function processChineseReadingJob(
 
     throw new Error(message, { cause: err });
   }
-}
-
-export function getChineseReadingJobSecret(env: {
-  CHINESE_READING_JOB_SECRET?: string;
-  APPLICATION_JOB_SECRET?: string;
-  DATABASE_URL?: string;
-}) {
-  return env.CHINESE_READING_JOB_SECRET || env.APPLICATION_JOB_SECRET || env.DATABASE_URL || '';
 }

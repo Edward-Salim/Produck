@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import {
   generateApplicationCoverLetter,
   generateLinkedInMessages,
@@ -42,10 +42,14 @@ export async function processApplicationCoverLetterJob(
   if (!job) throw new Error(`Application cover letter job not found: ${jobId}`);
   if (job.status === 'completed') return job.result;
 
-  await database
+  const [claimed] = await database
     .update(applicationCoverLetterJob)
     .set({ status: 'running', error: null, updatedAt: new Date() })
-    .where(eq(applicationCoverLetterJob.id, jobId));
+    .where(
+      and(eq(applicationCoverLetterJob.id, jobId), eq(applicationCoverLetterJob.status, 'queued'))
+    )
+    .returning({ id: applicationCoverLetterJob.id });
+  if (!claimed) return null;
 
   try {
     const result = await generateApplicationCoverLetter(env, job.dump);

@@ -135,7 +135,7 @@ export const POST: RequestHandler = async (event) => {
       console.error('[Refresh] failed:', err);
     });
 
-  // Keep the function alive on Netlify via waitUntil
+  // Allow the refresh to continue after the response.
   (event.platform as any)?.context?.waitUntil?.(refreshPromise);
 
   return json({ accepted: true, running: true });

@@ -1,5 +1,5 @@
 import { mdsvex } from 'mdsvex';
-import adapter from '@sveltejs/adapter-netlify';
+import adapter from '@sveltejs/adapter-cloudflare';
 import { relative, sep } from 'node:path';
 
 /** @type {import('@sveltejs/kit').Config} */
@@ -15,7 +15,10 @@ const config = {
     }
   },
   kit: {
-    adapter: adapter()
+    adapter: adapter({
+      config: 'cloudflare/sveltekit.json',
+      platformProxy: { configPath: 'wrangler.jsonc' }
+    })
   },
   preprocess: [mdsvex({ extensions: ['.svx', '.md'] })],
   extensions: ['.svelte', '.svx', '.md']

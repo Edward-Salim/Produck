@@ -1,5 +1,6 @@
 import { json } from '@sveltejs/kit';
 import { env } from '$env/dynamic/private';
+import { dispatchJob } from '$lib/server/background-job.js';
 import { and, eq, sql } from 'drizzle-orm';
 import {
   CHINESE_READING_LEVELS,
@@ -9,48 +10,13 @@ import {
   validateReadingVocabulary,
   type HskLevel
 } from '$lib/server/chinese-reading.js';
-import {
-  processChineseReadingJob,
-  getChineseReadingJobSecret
-} from '$lib/server/chinese-reading-jobs.js';
+import { processChineseReadingJob } from '$lib/server/chinese-reading-jobs.js';
 import { ensureChineseReadingStoryTable } from '$lib/server/chinese-reading-schema.js';
 import { db } from '$lib/server/db/index.js';
 import { appUser, chineseReadingJob, chineseReadingStory } from '$lib/server/db/schema.js';
 import type { RequestHandler } from './$types.js';
 
-async function triggerBackgroundJob(
-  origin: string,
-  jobId: string,
-  waitUntil?: (promise: Promise<unknown>) => void
-) {
-  const fallback = () =>
-    processChineseReadingJob(db, env, jobId).catch((fallbackErr) => {
-      console.error('Chinese reading fallback job failed:', fallbackErr);
-    });
-
-  if (!waitUntil) {
-    void fallback();
-    return;
-  }
-
-  const secret = getChineseReadingJobSecret(env);
-  const trigger = fetch(`${origin}/api/chinese-reading/jobs/run`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ jobId, secret })
-  });
-
-  try {
-    const response = await trigger;
-    if (response.ok || response.status === 202) return;
-    throw new Error(`Background function returned ${response.status}`);
-  } catch (err) {
-    console.warn('Chinese reading background function trigger failed, using fallback:', err);
-    waitUntil(fallback());
-  }
-}
-
-export const POST: RequestHandler = async ({ request, locals, url, platform }) => {
+export const POST: RequestHandler = async ({ request, locals, platform }) => {
   const authId = locals.session?.user?.id;
   const [caller] = authId ? await db.select().from(appUser).where(eq(appUser.authId, authId)) : [];
   if (!caller) return json({ error: 'Sign in to generate AI readings.' }, { status: 401 });
@@ -69,9 +35,8 @@ export const POST: RequestHandler = async ({ request, locals, url, platform }) =
 
   try {
     await ensureChineseReadingStoryTable(db);
-    const guard = getVocabGuard(level);
-
     if (allowCache && !force) {
+      const guard = await getVocabGuard(level, platform?.env.ASSETS);
       const cachedStories = await db
         .select()
         .from(chineseReadingStory)
@@ -117,8 +82,9 @@ export const POST: RequestHandler = async ({ request, locals, url, platform }) =
       status: 'queued'
     });
 
-    const netlifyContext = (platform as any)?.context;
-    await triggerBackgroundJob(url.origin, jobId, netlifyContext?.waitUntil?.bind(netlifyContext));
+    await dispatchJob(platform, { kind: 'chinese-reading', id: jobId }, () =>
+      processChineseReadingJob(db, env, jobId)
+    );
 
     return json({ jobId, status: 'queued', level }, { status: 202 });
   } catch (err) {

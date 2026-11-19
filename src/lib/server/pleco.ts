@@ -1,22 +1,13 @@
-import { existsSync, readFileSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import type { Fetcher } from '@cloudflare/workers-types';
+import { readFile } from 'node:fs/promises';
+import { resolve } from 'node:path';
 
-const moduleDir = dirname(fileURLToPath(import.meta.url));
-
-export function readPlecoLevelFile(label: string) {
+export async function readPlecoLevelFile(label: string, assets?: Fetcher) {
   const fileName = `hsk3.0-level${label}.txt`;
-  const candidates = [
-    resolve(process.cwd(), 'static', 'pleco', fileName),
-    resolve(moduleDir, '..', '..', '..', 'static', 'pleco', fileName),
-    resolve(moduleDir, '..', '..', '..', '..', 'static', 'pleco', fileName),
-    resolve('/var/task', 'static', 'pleco', fileName)
-  ];
-
-  const filePath = candidates.find((candidate) => existsSync(candidate));
-  if (!filePath) {
-    throw new Error(`Missing Pleco HSK file ${fileName}. Checked: ${candidates.join(', ')}`);
+  if (assets) {
+    const response = await assets.fetch(`https://produck.fun/pleco/${fileName}`);
+    if (!response.ok) throw new Error(`Missing Pleco HSK file ${fileName}: ${response.status}`);
+    return response.text();
   }
-
-  return readFileSync(filePath, 'utf-8');
+  return readFile(resolve('static', 'pleco', fileName), 'utf8');
 }

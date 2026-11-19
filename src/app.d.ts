@@ -1,3 +1,6 @@
+import type { Fetcher, KVNamespace, Queue } from '@cloudflare/workers-types';
+import type { BackgroundJob } from '$lib/server/background-job.js';
+
 // See https://svelte.dev/docs/kit/types#app.d.ts
 // for information about these interfaces
 
@@ -19,7 +22,13 @@ declare global {
       articleDetail?: boolean;
       bookShelf?: 'work' | 'misc';
     }
-    // interface Platform {}
+    interface Platform {
+      env: {
+        ASSETS?: Fetcher;
+        BOOK_FILES?: KVNamespace;
+        JOBS?: Queue<BackgroundJob>;
+      };
+    }
   }
 }
 

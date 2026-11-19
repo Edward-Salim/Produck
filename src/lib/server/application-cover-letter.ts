@@ -257,10 +257,3 @@ export async function generateApplicationCoverLetter(
     model
   };
 }
-
-export function getApplicationJobSecret(env: {
-  APPLICATION_JOB_SECRET?: string;
-  DATABASE_URL?: string;
-}) {
-  return env.APPLICATION_JOB_SECRET || env.DATABASE_URL || '';
-}

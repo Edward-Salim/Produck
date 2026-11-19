@@ -68,7 +68,7 @@ export const POST: RequestHandler = async ({ request, cookies, getClientAddress 
     }
 
     stage = 'verify-password';
-    const valid = verifyPassword(password, user.passwordHash);
+    const valid = await verifyPassword(password, user.passwordHash);
     if (!valid) {
       recordFailedLogin(attemptKey);
       return json({ error: 'Invalid credentials.' }, { status: 401 });
@@ -83,7 +83,6 @@ export const POST: RequestHandler = async ({ request, cookies, getClientAddress 
       path: '/',
       httpOnly: true,
       sameSite: 'lax',
-      secure: process.env.NODE_ENV === 'production',
       maxAge: 60 * 60 * 24 * 365
     });
 

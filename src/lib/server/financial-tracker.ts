@@ -1,3 +1,4 @@
+import { dev } from '$app/environment';
 import { env } from '$env/dynamic/private';
 import { error } from '@sveltejs/kit';
 import { and, asc, eq, isNull } from 'drizzle-orm';
@@ -31,7 +32,7 @@ export function assertFinancialTrackerAccess(user: NonNullable<App.Locals['sessi
     throw error(403, 'Forbidden');
   }
 
-  if (emails.length === 0 && env.NODE_ENV === 'production') {
+  if (emails.length === 0 && !dev) {
     throw error(403, 'FINANCIAL_TRACKER_ALLOWED_EMAILS is not configured.');
   }
 }

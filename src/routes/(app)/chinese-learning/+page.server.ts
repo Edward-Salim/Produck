@@ -1,4 +1,5 @@
 import { readPlecoLevelFile } from '$lib/server/pleco.js';
+import type { Fetcher } from '@cloudflare/workers-types';
 import type { PageServerLoad } from './$types.js';
 import { generateSentences } from './sentences.js';
 import type { SentenceData } from './sentences.js';
@@ -534,13 +535,13 @@ const LEVEL_NAMES: Record<number, string> = {
   7: 'HSK 7-9'
 };
 
-function loadAllWords(): WordData[] {
+async function loadAllWords(assets?: Fetcher): Promise<WordData[]> {
   const allWords: WordData[] = [];
 
   for (let level = 1; level <= 7; level++) {
     const label = LEVEL_LABELS[level];
     try {
-      const text = readPlecoLevelFile(label);
+      const text = await readPlecoLevelFile(label, assets);
       const words = parseHskFile(text, level);
       allWords.push(...words);
     } catch (err) {
@@ -552,9 +553,9 @@ function loadAllWords(): WordData[] {
   return allWords;
 }
 
-export const load: PageServerLoad = async () => {
+export const load: PageServerLoad = async ({ platform }) => {
   if (!cached) {
-    const words = loadAllWords();
+    const words = await loadAllWords(platform?.env.ASSETS);
     const level1Words = words.filter((w) => w.level >= 1 && w.level <= 7);
     const sentences = generateSentences(level1Words);
     cached = { words, levelNames: LEVEL_NAMES, sentences };
