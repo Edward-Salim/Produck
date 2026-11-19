@@ -45,6 +45,9 @@ export const POST: RequestHandler = async ({ request, locals }) => {
       return json({ error: 'Missing required fields' }, { status: 400 });
     }
     await assertProjectAccess(locals, Number(projectId));
+    if (templateId === 'stakeholder-map') {
+      return json({ error: 'Stakeholder maps are read-only' }, { status: 403 });
+    }
 
     const displayName = locals.session?.user?.displayName ?? updatedBy;
 
@@ -52,12 +55,18 @@ export const POST: RequestHandler = async ({ request, locals }) => {
     if (id && typeof id === 'string' && id.startsWith('db-')) {
       const numericId = Number(id.slice(3));
       const [existing] = await db
-        .select({ projectId: frameworkInstance.projectId })
+        .select({
+          projectId: frameworkInstance.projectId,
+          templateId: frameworkInstance.templateId
+        })
         .from(frameworkInstance)
         .where(eq(frameworkInstance.id, numericId))
         .limit(1);
       if (!existing) return json({ error: 'Instance not found' }, { status: 404 });
       await assertProjectAccess(locals, existing.projectId);
+      if (existing.templateId === 'stakeholder-map') {
+        return json({ error: 'Stakeholder maps are read-only' }, { status: 403 });
+      }
 
       const [row] = await db
         .update(frameworkInstance)
@@ -132,12 +141,15 @@ export const DELETE: RequestHandler = async ({ url, locals }) => {
 
   try {
     const [existing] = await db
-      .select({ projectId: frameworkInstance.projectId })
+      .select({ projectId: frameworkInstance.projectId, templateId: frameworkInstance.templateId })
       .from(frameworkInstance)
       .where(eq(frameworkInstance.id, numericId))
       .limit(1);
     if (!existing) return json({ error: 'Instance not found' }, { status: 404 });
     await assertProjectAccess(locals, existing.projectId);
+    if (existing.templateId === 'stakeholder-map') {
+      return json({ error: 'Stakeholder maps are read-only' }, { status: 403 });
+    }
 
     await db.delete(frameworkInstance).where(eq(frameworkInstance.id, numericId));
     return json({ ok: true });

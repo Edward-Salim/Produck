@@ -8,11 +8,12 @@ import {
   projectAccess,
   workspaceAccess
 } from '$lib/server/db/schema.js';
-import { asc, eq, and } from 'drizzle-orm';
+import { asc, eq, and, inArray } from 'drizzle-orm';
 import type { LayoutServerLoad } from './$types.js';
 
-export const load: LayoutServerLoad = async ({ cookies, locals }) => {
+export const load: LayoutServerLoad = async ({ cookies, locals, url }) => {
   const restrictedSections = locals.session?.user.restrictedSections ?? [];
+  const requestedProjectId = Number(url.searchParams.get('project'));
   try {
     // Look up current user + all workspaces in parallel
     const authId = locals.session?.user?.id;
@@ -42,27 +43,23 @@ export const load: LayoutServerLoad = async ({ cookies, locals }) => {
       workspaces = allWorkspaces.filter((w) => allowedWsIds.has(w.id));
     }
 
-    // Workspace: cookie → DB prefs → first fallback
-    const cookieWorkspace = cookies.get('active_workspace') ?? '';
-    const cookieWsId = Number(cookieWorkspace) || 0;
-    let activeWorkspaceId =
-      cookieWsId && workspaces.some((w) => w.id === cookieWsId) ? cookieWsId : 0;
-    if (!activeWorkspaceId && userPreferences.lastWorkspaceId) {
-      activeWorkspaceId = workspaces.some((w) => w.id === userPreferences.lastWorkspaceId)
-        ? userPreferences.lastWorkspaceId
-        : 0;
-    }
-    if (!activeWorkspaceId) {
-      activeWorkspaceId = workspaces[0]?.id ?? 0;
-    }
-
-    // Projects + access in parallel
+    // Resolve project links against the user's visible workspaces and project grants.
     const [allProjects, accessRows] = await Promise.all([
-      activeWorkspaceId
+      workspaces.length
         ? db
-            .select({ id: project.id, name: project.name, shortName: project.shortName })
+            .select({
+              id: project.id,
+              name: project.name,
+              shortName: project.shortName,
+              workspaceId: project.workspaceId
+            })
             .from(project)
-            .where(eq(project.workspaceId, activeWorkspaceId))
+            .where(
+              inArray(
+                project.workspaceId,
+                workspaces.map((workspace) => workspace.id)
+              )
+            )
             .orderBy(asc(project.id))
         : Promise.resolve([]),
       !isAdmin && currentUser
@@ -73,28 +70,27 @@ export const load: LayoutServerLoad = async ({ cookies, locals }) => {
         : Promise.resolve(null)
     ]);
 
-    const projects =
-      accessRows !== null
-        ? (() => {
-            const allowedIds = new Set(accessRows.map((a) => a.projectId));
-            return allProjects.filter((p) => allowedIds.has(p.id));
-          })()
-        : allProjects;
-
-    // Project: cookie → DB prefs → first fallback (must belong to this workspace)
+    const allowedProjectIds = accessRows && new Set(accessRows.map((access) => access.projectId));
+    const visibleProjects = allowedProjectIds
+      ? allProjects.filter((project) => allowedProjectIds.has(project.id))
+      : allProjects;
+    const requestedProject = visibleProjects.find((project) => project.id === requestedProjectId);
+    const cookieWorkspaceId = Number(cookies.get('active_workspace'));
+    const activeWorkspaceId =
+      requestedProject?.workspaceId ??
+      workspaces.find((workspace) => workspace.id === cookieWorkspaceId)?.id ??
+      workspaces.find((workspace) => workspace.id === userPreferences.lastWorkspaceId)?.id ??
+      workspaces[0]?.id ??
+      0;
+    const projects = visibleProjects.filter((project) => project.workspaceId === activeWorkspaceId);
     const cookieProject = cookies.get('active_project') ?? '';
-    let projectBelongs = projects.some((p) => String(p.id) === cookieProject);
-    let lastProject = projectBelongs ? cookieProject : '';
-    if (!lastProject && userPreferences.lastProjectId) {
-      const dbProjectValid = projects.some((p) => p.id === userPreferences.lastProjectId);
-      if (dbProjectValid) {
-        lastProject = String(userPreferences.lastProjectId);
-        projectBelongs = true;
-      }
-    }
-    if (!lastProject) {
-      lastProject = String(projects[0]?.id ?? '');
-    }
+    const lastProject = String(
+      requestedProject?.id ??
+        projects.find((project) => project.id === Number(cookieProject))?.id ??
+        projects.find((project) => project.id === userPreferences.lastProjectId)?.id ??
+        projects[0]?.id ??
+        ''
+    );
 
     // Persist corrected values back to cookies
     if (activeWorkspaceId) {
@@ -110,6 +106,8 @@ export const load: LayoutServerLoad = async ({ cookies, locals }) => {
         maxAge: 60 * 60 * 24 * 365,
         sameSite: 'lax'
       });
+    } else if (cookieProject) {
+      cookies.delete('active_project', { path: '/' });
     }
 
     // Sync resolved values to DB preferences for cross-device fallback

@@ -10,6 +10,7 @@ import Puzzle from '@lucide/svelte/icons/puzzle';
 import Route from '@lucide/svelte/icons/route';
 import Target from '@lucide/svelte/icons/target';
 import TrendingUp from '@lucide/svelte/icons/trending-up';
+import Users from '@lucide/svelte/icons/users';
 import Workflow from '@lucide/svelte/icons/workflow';
 import type { Component } from 'svelte';
 import assumptionTestCover from '$lib/assets/framework-cards/assumption-test.png';
@@ -19,6 +20,7 @@ import ideaBankCover from '$lib/assets/framework-cards/idea-bank.png';
 import interviewSnapshotCover from '$lib/assets/framework-cards/interview-snapshot.png';
 import kanbanCover from '$lib/assets/framework-cards/kanban.png';
 import outcomesCover from '$lib/assets/framework-cards/outcomes-v2.png';
+import stakeholderMapCover from '$lib/assets/framework-cards/stakeholder-map.webp';
 import storyMapCover from '$lib/assets/framework-cards/story-map.png';
 import fintechLandscapeCover from '$lib/assets/framework-cards/fintech-landscape.png';
 import valuePropositionCanvasCover from '$lib/assets/framework-cards/value-proposition-canvas.png';
@@ -49,6 +51,20 @@ export type FrameworkTemplate = {
 };
 
 export const FRAMEWORK_TEMPLATES: FrameworkTemplate[] = [
+  {
+    id: 'stakeholder-map',
+    name: 'Stakeholder Map',
+    category: 'Discovery',
+    description:
+      'Find the people involved in the project and see which departments they represent.',
+    icon: Users,
+    fields: [],
+    instructions:
+      'Review stakeholders by department. Each entry shows the person’s job title and business location when available.',
+    terminology: [],
+    coverGradient: 'linear-gradient(135deg, #f4ede2 0%, #ded1bf 100%)',
+    coverImage: stakeholderMapCover
+  },
   {
     id: 'sitemap',
     name: 'Sitemap',

@@ -1,7 +1,8 @@
 <script lang="ts">
   import { navigating, page } from '$app/state';
-  import { invalidateAll, replaceState } from '$app/navigation';
+  import { afterNavigate, invalidateAll, replaceState } from '$app/navigation';
   import { onMount } from 'svelte';
+  import checkdaqLogo from '$lib/assets/projects/logo-checkdaq-transparent.webp';
   import { getFullscreen, toggleFullscreen } from '$lib/stores/fullscreen.svelte.js';
   import { FRAMEWORK_TEMPLATES, type FrameworkTemplate } from '$lib/frameworks/templates.js';
   import {
@@ -26,7 +27,6 @@
   import Plus from '@lucide/svelte/icons/plus';
   import Rocket from '@lucide/svelte/icons/rocket';
   import Search from '@lucide/svelte/icons/search';
-  import Target from '@lucide/svelte/icons/target';
 
   import type { FrameworkPageInstance } from './+page.server.js';
   import IdeaBankEditor from '$lib/components/frameworks/IdeaBankEditor.svelte';
@@ -44,6 +44,7 @@
   import MarketSizingEditor from '$lib/components/frameworks/MarketSizingEditor.svelte';
   import OrganogramEditor from '$lib/components/frameworks/OrganogramEditor.svelte';
   import SitemapEditor from '$lib/components/frameworks/SitemapEditor.svelte';
+  import StakeholderMap from '$lib/components/frameworks/StakeholderMap.svelte';
   import type { FrameworkInstance } from '$lib/components/frameworks/types.js';
   import type { Component } from 'svelte';
   import * as Dialog from '$lib/components/ui/dialog/index.js';
@@ -51,6 +52,11 @@
 
   type FrameworkView = 'templates' | 'editor';
   type MarketSizingCurrency = 'USD' | 'IDR';
+  const PROJECT_IMAGES: Partial<
+    Record<number, { src: string; alt: string; width: number; height: number }[]>
+  > = {
+    24: [{ src: checkdaqLogo, alt: 'CheckGPT', width: 438, height: 150 }]
+  };
 
   let { data } = $props<{
     data: {
@@ -65,7 +71,7 @@
     };
   }>();
 
-  let projectId = $derived(page.url.searchParams.get('project') ?? String(data.projectId));
+  let projectId = $derived(String(data.projectId));
 
   let instances = $derived(
     dedupeFrameworkInstances(data.frameworkInstances as FrameworkInstance[])
@@ -78,13 +84,25 @@
 
   let contextSwitching = $state(false);
   let selectedInstanceId = $state<string | null>(requestedInstanceId());
-  let selectedCategory = $state<'all' | FrameworkTemplate['category']>('all');
   let view = $state<FrameworkView>(requestedInstanceId() ? 'editor' : 'templates');
   let draftPage = $state(0);
+  let loadedProjectId: number | undefined;
+
+  afterNavigate(() => {
+    const nextProjectId = data.projectId;
+    if (loadedProjectId === nextProjectId) return;
+    loadedProjectId = nextProjectId;
+    const selection = requestedInstanceId();
+    selectedInstanceId = selection;
+    view = selection ? 'editor' : 'templates';
+    draftPage = 0;
+  });
+
   const DRAFTS_PER_PAGE = 10;
   const panelClass = 'rounded-lg border border-cork-300/50 bg-cork-50/60 shadow-sm';
   const artifactControlClass =
-    'flex h-9 w-full min-w-0 cursor-pointer items-center justify-center rounded-md border outline-none transition-colors disabled:cursor-wait disabled:opacity-60';
+    'flex h-9 w-full min-w-0 cursor-pointer items-center justify-center rounded-md outline-none transition-colors disabled:cursor-wait disabled:opacity-60';
+  const neutralArtifactControlClass = `${artifactControlClass} bg-cork-200 text-cork-700 hover:bg-cork-300/80 focus-visible:bg-cork-300`;
   let fullscreen = $derived(getFullscreen());
   let showHelp = $state(false);
   let showKanbanHistory = $state(false);
@@ -98,17 +116,18 @@
       (navigating.to?.url.pathname === '/frameworks' &&
         navigating.to.url.searchParams.get('project') !== page.url.searchParams.get('project'))
   );
+  let projectImages = $derived(isFrameworkLoading ? [] : (PROJECT_IMAGES[data.projectId] ?? []));
+  let projectLogo = $derived(projectImages[0]);
 
   const templates = FRAMEWORK_TEMPLATES;
+  const templateSections = [
+    { category: 'Discovery', Icon: Search },
+    { category: 'Strategy', Icon: Compass },
+    { category: 'Validation', Icon: FlaskConical },
+    { category: 'Delivery', Icon: Rocket }
+  ] satisfies { category: FrameworkTemplate['category']; Icon: typeof Search }[];
 
   onMount(() => {
-    const requestedFramework = page.url.searchParams.get('framework');
-    const requestedInstance = findFrameworkInstance(instances, requestedFramework);
-    if (requestedInstance) {
-      selectedInstanceId = requestedInstance.id;
-      view = 'editor';
-    }
-
     const startContextSwitch = () => (contextSwitching = true);
     const endContextSwitch = () => (contextSwitching = false);
     window.addEventListener('produck:context-switch-start', startContextSwitch);
@@ -136,30 +155,24 @@
     }
   }
 
-  let categories = $derived(['all', ...new Set(templates.map((t) => t.category))] as Array<
-    'all' | FrameworkTemplate['category']
-  >);
-
-  let filteredTemplates = $derived.by(() => {
-    const byCategory =
-      selectedCategory === 'all'
-        ? templates
-        : templates.filter((t) => t.category === selectedCategory);
+  let sortedTemplates = $derived(
     // Sort: unpicked first (original order), picked last (most recently updated first)
-    return [...byCategory].sort((a, b) => {
-      const aPicked = existingTemplateIds.has(a.id);
-      const bPicked = existingTemplateIds.has(b.id);
-      if (aPicked !== bPicked) return aPicked ? 1 : -1;
-      if (aPicked) {
-        // Both picked: most recently updated first
-        const aUpdated = instances.find((i) => i.templateId === a.id)?.updatedAt ?? '';
-        const bUpdated = instances.find((i) => i.templateId === b.id)?.updatedAt ?? '';
-        return bUpdated.localeCompare(aUpdated);
-      }
-      // Both unpicked: keep original template order
-      return 0;
-    });
-  });
+    templates
+      .filter((template) => template.id !== 'stakeholder-map' || isTemplateAdded(template.id))
+      .sort((a, b) => {
+        const aPicked = isTemplateAdded(a.id);
+        const bPicked = isTemplateAdded(b.id);
+        if (aPicked !== bPicked) return aPicked ? 1 : -1;
+        if (aPicked) {
+          // Both picked: most recently updated first
+          const aUpdated = instances.find((i) => i.templateId === a.id)?.updatedAt ?? '';
+          const bUpdated = instances.find((i) => i.templateId === b.id)?.updatedAt ?? '';
+          return bUpdated.localeCompare(aUpdated);
+        }
+        // Both unpicked: keep original template order
+        return 0;
+      })
+  );
 
   let selectedInstance = $derived(
     instances.find((i) => i.id === selectedInstanceId) ?? instances[0] ?? null
@@ -178,6 +191,11 @@
   );
 
   let existingTemplateIds = $derived(new Set(instances.map((i) => i.templateId)));
+
+  function isTemplateAdded(templateId: string) {
+    return !isRepeatableFramework(templateId) && existingTemplateIds.has(templateId);
+  }
+
   let showEpicKanbanSync = $derived(
     (selectedTemplate?.id === 'backlog' || selectedTemplate?.id === 'kanban') &&
       existingTemplateIds.has('backlog') &&
@@ -239,6 +257,7 @@
       currency?: MarketSizingCurrency;
     }>
   > = {
+    'stakeholder-map': StakeholderMap,
     sitemap: SitemapEditor,
     'fintech-landscape': FintechLandscapeEditor,
     'value-proposition-canvas': ValuePropositionCanvasEditor,
@@ -401,6 +420,7 @@
       .then(async (res) => {
         if (res.ok) {
           const json = await res.json();
+          if (page.url.pathname !== '/frameworks' || projectId !== pid) return;
           const dbId = json.instance.id;
           if (!instances.some((i) => i.id === instance.id)) {
             fetch(`/api/framework-instances?id=${dbId}`, { method: 'DELETE' }).catch(() => {
@@ -464,6 +484,7 @@
       .then(async (res) => {
         if (res.ok) {
           const json = await res.json();
+          if (page.url.pathname !== '/frameworks' || projectId !== pid) return;
           // If this was a first-time save (seed → db), update local id
           if (!isDbBacked && json.instance?.id && json.instance.id !== updated.id) {
             instances = instances.map((i) =>
@@ -515,9 +536,9 @@
       {#if selectedTemplate.id === 'story-map'}
         <button
           type="button"
-          class="{artifactControlClass} border-cork-300/50 text-cork-600 hover:bg-cork-200/60 {showStoryMapIds
-            ? 'bg-cork-200/70'
-            : 'bg-cork-50/60'}"
+          class={showStoryMapIds
+            ? `${artifactControlClass} bg-cork-300 text-cork-800 hover:bg-cork-400/75 focus-visible:bg-cork-400/75`
+            : neutralArtifactControlClass}
           aria-label={showStoryMapIds ? 'Hide IDs' : 'Show IDs'}
           aria-pressed={showStoryMapIds}
           title={showStoryMapIds ? 'Hide IDs' : 'Show IDs'}
@@ -529,7 +550,7 @@
       {#if selectedTemplate.id === 'market-sizing'}
         <button
           type="button"
-          class="{artifactControlClass} border-cork-300/50 bg-cork-50/60 text-xs font-semibold text-cork-600 hover:border-cork-400/60 hover:bg-cork-200/60 hover:text-cork-800"
+          class="{neutralArtifactControlClass} text-xs font-semibold"
           title="Switch currency"
           aria-label="Toggle market size currency"
           onclick={toggleMarketSizingCurrency}
@@ -540,9 +561,9 @@
       {#if showEpicKanbanSync}
         <button
           type="button"
-          class="{artifactControlClass} {data.epicKanbanSyncEnabled
-            ? 'border-cork-600 bg-cork-700 text-cork-50 hover:bg-cork-800'
-            : 'border-cork-300/50 bg-cork-50/60 text-cork-500 hover:border-cork-400/60 hover:bg-cork-200/60 hover:text-cork-800'}"
+          class={data.epicKanbanSyncEnabled
+            ? `${artifactControlClass} bg-cork-700 text-cork-50 hover:bg-cork-800 focus-visible:bg-cork-800`
+            : neutralArtifactControlClass}
           disabled={syncUpdating}
           title={data.epicKanbanSyncEnabled
             ? 'Disable Epics and Kanban synchronization'
@@ -557,7 +578,7 @@
       {#if selectedTemplate.id === 'kanban'}
         <button
           type="button"
-          class="{artifactControlClass} border-cork-300/50 bg-cork-50/60 text-cork-500 hover:border-cork-400/60 hover:bg-cork-200/60 hover:text-cork-800"
+          class={neutralArtifactControlClass}
           title="Activity history"
           aria-label="History"
           onclick={() => (showKanbanHistory = true)}><Clock class="size-3.5" /></button
@@ -565,14 +586,14 @@
       {/if}
       <button
         type="button"
-        class="{artifactControlClass} border-cork-300/50 bg-cork-50/60 text-cork-500 hover:border-cork-400/60 hover:bg-cork-200/60 hover:text-cork-800"
+        class={neutralArtifactControlClass}
         title="Instructions & terminology"
         aria-label="Help"
         onclick={() => (showHelp = true)}><Info class="size-3.5" /></button
       >
       <button
         type="button"
-        class="{artifactControlClass} border-cork-300/50 bg-cork-50/60 text-cork-500 hover:border-cork-400/60 hover:bg-cork-200/60 hover:text-cork-800"
+        class={neutralArtifactControlClass}
         title={fullscreen ? 'Exit fullscreen (F)' : 'Fullscreen (F)'}
         aria-label={fullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
         onclick={toggleFullscreen}
@@ -601,7 +622,20 @@
 
   {#if fullscreen && selectedInstance && selectedTemplate && view === 'editor'}
     <div style="min-height: 100vh;">
-      <div class="mx-auto mb-3 w-72 max-w-full px-4">
+      <div
+        class="mb-3 {projectLogo
+          ? 'grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] items-center gap-3 sm:grid-cols-[minmax(0,1fr)_18rem_minmax(0,1fr)]'
+          : 'mx-auto w-72 max-w-full px-4'}"
+      >
+        {#if projectLogo}
+          <img
+            src={projectLogo.src}
+            alt={projectLogo.alt}
+            width={projectLogo.width}
+            height={projectLogo.height}
+            class="h-auto max-h-16 w-44 max-w-full justify-self-start object-contain object-left"
+          />
+        {/if}
         {@render artifactControls()}
       </div>
       <div class={panelClass}>
@@ -632,122 +666,95 @@
             {@render artifactSkeleton()}
           </div>
         {:else if view === 'templates'}
-          <div class="mb-3">
-            <div class="flex flex-wrap gap-1.5">
-              {#each categories as category (category)}
-                {@const CategoryIcon =
-                  category === 'Discovery'
-                    ? Search
-                    : category === 'Strategy'
-                      ? Compass
-                      : category === 'Validation'
-                        ? FlaskConical
-                        : category === 'Delivery'
-                          ? Rocket
-                          : Target}
-                <button
-                  type="button"
-                  class="inline-flex cursor-pointer items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors {selectedCategory ===
-                  category
-                    ? 'bg-cork-700 text-cork-50'
-                    : 'bg-cork-200/60 text-cork-500 hover:bg-cork-300/60 hover:text-cork-700'}"
-                  onclick={() => (selectedCategory = category)}
+          <div class="space-y-5">
+            {#each templateSections as { category, Icon: SectionIcon } (category)}
+              <section aria-labelledby={`template-section-${category}`} class="min-w-0">
+                <h2
+                  id={`template-section-${category}`}
+                  class="mb-2 flex items-center gap-2 font-display text-lg text-cork-800"
                 >
-                  {#if category !== 'all'}<CategoryIcon class="size-3.5" />{/if}
-                  {category === 'all' ? 'All' : category}
-                </button>
-              {/each}
-            </div>
-          </div>
-
-          <div
-            class="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 [-webkit-overflow-scrolling:touch] [scrollbar-width:none] lg:mx-0 lg:grid lg:grid-cols-4 lg:overflow-visible lg:px-0 lg:pb-0 xl:grid-cols-[repeat(4,minmax(0,14rem))]"
-          >
-            {#each filteredTemplates as template (template.id)}
-              {@const Icon = template.icon}
-              {@const CatIcon =
-                template.category === 'Discovery'
-                  ? Search
-                  : template.category === 'Strategy'
-                    ? Compass
-                    : template.category === 'Validation'
-                      ? FlaskConical
-                      : template.category === 'Delivery'
-                        ? Rocket
-                        : Target}
-              {@const added = existingTemplateIds.has(template.id)}
-              <article
-                class="{panelClass} w-[68vw] max-w-[20rem] shrink-0 snap-start overflow-hidden transition-colors hover:border-cork-400/60 sm:w-[58vw] md:w-[46vw] lg:w-auto lg:max-w-none lg:shrink"
-              >
-                <!-- Header: title left, category icon right -->
-                <div class="flex items-center justify-between gap-2 bg-[#f1ece2] px-3 py-2">
-                  <h2
-                    class="truncate font-display text-sm font-semibold {added
-                      ? 'text-cork-700'
-                      : 'text-cork-800'} pr-2"
-                  >
-                    {template.name}
-                  </h2>
-                  {#if added && isRepeatableFramework(template.id)}
-                    <button
-                      type="button"
-                      class="flex size-6 shrink-0 cursor-pointer items-center justify-center rounded-md text-cork-500 transition-colors hover:bg-cork-200/60 hover:text-cork-800 disabled:cursor-wait disabled:opacity-60"
-                      aria-label="New story map"
-                      title="New story map"
-                      disabled={isFrameworkLoading}
-                      onclick={() => createInstance(template)}
+                  <SectionIcon class="size-4 shrink-0 text-cork-500" aria-hidden="true" />
+                  {category}
+                </h2>
+                <div
+                  class="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 [-webkit-overflow-scrolling:touch] [scrollbar-width:none] lg:mx-0 lg:grid lg:grid-cols-4 lg:overflow-visible lg:px-0 lg:pb-0 xl:grid-cols-[repeat(4,minmax(0,14rem))]"
+                >
+                  {#each sortedTemplates.filter((template) => template.category === category) as template (template.id)}
+                    {@const Icon = template.icon}
+                    {@const added = isTemplateAdded(template.id)}
+                    {@const showAddedMark = added && template.id !== 'stakeholder-map'}
+                    <article
+                      class="{panelClass} w-[68vw] max-w-[20rem] shrink-0 snap-start overflow-hidden transition-colors hover:border-cork-400/60 sm:w-[58vw] md:w-[46vw] lg:w-auto lg:max-w-none lg:shrink"
                     >
-                      <Plus class="size-3.5" />
-                    </button>
-                  {:else}
-                    <CatIcon
-                      class="size-3.5 shrink-0 {added ? 'text-cork-500' : 'text-cork-400'}"
-                    />
-                  {/if}
-                </div>
-                <!-- Cover: icon → + on hover -->
-                <button
-                  type="button"
-                  class="group relative mx-3 mb-3 flex aspect-[9/5] w-[calc(100%-1.5rem)] cursor-pointer items-center justify-center overflow-hidden bg-cork-200/50 {added
-                    ? 'bg-cork-200/70'
-                    : ''}"
-                  disabled={isFrameworkLoading}
-                  onclick={() =>
-                    added
-                      ? openDraft(instances.find((i) => i.templateId === template.id)!.id)
-                      : createInstance(template)}
-                >
-                  {#if template.coverImage}
-                    <img
-                      src={template.coverImage}
-                      alt=""
-                      class="absolute inset-0 h-full w-full scale-[1.22] object-contain transition-opacity transition-transform {added
-                        ? 'opacity-35 grayscale-[35%]'
-                        : 'group-hover:opacity-25'}"
-                    />
-                  {:else}
-                    <Icon
-                      class="size-12 transition-opacity {added
-                        ? 'text-cork-400/60'
-                        : 'text-cork-700/70 group-hover:opacity-0'}"
-                    />
-                  {/if}
-                  {#if added}
-                    <div class="absolute inset-0 flex items-center justify-center bg-cork-100/25">
-                      <span
-                        class="flex size-10 items-center justify-center rounded-full border border-cork-400/30 bg-cork-50/80 text-cork-500 shadow-sm"
-                        aria-hidden="true"
+                      <div class="flex items-center justify-between gap-2 bg-[#f1ece2] px-3 py-2">
+                        <h3
+                          class="truncate font-display text-sm font-semibold {added
+                            ? 'text-cork-700'
+                            : 'text-cork-800'} pr-2"
+                        >
+                          {template.name}
+                        </h3>
+                        {#if isRepeatableFramework(template.id)}
+                          <span
+                            class="inline-flex shrink-0 items-center text-cork-500"
+                            title="Supports multiple story maps"
+                          >
+                            <Layers3 class="size-3.5" aria-hidden="true" />
+                            <span class="sr-only">Supports multiple story maps</span>
+                          </span>
+                        {/if}
+                      </div>
+                      <!-- Cover: icon → + on hover -->
+                      <button
+                        type="button"
+                        class="group relative mx-3 mb-3 flex aspect-[9/5] w-[calc(100%-1.5rem)] cursor-pointer items-center justify-center overflow-hidden bg-cork-200/50 {added
+                          ? 'bg-cork-200/70'
+                          : ''}"
+                        aria-label={added ? `Open ${template.name}` : `Add ${template.name}`}
+                        disabled={isFrameworkLoading}
+                        onclick={() =>
+                          added
+                            ? openDraft(instances.find((i) => i.templateId === template.id)!.id)
+                            : createInstance(template)}
                       >
-                        <CheckCircle2 class="size-5" />
-                      </span>
-                    </div>
-                  {:else}
-                    <Plus
-                      class="absolute size-10 text-cork-700 opacity-0 transition-opacity group-hover:opacity-100"
-                    />
-                  {/if}
-                </button>
-              </article>
+                        {#if template.coverImage}
+                          <img
+                            src={template.coverImage}
+                            alt=""
+                            class="absolute inset-0 h-full w-full scale-[1.22] object-contain transition-opacity transition-transform {showAddedMark
+                              ? 'opacity-35 grayscale-[35%]'
+                              : !added
+                                ? 'group-hover:opacity-25'
+                                : ''}"
+                          />
+                        {:else}
+                          <Icon
+                            class="size-12 transition-opacity {showAddedMark
+                              ? 'text-cork-400/60'
+                              : 'text-cork-700/70'} {!added ? 'group-hover:opacity-0' : ''}"
+                          />
+                        {/if}
+                        {#if showAddedMark}
+                          <div
+                            class="absolute inset-0 flex items-center justify-center bg-cork-100/25"
+                          >
+                            <span
+                              class="flex size-10 items-center justify-center rounded-full border border-cork-400/30 bg-cork-50/80 text-cork-500 shadow-sm"
+                              aria-hidden="true"
+                            >
+                              <CheckCircle2 class="size-5" />
+                            </span>
+                          </div>
+                        {:else if !added}
+                          <Plus
+                            class="absolute size-10 text-cork-700 opacity-0 transition-opacity group-hover:opacity-100"
+                          />
+                        {/if}
+                      </button>
+                    </article>
+                  {/each}
+                </div>
+              </section>
             {/each}
           </div>
         {:else if selectedInstance && selectedTemplate}
@@ -893,6 +900,15 @@
             {@render artifactControls()}
           </div>
         {/if}
+        {#each projectImages as image (image.src)}
+          <img
+            src={image.src}
+            alt={image.alt}
+            width={image.width}
+            height={image.height}
+            class="mx-auto block h-auto w-full max-w-36"
+          />
+        {/each}
       </div>
     </div>
   {/if}

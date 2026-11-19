@@ -150,8 +150,11 @@
     window.dispatchEvent(new Event(`produck:context-switch-${state}`));
   }
 
+  let switchingContext = false;
+
   async function switchWorkspace(id: string | undefined) {
-    if (!id || id === selectedWorkspaceId) return;
+    if (!id || id === selectedWorkspaceId || switchingContext) return;
+    switchingContext = true;
     announceContextSwitch('start');
     try {
       const response = await fetch('/api/workspace', {
@@ -160,22 +163,20 @@
         body: JSON.stringify({ workspaceId: id })
       });
       if (!response.ok) throw new Error('Failed to switch workspace');
-      window.location.reload();
-    } catch {
+      const url = new URL(page.url);
+      url.searchParams.delete('project');
+      url.searchParams.delete('framework');
+      await goto(url, { invalidateAll: true, replaceState: true });
+    } catch (error) {
+      console.error('Workspace switch failed:', error);
+    } finally {
+      switchingContext = false;
       announceContextSwitch('end');
     }
   }
 
   // ── Project ──
-  let selectedProjectId = $derived(
-    page.url.searchParams.get('project') ?? data.lastProject ?? String(data.projects[0]?.id ?? '')
-  );
-
-  $effect(() => {
-    if (selectedProjectId) {
-      document.cookie = `active_project=${selectedProjectId};path=/;max-age=${60 * 60 * 24 * 365};samesite=lax`;
-    }
-  });
+  let selectedProjectId = $derived(data.lastProject);
 
   $effect(() => {
     saveLastAppPagePath(page.url.pathname);
@@ -183,20 +184,16 @@
   });
 
   async function switchProject(id: string | undefined) {
-    if (!id || id === selectedProjectId) return;
+    if (!id || id === selectedProjectId || switchingContext) return;
+    switchingContext = true;
     announceContextSwitch('start');
-    document.cookie = `active_project=${id};path=/;max-age=${60 * 60 * 24 * 365};samesite=lax`;
-    // Persist to DB for cross-device sync (non-blocking)
-    fetch('/api/preferences', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ lastProjectId: Number(id) })
-    });
     const url = new URL(page.url);
     url.searchParams.set('project', id);
+    url.searchParams.delete('framework');
     try {
       await goto(url.toString(), { invalidateAll: true });
     } finally {
+      switchingContext = false;
       announceContextSwitch('end');
     }
   }
@@ -215,9 +212,7 @@
   }
 
   function buildUrl(path: string): string {
-    // Carry the current project param from the URL if available, otherwise use selected
-    const currentProject = page.url.searchParams.get('project') ?? selectedProjectId;
-    return `${path}?project=${currentProject}`;
+    return selectedProjectId ? `${path}?project=${selectedProjectId}` : path;
   }
 
   function handleKeydown(e: KeyboardEvent) {

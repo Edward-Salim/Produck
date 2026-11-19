@@ -39,8 +39,9 @@ export interface MethodologyData {
   figure: string | null;
 }
 
-export const load: PageServerLoad = async ({ cookies, locals }) => {
-  const projectId = Number(cookies.get('active_project'));
+export const load: PageServerLoad = async ({ parent, locals }) => {
+  const { lastProject } = await parent();
+  const projectId = Number(lastProject);
   if (projectId) await assertProjectAccess(locals, projectId);
 
   try {

@@ -1,4 +1,4 @@
-import { assertProjectAccess, assertWorkspaceAccess } from '$lib/server/access.js';
+import { assertProjectAccess } from '$lib/server/access.js';
 import {
   loadFrameworkPageInstances,
   type FrameworkPageInstance
@@ -10,26 +10,12 @@ import type { PageServerLoad } from './$types.js';
 
 export type { FrameworkPageInstance };
 
-export const load: PageServerLoad = async ({ cookies, locals, url }) => {
-  const workspaceId = Number(cookies.get('active_workspace'));
-  const projectId = Number(url.searchParams.get('project') || cookies.get('active_project'));
+export const load: PageServerLoad = async ({ cookies, locals, parent }) => {
+  const context = await parent();
+  const workspaceId = Number(context.activeWorkspaceId);
+  const projectId = Number(context.lastProject);
   const displayName = locals.session?.user?.displayName;
   const showStoryMapIds = cookies.get('story_map_show_ids') !== 'false';
-
-  if (!workspaceId) {
-    return {
-      frameworkInstances: [] as FrameworkPageInstance[],
-      workspaceId: 0,
-      projectId: 0,
-      projectName: '',
-      epicKanbanSyncEnabled: false,
-      fintechPicks: [] as { companyId: string }[],
-      showStoryMapIds,
-      displayName
-    };
-  }
-
-  await assertWorkspaceAccess(locals, workspaceId);
 
   if (!projectId) {
     return {
