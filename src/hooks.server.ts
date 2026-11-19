@@ -1,5 +1,6 @@
-import { json, redirect, type Handle } from '@sveltejs/kit';
+import { error, json, redirect, type Handle } from '@sveltejs/kit';
 import { validateSession } from '$lib/server/auth.js';
+import { isRestrictedSectionRoute } from '$lib/constants/restricted-sections.js';
 
 export const handle: Handle = async ({ event, resolve }) => {
   const legacyChineseLearningPrefix = ['/tools/chinese-game', '/tools/chinese-learning'].find(
@@ -37,7 +38,8 @@ export const handle: Handle = async ({ event, resolve }) => {
         id: sessionResult.user.authId,
         email: sessionResult.user.email,
         displayName: sessionResult.user.displayName,
-        role: sessionResult.user.role
+        role: sessionResult.user.role,
+        restrictedSections: sessionResult.user.restrictedSections
       }
     };
     // Refresh cookie to slide expiration
@@ -56,6 +58,13 @@ export const handle: Handle = async ({ event, resolve }) => {
       return json({ error: 'Unauthorized' }, { status: 401 });
     }
     throw redirect(303, '/login');
+  }
+
+  const routeId = event.route.id;
+  const user = event.locals.session?.user;
+  if (user && routeId && isRestrictedSectionRoute(routeId, user.restrictedSections)) {
+    if (routeId.startsWith('/api/')) return json({ error: 'Forbidden' }, { status: 403 });
+    error(403, 'This section is unavailable for your account.');
   }
 
   const pathname = event.url.pathname.replace(/\/$/, '') || '/';

@@ -1,5 +1,6 @@
 import type { Fetcher, KVNamespace, Queue } from '@cloudflare/workers-types';
 import type { BackgroundJob } from '$lib/server/background-job.js';
+import type { RestrictedSection } from '$lib/constants/restricted-sections.js';
 
 // See https://svelte.dev/docs/kit/types#app.d.ts
 // for information about these interfaces
@@ -14,6 +15,7 @@ declare global {
           email: string;
           displayName: string;
           role: string;
+          restrictedSections: RestrictedSection[];
         };
       } | null;
     }

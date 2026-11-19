@@ -14,6 +14,7 @@ import {
   customType
 } from 'drizzle-orm/pg-core';
 import { relations, sql } from 'drizzle-orm';
+import type { RestrictedSection } from '$lib/constants/restricted-sections.js';
 import type { FinancialTrackerPlan } from '$lib/financial-tracker-plan.js';
 import type { StoryFieldNote, StoryPrototypeImage } from '$lib/types/story-map.js';
 import type {
@@ -31,6 +32,11 @@ export const appUser = pgTable('app_user', {
   email: text('email').notNull(),
   displayName: text('display_name').notNull(),
   role: text('role').notNull().default('member'),
+  restrictedSections: text('restricted_sections')
+    .array()
+    .$type<RestrictedSection[]>()
+    .notNull()
+    .default(sql`'{}'::text[]`),
   passwordHash: text('password_hash'),
   preferences: jsonb('preferences')
     .$type<{

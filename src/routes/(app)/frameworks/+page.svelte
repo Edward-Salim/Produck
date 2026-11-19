@@ -60,6 +60,7 @@
       projectName: string;
       epicKanbanSyncEnabled: boolean;
       fintechPicks: { companyId: string }[];
+      showStoryMapIds: boolean;
       currentUser?: { displayName?: string };
     };
   }>();
@@ -87,7 +88,7 @@
   let fullscreen = $derived(getFullscreen());
   let showHelp = $state(false);
   let showKanbanHistory = $state(false);
-  let showStoryMapIds = $state(true);
+  let showStoryMapIds = $derived(data.showStoryMapIds);
   let marketSizingCurrency = $state<MarketSizingCurrency>('USD');
   let syncUpdating = $state(false);
   let syncConfirmationOpen = $state(false);
@@ -216,6 +217,11 @@
 
   function toggleMarketSizingCurrency() {
     marketSizingCurrency = marketSizingCurrency === 'USD' ? 'IDR' : 'USD';
+  }
+
+  function toggleStoryMapIds() {
+    showStoryMapIds = !showStoryMapIds;
+    document.cookie = `story_map_show_ids=${showStoryMapIds}; path=/frameworks; max-age=31536000; samesite=lax`;
   }
 
   // ── Custom editor map ──
@@ -515,7 +521,7 @@
           aria-label={showStoryMapIds ? 'Hide IDs' : 'Show IDs'}
           aria-pressed={showStoryMapIds}
           title={showStoryMapIds ? 'Hide IDs' : 'Show IDs'}
-          onclick={() => (showStoryMapIds = !showStoryMapIds)}
+          onclick={toggleStoryMapIds}
         >
           <Hash class="size-3.5" />
         </button>

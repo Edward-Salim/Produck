@@ -12,6 +12,7 @@ import { asc, eq, and } from 'drizzle-orm';
 import type { LayoutServerLoad } from './$types.js';
 
 export const load: LayoutServerLoad = async ({ cookies, locals }) => {
+  const restrictedSections = locals.session?.user.restrictedSections ?? [];
   try {
     // Look up current user + all workspaces in parallel
     const authId = locals.session?.user?.id;
@@ -170,6 +171,7 @@ export const load: LayoutServerLoad = async ({ cookies, locals }) => {
       gaugeKRs,
       gaugeYear,
       gaugeQuarter,
+      restrictedSections,
       currentUser: currentUser
         ? {
             id: currentUser.id,
@@ -190,6 +192,7 @@ export const load: LayoutServerLoad = async ({ cookies, locals }) => {
       gaugeKRs: [],
       gaugeYear: new Date().getFullYear(),
       gaugeQuarter: Math.floor(new Date().getMonth() / 3) + 1,
+      restrictedSections,
       currentUser: null,
       isAdmin: false
     };

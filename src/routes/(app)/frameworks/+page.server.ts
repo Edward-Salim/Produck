@@ -14,6 +14,7 @@ export const load: PageServerLoad = async ({ cookies, locals, url }) => {
   const workspaceId = Number(cookies.get('active_workspace'));
   const projectId = Number(url.searchParams.get('project') || cookies.get('active_project'));
   const displayName = locals.session?.user?.displayName;
+  const showStoryMapIds = cookies.get('story_map_show_ids') !== 'false';
 
   if (!workspaceId) {
     return {
@@ -23,6 +24,7 @@ export const load: PageServerLoad = async ({ cookies, locals, url }) => {
       projectName: '',
       epicKanbanSyncEnabled: false,
       fintechPicks: [] as { companyId: string }[],
+      showStoryMapIds,
       displayName
     };
   }
@@ -37,6 +39,7 @@ export const load: PageServerLoad = async ({ cookies, locals, url }) => {
       projectName: '',
       epicKanbanSyncEnabled: false,
       fintechPicks: [] as { companyId: string }[],
+      showStoryMapIds,
       displayName
     };
   }
@@ -63,6 +66,7 @@ export const load: PageServerLoad = async ({ cookies, locals, url }) => {
     projectName: activeProject?.name ?? '',
     epicKanbanSyncEnabled: activeProject?.epicKanbanSyncEnabled ?? false,
     fintechPicks,
+    showStoryMapIds,
     displayName
   };
 };

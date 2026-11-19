@@ -13,7 +13,6 @@
   let fullscreen = $derived(getFullscreen());
   import Layers3 from '@lucide/svelte/icons/layers';
   import Wrench from '@lucide/svelte/icons/wrench';
-  import BookOpen from '@lucide/svelte/icons/book-open';
   import LibraryBig from '@lucide/svelte/icons/library-big';
   import WalletCards from '@lucide/svelte/icons/wallet-cards';
   import GaugeCircle from '@lucide/svelte/icons/circle-gauge';
@@ -308,17 +307,6 @@
                   {/snippet}
                 </Sidebar.MenuButton>
               </Sidebar.MenuItem>
-              <Sidebar.MenuItem>
-                <Sidebar.MenuButton
-                  size="sm"
-                  isActive={page.url.pathname.startsWith('/artifacts')}
-                  tooltipContent="PM Toolkit"
-                >
-                  {#snippet child({ props })}
-                    <a href="/artifacts" {...props}><BookOpen /><span>PM Toolkit</span></a>
-                  {/snippet}
-                </Sidebar.MenuButton>
-              </Sidebar.MenuItem>
             </Sidebar.Menu>
           </Sidebar.GroupContent>
         </Sidebar.Group>
@@ -340,17 +328,19 @@
                   {/snippet}
                 </Sidebar.MenuButton>
               </Sidebar.MenuItem>
-              <Sidebar.MenuItem>
-                <Sidebar.MenuButton
-                  size="sm"
-                  isActive={page.url.pathname.startsWith('/trends')}
-                  tooltipContent="Trends"
-                >
-                  {#snippet child({ props })}
-                    <a href="/trends" {...props}><Rss /><span>Trends</span></a>
-                  {/snippet}
-                </Sidebar.MenuButton>
-              </Sidebar.MenuItem>
+              {#if !data.restrictedSections.includes('trends')}
+                <Sidebar.MenuItem>
+                  <Sidebar.MenuButton
+                    size="sm"
+                    isActive={page.url.pathname.startsWith('/trends')}
+                    tooltipContent="Trends"
+                  >
+                    {#snippet child({ props })}
+                      <a href="/trends" {...props}><Rss /><span>Trends</span></a>
+                    {/snippet}
+                  </Sidebar.MenuButton>
+                </Sidebar.MenuItem>
+              {/if}
             </Sidebar.Menu>
           </Sidebar.GroupContent>
         </Sidebar.Group>
@@ -360,19 +350,21 @@
         <Sidebar.Group>
           <Sidebar.GroupContent>
             <Sidebar.Menu>
-              <Sidebar.MenuItem>
-                <Sidebar.MenuButton
-                  size="sm"
-                  isActive={page.url.pathname.startsWith('/financial-tracker')}
-                  tooltipContent="Financial Tracker"
-                >
-                  {#snippet child({ props })}
-                    <a href="/financial-tracker" {...props}
-                      ><WalletCards /><span>Financial Tracker</span></a
-                    >
-                  {/snippet}
-                </Sidebar.MenuButton>
-              </Sidebar.MenuItem>
+              {#if !data.restrictedSections.includes('financial-tracker')}
+                <Sidebar.MenuItem>
+                  <Sidebar.MenuButton
+                    size="sm"
+                    isActive={page.url.pathname.startsWith('/financial-tracker')}
+                    tooltipContent="Financial Tracker"
+                  >
+                    {#snippet child({ props })}
+                      <a href="/financial-tracker" {...props}
+                        ><WalletCards /><span>Financial Tracker</span></a
+                      >
+                    {/snippet}
+                  </Sidebar.MenuButton>
+                </Sidebar.MenuItem>
+              {/if}
               <Sidebar.MenuItem>
                 <Sidebar.MenuButton
                   size="sm"

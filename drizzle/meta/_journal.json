@@ -295,6 +295,13 @@
       "when": 1795056600000,
       "tag": "0044_worker_password_verification",
       "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "7",
+      "when": 1795071600000,
+      "tag": "0045_user_restricted_sections",
+      "breakpoints": true
     }
   ]
 }

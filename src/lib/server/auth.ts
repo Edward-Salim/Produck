@@ -105,7 +105,8 @@ export async function validateSession(sessionId: string) {
       authId: userRow.authId,
       email: userRow.email,
       displayName: userRow.displayName,
-      role: userRow.role
+      role: userRow.role,
+      restrictedSections: userRow.restrictedSections
     }
   };
 }

@@ -13,6 +13,7 @@ function isSafeAppPath(path: string) {
     path.startsWith('/') &&
     !path.startsWith('//') &&
     path !== '/login' &&
+    !/^\/artifacts(?:[/?#]|$)/.test(path) &&
     !getDeprecatedFeature(path)
   );
 }
