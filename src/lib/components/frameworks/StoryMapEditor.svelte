@@ -9,12 +9,14 @@
     instance,
     draftMode,
     onUpdate,
-    showIds = true
+    showIds = true,
+    linkedStoryId = null
   }: {
     instance: FrameworkInstance;
     draftMode: 'edit' | 'view';
     onUpdate: (values: Record<string, string>, title?: string) => void;
     showIds?: boolean;
+    linkedStoryId?: string | null;
   } = $props();
 
   let data = $state<StoryMapData>({
@@ -257,7 +259,7 @@
       </div>
     </div>
   {:else if data.activities.length > 0}
-    <StoryMapBoard {data} {showIds} />
+    <StoryMapBoard {data} {showIds} {linkedStoryId} />
   {:else}
     <div class="rounded-xl border border-cork-300/40 bg-cork-100 px-4 py-16 text-center">
       <p class="text-sm text-cork-500">

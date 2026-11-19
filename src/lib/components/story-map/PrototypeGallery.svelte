@@ -3,7 +3,7 @@
   import { SvelteSet } from 'svelte/reactivity';
   import { prototypeImageGroups, prototypeImageOverview } from '$lib/frameworks/prototypes.js';
 
-  let { images, maxHeight = 600 }: { images: unknown; maxHeight?: number } = $props();
+  let { images, maxHeight = 600 }: { images: unknown; maxHeight?: number | null } = $props();
   let groups = $derived(prototypeImageGroups(images));
   const loaded = new SvelteSet<string>();
   const failed = new SvelteSet<string>();
@@ -11,7 +11,7 @@
 
 <div
   class="min-h-0 overflow-y-auto overscroll-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-  style:max-height="{maxHeight}px"
+  style:max-height={maxHeight === null ? undefined : `${maxHeight}px`}
 >
   {#if groups.length}
     <div class="space-y-6">

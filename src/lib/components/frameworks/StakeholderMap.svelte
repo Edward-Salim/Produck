@@ -10,6 +10,7 @@
     name: string;
     title: string;
     department: string;
+    responsibility?: string;
     location?: string;
     countryCode?: keyof typeof flags;
     countryCodes?: (keyof typeof flags)[];
@@ -30,14 +31,23 @@
 
 <div class="mx-auto max-w-4xl space-y-5">
   {#each departments as [name, people] (name)}
+    {@const hasResponsibilities = people.some((person) => person.responsibility)}
     <section>
       <h2 class="mb-2 font-display text-lg text-cork-800">{name}</h2>
       <div class="overflow-x-auto rounded-lg">
-        <table class="w-full min-w-[22rem] table-fixed text-left text-sm" aria-label={name}>
+        <table
+          class="w-full table-fixed text-left text-sm {hasResponsibilities
+            ? 'min-w-[34rem]'
+            : 'min-w-[22rem]'}"
+          aria-label={name}
+        >
           <colgroup>
             <col class="w-14 sm:w-16" />
             <col class="w-1/3" />
             <col />
+            {#if hasResponsibilities}
+              <col class="w-1/4" />
+            {/if}
             <col class="w-16 sm:w-20" />
           </colgroup>
           <thead class="bg-cork-100 text-xs text-cork-700">
@@ -45,6 +55,9 @@
               <th scope="col" class="py-2.5 pl-3 sm:pl-4">Photo</th>
               <th scope="col" class="px-2 py-2.5">Name</th>
               <th scope="col" class="px-2 py-2.5">Job title</th>
+              {#if hasResponsibilities}
+                <th scope="col" class="px-2 py-2.5">Responsibility</th>
+              {/if}
               <th scope="col" class="px-2 py-2.5 text-center">Location</th>
             </tr>
           </thead>
@@ -74,6 +87,9 @@
                 </td>
                 <th scope="row" class="px-2 py-2 font-semibold text-cork-800">{person.name}</th>
                 <td class="px-2 py-2 text-cork-700">{person.title}</td>
+                {#if hasResponsibilities}
+                  <td class="px-2 py-2 text-cork-700">{person.responsibility ?? '—'}</td>
+                {/if}
                 <td class="px-2 py-2 text-center">
                   <div class="flex flex-wrap justify-center gap-1">
                     {#each countryCodes as countryCode (countryCode)}

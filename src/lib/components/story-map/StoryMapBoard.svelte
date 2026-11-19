@@ -8,11 +8,24 @@
   import ArrowDown from '@lucide/svelte/icons/arrow-down';
   import { resolveStoryActor } from '$lib/frameworks/actors.js';
 
-  let { data, showIds = true }: { data: StoryMapData; showIds?: boolean } = $props();
+  let {
+    data,
+    showIds = true,
+    linkedStoryId = null
+  }: { data: StoryMapData; showIds?: boolean; linkedStoryId?: string | null } = $props();
 
   let selectedStory: Story | null = $state(null);
   let modalOpen: boolean = $state(false);
   let activeActorTooltip = $state<string | null>(null);
+  let dismissedLinkedStory = $state.raw<Story>();
+  let linkedStory = $derived(
+    linkedStoryId
+      ? Object.values(data.stories)
+          .flat()
+          .find((story) => story.id === linkedStoryId)
+      : undefined
+  );
+  let visibleLinkedStory = $derived(linkedStory === dismissedLinkedStory ? undefined : linkedStory);
 
   function setActorTooltipOpen(id: string, open: boolean) {
     if (open) activeActorTooltip = id;
@@ -96,6 +109,11 @@
   function openStory(story: Story) {
     selectedStory = story;
     modalOpen = true;
+  }
+
+  function setModalOpen(open: boolean) {
+    modalOpen = open;
+    if (!open && visibleLinkedStory) dismissedLinkedStory = visibleLinkedStory;
   }
 
   function scrollToCategory(
@@ -335,4 +353,7 @@
 </div>
 
 <!-- Story detail modal -->
-<StoryModal bind:open={modalOpen} story={selectedStory} />
+<StoryModal
+  bind:open={() => modalOpen || !!visibleLinkedStory, setModalOpen}
+  story={modalOpen ? selectedStory : (visibleLinkedStory ?? selectedStory)}
+/>

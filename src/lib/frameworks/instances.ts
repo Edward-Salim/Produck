@@ -1,7 +1,13 @@
 type FrameworkIdentity = { id: string; templateId: string };
 
+export const PROJECT_BRIEF_TEMPLATE_ID = 'custom-artifact';
+
 export function isRepeatableFramework(templateId: string): boolean {
-  return templateId === 'story-map';
+  return templateId === 'story-map' || templateId === PROJECT_BRIEF_TEMPLATE_ID;
+}
+
+export function isReadOnlyFramework(templateId: string): boolean {
+  return templateId === 'stakeholder-map' || templateId === PROJECT_BRIEF_TEMPLATE_ID;
 }
 
 export function dedupeFrameworkInstances<T extends FrameworkIdentity>(

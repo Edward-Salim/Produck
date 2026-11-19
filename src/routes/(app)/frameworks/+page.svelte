@@ -9,7 +9,9 @@
     dedupeFrameworkInstances,
     findFrameworkInstance,
     frameworkSelectionKey,
-    isRepeatableFramework
+    isReadOnlyFramework,
+    isRepeatableFramework,
+    PROJECT_BRIEF_TEMPLATE_ID
   } from '$lib/frameworks/instances.js';
   import CheckCheck from '@lucide/svelte/icons/check-check';
   import CheckCircle2 from '@lucide/svelte/icons/circle-check';
@@ -46,6 +48,7 @@
   import OrganogramEditor from '$lib/components/frameworks/OrganogramEditor.svelte';
   import SitemapEditor from '$lib/components/frameworks/SitemapEditor.svelte';
   import StakeholderMap from '$lib/components/frameworks/StakeholderMap.svelte';
+  import CustomArtifact from '$lib/components/frameworks/CustomArtifact.svelte';
   import type { FrameworkInstance } from '$lib/components/frameworks/types.js';
   import type { Component } from 'svelte';
   import * as Dialog from '$lib/components/ui/dialog/index.js';
@@ -73,6 +76,7 @@
   }>();
 
   let projectId = $derived(String(data.projectId));
+  let linkedStoryId = $derived(page.url.searchParams.get('story'));
 
   let instances = $derived(
     dedupeFrameworkInstances(data.frameworkInstances as FrameworkInstance[])
@@ -89,9 +93,11 @@
   let draftPage = $state(0);
   let loadedProjectId: number | undefined;
 
-  afterNavigate(() => {
+  afterNavigate(({ from, to }) => {
     const nextProjectId = data.projectId;
-    if (loadedProjectId === nextProjectId) return;
+    const frameworkChanged =
+      from?.url.searchParams.get('framework') !== to?.url.searchParams.get('framework');
+    if (loadedProjectId === nextProjectId && !frameworkChanged) return;
     loadedProjectId = nextProjectId;
     const selection = requestedInstanceId();
     selectedInstanceId = selection;
@@ -163,7 +169,7 @@
   let sortedTemplates = $derived(
     // Sort: unpicked first (original order), picked last (most recently updated first)
     templates
-      .filter((template) => template.id !== 'stakeholder-map' || isTemplateAdded(template.id))
+      .filter((template) => !isReadOnlyFramework(template.id) || isTemplateAdded(template.id))
       .sort((a, b) => {
         const aPicked = isTemplateAdded(a.id);
         const bPicked = isTemplateAdded(b.id);
@@ -198,7 +204,10 @@
   let existingTemplateIds = $derived(new Set(instances.map((i) => i.templateId)));
 
   function isTemplateAdded(templateId: string) {
-    return !isRepeatableFramework(templateId) && existingTemplateIds.has(templateId);
+    return (
+      existingTemplateIds.has(templateId) &&
+      (isReadOnlyFramework(templateId) || !isRepeatableFramework(templateId))
+    );
   }
 
   let showEpicKanbanSync = $derived(
@@ -258,6 +267,7 @@
       projectName?: string;
       showHistory?: boolean;
       showIds?: boolean;
+      linkedStoryId?: string | null;
       fintechPicks?: { companyId: string }[];
       currency?: MarketSizingCurrency;
     }>
@@ -286,6 +296,7 @@
 
   function setFrameworkUrl(selection: string | null) {
     const url = new URL(page.url);
+    url.searchParams.delete('story');
     if (selection) url.searchParams.set('framework', selection);
     else url.searchParams.delete('framework');
     replaceState(url, page.state);
@@ -305,6 +316,7 @@
   }
 
   function createInstance(template: FrameworkTemplate) {
+    if (isReadOnlyFramework(template.id)) return;
     const emptyValues: Record<string, string> = {};
     if (template.id === 'interview-snapshot') {
       emptyValues.snapshots = JSON.stringify([
@@ -459,7 +471,7 @@
   }
 
   function handleUpdate(values: Record<string, string>, title?: string) {
-    if (!selectedInstance) return;
+    if (!selectedInstance || isReadOnlyFramework(selectedInstance.templateId)) return;
     const updated = {
       ...selectedInstance,
       values,
@@ -607,7 +619,7 @@
   {/if}
 {/snippet}
 
-{#if view === 'editor' && selectedInstance}
+{#if view === 'editor' && selectedInstance && selectedInstance.templateId !== PROJECT_BRIEF_TEMPLATE_ID}
   <h1 class="sr-only">{selectedInstance.title}</h1>
 {/if}
 
@@ -641,25 +653,30 @@
         {/if}
         {@render artifactControls()}
       </div>
-      <div class={panelClass}>
-        <div class="p-4" aria-busy={isFrameworkLoading}>
-          {#if isFrameworkLoading}
-            {@render artifactSkeleton()}
-          {:else}
-            <EditorComponent
-              instance={selectedInstance}
-              draftMode="view"
-              onUpdate={handleUpdate}
-              {projectId}
-              projectName={data.projectName}
-              fintechPicks={data.fintechPicks}
-              currency={marketSizingCurrency}
-              bind:showHistory={showKanbanHistory}
-              showIds={showStoryMapIds}
-            />
-          {/if}
+      {#if selectedInstance.templateId === PROJECT_BRIEF_TEMPLATE_ID && !isFrameworkLoading}
+        <CustomArtifact instance={selectedInstance} {projectId} />
+      {:else}
+        <div class={panelClass}>
+          <div class="p-4" aria-busy={isFrameworkLoading}>
+            {#if isFrameworkLoading}
+              {@render artifactSkeleton()}
+            {:else}
+              <EditorComponent
+                instance={selectedInstance}
+                draftMode="view"
+                onUpdate={handleUpdate}
+                {projectId}
+                projectName={data.projectName}
+                fintechPicks={data.fintechPicks}
+                currency={marketSizingCurrency}
+                bind:showHistory={showKanbanHistory}
+                showIds={showStoryMapIds}
+                {linkedStoryId}
+              />
+            {/if}
+          </div>
         </div>
-      </div>
+      {/if}
     </div>
   {:else}
     <div class="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_16rem]">
@@ -697,16 +714,16 @@
                           {template.name}
                         </h3>
                         {#if isRepeatableFramework(template.id)}
+                          {@const stackLabel = `Supports multiple ${template.name.toLowerCase()}s`}
                           <span
                             class="inline-flex shrink-0 items-center text-cork-500"
-                            title="Supports multiple story maps"
+                            title={stackLabel}
                           >
                             <Layers3 class="size-3.5" aria-hidden="true" />
-                            <span class="sr-only">Supports multiple story maps</span>
+                            <span class="sr-only">{stackLabel}</span>
                           </span>
                         {/if}
                       </div>
-                      <!-- Cover: icon → + on hover -->
                       <button
                         type="button"
                         class="group relative mx-3 mb-3 flex aspect-[9/5] w-[calc(100%-1.5rem)] cursor-pointer items-center justify-center overflow-hidden bg-cork-200/50 {added
@@ -716,7 +733,9 @@
                         disabled={isFrameworkLoading}
                         onclick={() =>
                           added
-                            ? openDraft(instances.find((i) => i.templateId === template.id)!.id)
+                            ? openDraft(
+                                sortedInstances.find((i) => i.templateId === template.id)!.id
+                              )
                             : createInstance(template)}
                       >
                         {#if template.coverImage}
@@ -748,6 +767,8 @@
               </section>
             {/each}
           </div>
+        {:else if selectedInstance?.templateId === PROJECT_BRIEF_TEMPLATE_ID}
+          <CustomArtifact instance={selectedInstance} {projectId} />
         {:else if selectedInstance && selectedTemplate}
           <div class={panelClass}>
             <!-- Editor body -->
@@ -763,6 +784,7 @@
                   currency={marketSizingCurrency}
                   bind:showHistory={showKanbanHistory}
                   showIds={showStoryMapIds}
+                  {linkedStoryId}
                 />
               </div>
             {:else}
@@ -836,6 +858,9 @@
               <div class="space-y-1">
                 {#each paginatedInstances as instance (instance.id)}
                   {@const selected = view === 'editor' && selectedInstance?.id === instance.id}
+                  {@const typeName = templates.find(
+                    (template) => template.id === instance.templateId
+                  )?.name}
                   <button
                     type="button"
                     class="block w-full min-w-0 cursor-pointer rounded-lg px-3 py-2 text-left transition-colors {selected
@@ -853,8 +878,10 @@
                         : 'text-cork-600'}"
                     >
                       {formatUpdatedAt(instance.updatedAt)}
-                      {#if instance.updatedBy}
-                        <span class="opacity-50">·</span> {instance.updatedBy}
+                      {#if typeName && typeName.toLowerCase() !== instance.title
+                            .trim()
+                            .toLowerCase()}
+                        <span class="opacity-50">·</span> {typeName}
                       {/if}
                     </span>
                   </button>

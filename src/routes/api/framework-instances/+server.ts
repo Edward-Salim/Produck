@@ -4,6 +4,7 @@ import { asc, eq } from 'drizzle-orm';
 import { json } from '@sveltejs/kit';
 import { assertProjectAccess } from '$lib/server/access.js';
 import { syncBacklogToKanban } from '$lib/server/epic-kanban-sync.js';
+import { isReadOnlyFramework } from '$lib/frameworks/instances.js';
 import type { RequestHandler } from './$types.js';
 
 export const GET: RequestHandler = async ({ url, locals }) => {
@@ -41,12 +42,12 @@ export const POST: RequestHandler = async ({ request, locals }) => {
     const body = await request.json();
     const { id, projectId, templateId, title, values, updatedBy } = body;
 
-    if (!projectId || !templateId || !title) {
+    if (!projectId || typeof templateId !== 'string' || !templateId || !title) {
       return json({ error: 'Missing required fields' }, { status: 400 });
     }
     await assertProjectAccess(locals, Number(projectId));
-    if (templateId === 'stakeholder-map') {
-      return json({ error: 'Stakeholder maps are read-only' }, { status: 403 });
+    if (isReadOnlyFramework(templateId)) {
+      return readOnlyResponse(templateId);
     }
 
     const displayName = locals.session?.user?.displayName ?? updatedBy;
@@ -64,8 +65,8 @@ export const POST: RequestHandler = async ({ request, locals }) => {
         .limit(1);
       if (!existing) return json({ error: 'Instance not found' }, { status: 404 });
       await assertProjectAccess(locals, existing.projectId);
-      if (existing.templateId === 'stakeholder-map') {
-        return json({ error: 'Stakeholder maps are read-only' }, { status: 403 });
+      if (isReadOnlyFramework(existing.templateId)) {
+        return readOnlyResponse(existing.templateId);
       }
 
       const [row] = await db
@@ -147,8 +148,8 @@ export const DELETE: RequestHandler = async ({ url, locals }) => {
       .limit(1);
     if (!existing) return json({ error: 'Instance not found' }, { status: 404 });
     await assertProjectAccess(locals, existing.projectId);
-    if (existing.templateId === 'stakeholder-map') {
-      return json({ error: 'Stakeholder maps are read-only' }, { status: 403 });
+    if (isReadOnlyFramework(existing.templateId)) {
+      return readOnlyResponse(existing.templateId);
     }
 
     await db.delete(frameworkInstance).where(eq(frameworkInstance.id, numericId));
@@ -159,3 +160,11 @@ export const DELETE: RequestHandler = async ({ url, locals }) => {
     return json({ error: 'Failed to delete instance' }, { status: 500 });
   }
 };
+
+function readOnlyResponse(templateId: string) {
+  const error =
+    templateId === 'stakeholder-map'
+      ? 'Stakeholder maps are read-only'
+      : 'Project briefs are read-only';
+  return json({ error }, { status: 403 });
+}
