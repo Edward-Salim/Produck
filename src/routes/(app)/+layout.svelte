@@ -385,7 +385,7 @@
         <div
           class="flex items-center gap-2 px-2 pb-1 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0"
         >
-          {#if data.currentUser?.email === 'ewodku@dummy.com'}
+          {#if data.currentUser?.email === 'edward.salim@produck.fun'}
             <img
               src={edwardAvatar}
               alt="Avatar"
