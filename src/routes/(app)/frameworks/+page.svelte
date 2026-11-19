@@ -11,6 +11,7 @@
     frameworkSelectionKey,
     isRepeatableFramework
   } from '$lib/frameworks/instances.js';
+  import CheckCheck from '@lucide/svelte/icons/check-check';
   import CheckCircle2 from '@lucide/svelte/icons/circle-check';
   import ChevronLeft from '@lucide/svelte/icons/chevron-left';
   import ChevronRight from '@lucide/svelte/icons/chevron-right';
@@ -100,9 +101,13 @@
 
   const DRAFTS_PER_PAGE = 10;
   const panelClass = 'rounded-lg border border-cork-300/50 bg-cork-50/60 shadow-sm';
+  const activeItemClass =
+    'bg-[#cbd8bd] text-[#2f4731] hover:bg-[#bfd0b0] focus-visible:bg-[#b2c6a4]';
+  const idleSidebarItemClass = 'text-cork-700 hover:bg-cork-200/80 focus-visible:bg-cork-200';
   const artifactControlClass =
     'flex h-9 w-full min-w-0 cursor-pointer items-center justify-center rounded-md outline-none transition-colors disabled:cursor-wait disabled:opacity-60';
-  const neutralArtifactControlClass = `${artifactControlClass} bg-cork-200 text-cork-700 hover:bg-cork-300/80 focus-visible:bg-cork-300`;
+  const neutralArtifactControlClass = `${artifactControlClass} bg-cork-200/80 text-cork-700 hover:bg-cork-300/80 focus-visible:bg-cork-300`;
+  const activeArtifactControlClass = `${artifactControlClass} ${activeItemClass}`;
   let fullscreen = $derived(getFullscreen());
   let showHelp = $state(false);
   let showKanbanHistory = $state(false);
@@ -536,9 +541,7 @@
       {#if selectedTemplate.id === 'story-map'}
         <button
           type="button"
-          class={showStoryMapIds
-            ? `${artifactControlClass} bg-cork-300 text-cork-800 hover:bg-cork-400/75 focus-visible:bg-cork-400/75`
-            : neutralArtifactControlClass}
+          class={showStoryMapIds ? activeArtifactControlClass : neutralArtifactControlClass}
           aria-label={showStoryMapIds ? 'Hide IDs' : 'Show IDs'}
           aria-pressed={showStoryMapIds}
           title={showStoryMapIds ? 'Hide IDs' : 'Show IDs'}
@@ -562,7 +565,7 @@
         <button
           type="button"
           class={data.epicKanbanSyncEnabled
-            ? `${artifactControlClass} bg-cork-700 text-cork-50 hover:bg-cork-800 focus-visible:bg-cork-800`
+            ? activeArtifactControlClass
             : neutralArtifactControlClass}
           disabled={syncUpdating}
           title={data.epicKanbanSyncEnabled
@@ -578,7 +581,7 @@
       {#if selectedTemplate.id === 'kanban'}
         <button
           type="button"
-          class={neutralArtifactControlClass}
+          class={showKanbanHistory ? activeArtifactControlClass : neutralArtifactControlClass}
           title="Activity history"
           aria-label="History"
           onclick={() => (showKanbanHistory = true)}><Clock class="size-3.5" /></button
@@ -586,14 +589,14 @@
       {/if}
       <button
         type="button"
-        class={neutralArtifactControlClass}
+        class={showHelp ? activeArtifactControlClass : neutralArtifactControlClass}
         title="Instructions & terminology"
         aria-label="Help"
         onclick={() => (showHelp = true)}><Info class="size-3.5" /></button
       >
       <button
         type="button"
-        class={neutralArtifactControlClass}
+        class={fullscreen ? activeArtifactControlClass : neutralArtifactControlClass}
         title={fullscreen ? 'Exit fullscreen (F)' : 'Fullscreen (F)'}
         aria-label={fullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
         onclick={toggleFullscreen}
@@ -682,7 +685,6 @@
                   {#each sortedTemplates.filter((template) => template.category === category) as template (template.id)}
                     {@const Icon = template.icon}
                     {@const added = isTemplateAdded(template.id)}
-                    {@const showAddedMark = added && template.id !== 'stakeholder-map'}
                     <article
                       class="{panelClass} w-[68vw] max-w-[20rem] shrink-0 snap-start overflow-hidden transition-colors hover:border-cork-400/60 sm:w-[58vw] md:w-[46vw] lg:w-auto lg:max-w-none lg:shrink"
                     >
@@ -721,31 +723,20 @@
                           <img
                             src={template.coverImage}
                             alt=""
-                            class="absolute inset-0 h-full w-full scale-[1.22] object-contain transition-opacity transition-transform {showAddedMark
+                            class="absolute inset-0 h-full w-full scale-[1.22] object-contain transition-opacity transition-transform {added
                               ? 'opacity-35 grayscale-[35%]'
-                              : !added
-                                ? 'group-hover:opacity-25'
-                                : ''}"
+                              : 'group-hover:opacity-25'}"
                           />
                         {:else}
                           <Icon
-                            class="size-12 transition-opacity {showAddedMark
+                            class="size-12 transition-opacity {added
                               ? 'text-cork-400/60'
                               : 'text-cork-700/70'} {!added ? 'group-hover:opacity-0' : ''}"
                           />
                         {/if}
-                        {#if showAddedMark}
-                          <div
-                            class="absolute inset-0 flex items-center justify-center bg-cork-100/25"
-                          >
-                            <span
-                              class="flex size-10 items-center justify-center rounded-full border border-cork-400/30 bg-cork-50/80 text-cork-500 shadow-sm"
-                              aria-hidden="true"
-                            >
-                              <CheckCircle2 class="size-5" />
-                            </span>
-                          </div>
-                        {:else if !added}
+                        {#if added}
+                          <CheckCheck class="absolute size-7 text-cork-700" aria-hidden="true" />
+                        {:else}
                           <Plus
                             class="absolute size-10 text-cork-700 opacity-0 transition-opacity group-hover:opacity-100"
                           />
@@ -817,8 +808,9 @@
                 type="button"
                 class="flex w-full cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors {view ===
                 'templates'
-                  ? 'bg-cork-700 text-cork-50'
-                  : 'text-cork-700 hover:bg-cork-200/60 hover:text-cork-900'}"
+                  ? activeItemClass
+                  : idleSidebarItemClass}"
+                aria-current={view === 'templates' ? 'true' : undefined}
                 onclick={openTemplateLibrary}
               >
                 <Layers3 class="size-4 shrink-0" />
@@ -843,30 +835,29 @@
             {:else}
               <div class="space-y-1">
                 {#each paginatedInstances as instance (instance.id)}
-                  <div
-                    class="group rounded-lg px-3 py-2 transition-colors {selectedInstance?.id ===
-                      instance.id && view === 'editor'
-                      ? 'bg-cork-200/90 text-cork-900'
-                      : 'text-cork-600 hover:bg-cork-200/50 hover:text-cork-800'}"
+                  {@const selected = view === 'editor' && selectedInstance?.id === instance.id}
+                  <button
+                    type="button"
+                    class="block w-full min-w-0 cursor-pointer rounded-lg px-3 py-2 text-left transition-colors {selected
+                      ? activeItemClass
+                      : idleSidebarItemClass}"
+                    aria-current={selected ? 'true' : undefined}
+                    onclick={() => openDraft(instance.id)}
                   >
-                    <div class="flex items-center gap-1.5">
-                      <button
-                        type="button"
-                        class="min-w-0 flex-1 cursor-pointer text-left"
-                        onclick={() => openDraft(instance.id)}
-                      >
-                        <span class="block truncate text-xs leading-tight font-medium text-current"
-                          >{instance.title}</span
-                        >
-                        <span class="mt-0.5 block text-[9px] text-cork-400">
-                          {formatUpdatedAt(instance.updatedAt)}
-                          {#if instance.updatedBy}
-                            <span class="opacity-50">·</span> {instance.updatedBy}
-                          {/if}
-                        </span>
-                      </button>
-                    </div>
-                  </div>
+                    <span class="block truncate text-xs leading-tight font-medium"
+                      >{instance.title}</span
+                    >
+                    <span
+                      class="mt-0.5 block text-[9px] {selected
+                        ? 'text-[#4b6045]'
+                        : 'text-cork-600'}"
+                    >
+                      {formatUpdatedAt(instance.updatedAt)}
+                      {#if instance.updatedBy}
+                        <span class="opacity-50">·</span> {instance.updatedBy}
+                      {/if}
+                    </span>
+                  </button>
                 {/each}
               </div>
               {#if totalDraftPages > 1}
