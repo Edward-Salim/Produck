@@ -5,14 +5,18 @@
   import checkdaqLogo from '$lib/assets/projects/logo-checkdaq-transparent.webp';
   import { getFullscreen, toggleFullscreen } from '$lib/stores/fullscreen.svelte.js';
   import { FRAMEWORK_TEMPLATES, type FrameworkTemplate } from '$lib/frameworks/templates.js';
+  import type { RoadmapView } from '$lib/frameworks/roadmap.js';
   import {
     dedupeFrameworkInstances,
     findFrameworkInstance,
     frameworkSelectionKey,
     isReadOnlyFramework,
     isRepeatableFramework,
-    PROJECT_BRIEF_TEMPLATE_ID
+    PROJECT_BRIEF_TEMPLATE_ID,
+    ROADMAP_TEMPLATE_ID
   } from '$lib/frameworks/instances.js';
+  import CalendarDays from '@lucide/svelte/icons/calendar-days';
+  import ChartGantt from '@lucide/svelte/icons/chart-gantt';
   import CheckCheck from '@lucide/svelte/icons/check-check';
   import CheckCircle2 from '@lucide/svelte/icons/circle-check';
   import ChevronLeft from '@lucide/svelte/icons/chevron-left';
@@ -49,6 +53,7 @@
   import SitemapEditor from '$lib/components/frameworks/SitemapEditor.svelte';
   import StakeholderMap from '$lib/components/frameworks/StakeholderMap.svelte';
   import CustomArtifact from '$lib/components/frameworks/CustomArtifact.svelte';
+  import RoadmapArtifact from '$lib/components/frameworks/RoadmapArtifact.svelte';
   import type { FrameworkInstance } from '$lib/components/frameworks/types.js';
   import type { Component } from 'svelte';
   import * as Dialog from '$lib/components/ui/dialog/index.js';
@@ -88,6 +93,7 @@
   }
 
   let contextSwitching = $state(false);
+  let roadmapView = $state<RoadmapView>('horizons');
   let selectedInstanceId = $state<string | null>(requestedInstanceId());
   let view = $state<FrameworkView>(requestedInstanceId() ? 'editor' : 'templates');
   let draftPage = $state(0);
@@ -199,6 +205,10 @@
 
   let selectedTemplate = $derived(
     selectedInstance ? (templates.find((t) => t.id === selectedInstance.templateId) ?? null) : null
+  );
+  let isStandaloneArtifact = $derived(
+    selectedTemplate?.id === PROJECT_BRIEF_TEMPLATE_ID ||
+      selectedTemplate?.id === ROADMAP_TEMPLATE_ID
   );
 
   let existingTemplateIds = $derived(new Set(instances.map((i) => i.templateId)));
@@ -543,6 +553,16 @@
   </div>
 {/snippet}
 
+{#snippet standaloneArtifact(instance: FrameworkInstance)}
+  {#if instance.templateId === ROADMAP_TEMPLATE_ID}
+    {#key roadmapView}
+      <RoadmapArtifact {instance} view={roadmapView} />
+    {/key}
+  {:else}
+    <CustomArtifact {instance} {projectId} />
+  {/if}
+{/snippet}
+
 {#snippet artifactControls()}
   {#if selectedTemplate}
     <div
@@ -560,6 +580,36 @@
           onclick={toggleStoryMapIds}
         >
           <Hash class="size-3.5" />
+        </button>
+      {/if}
+      {#if selectedTemplate.id === ROADMAP_TEMPLATE_ID}
+        <button
+          type="button"
+          class={roadmapView === 'quarters'
+            ? activeArtifactControlClass
+            : neutralArtifactControlClass}
+          aria-label="Quarterly roadmap view"
+          aria-pressed={roadmapView === 'quarters'}
+          title={roadmapView === 'quarters'
+            ? 'Switch to Now / Next / Later'
+            : 'Switch to quarterly view'}
+          onclick={() => (roadmapView = roadmapView === 'quarters' ? 'horizons' : 'quarters')}
+        >
+          <CalendarDays class="size-3.5" aria-hidden="true" />
+        </button>
+        <button
+          type="button"
+          class={roadmapView === 'timeline'
+            ? activeArtifactControlClass
+            : neutralArtifactControlClass}
+          aria-label="Timeline roadmap view"
+          aria-pressed={roadmapView === 'timeline'}
+          title={roadmapView === 'timeline'
+            ? 'Switch to Now / Next / Later'
+            : 'Switch to timeline view'}
+          onclick={() => (roadmapView = roadmapView === 'timeline' ? 'horizons' : 'timeline')}
+        >
+          <ChartGantt class="size-3.5" aria-hidden="true" />
         </button>
       {/if}
       {#if selectedTemplate.id === 'market-sizing'}
@@ -619,7 +669,7 @@
   {/if}
 {/snippet}
 
-{#if view === 'editor' && selectedInstance && selectedInstance.templateId !== PROJECT_BRIEF_TEMPLATE_ID}
+{#if view === 'editor' && selectedInstance && !isStandaloneArtifact}
   <h1 class="sr-only">{selectedInstance.title}</h1>
 {/if}
 
@@ -653,8 +703,8 @@
         {/if}
         {@render artifactControls()}
       </div>
-      {#if selectedInstance.templateId === PROJECT_BRIEF_TEMPLATE_ID && !isFrameworkLoading}
-        <CustomArtifact instance={selectedInstance} {projectId} />
+      {#if isStandaloneArtifact && !isFrameworkLoading}
+        {@render standaloneArtifact(selectedInstance)}
       {:else}
         <div class={panelClass}>
           <div class="p-4" aria-busy={isFrameworkLoading}>
@@ -767,8 +817,8 @@
               </section>
             {/each}
           </div>
-        {:else if selectedInstance?.templateId === PROJECT_BRIEF_TEMPLATE_ID}
-          <CustomArtifact instance={selectedInstance} {projectId} />
+        {:else if selectedInstance && isStandaloneArtifact}
+          {@render standaloneArtifact(selectedInstance)}
         {:else if selectedInstance && selectedTemplate}
           <div class={panelClass}>
             <!-- Editor body -->

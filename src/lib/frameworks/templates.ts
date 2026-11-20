@@ -5,6 +5,7 @@ import FlaskConical from '@lucide/svelte/icons/flask-conical';
 import Lightbulb from '@lucide/svelte/icons/lightbulb';
 import Landmark from '@lucide/svelte/icons/landmark';
 import MapPinned from '@lucide/svelte/icons/map-pinned';
+import Milestone from '@lucide/svelte/icons/milestone';
 import Network from '@lucide/svelte/icons/network';
 import NotebookPen from '@lucide/svelte/icons/notebook-pen';
 import Puzzle from '@lucide/svelte/icons/puzzle';
@@ -22,6 +23,7 @@ import interviewSnapshotCover from '$lib/assets/framework-cards/interview-snapsh
 import kanbanCover from '$lib/assets/framework-cards/kanban.png';
 import outcomesCover from '$lib/assets/framework-cards/outcomes-v2.png';
 import projectBriefCover from '$lib/assets/framework-cards/project-brief.webp';
+import roadmapCover from '$lib/assets/framework-cards/roadmap-cover.webp';
 import stakeholderMapCover from '$lib/assets/framework-cards/stakeholder-map.webp';
 import storyMapCover from '$lib/assets/framework-cards/story-map.png';
 import fintechLandscapeCover from '$lib/assets/framework-cards/fintech-landscape.png';
@@ -31,7 +33,7 @@ import businessModelCanvasCover from '$lib/assets/framework-cards/business-model
 import marketSizingCover from '$lib/assets/framework-cards/market-sizing.png';
 import organogramCover from '$lib/assets/framework-cards/organogram.png';
 import sitemapCover from '$lib/assets/framework-cards/sitemap.png';
-import { PROJECT_BRIEF_TEMPLATE_ID } from './instances.js';
+import { PROJECT_BRIEF_TEMPLATE_ID, ROADMAP_TEMPLATE_ID } from './instances.js';
 
 export type FrameworkField = {
   id: string;
@@ -54,6 +56,18 @@ export type FrameworkTemplate = {
 };
 
 export const FRAMEWORK_TEMPLATES: FrameworkTemplate[] = [
+  {
+    id: ROADMAP_TEMPLATE_ID,
+    name: 'Roadmap',
+    category: 'Delivery',
+    description: 'See what work comes first, what follows, and what can wait.',
+    icon: Milestone,
+    fields: [],
+    instructions: 'Tap a card to read its description.',
+    terminology: [],
+    coverGradient: 'linear-gradient(135deg, #ebf0e5 0%, #c9d9cf 52%, #dcd3bf 100%)',
+    coverImage: roadmapCover
+  },
   {
     id: PROJECT_BRIEF_TEMPLATE_ID,
     name: 'Project Brief',

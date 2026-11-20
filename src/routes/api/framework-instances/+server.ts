@@ -4,7 +4,7 @@ import { asc, eq } from 'drizzle-orm';
 import { json } from '@sveltejs/kit';
 import { assertProjectAccess } from '$lib/server/access.js';
 import { syncBacklogToKanban } from '$lib/server/epic-kanban-sync.js';
-import { isReadOnlyFramework } from '$lib/frameworks/instances.js';
+import { isReadOnlyFramework, ROADMAP_TEMPLATE_ID } from '$lib/frameworks/instances.js';
 import type { RequestHandler } from './$types.js';
 
 export const GET: RequestHandler = async ({ url, locals }) => {
@@ -162,6 +162,9 @@ export const DELETE: RequestHandler = async ({ url, locals }) => {
 };
 
 function readOnlyResponse(templateId: string) {
+  if (templateId === ROADMAP_TEMPLATE_ID)
+    return json({ error: 'Roadmaps are read-only' }, { status: 403 });
+
   const error =
     templateId === 'stakeholder-map'
       ? 'Stakeholder maps are read-only'
