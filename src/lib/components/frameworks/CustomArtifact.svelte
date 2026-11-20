@@ -158,6 +158,8 @@
     {@const icon = linkIcon(href)}
     <a
       {href}
+      target="_blank"
+      rel="noopener"
       class="rounded-sm border border-cork-300/75 bg-[#fffcf6] box-decoration-clone px-1.5 py-px whitespace-normal [-webkit-box-decoration-break:clone] hover:bg-cork-100/75 {linkBaseClass}"
     >
       {#if icon}
