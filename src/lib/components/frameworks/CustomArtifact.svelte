@@ -211,6 +211,7 @@
         compact ? 'py-1' : 'py-2.5',
         index > 0 && 'border-s',
         !visual && index === mergeColumn && 'w-[30%]',
+        !visual && column === 'Saved in' && 'min-w-56',
         !visual && index === 0 && columns.length > 4 && 'min-w-64',
         !visual && index === 0 && columns.length === 2 && 'w-2/5'
       ]}
@@ -312,6 +313,7 @@
             index === 0 && row.inset ? 'ps-12 sm:ps-14' : 'ps-3 sm:ps-4',
             compact ? 'py-0.5' : 'py-3',
             compact && index > 0 && cell === '?' && 'bg-[#f9f0db]',
+            compact && index > 0 && cell === '✗' && 'bg-[#f3e2de]',
             index === 0 && 'bg-cork-100/50 font-normal [&>*]:font-normal',
             index === 0 && !compact && 'text-cork-900'
           ]}
