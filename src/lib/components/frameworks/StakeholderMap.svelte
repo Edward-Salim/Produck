@@ -31,7 +31,7 @@
 
 <div class="mx-auto max-w-4xl space-y-5">
   {#each departments as [name, people] (name)}
-    {@const hasResponsibilities = people.some((person) => person.responsibility)}
+    {@const hasResponsibilities = people.some((person) => person.responsibility?.trim())}
     <section>
       <h2 class="mb-2 font-display text-lg text-cork-800">{name}</h2>
       <div class="overflow-x-auto rounded-lg">
@@ -88,7 +88,7 @@
                 <th scope="row" class="px-2 py-2 font-semibold text-cork-800">{person.name}</th>
                 <td class="px-2 py-2 text-cork-700">{person.title}</td>
                 {#if hasResponsibilities}
-                  <td class="px-2 py-2 text-cork-700">{person.responsibility ?? '—'}</td>
+                  <td class="px-2 py-2 text-cork-700">{person.responsibility}</td>
                 {/if}
                 <td class="px-2 py-2 text-center">
                   <div class="flex flex-wrap justify-center gap-1">

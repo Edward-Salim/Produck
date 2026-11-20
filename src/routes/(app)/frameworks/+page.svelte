@@ -97,6 +97,7 @@
   let selectedInstanceId = $state<string | null>(requestedInstanceId());
   let view = $state<FrameworkView>(requestedInstanceId() ? 'editor' : 'templates');
   let draftPage = $state(0);
+  let contentPane: HTMLElement | undefined = $state();
   let loadedProjectId: number | undefined;
 
   afterNavigate(({ from, to }) => {
@@ -109,6 +110,7 @@
     selectedInstanceId = selection;
     view = selection ? 'editor' : 'templates';
     draftPage = 0;
+    if (!to?.url.hash) resetContentScroll();
   });
 
   const DRAFTS_PER_PAGE = 10;
@@ -312,9 +314,14 @@
     replaceState(url, page.state);
   }
 
+  function resetContentScroll() {
+    if (contentPane) contentPane.scrollTop = 0;
+  }
+
   function openTemplateLibrary() {
     view = 'templates';
     setFrameworkUrl(null);
+    resetContentScroll();
   }
 
   function uniqueTitle(name: string): string {
@@ -430,6 +437,7 @@
     view = 'editor';
     setFrameworkUrl(frameworkSelectionKey(instance));
     draftPage = 0;
+    resetContentScroll();
 
     // Persist to DB
     const pid = projectId;
@@ -469,6 +477,7 @@
   }
 
   function openDraft(id: string) {
+    if (view !== 'editor' || selectedInstanceId !== id) resetContentScroll();
     selectedInstanceId = id;
     view = 'editor';
     draftPage = 0;
@@ -563,12 +572,12 @@
   {/if}
 {/snippet}
 
-{#snippet artifactControls()}
+{#snippet artifactControls(standalone = false)}
   {#if selectedTemplate}
     <div
       role="group"
       aria-label="Artifact controls"
-      class="{panelClass} grid w-full auto-cols-fr grid-flow-col gap-2 p-4"
+      class={['grid w-full auto-cols-fr grid-flow-col gap-2', standalone && `${panelClass} p-4`]}
     >
       {#if selectedTemplate.id === 'story-map'}
         <button
@@ -673,18 +682,7 @@
   <h1 class="sr-only">{selectedInstance.title}</h1>
 {/if}
 
-<div class="artifact-page space-y-5">
-  {#if !fullscreen && view === 'templates'}
-    <header>
-      <div>
-        <h1 class="font-display text-2xl text-cork-800 md:text-4xl">Frameworks</h1>
-        <p class="mt-0.5 text-sm text-cork-500">
-          Pick lightweight templates and fill them for the active workspace.
-        </p>
-      </div>
-    </header>
-  {/if}
-
+<div class="artifact-page lg:h-full">
   {#if fullscreen && selectedInstance && selectedTemplate && view === 'editor'}
     <div style="min-height: 100vh;">
       <div
@@ -701,7 +699,7 @@
             class="h-auto max-h-16 w-44 max-w-full justify-self-start object-contain object-left"
           />
         {/if}
-        {@render artifactControls()}
+        {@render artifactControls(true)}
       </div>
       {#if isStandaloneArtifact && !isFrameworkLoading}
         {@render standaloneArtifact(selectedInstance)}
@@ -729,8 +727,23 @@
       {/if}
     </div>
   {:else}
-    <div class="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_16rem]">
-      <section class="min-w-0" aria-busy={isFrameworkLoading}>
+    <div
+      class="grid gap-4 lg:h-full lg:grid-cols-[minmax(0,1fr)_16rem] lg:grid-rows-[minmax(0,1fr)] lg:gap-0"
+    >
+      <section
+        bind:this={contentPane}
+        class="framework-content framework-scroll min-w-0 lg:min-h-0 lg:overflow-y-auto lg:px-6"
+        aria-busy={isFrameworkLoading}
+      >
+        {#if !fullscreen && view === 'templates'}
+          <header class="mb-5">
+            <h1 class="font-display text-2xl text-cork-800 md:text-4xl">Frameworks</h1>
+            <p class="mt-0.5 text-sm text-cork-500">
+              Pick lightweight templates and fill them for the active workspace.
+            </p>
+          </header>
+        {/if}
+
         {#if isFrameworkLoading && view === 'editor'}
           <div class="{panelClass} p-4">
             {@render artifactSkeleton()}
@@ -871,25 +884,30 @@
         {/if}
       </section>
 
-      <!-- Draft sidebar -->
-      <div class="h-fit space-y-3">
-        <aside class="{panelClass} p-4" aria-busy={isFrameworkLoading}>
-          <div>
-            <div class="space-y-1">
-              <button
-                type="button"
-                class="flex w-full cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors {view ===
-                'templates'
-                  ? activeItemClass
-                  : idleSidebarItemClass}"
-                aria-current={view === 'templates' ? 'true' : undefined}
-                onclick={openTemplateLibrary}
-              >
-                <Layers3 class="size-4 shrink-0" />
-                <span class="truncate">Template library</span>
-              </button>
-            </div>
+      <aside
+        class="min-w-0 rounded-sm border border-cork-300/60 bg-cork-50/60 p-3 [scrollbar-width:none] lg:min-h-0 lg:overflow-y-auto lg:rounded-none lg:border-y-0 lg:border-e-0 lg:p-4 [&::-webkit-scrollbar]:hidden"
+        aria-label="Frameworks sidebar"
+        aria-busy={isFrameworkLoading}
+      >
+        {#if view === 'editor' && selectedInstance && selectedTemplate}
+          <div class="mb-3 border-b border-cork-300/50 pb-3">
+            {@render artifactControls()}
           </div>
+        {/if}
+
+        <nav aria-label="Frameworks navigation">
+          <button
+            type="button"
+            class="flex w-full cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors {view ===
+            'templates'
+              ? activeItemClass
+              : idleSidebarItemClass}"
+            aria-current={view === 'templates' ? 'true' : undefined}
+            onclick={openTemplateLibrary}
+          >
+            <Layers3 class="size-4 shrink-0" />
+            <span class="truncate">Template library</span>
+          </button>
 
           <div class="mt-3 border-t border-cork-300/50 pt-3">
             {#if isFrameworkLoading}
@@ -962,22 +980,22 @@
               {/if}
             {/if}
           </div>
-        </aside>
-        {#if view === 'editor' && selectedInstance && selectedTemplate}
-          <div class="flex justify-end">
-            {@render artifactControls()}
+        </nav>
+
+        {#if projectImages.length}
+          <div class="mt-3 space-y-3 border-t border-cork-300/50 pt-3">
+            {#each projectImages as image (image.src)}
+              <img
+                src={image.src}
+                alt={image.alt}
+                width={image.width}
+                height={image.height}
+                class="mx-auto block h-auto w-full max-w-36"
+              />
+            {/each}
           </div>
         {/if}
-        {#each projectImages as image (image.src)}
-          <img
-            src={image.src}
-            alt={image.alt}
-            width={image.width}
-            height={image.height}
-            class="mx-auto block h-auto w-full max-w-36"
-          />
-        {/each}
-      </div>
+      </aside>
     </div>
   {/if}
 </div>
@@ -1096,6 +1114,88 @@
   .artifact-page :global(:focus-visible) {
     outline: none;
     --tw-ring-shadow: 0 0 #0000;
+  }
+
+  @media (width >= 64rem) {
+    .framework-content {
+      --table-header-top: 0px;
+    }
+
+    /* Keep vertical spacing in the scrollable content so sticky headers meet the pane edge. */
+    .framework-content::before,
+    .framework-content::after {
+      display: block;
+      height: 1.5rem;
+      content: '';
+    }
+  }
+
+  .framework-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-cork-400, #b0a48e) transparent;
+  }
+
+  @supports selector(::-webkit-scrollbar) {
+    .framework-scroll {
+      scrollbar-width: auto;
+      scrollbar-color: auto;
+    }
+  }
+
+  .framework-scroll::-webkit-scrollbar {
+    width: 8px;
+    background: transparent;
+  }
+
+  .framework-scroll::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .framework-scroll::-webkit-scrollbar-thumb {
+    border: 1px solid transparent;
+    border-radius: 999px;
+    background: var(--color-cork-400, #b0a48e);
+    background-clip: padding-box;
+  }
+
+  .framework-scroll::-webkit-scrollbar-thumb:hover {
+    background-color: var(--color-cork-500, #8a7e6b);
+  }
+
+  .framework-scroll::-webkit-scrollbar-button {
+    display: none;
+    width: 0;
+    height: 0;
+  }
+
+  .framework-scroll::-webkit-scrollbar-button:vertical:start:decrement,
+  .framework-scroll::-webkit-scrollbar-button:vertical:end:increment {
+    display: block;
+    width: 8px;
+    height: 12px;
+    color: var(--color-cork-500, #8a7e6b);
+    background-color: transparent;
+    background-repeat: no-repeat;
+    background-position:
+      calc(50% - 1.5px) center,
+      calc(50% + 1.5px) center;
+    background-size: 3px 4px;
+  }
+
+  .framework-scroll::-webkit-scrollbar-button:vertical:start:decrement {
+    background-image:
+      linear-gradient(135deg, transparent 50%, currentColor 50%),
+      linear-gradient(225deg, transparent 50%, currentColor 50%);
+  }
+
+  .framework-scroll::-webkit-scrollbar-button:vertical:end:increment {
+    background-image:
+      linear-gradient(45deg, transparent 50%, currentColor 50%),
+      linear-gradient(315deg, transparent 50%, currentColor 50%);
+  }
+
+  .framework-scroll::-webkit-scrollbar-button:vertical:hover {
+    color: var(--color-cork-700, #5c4b3a);
   }
 
   .help-modal-scroll {

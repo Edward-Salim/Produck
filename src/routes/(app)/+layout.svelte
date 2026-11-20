@@ -28,6 +28,8 @@
 
   let { children, data } = $props();
   let sidebarOpen = $state(false);
+  let topbarHeight = $state(0);
+  let dockedFrameworkSidebar = $derived(page.url.pathname === '/frameworks' && !fullscreen);
 
   // ── Access management (admin only) ──
   let accessDialogOpen = $state(false);
@@ -446,10 +448,17 @@
     </Sidebar.Root>
   {/if}
 
-  <Sidebar.Inset class="flex h-svh flex-col overflow-y-auto bg-cork-100 [scrollbar-gutter:stable]">
+  <Sidebar.Inset
+    class={[
+      'flex h-svh flex-col overflow-y-auto bg-cork-100 [scrollbar-gutter:stable]',
+      dockedFrameworkSidebar && 'lg:overflow-hidden lg:[scrollbar-gutter:auto]'
+    ]}
+    style="--app-topbar-height: {fullscreen ? 0 : topbarHeight}px;"
+  >
     {#if !fullscreen}
       <header
-        class="reader-topbar sticky top-0 z-50 border-b border-cork-200 bg-cork-100"
+        class="reader-topbar sticky top-0 z-50 shrink-0 border-b border-cork-200 bg-cork-100"
+        bind:offsetHeight={topbarHeight}
         {@attach autoHideReaderTopbar(page.url.pathname)}
       >
         <div class="flex items-center gap-2 px-4 py-1.5 md:gap-3">
@@ -472,7 +481,7 @@
               >
               <Select.Root type="single" value={selectedProjectId} onValueChange={switchProject}>
                 <Select.Trigger
-                  class="h-7 max-w-64 cursor-pointer border-cork-300 bg-cork-200/50 text-sm text-cork-700"
+                  class="h-7 max-w-64 cursor-pointer border-cork-300 bg-cork-200/50 text-sm text-cork-700 shadow-none"
                 >
                   <span class="truncate">{selectedProjectLabel}</span>
                 </Select.Trigger>
@@ -563,7 +572,9 @@
         </p>
       </div>
     {:else}
-      <div class="px-4 pt-6 pb-6 md:px-6">
+      <div
+        class={['px-4 pt-6 pb-6 md:px-6', dockedFrameworkSidebar && 'lg:min-h-0 lg:flex-1 lg:p-0']}
+      >
         {#if deprecatedFeature}
           <p
             class="mb-6 rounded-lg border border-cork-300 bg-cork-100 px-4 py-3 text-sm text-cork-600"

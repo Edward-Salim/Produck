@@ -177,15 +177,19 @@
         >
       </div>
 
-      {#each activityOrder as { act, startCol, span: _span } (act.id)}
-        <!-- Actor emojis: placed in first column only -->
+      {#each activityOrder as { act, startCol }, index (act.id)}
+        {@const actors = act.actors ?? []}
+        {@const previousActors = activityOrder[index - 1]?.act.actors ?? []}
+        {@const sameActors =
+          actors.length === previousActors.length &&
+          actors.every((emoji) => previousActors.includes(emoji))}
         <div
           class="flex items-end justify-center py-1.5"
           style="grid-column: {startCol + 2}; grid-row: 1;"
         >
-          {#if act.actors}
+          {#if actors.length && !sameActors}
             <div class="flex w-35 items-center justify-center gap-1">
-              {#each act.actors as actorEmoji (actorEmoji)}
+              {#each actors as actorEmoji (actorEmoji)}
                 {@const actor = data.actors.find((a) => a.emoji === actorEmoji)}
                 {@const tooltipId = `${act.id}:${actorEmoji}`}
                 <Tooltip.Root

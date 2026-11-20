@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
+  artifactColumnSpans,
   artifactLinkHref,
   parseCustomArtifact
 } from '../../src/lib/frameworks/custom-artifacts.ts';
@@ -46,6 +47,147 @@ test('custom artifact parsing preserves valid blocks and skips bad or duplicate 
   });
   assert.equal(parseCustomArtifact('{'), null);
   assert.equal(parseCustomArtifact('{"blocks":{}}'), null);
+});
+
+test('a conditional cell requires a non-empty explanation', () => {
+  const condition = {
+    type: 'condition',
+    text: 'Email is required unless Service User is enabled.'
+  };
+  const table = {
+    id: 'requirements',
+    type: 'table',
+    columns: ['Attribute', 'Partner API'],
+    rows: [['Business email', condition]]
+  };
+  const invalid = {
+    ...table,
+    id: 'invalid',
+    rows: [['Business email', { ...condition, text: ' ' }]]
+  };
+
+  assert.deepEqual(parseCustomArtifact(JSON.stringify({ blocks: [table, invalid] }))?.blocks, [
+    table
+  ]);
+});
+
+test('compact table spacing is opt-in and accepts only a boolean', () => {
+  const regular = { id: 'regular', type: 'table', columns: ['Flow'], rows: [['Direct']] };
+  const compact = { ...regular, id: 'compact', compact: true };
+  const invalid = { ...regular, id: 'invalid', compact: 'true' };
+
+  assert.deepEqual(
+    parseCustomArtifact(JSON.stringify({ blocks: [regular, compact, invalid] }))?.blocks,
+    [regular, compact]
+  );
+});
+
+test('a table can group rows under merged section headings', () => {
+  const table = {
+    id: 'comparison',
+    type: 'table',
+    columns: ['Attribute', 'Direct'],
+    rowGroups: [
+      { title: 'Applicant', rows: [['Name', '✓']] },
+      { title: 'Company', rows: [['Registration number', '✓']] }
+    ]
+  };
+  const wrongWidth = {
+    ...table,
+    id: 'wrong-width',
+    rowGroups: [{ title: 'Applicant', rows: [['Name']] }]
+  };
+  const mixed = { ...table, id: 'mixed', rows: [] };
+
+  assert.deepEqual(
+    parseCustomArtifact(JSON.stringify({ blocks: [table, wrongWidth, mixed] }))?.blocks,
+    [table]
+  );
+});
+
+test('table rows can include comparable options with the same columns', () => {
+  const row = {
+    cells: ['Product use', '✓'],
+    options: [
+      ['FX Conversion', '✓'],
+      ['FX Derivatives', '?']
+    ]
+  };
+  const required = { cells: ['Business email', '✓'], requiredFor: 'Singapore direct onboarding' };
+  const scoped = { cells: ['MOA upload', '✓'], market: 'HK' };
+  const documentRow = { cells: ['Shareholding chart', '✓'], kind: 'document' };
+  const table = {
+    id: 'comparison',
+    type: 'table',
+    columns: ['Attribute', 'Direct'],
+    rowGroups: [
+      { title: 'Business activity', rows: [row, required, scoped, documentRow, ['Website', '✓']] }
+    ]
+  };
+  const invalidRows = [
+    { ...row, cells: ['', '✓'] },
+    { ...row, options: [] },
+    { ...row, options: [['FX Conversion']] },
+    { ...row, options: [row] },
+    { ...required, requiredFor: '' },
+    { ...required, requiredFor: true },
+    { ...scoped, market: 'Hong Kong' },
+    { ...scoped, market: 'hk' },
+    { ...documentRow, kind: 'file' },
+    { cells: required.cells }
+  ];
+  const invalid = invalidRows.map((entry, index) => ({
+    ...table,
+    id: `invalid-${index}`,
+    rowGroups: [{ title: 'Business activity', rows: [entry] }]
+  }));
+
+  assert.deepEqual(parseCustomArtifact(JSON.stringify({ blocks: [table, ...invalid] }))?.blocks, [
+    table
+  ]);
+});
+
+test('a table can merge adjacent identical text in a specified data column', () => {
+  const link = { type: 'link', label: 'Registry', href: 'https://example.com/' };
+  const rows = [
+    ['Director ID type', 'NRIC or passport'],
+    ['NRIC', 'NRIC or passport'],
+    ['Director ID number', 'NRIC or passport'],
+    ['Alias', '?'],
+    ['Former name', '?'],
+    ['Passport', 'NRIC or passport'],
+    ['Registry report', link],
+    ['Registry number', link]
+  ];
+  const table = {
+    id: 'sources',
+    type: 'table',
+    columns: ['Attribute', 'Source'],
+    mergeColumn: 1,
+    bulletedColumn: 1,
+    showAttributeCount: true,
+    rows
+  };
+  const invalid = [
+    { mergeColumn: 0 },
+    { mergeColumn: 2 },
+    { mergeColumn: 1.5 },
+    { mergeColumn: '1' },
+    { bulletedColumn: 2 },
+    { showAttributeCount: 'true' }
+  ].map((overrides, index) => ({ ...table, id: `invalid-${index}`, ...overrides }));
+
+  assert.deepEqual(parseCustomArtifact(JSON.stringify({ blocks: [table, ...invalid] }))?.blocks, [
+    table
+  ]);
+  assert.deepEqual(artifactColumnSpans(rows, 1), [3, 0, 0, 1, 1, 1, 1, 1]);
+  assert.deepEqual(
+    artifactColumnSpans(
+      rows.filter(([label]) => label !== 'NRIC'),
+      1
+    ),
+    [2, 0, 1, 1, 1, 1, 1]
+  );
 });
 
 test('artifact links allow project paths and ordinary web URLs', () => {

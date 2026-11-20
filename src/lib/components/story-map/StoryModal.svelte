@@ -5,7 +5,6 @@
   import { PIC_COLORS, PIC_DEFAULT_HEX } from '$lib/constants/colors.js';
   import { normalizePrototypeImages, prototypeImageOverview } from '$lib/frameworks/prototypes.js';
   import PrototypeGallery from './PrototypeGallery.svelte';
-  import StoryFields from './StoryFields.svelte';
 
   let {
     open = $bindable(false),
@@ -21,16 +20,14 @@
   let hasConnextra = $derived(story?.asA && story?.wantTo);
   const detailViews = [
     { id: 'story', label: 'Story' },
-    { id: 'prototype', label: 'Prototype' },
-    { id: 'fields', label: 'Fields' }
+    { id: 'prototype', label: 'Prototype' }
   ] as const;
-  let activeView = $state<'story' | 'prototype' | 'fields'>('story');
+  let activeView = $state<(typeof detailViews)[number]['id']>('story');
   let showingPrototype = $derived(activeView === 'prototype');
   let viewportHeight = $state(800);
   let headerHeight = $state(60);
   let galleryHeight = $derived(Math.max(48, viewportHeight - headerHeight - 192));
   let detailWidth = $derived.by(() => {
-    if (activeView === 'fields') return 560;
     if (!showingPrototype) return 420;
     const images = normalizePrototypeImages(story?.prototypeImages);
     if (!images.length) return 420;
@@ -80,8 +77,7 @@
         </div>
 
         <Dialog.Description class="sr-only">
-          {activeView === 'fields' ? 'Fields' : showingPrototype ? 'Prototype images' : 'Details'} for
-          user story {story.id}.
+          {showingPrototype ? 'Prototype images' : 'Details'} for user story {story.id}.
         </Dialog.Description>
 
         <div class="flex min-h-0 flex-col justify-center">
@@ -89,8 +85,6 @@
             {#key story.id}
               <PrototypeGallery images={story.prototypeImages} maxHeight={galleryHeight} />
             {/key}
-          {:else if activeView === 'fields'}
-            <StoryFields notes={story.fieldNotes} maxHeight={galleryHeight} />
           {:else if hasConnextra}
             <div class="rounded-sm bg-black/5 px-3.5 py-2.5 text-sm text-cork-700">
               <strong>As a</strong>
