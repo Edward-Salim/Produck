@@ -3,7 +3,7 @@ type Tone = 'neutral' | 'success' | 'warning';
 export type ArtifactLink = { type: 'link'; label: string; href: string };
 export type ArtifactCell =
   | string
-  | ArtifactLink
+  | (ArtifactLink & { additionalLinks?: ArtifactLink[] })
   | { type: 'status'; label: string; tone: Tone }
   | { type: 'condition'; text: string };
 export type ArtifactText = string | (string | ArtifactLink | { type: 'strong'; text: string })[];
@@ -88,7 +88,9 @@ function isText(value: unknown): value is ArtifactText {
 function isCell(value: unknown): value is ArtifactCell {
   return (
     typeof value === 'string' ||
-    isLink(value) ||
+    (isLink(value) &&
+      (!('additionalLinks' in value) ||
+        (Array.isArray(value.additionalLinks) && value.additionalLinks.every(isLink)))) ||
     (isRecord(value) &&
       ((value.type === 'status' && typeof value.label === 'string' && isTone(value.tone)) ||
         (value.type === 'condition' && typeof value.text === 'string' && !!value.text.trim())))

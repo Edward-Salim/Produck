@@ -188,8 +188,8 @@
   {/if}
 {/snippet}
 
-{#snippet links(items: ArtifactLink[])}
-  <ul class="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-sm">
+{#snippet links(items: ArtifactLink[], className = 'mt-3 flex flex-wrap gap-x-4 gap-y-2 text-sm')}
+  <ul class={className}>
     {#each items as item, index (index)}
       <li>{@render link(item)}</li>
     {/each}
@@ -212,6 +212,7 @@
         index > 0 && 'border-s',
         !visual && index === mergeColumn && 'w-[30%]',
         !visual && column === 'Saved in' && 'min-w-56',
+        !visual && column === 'Sources' && 'min-w-48',
         !visual && index === 0 && columns.length > 4 && 'min-w-64',
         !visual && index === 0 && columns.length === 2 && 'w-2/5'
       ]}
@@ -348,7 +349,11 @@
               {@render cellText(cell, requirement, market, isDocument)}
             {/if}
           {:else if cell.type === 'link'}
-            {@render link(cell)}
+            {#if cell.additionalLinks?.length}
+              {@render links([cell, ...cell.additionalLinks], 'space-y-1')}
+            {:else}
+              {@render link(cell)}
+            {/if}
           {:else if cell.type === 'condition'}
             {@render conditionTooltip(cell.text, `${row.key}:${index}`)}
           {:else}
