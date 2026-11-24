@@ -75,6 +75,7 @@ export interface Story {
   wantTo?: string;
   soThat?: string;
   pains?: string[];
+  hasPainPoint?: boolean;
   gains?: string[];
   details?: string[];
   checkedAcs?: StoryCheckedAC[];

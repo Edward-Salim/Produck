@@ -12,6 +12,7 @@
     done = false,
     pic = '',
     picColor = '',
+    hasPainPoint = false,
     actor = undefined,
     onclick = undefined
   }: {
@@ -23,6 +24,7 @@
     done?: boolean;
     pic?: string;
     picColor?: string;
+    hasPainPoint?: boolean;
     actor?: Actor;
     onclick?: (() => void) | undefined;
   } = $props();
@@ -40,6 +42,7 @@
 <button
   type="button"
   class="relative h-20 w-35 shrink-0 overflow-visible rounded-sm outline-none select-none
+		{variant === 'story' && hasPainPoint ? 'border-2 border-red-600' : ''}
 		{variant === 'story'
     ? 'cursor-pointer transition-transform duration-150 hover:scale-105'
     : 'cursor-default'}"

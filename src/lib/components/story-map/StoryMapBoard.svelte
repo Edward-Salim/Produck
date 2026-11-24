@@ -11,8 +11,16 @@
   let {
     data,
     showIds = true,
+    showKanoLines = true,
+    showPainPoints = true,
     linkedStoryId = null
-  }: { data: StoryMapData; showIds?: boolean; linkedStoryId?: string | null } = $props();
+  }: {
+    data: StoryMapData;
+    showIds?: boolean;
+    showKanoLines?: boolean;
+    showPainPoints?: boolean;
+    linkedStoryId?: string | null;
+  } = $props();
 
   let selectedStory: Story | null = $state(null);
   let modalOpen: boolean = $state(false);
@@ -79,6 +87,11 @@
       lineColor: v.lineClass
     })
   );
+  let combinedStories = $derived([
+    ...data.stories['must-have'],
+    ...data.stories.performance,
+    ...data.stories.delighter
+  ]);
 
   /* ---- Helpers ---- */
 
@@ -290,68 +303,112 @@
       <!-- ====== Narrative flow label (overlaid, not a grid row) ====== -->
 
       <!-- ====== ROWS 5+: Kano sections ====== -->
-      {#each kanoSections as section, sIdx (section.key)}
-        {@const baseRow = kanoStartRow + 1 + sIdx * 2}
-        {@const grouped = groupByColumn(data.stories[section.key])}
+      {#if showKanoLines}
+        {#each kanoSections as section, sIdx (section.key)}
+          {@const baseRow = kanoStartRow + 1 + sIdx * 2}
+          {@const grouped = groupByColumn(data.stories[section.key])}
 
-        <!-- Separator row -->
+          <!-- Separator row -->
+          <div
+            data-story-category={section.key}
+            class="flex scroll-mt-24 items-center gap-3 py-1.5"
+            style="grid-column: 1 / -1; grid-row: {baseRow};"
+          >
+            <span
+              class="text-[10px] font-bold tracking-widest whitespace-nowrap uppercase {section.textColor}"
+            >
+              {section.label}
+            </span>
+            <div class="h-0.5 flex-1 rounded-full {section.lineColor}"></div>
+          </div>
+
+          <!-- Group stories by column so multiple stories stack vertically -->
+          {#each columns as col, colIndex (col.taskId ?? col.actId + '-' + colIndex)}
+            {@const stories = grouped.get(colIndex) ?? []}
+            {@const nextSection = kanoSections
+              .slice(sIdx + 1)
+              .find((next) =>
+                data.stories[next.key].some((story) => findColumnIndex(story) === colIndex)
+              )}
+            {#if stories.length > 0 || nextSection}
+              <div
+                data-story-category={section.key}
+                data-story-column={colIndex}
+                class="flex scroll-mt-24 flex-col items-center gap-3"
+                style="grid-column: {colIndex + 2}; grid-row: {baseRow + 1};"
+              >
+                {#each stories as story, storyIdx (story.id)}
+                  <StickyNote
+                    variant="story"
+                    colorIndex={sIdx * 100 + colIndex * 10 + storyIdx}
+                    title={story.title}
+                    id={story.id}
+                    showId={showIds}
+                    done={story.done}
+                    pic={story.pic}
+                    picColor={story.picColor}
+                    hasPainPoint={showPainPoints && story.hasPainPoint}
+                    actor={resolveStoryActor(story.asA, data.actors)}
+                    onclick={() => openStory(story)}
+                  />
+                {/each}
+                {#if nextSection}
+                  <button
+                    type="button"
+                    class="flex size-8 cursor-pointer items-center justify-center text-cork-600 transition-colors outline-none hover:text-cork-900"
+                    aria-label={`Scroll to ${nextSection.label}`}
+                    title={`Scroll to ${nextSection.label}`}
+                    onclick={(event) => scrollToCategory(event, nextSection.key, colIndex)}
+                  >
+                    <ArrowDown class="size-4" />
+                  </button>
+                {/if}
+              </div>
+            {/if}
+          {/each}
+        {/each}
+      {:else}
+        {@const baseRow = kanoStartRow}
+        {@const grouped = groupByColumn(combinedStories)}
+
         <div
-          data-story-category={section.key}
-          class="flex scroll-mt-24 items-center gap-3 py-1.5"
-          style="grid-column: 1 / -1; grid-row: {baseRow};"
+          class="flex h-full items-center justify-center"
+          style="grid-column: 1; grid-row: {baseRow};"
         >
           <span
-            class="text-[10px] font-bold tracking-widest whitespace-nowrap uppercase {section.textColor}"
+            class="text-[9px] font-semibold tracking-widest text-cork-500 uppercase"
+            style="writing-mode: vertical-rl; text-orientation: mixed;">Stories</span
           >
-            {section.label}
-          </span>
-          <div class="h-0.5 flex-1 rounded-full {section.lineColor}"></div>
         </div>
 
-        <!-- Group stories by column so multiple stories stack vertically -->
         {#each columns as col, colIndex (col.taskId ?? col.actId + '-' + colIndex)}
           {@const stories = grouped.get(colIndex) ?? []}
-          {@const nextSection = kanoSections
-            .slice(sIdx + 1)
-            .find((next) =>
-              data.stories[next.key].some((story) => findColumnIndex(story) === colIndex)
-            )}
-          {#if stories.length > 0 || nextSection}
+          {#if stories.length}
             <div
-              data-story-category={section.key}
+              data-story-category="combined"
               data-story-column={colIndex}
               class="flex scroll-mt-24 flex-col items-center gap-3"
-              style="grid-column: {colIndex + 2}; grid-row: {baseRow + 1};"
+              style="grid-column: {colIndex + 2}; grid-row: {baseRow};"
             >
               {#each stories as story, storyIdx (story.id)}
                 <StickyNote
                   variant="story"
-                  colorIndex={sIdx * 100 + colIndex * 10 + storyIdx}
+                  colorIndex={colIndex * 10 + storyIdx}
                   title={story.title}
                   id={story.id}
                   showId={showIds}
                   done={story.done}
                   pic={story.pic}
                   picColor={story.picColor}
+                  hasPainPoint={showPainPoints && story.hasPainPoint}
                   actor={resolveStoryActor(story.asA, data.actors)}
                   onclick={() => openStory(story)}
                 />
               {/each}
-              {#if nextSection}
-                <button
-                  type="button"
-                  class="flex size-8 cursor-pointer items-center justify-center text-cork-600 transition-colors outline-none hover:text-cork-900"
-                  aria-label={`Scroll to ${nextSection.label}`}
-                  title={`Scroll to ${nextSection.label}`}
-                  onclick={(event) => scrollToCategory(event, nextSection.key, colIndex)}
-                >
-                  <ArrowDown class="size-4" />
-                </button>
-              {/if}
             </div>
           {/if}
         {/each}
-      {/each}
+      {/if}
     </div>
   </div>
 </div>
@@ -360,4 +417,5 @@
 <StoryModal
   bind:open={() => modalOpen || !!visibleLinkedStory, setModalOpen}
   story={modalOpen ? selectedStory : (visibleLinkedStory ?? selectedStory)}
+  {showPainPoints}
 />

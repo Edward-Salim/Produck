@@ -16,6 +16,8 @@ export const load: PageServerLoad = async ({ cookies, locals, parent }) => {
   const projectId = Number(context.lastProject);
   const displayName = locals.session?.user?.displayName;
   const showStoryMapIds = cookies.get('story_map_show_ids') !== 'false';
+  const showStoryMapKanoLines = cookies.get('story_map_show_kano_lines') !== 'false';
+  const showStoryMapPainPoints = cookies.get('story_map_show_pain_points') !== 'false';
 
   if (!projectId) {
     return {
@@ -26,6 +28,8 @@ export const load: PageServerLoad = async ({ cookies, locals, parent }) => {
       epicKanbanSyncEnabled: false,
       fintechPicks: [] as { companyId: string }[],
       showStoryMapIds,
+      showStoryMapKanoLines,
+      showStoryMapPainPoints,
       displayName
     };
   }
@@ -53,6 +57,8 @@ export const load: PageServerLoad = async ({ cookies, locals, parent }) => {
     epicKanbanSyncEnabled: activeProject?.epicKanbanSyncEnabled ?? false,
     fintechPicks,
     showStoryMapIds,
+    showStoryMapKanoLines,
+    showStoryMapPainPoints,
     displayName
   };
 };

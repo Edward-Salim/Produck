@@ -2,6 +2,7 @@
   import { navigating, page } from '$app/state';
   import { afterNavigate, invalidateAll, replaceState } from '$app/navigation';
   import { onMount } from 'svelte';
+  import { DropdownMenu } from 'bits-ui';
   import checkdaqLogo from '$lib/assets/projects/logo-checkdaq-transparent.webp';
   import { getFullscreen, toggleFullscreen } from '$lib/stores/fullscreen.svelte.js';
   import { FRAMEWORK_TEMPLATES, type FrameworkTemplate } from '$lib/frameworks/templates.js';
@@ -25,6 +26,7 @@
   import Clock from '@lucide/svelte/icons/clock';
   import Compass from '@lucide/svelte/icons/compass';
   import FlaskConical from '@lucide/svelte/icons/flask-conical';
+  import Frown from '@lucide/svelte/icons/frown';
   import Info from '@lucide/svelte/icons/info';
   import Hash from '@lucide/svelte/icons/hash';
   import Layers3 from '@lucide/svelte/icons/layers';
@@ -34,6 +36,7 @@
   import Plus from '@lucide/svelte/icons/plus';
   import Rocket from '@lucide/svelte/icons/rocket';
   import Search from '@lucide/svelte/icons/search';
+  import SlidersHorizontal from '@lucide/svelte/icons/sliders-horizontal';
 
   import type { FrameworkPageInstance } from './+page.server.js';
   import IdeaBankEditor from '$lib/components/frameworks/IdeaBankEditor.svelte';
@@ -76,6 +79,8 @@
       epicKanbanSyncEnabled: boolean;
       fintechPicks: { companyId: string }[];
       showStoryMapIds: boolean;
+      showStoryMapKanoLines: boolean;
+      showStoryMapPainPoints: boolean;
       currentUser?: { displayName?: string };
     };
   }>();
@@ -126,6 +131,8 @@
   let showHelp = $state(false);
   let showKanbanHistory = $state(false);
   let showStoryMapIds = $derived(data.showStoryMapIds);
+  let showStoryMapKanoLines = $derived(data.showStoryMapKanoLines);
+  let showStoryMapPainPoints = $derived(data.showStoryMapPainPoints);
   let marketSizingCurrency = $state<MarketSizingCurrency>('USD');
   let syncUpdating = $state(false);
   let syncConfirmationOpen = $state(false);
@@ -263,9 +270,19 @@
     marketSizingCurrency = marketSizingCurrency === 'USD' ? 'IDR' : 'USD';
   }
 
-  function toggleStoryMapIds() {
-    showStoryMapIds = !showStoryMapIds;
+  function setStoryMapIds(visible: boolean) {
+    showStoryMapIds = visible;
     document.cookie = `story_map_show_ids=${showStoryMapIds}; path=/frameworks; max-age=31536000; samesite=lax`;
+  }
+
+  function setStoryMapKanoLines(visible: boolean) {
+    showStoryMapKanoLines = visible;
+    document.cookie = `story_map_show_kano_lines=${showStoryMapKanoLines}; path=/frameworks; max-age=31536000; samesite=lax`;
+  }
+
+  function setStoryMapPainPoints(visible: boolean) {
+    showStoryMapPainPoints = visible;
+    document.cookie = `story_map_show_pain_points=${showStoryMapPainPoints}; path=/frameworks; max-age=31536000; samesite=lax`;
   }
 
   // ── Custom editor map ──
@@ -279,6 +296,8 @@
       projectName?: string;
       showHistory?: boolean;
       showIds?: boolean;
+      showKanoLines?: boolean;
+      showPainPoints?: boolean;
       linkedStoryId?: string | null;
       fintechPicks?: { companyId: string }[];
       currency?: MarketSizingCurrency;
@@ -580,16 +599,86 @@
       class={['grid w-full auto-cols-fr grid-flow-col gap-2', standalone && `${panelClass} p-4`]}
     >
       {#if selectedTemplate.id === 'story-map'}
-        <button
-          type="button"
-          class={showStoryMapIds ? activeArtifactControlClass : neutralArtifactControlClass}
-          aria-label={showStoryMapIds ? 'Hide IDs' : 'Show IDs'}
-          aria-pressed={showStoryMapIds}
-          title={showStoryMapIds ? 'Hide IDs' : 'Show IDs'}
-          onclick={toggleStoryMapIds}
-        >
-          <Hash class="size-3.5" />
-        </button>
+        <DropdownMenu.Root>
+          <DropdownMenu.Trigger
+            class={showStoryMapIds && showStoryMapKanoLines && showStoryMapPainPoints
+              ? activeArtifactControlClass
+              : neutralArtifactControlClass}
+            aria-label="Story map options"
+            title="Story map options"
+          >
+            <SlidersHorizontal class="size-3.5" />
+          </DropdownMenu.Trigger>
+          <DropdownMenu.Portal>
+            <DropdownMenu.Content
+              side="bottom"
+              align="end"
+              sideOffset={6}
+              class="z-50 min-w-56 rounded-lg border border-cork-300 bg-cork-50 p-1.5 shadow-md"
+            >
+              <DropdownMenu.CheckboxItem
+                checked={showStoryMapIds}
+                onCheckedChange={setStoryMapIds}
+                class="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-xs text-cork-700 outline-none hover:bg-cork-200/50 data-highlighted:bg-cork-200/50"
+              >
+                <Hash class="size-3.5 shrink-0 text-cork-500" aria-hidden="true" />
+                <span>Story IDs</span>
+                <span
+                  class="ml-auto flex h-4 w-7 shrink-0 items-center rounded-full p-0.5 transition-colors {showStoryMapIds
+                    ? 'bg-cork-700'
+                    : 'bg-cork-300'}"
+                  aria-hidden="true"
+                >
+                  <span
+                    class="size-3 rounded-full bg-white shadow-sm transition-transform {showStoryMapIds
+                      ? 'translate-x-3'
+                      : 'translate-x-0'}"
+                  ></span>
+                </span>
+              </DropdownMenu.CheckboxItem>
+              <DropdownMenu.CheckboxItem
+                checked={showStoryMapKanoLines}
+                onCheckedChange={setStoryMapKanoLines}
+                class="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-xs text-cork-700 outline-none hover:bg-cork-200/50 data-highlighted:bg-cork-200/50"
+              >
+                <Layers3 class="size-3.5 shrink-0 text-cork-500" aria-hidden="true" />
+                <span>Kano lines</span>
+                <span
+                  class="ml-auto flex h-4 w-7 shrink-0 items-center rounded-full p-0.5 transition-colors {showStoryMapKanoLines
+                    ? 'bg-cork-700'
+                    : 'bg-cork-300'}"
+                  aria-hidden="true"
+                >
+                  <span
+                    class="size-3 rounded-full bg-white shadow-sm transition-transform {showStoryMapKanoLines
+                      ? 'translate-x-3'
+                      : 'translate-x-0'}"
+                  ></span>
+                </span>
+              </DropdownMenu.CheckboxItem>
+              <DropdownMenu.CheckboxItem
+                checked={showStoryMapPainPoints}
+                onCheckedChange={setStoryMapPainPoints}
+                class="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-xs text-cork-700 outline-none hover:bg-cork-200/50 data-highlighted:bg-cork-200/50"
+              >
+                <Frown class="size-3.5 shrink-0 text-cork-500" aria-hidden="true" />
+                <span>Pain points</span>
+                <span
+                  class="ml-auto flex h-4 w-7 shrink-0 items-center rounded-full p-0.5 transition-colors {showStoryMapPainPoints
+                    ? 'bg-cork-700'
+                    : 'bg-cork-300'}"
+                  aria-hidden="true"
+                >
+                  <span
+                    class="size-3 rounded-full bg-white shadow-sm transition-transform {showStoryMapPainPoints
+                      ? 'translate-x-3'
+                      : 'translate-x-0'}"
+                  ></span>
+                </span>
+              </DropdownMenu.CheckboxItem>
+            </DropdownMenu.Content>
+          </DropdownMenu.Portal>
+        </DropdownMenu.Root>
       {/if}
       {#if selectedTemplate.id === ROADMAP_TEMPLATE_ID}
         <button
@@ -719,6 +808,8 @@
                 currency={marketSizingCurrency}
                 bind:showHistory={showKanbanHistory}
                 showIds={showStoryMapIds}
+                showKanoLines={showStoryMapKanoLines}
+                showPainPoints={showStoryMapPainPoints}
                 {linkedStoryId}
               />
             {/if}
@@ -847,6 +938,8 @@
                   currency={marketSizingCurrency}
                   bind:showHistory={showKanbanHistory}
                   showIds={showStoryMapIds}
+                  showKanoLines={showStoryMapKanoLines}
+                  showPainPoints={showStoryMapPainPoints}
                   {linkedStoryId}
                 />
               </div>

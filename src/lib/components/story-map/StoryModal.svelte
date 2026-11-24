@@ -5,22 +5,30 @@
   import { PIC_COLORS, PIC_DEFAULT_HEX } from '$lib/constants/colors.js';
   import { normalizePrototypeImages, prototypeImageOverview } from '$lib/frameworks/prototypes.js';
   import PrototypeGallery from './PrototypeGallery.svelte';
+  import Frown from '@lucide/svelte/icons/frown';
 
   let {
     open = $bindable(false),
-    story
+    story,
+    showPainPoints = true
   }: {
     open: boolean;
     story: Story | null;
+    showPainPoints?: boolean;
   } = $props();
 
   let picHex = $derived(
     story ? (PIC_COLORS[story.picColor]?.hex ?? PIC_DEFAULT_HEX) : PIC_DEFAULT_HEX
   );
   let hasConnextra = $derived(story?.asA && story?.wantTo);
+  let painNotes = $derived(
+    (showPainPoints ? (story?.details ?? []) : [])
+      .filter((detail) => detail.startsWith('Pain point:'))
+      .map((detail) => detail.replace(/^Pain point:\s*/, ''))
+  );
   const detailViews = [
     { id: 'story', label: 'Story' },
-    { id: 'prototype', label: 'Prototype' }
+    { id: 'prototype', label: 'Screenshots' }
   ] as const;
   let activeView = $state<(typeof detailViews)[number]['id']>('story');
   let showingPrototype = $derived(activeView === 'prototype');
@@ -77,26 +85,37 @@
         </div>
 
         <Dialog.Description class="sr-only">
-          {showingPrototype ? 'Prototype images' : 'Details'} for user story {story.id}.
+          {showingPrototype ? 'Screenshots' : 'Details'} for user story {story.id}.
         </Dialog.Description>
 
-        <div class="flex min-h-0 flex-col justify-center">
+        <div class="flex min-h-0 flex-col justify-center gap-3">
           {#if showingPrototype}
             {#key story.id}
               <PrototypeGallery images={story.prototypeImages} maxHeight={galleryHeight} />
             {/key}
-          {:else if hasConnextra}
-            <div class="rounded-sm bg-black/5 px-3.5 py-2.5 text-sm text-cork-700">
-              <strong>As a</strong>
-              {story.asA},
-              <strong>I want to</strong>
-              {story.wantTo}
-              {#if story.soThat}
-                <strong>so that</strong> {story.soThat}
-              {/if}
-            </div>
           {:else}
-            <p class="text-center text-xs text-cork-500">No details yet</p>
+            {#if hasConnextra}
+              <div class="rounded-sm bg-black/5 px-3.5 py-2.5 text-sm text-cork-700">
+                <strong>As a</strong>
+                {story.asA},
+                <strong>I want to</strong>
+                {story.wantTo}
+                {#if story.soThat}
+                  <strong>so that</strong> {story.soThat}
+                {/if}
+              </div>
+            {/if}
+            {#each painNotes as painNote, index (index)}
+              <div
+                class="flex items-start gap-2 rounded-sm bg-red-500/10 px-3.5 py-2.5 text-sm text-red-700"
+              >
+                <Frown class="mt-0.5 size-4 shrink-0 text-red-700" aria-hidden="true" />
+                <p>{painNote}</p>
+              </div>
+            {/each}
+            {#if !hasConnextra && !painNotes.length}
+              <p class="text-center text-xs text-cork-500">No details yet</p>
+            {/if}
           {/if}
         </div>
       </div>
