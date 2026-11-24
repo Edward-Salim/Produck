@@ -1,11 +1,23 @@
 type Tone = 'neutral' | 'success' | 'warning';
 
 export type ArtifactLink = { type: 'link'; label: string; href: string };
+export type ArtifactFieldType =
+  | 'address'
+  | 'boolean'
+  | 'choice'
+  | 'date'
+  | 'document'
+  | 'email'
+  | 'number'
+  | 'phone'
+  | 'text'
+  | 'url';
 export type ArtifactCell =
   | string
   | (ArtifactLink & { additionalLinks?: ArtifactLink[] })
   | { type: 'status'; label: string; tone: Tone }
-  | { type: 'condition'; text: string };
+  | { type: 'condition'; text: string }
+  | { type: 'field-type'; value: ArtifactFieldType };
 export type ArtifactText = string | (string | ArtifactLink | { type: 'strong'; text: string })[];
 export type ArtifactColumnIcon = 'wallex-direct-sign-up' | 'checkdaq' | 'wallex-partner-api';
 export type ArtifactColumn =
@@ -67,6 +79,21 @@ function isTone(value: unknown): value is Tone {
   return value === 'neutral' || value === 'success' || value === 'warning';
 }
 
+function isArtifactFieldType(value: unknown): value is ArtifactFieldType {
+  return (
+    value === 'address' ||
+    value === 'boolean' ||
+    value === 'choice' ||
+    value === 'date' ||
+    value === 'document' ||
+    value === 'email' ||
+    value === 'number' ||
+    value === 'phone' ||
+    value === 'text' ||
+    value === 'url'
+  );
+}
+
 function isLink(value: unknown): value is ArtifactLink {
   return (
     isRecord(value) &&
@@ -98,7 +125,8 @@ function isCell(value: unknown): value is ArtifactCell {
         (Array.isArray(value.additionalLinks) && value.additionalLinks.every(isLink)))) ||
     (isRecord(value) &&
       ((value.type === 'status' && typeof value.label === 'string' && isTone(value.tone)) ||
-        (value.type === 'condition' && typeof value.text === 'string' && !!value.text.trim())))
+        (value.type === 'condition' && typeof value.text === 'string' && !!value.text.trim()) ||
+        (value.type === 'field-type' && isArtifactFieldType(value.value))))
   );
 }
 

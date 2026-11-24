@@ -1,10 +1,17 @@
 <script lang="ts">
   import ChevronDown from '@lucide/svelte/icons/chevron-down';
+  import CalendarDays from '@lucide/svelte/icons/calendar-days';
   import CircleCheck from '@lucide/svelte/icons/circle-check';
   import FileText from '@lucide/svelte/icons/file-text';
   import Globe from '@lucide/svelte/icons/globe';
+  import Hash from '@lucide/svelte/icons/hash';
   import Info from '@lucide/svelte/icons/info';
+  import List from '@lucide/svelte/icons/list';
+  import Mail from '@lucide/svelte/icons/mail';
+  import MapPin from '@lucide/svelte/icons/map-pin';
+  import Phone from '@lucide/svelte/icons/phone';
   import TriangleAlert from '@lucide/svelte/icons/triangle-alert';
+  import Type from '@lucide/svelte/icons/type';
   import { Tooltip } from 'bits-ui';
   import { HK, ID, MY, SG } from 'country-flag-icons/string/3x2';
   import { SvelteSet } from 'svelte/reactivity';
@@ -26,6 +33,7 @@
     type ArtifactCell,
     type ArtifactColumn,
     type ArtifactColumnIcon,
+    type ArtifactFieldType,
     type ArtifactLink,
     type ArtifactTableRow,
     type ArtifactText
@@ -148,6 +156,30 @@
     'wallex-direct-sign-up': wallexDirectSignupLogo,
     checkdaq: checkdaqLogo,
     'wallex-partner-api': wallexPartnerApiLogo
+  };
+  const fieldTypeIcons = {
+    address: MapPin,
+    boolean: CircleCheck,
+    choice: List,
+    date: CalendarDays,
+    document: FileText,
+    email: Mail,
+    number: Hash,
+    phone: Phone,
+    text: Type,
+    url: Globe
+  };
+  const fieldTypeLabels: Record<ArtifactFieldType, string> = {
+    address: 'Address',
+    boolean: 'Yes or no',
+    choice: 'Choice',
+    date: 'Date',
+    document: 'Document',
+    email: 'Email',
+    number: 'Number',
+    phone: 'Phone',
+    text: 'Text',
+    url: 'Website'
   };
   const linkBaseClass =
     'font-medium wrap-anywhere text-[#3b5d80] underline-offset-3 hover:text-[#294866] focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-offset-3';
@@ -383,6 +415,16 @@
             {/if}
           {:else if cell.type === 'condition'}
             {@render conditionTooltip(cell.text, `${row.key}:${index}`)}
+          {:else if cell.type === 'field-type'}
+            {@const FieldTypeIcon = fieldTypeIcons[cell.value]}
+            <span
+              class="inline-flex size-5 items-center justify-center text-cork-600"
+              role="img"
+              aria-label={fieldTypeLabels[cell.value]}
+              title={fieldTypeLabels[cell.value]}
+            >
+              <FieldTypeIcon class="size-4" aria-hidden="true" />
+            </span>
           {:else}
             <span
               class="inline-flex rounded-sm px-2 py-0.5 text-xs font-medium {badgeClass[cell.tone]}"
