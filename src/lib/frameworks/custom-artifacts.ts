@@ -7,6 +7,8 @@ export type ArtifactCell =
   | { type: 'status'; label: string; tone: Tone }
   | { type: 'condition'; text: string };
 export type ArtifactText = string | (string | ArtifactLink | { type: 'strong'; text: string })[];
+export type ArtifactColumnIcon = 'wallex-direct-sign-up' | 'checkdaq' | 'wallex-partner-api';
+export type ArtifactColumn = string | { label: string; icon?: ArtifactColumnIcon };
 export type ArtifactTableRow =
   | ArtifactCell[]
   | {
@@ -34,10 +36,11 @@ type ContentBlock =
   | { type: 'list'; items: ArtifactText[]; ordered?: boolean }
   | ({
       type: 'table';
-      columns: string[];
+      columns: ArtifactColumn[];
       compact?: boolean;
       mergeColumn?: number;
       bulletedColumn?: number;
+      bulletedColumns?: number[];
       showAttributeCount?: boolean;
     } & TableRows)
   | { type: 'gallery'; images: unknown[] };
@@ -94,6 +97,22 @@ function isCell(value: unknown): value is ArtifactCell {
     (isRecord(value) &&
       ((value.type === 'status' && typeof value.label === 'string' && isTone(value.tone)) ||
         (value.type === 'condition' && typeof value.text === 'string' && !!value.text.trim())))
+  );
+}
+
+function isArtifactColumnIcon(value: unknown): value is ArtifactColumnIcon {
+  return (
+    value === 'wallex-direct-sign-up' || value === 'checkdaq' || value === 'wallex-partner-api'
+  );
+}
+
+function isArtifactColumn(value: unknown): value is ArtifactColumn {
+  return (
+    (typeof value === 'string' && !!value.trim()) ||
+    (isRecord(value) &&
+      typeof value.label === 'string' &&
+      !!value.label.trim() &&
+      (value.icon === undefined || isArtifactColumnIcon(value.icon)))
   );
 }
 
@@ -164,25 +183,26 @@ function isBlock(value: unknown): value is UnparsedBlock {
       return Array.isArray(value.images);
     case 'table': {
       const columns = value.columns;
+      const bulletedColumns = value.bulletedColumns;
       if (
         (value.compact !== undefined && typeof value.compact !== 'boolean') ||
         (value.showAttributeCount !== undefined && typeof value.showAttributeCount !== 'boolean') ||
         !Array.isArray(columns) ||
         columns.length === 0 ||
-        !columns.every((column) => typeof column === 'string' && column.trim())
+        !columns.every(isArtifactColumn)
       )
         return false;
 
       const dataColumns = [value.mergeColumn, value.bulletedColumn];
+      const isDataColumn = (column: unknown) =>
+        typeof column === 'number' &&
+        Number.isInteger(column) &&
+        column >= 1 &&
+        column < columns.length;
       if (
-        dataColumns.some(
-          (column) =>
-            column !== undefined &&
-            (typeof column !== 'number' ||
-              !Number.isInteger(column) ||
-              column < 1 ||
-              column >= columns.length)
-        )
+        dataColumns.some((column) => column !== undefined && !isDataColumn(column)) ||
+        (bulletedColumns !== undefined &&
+          (!Array.isArray(bulletedColumns) || !bulletedColumns.every(isDataColumn)))
       )
         return false;
 

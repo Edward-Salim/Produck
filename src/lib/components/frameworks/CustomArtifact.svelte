@@ -13,6 +13,9 @@
   import produckIcon from '$lib/assets/brand/favicon.png';
   import sharepointIcon from '$lib/assets/brand/sharepoint-icon.png';
   import wallexIcon from '$lib/assets/brand/wallex-icon.png';
+  import checkdaqLogo from '$lib/assets/projects/logo-checkdaq-transparent.webp';
+  import wallexDirectSignupLogo from '$lib/assets/projects/wallex-direct-sign-up.png';
+  import wallexPartnerApiLogo from '$lib/assets/projects/wallex-partner-api.png';
   import PrototypeGallery from '$lib/components/story-map/PrototypeGallery.svelte';
   import TooltipContent from '$lib/components/ui/tooltip/tooltip-content.svelte';
   import {
@@ -21,6 +24,8 @@
     parseCustomArtifact,
     type ArtifactBlock,
     type ArtifactCell,
+    type ArtifactColumn,
+    type ArtifactColumnIcon,
     type ArtifactLink,
     type ArtifactTableRow,
     type ArtifactText
@@ -139,6 +144,11 @@
   };
   const surfaceClass = 'rounded-sm shadow-[0_1px_3px_rgba(57,45,27,0.045)]';
   const paperSurfaceClass = `${surfaceClass} bg-[#fffcf6]`;
+  const columnHeaderIcons: Record<ArtifactColumnIcon, string> = {
+    'wallex-direct-sign-up': wallexDirectSignupLogo,
+    checkdaq: checkdaqLogo,
+    'wallex-partner-api': wallexPartnerApiLogo
+  };
   const linkBaseClass =
     'font-medium wrap-anywhere text-[#3b5d80] underline-offset-3 hover:text-[#294866] focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-offset-3';
   const calloutStyles = {
@@ -199,27 +209,39 @@
 {/snippet}
 
 {#snippet columnLabels(
-  columns: string[],
+  columns: ArtifactColumn[],
   compact: boolean | undefined,
   mergeColumn: number | undefined,
   visual = false
 )}
   {#each columns as column, index (index)}
+    {@const label = typeof column === 'string' ? column : column.label}
+    {@const icon =
+      typeof column === 'string' || !column.icon ? undefined : columnHeaderIcons[column.icon]}
     <svelte:element
       this={visual ? 'div' : 'th'}
       scope={visual ? undefined : 'col'}
       class={[
-        'border-cork-300/75 px-3 align-top font-semibold whitespace-nowrap sm:px-4',
+        'border-cork-300/75 px-3 align-top font-semibold sm:px-4',
         compact ? 'py-1' : 'py-2.5',
+        icon ? 'text-center whitespace-normal' : 'whitespace-nowrap',
         index > 0 && 'border-s',
         !visual && index === mergeColumn && 'w-[30%]',
-        !visual && column === 'Saved in' && 'min-w-56',
-        !visual && column === 'Sources' && 'min-w-48',
+        !visual && label === 'Saved in' && 'min-w-56',
+        !visual && label === 'Sources' && 'min-w-48',
         !visual && index === 0 && columns.length > 4 && 'min-w-64',
-        !visual && index === 0 && columns.length === 2 && 'w-2/5'
+        !visual && index === 0 && columns.length === 2 && 'w-2/5',
+        icon && 'min-w-28'
       ]}
     >
-      {column}
+      {#if icon}
+        <span class="flex min-w-28 flex-col items-center gap-1">
+          <img src={icon} alt="" class="h-5 w-28 object-contain" />
+          <span class="leading-tight">{label}</span>
+        </span>
+      {:else}
+        {label}
+      {/if}
     </svelte:element>
   {/each}
 {/snippet}
@@ -292,7 +314,7 @@
   rowsBelow: number,
   mergeColumn: number | undefined,
   mergeSpan: number,
-  bulletedColumn: number | undefined
+  bulletedColumns: number[] | undefined
 )}
   <tr>
     {#each row.cells as cell, index (index)}
@@ -309,7 +331,7 @@
           title={requirement}
           class={[
             'border-cork-300/75 pe-3 wrap-anywhere sm:pe-4',
-            index === bulletedColumn ? 'align-middle' : 'align-top',
+            bulletedColumns?.includes(index) ? 'align-middle' : 'align-top',
             index > 0 && 'border-s',
             rowsBelow >= span && 'border-b',
             index === mergeColumn && 'min-w-48',
@@ -339,7 +361,7 @@
                   aria-hidden="true"
                 />
               </button>
-            {:else if index === bulletedColumn && cell.trim() && cell !== '?'}
+            {:else if bulletedColumns?.includes(index) && cell.trim() && cell !== '?'}
               <ul class="list-disc ps-4">
                 {#each cell
                   .split('\n')
@@ -437,6 +459,10 @@
 
           {#if block.type === 'table'}
             {@const groups = block.rowGroups ?? [{ title: undefined, rows: block.rows }]}
+            {@const bulletedColumns = [
+              ...(block.bulletedColumns ?? []),
+              ...(block.bulletedColumn === undefined ? [] : [block.bulletedColumn])
+            ]}
             {#if block.showAttributeCount}
               {@const count = groups.reduce((total, group) => total + group.rows.length, 0)}
               <p class="mb-2 text-sm text-cork-700">
@@ -519,7 +545,7 @@
                           rows.length - rowIndex - 1,
                           block.mergeColumn,
                           spans?.[rowIndex] ?? 1,
-                          block.bulletedColumn
+                          bulletedColumns.length ? bulletedColumns : undefined
                         )}
                       {/each}
                     </tbody>
