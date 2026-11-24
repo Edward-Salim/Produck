@@ -1,7 +1,7 @@
 <script lang="ts">
   import Image from '@lucide/svelte/icons/image';
   import { SvelteSet } from 'svelte/reactivity';
-  import { prototypeImageGroups, prototypeImageOverview } from '$lib/frameworks/prototypes.js';
+  import { prototypeImageFrame, prototypeImageGroups } from '$lib/frameworks/prototypes.js';
 
   let { images, maxHeight = 600 }: { images: unknown; maxHeight?: number | null } = $props();
   let groups = $derived(prototypeImageGroups(images));
@@ -26,7 +26,7 @@
               : ''}"
           >
             {#each group.images as image, imageIndex (image.id)}
-              {@const frame = prototypeImageOverview(image)}
+              {@const frame = prototypeImageFrame(image)}
               <figure
                 class="mx-auto w-full min-w-0 {group.images.length > 1
                   ? 'sm:col-span-2'
@@ -37,7 +37,10 @@
                   : ''}"
                 style:max-width={frame.maxWidth}
               >
-                <div class="relative overflow-hidden rounded-sm bg-black/5">
+                <div
+                  class="relative overflow-hidden rounded-sm bg-black/5"
+                  style:aspect-ratio={frame.aspectRatio}
+                >
                   {#if failed.has(image.id)}
                     <p class="p-6 text-center text-xs text-cork-600">Image unavailable</p>
                   {:else}
@@ -53,6 +56,7 @@
                       width={image.width}
                       height={image.height}
                       class="relative block h-auto w-full"
+                      style={frame.imageStyle}
                       loading="lazy"
                       onload={() => loaded.add(image.id)}
                       onerror={() => failed.add(image.id)}

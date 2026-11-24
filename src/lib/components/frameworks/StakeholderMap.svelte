@@ -1,10 +1,11 @@
 <script lang="ts">
-  import { ID, SG } from 'country-flag-icons/string/3x2';
+  import { ID, SG, VN } from 'country-flag-icons/string/3x2';
   import type { FrameworkInstance } from './types.js';
 
   const flags = {
     ID: { label: 'Indonesia', src: 'data:image/svg+xml,' + encodeURIComponent(ID) },
-    SG: { label: 'Singapore', src: 'data:image/svg+xml,' + encodeURIComponent(SG) }
+    SG: { label: 'Singapore', src: 'data:image/svg+xml,' + encodeURIComponent(SG) },
+    VN: { label: 'Vietnam', src: 'data:image/svg+xml,' + encodeURIComponent(VN) }
   };
   type Stakeholder = {
     name: string;

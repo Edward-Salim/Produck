@@ -3,7 +3,7 @@
   import { Badge } from '$lib/components/ui/badge/index.js';
   import type { Story } from '$lib/types/story-map.js';
   import { PIC_COLORS, PIC_DEFAULT_HEX } from '$lib/constants/colors.js';
-  import { normalizePrototypeImages, prototypeImageOverview } from '$lib/frameworks/prototypes.js';
+  import { normalizePrototypeImages, prototypeImageFrame } from '$lib/frameworks/prototypes.js';
   import PrototypeGallery from './PrototypeGallery.svelte';
   import Frown from '@lucide/svelte/icons/frown';
 
@@ -40,7 +40,7 @@
     const images = normalizePrototypeImages(story?.prototypeImages);
     if (!images.length) return 420;
     if (images.length > 1) return 1100;
-    const frame = prototypeImageOverview(images[0]);
+    const frame = prototypeImageFrame(images[0]);
     const naturalWidth = Number.parseFloat(frame.maxWidth ?? '672');
     const ratio = frame.aspectRatio ?? (images[0].width ?? 16) / (images[0].height ?? 9);
     const imageWidth = Math.min(naturalWidth, Math.max(1, galleryHeight - 40) * ratio);
