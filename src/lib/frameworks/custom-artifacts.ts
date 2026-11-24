@@ -8,7 +8,9 @@ export type ArtifactCell =
   | { type: 'condition'; text: string };
 export type ArtifactText = string | (string | ArtifactLink | { type: 'strong'; text: string })[];
 export type ArtifactColumnIcon = 'wallex-direct-sign-up' | 'checkdaq' | 'wallex-partner-api';
-export type ArtifactColumn = string | { label: string; icon?: ArtifactColumnIcon };
+export type ArtifactColumn =
+  | string
+  | { label: string; icon?: ArtifactColumnIcon; description?: string };
 export type ArtifactTableRow =
   | ArtifactCell[]
   | {
@@ -112,7 +114,9 @@ function isArtifactColumn(value: unknown): value is ArtifactColumn {
     (isRecord(value) &&
       typeof value.label === 'string' &&
       !!value.label.trim() &&
-      (value.icon === undefined || isArtifactColumnIcon(value.icon)))
+      (value.icon === undefined || isArtifactColumnIcon(value.icon)) &&
+      (value.description === undefined ||
+        (typeof value.description === 'string' && !!value.description.trim())))
   );
 }
 

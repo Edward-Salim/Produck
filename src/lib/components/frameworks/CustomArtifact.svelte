@@ -216,11 +216,14 @@
 )}
   {#each columns as column, index (index)}
     {@const label = typeof column === 'string' ? column : column.label}
+    {@const description = typeof column === 'string' ? undefined : column.description}
     {@const icon =
       typeof column === 'string' || !column.icon ? undefined : columnHeaderIcons[column.icon]}
     <svelte:element
       this={visual ? 'div' : 'th'}
       scope={visual ? undefined : 'col'}
+      title={description}
+      aria-description={visual ? undefined : description}
       class={[
         'border-cork-300/75 px-3 align-top font-semibold sm:px-4',
         compact ? 'py-1' : 'py-2.5',
