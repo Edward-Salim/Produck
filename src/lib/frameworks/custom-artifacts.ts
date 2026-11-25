@@ -53,6 +53,7 @@ type ContentBlock =
       columns: ArtifactColumn[];
       compact?: boolean;
       mergeColumn?: number;
+      mergeColumns?: number[];
       bulletedColumn?: number;
       bulletedColumns?: number[];
       showAttributeCount?: boolean;
@@ -237,6 +238,10 @@ function isBlock(value: unknown): value is UnparsedBlock {
         column < columns.length;
       if (
         (value.mergeColumn !== undefined && !isMergeColumn(value.mergeColumn)) ||
+        (value.mergeColumns !== undefined &&
+          (!Array.isArray(value.mergeColumns) ||
+            !value.mergeColumns.every(isMergeColumn) ||
+            new Set(value.mergeColumns).size !== value.mergeColumns.length)) ||
         (value.bulletedColumn !== undefined && !isDataColumn(value.bulletedColumn)) ||
         (bulletedColumns !== undefined &&
           (!Array.isArray(bulletedColumns) || !bulletedColumns.every(isDataColumn)))
@@ -296,26 +301,36 @@ export function parseCustomArtifact(source: string | undefined): ArtifactDocumen
   }
 }
 
-export function artifactColumnSpans(rows: ArtifactCell[][], column: number): number[] {
-  const spans = rows.map(() => 1);
-  let start = 0;
-  for (let index = 1; index < rows.length; index++) {
-    const value = rows[index][column];
-    const startValue = rows[start][column];
-    const matchesStart =
-      (typeof value === 'string' &&
+export function artifactColumnSpans(rows: ArtifactCell[][], column: number): number[];
+export function artifactColumnSpans(rows: ArtifactCell[][], columns: number[]): number[][];
+export function artifactColumnSpans(
+  rows: ArtifactCell[][],
+  columns: number | number[]
+): number[] | number[][] {
+  const mergeColumns = typeof columns === 'number' ? [columns] : columns;
+  const spans = rows.map(() => mergeColumns.map(() => 1));
+
+  for (const [mergeIndex, column] of mergeColumns.entries()) {
+    let start = 0;
+    for (let index = 1; index < rows.length; index++) {
+      const value = rows[index][column];
+      const startValue = rows[start][column];
+      const matchesStart =
+        typeof value === 'string' &&
         typeof startValue === 'string' &&
         !!value.trim() &&
         value !== '?' &&
-        value === startValue);
-    if (matchesStart) {
-      spans[start]++;
-      spans[index] = 0;
-    } else {
-      start = index;
+        value === startValue;
+      if (matchesStart) {
+        spans[start][mergeIndex]++;
+        spans[index][mergeIndex] = 0;
+      } else {
+        start = index;
+      }
     }
   }
-  return spans;
+
+  return typeof columns === 'number' ? spans.map((row) => row[0] ?? 1) : spans;
 }
 
 export function artifactLinkHref(href: string): string | undefined {

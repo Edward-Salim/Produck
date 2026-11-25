@@ -128,7 +128,10 @@
         table.style.setProperty('table-layout', 'fixed');
         table.style.setProperty('width', `${tableWidth}px`);
         widths.forEach((width, index) => columns[index]?.style.setProperty('width', `${width}px`));
-        header.style.setProperty('--table-header-columns', widths.map((width) => `${width}px`).join(' '));
+        header.style.setProperty(
+          '--table-header-columns',
+          widths.map((width) => `${width}px`).join(' ')
+        );
         scroller.tabIndex = 0;
       } else if (layout === 'fit' && previousLayout !== 'fit') {
         for (const column of columns) column.style.removeProperty('width');
@@ -277,10 +280,11 @@
 {#snippet columnLabels(
   columns: ArtifactColumn[],
   compact: boolean | undefined,
-  mergeColumn: number | undefined,
+  mergeColumns: number[],
   visual = false
 )}
   {#each columns as column, index (index)}
+    {@const mergeIndex = mergeColumns.indexOf(index)}
     {@const label = typeof column === 'string' ? column : column.label}
     {@const description = typeof column === 'string' ? undefined : column.description}
     {@const icon =
@@ -295,10 +299,12 @@
         icon ? 'text-center whitespace-normal' : 'whitespace-nowrap',
         visual && 'flex items-center',
         index > 0 && 'border-s',
-        !visual && index === mergeColumn && 'w-[30%]',
+        !visual && mergeColumns.length === 1 && mergeIndex >= 0 && 'w-[30%]',
+        !visual && mergeColumns.length > 1 && mergeIndex === 0 && 'w-[18%]',
+        !visual && mergeColumns.length > 1 && mergeIndex > 0 && 'w-[28%]',
         !visual && label === 'Saved in' && 'min-w-56',
         !visual && label === 'Sources' && 'min-w-48',
-        !visual && index === 0 && columns.length > 4 && 'min-w-64',
+        !visual && index === 0 && columns.length > 4 && mergeIndex !== 0 && 'min-w-64',
         !visual && index === 0 && columns.length === 2 && 'w-2/5',
         icon && 'min-w-28'
       ]}
@@ -397,13 +403,14 @@
   row: DisplayRow,
   compact: boolean | undefined,
   rowsBelow: number,
-  mergeColumn: number | undefined,
-  mergeSpan: number,
+  mergeColumns: number[],
+  mergeSpans: number[],
   bulletedColumns: number[] | undefined
 )}
   <tr>
     {#each row.cells as cell, index (index)}
-      {@const span = index === mergeColumn ? mergeSpan : 1}
+      {@const mergeIndex = mergeColumns.indexOf(index)}
+      {@const span = mergeIndex < 0 ? 1 : (mergeSpans[mergeIndex] ?? 1)}
       {#if span > 0}
         {@const requirement =
           index === 0 && row.requiredFor ? `Required for ${row.requiredFor}` : undefined}
@@ -418,7 +425,9 @@
             bulletedColumns?.includes(index) ? 'align-middle' : 'align-top',
             index > 0 && 'border-s',
             rowsBelow >= span && 'border-b',
-            index === mergeColumn && 'min-w-48',
+            mergeIndex === 0 && mergeColumns.length > 1 && 'min-w-32',
+            mergeIndex > 0 && 'min-w-48',
+            mergeIndex === 0 && mergeColumns.length === 1 && 'min-w-48',
             index === 0 && row.inset ? 'ps-12 sm:ps-14' : 'ps-3 sm:ps-4',
             compact ? 'py-0.5' : 'py-3',
             compact && index > 0 && cell === '?' && 'bg-[#f9f0db]',
@@ -553,6 +562,12 @@
 
           {#if block.type === 'table'}
             {@const groups = block.rowGroups ?? [{ title: undefined, rows: block.rows }]}
+            {@const mergeColumns = [
+              ...new Set([
+                ...(block.mergeColumns ?? []),
+                ...(block.mergeColumn === undefined ? [] : [block.mergeColumn])
+              ])
+            ]}
             {@const bulletedColumns = [
               ...(block.bulletedColumns ?? []),
               ...(block.bulletedColumn === undefined ? [] : [block.bulletedColumn])
@@ -582,7 +597,7 @@
                 ]}
               >
                 <div class="brief-table-labels">
-                  {@render columnLabels(block.columns, block.compact, block.mergeColumn, true)}
+                  {@render columnLabels(block.columns, block.compact, mergeColumns, true)}
                 </div>
               </div>
               <div
@@ -605,7 +620,7 @@
                   </colgroup>
                   <thead class="z-10 bg-cork-200 text-cork-900">
                     <tr>
-                      {@render columnLabels(block.columns, block.compact, block.mergeColumn)}
+                      {@render columnLabels(block.columns, block.compact, mergeColumns)}
                     </tr>
                   </thead>
                   {#each groups as group, groupIndex (groupIndex)}
@@ -614,11 +629,11 @@
                       `${instance.id}:${block.id}:${groupIndex}`
                     )}
                     {@const spans =
-                      block.mergeColumn === undefined
+                      mergeColumns.length === 0
                         ? undefined
                         : artifactColumnSpans(
                             rows.map((row) => row.cells),
-                            block.mergeColumn
+                            mergeColumns
                           )}
                     <tbody class="text-cork-700">
                       {#if group.title}
@@ -642,8 +657,8 @@
                           row,
                           block.compact,
                           rows.length - rowIndex - 1,
-                          block.mergeColumn,
-                          spans?.[rowIndex] ?? 1,
+                          mergeColumns,
+                          spans?.[rowIndex] ?? [],
                           bulletedColumns.length ? bulletedColumns : undefined
                         )}
                       {/each}
