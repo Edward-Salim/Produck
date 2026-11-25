@@ -67,7 +67,6 @@
     inset?: boolean;
     requiredFor?: string;
     market?: string;
-    kind?: 'document';
   };
 
   function visibleTableRows(rows: ArtifactTableRow[], groupKey: string): DisplayRow[] {
@@ -80,8 +79,7 @@
         cells: row.cells,
         optionKey: row.options ? key : undefined,
         requiredFor: row.requiredFor,
-        market: row.market,
-        kind: row.kind
+        market: row.market
       };
       if (!row.options || collapsedOptions.has(key)) return [main];
       return [
@@ -96,23 +94,51 @@
     const table = scroller.querySelector('table');
     const header = wrapper?.querySelector<HTMLElement>('.brief-table-sticky');
     const cells = table?.tHead?.rows[0]?.cells;
-    if (!wrapper || !table || !header || !cells) return;
+    const columns = table?.querySelectorAll<HTMLTableColElement>('colgroup col');
+    if (!wrapper || !table || !header || !cells || !columns) return;
+
+    let naturalTableWidth = 0;
+    let active = true;
+    let fontMetricsReady = false;
+    let previousLayout: 'overflow' | 'fit' | undefined;
 
     const scrollHeader = () => {
-      header.scrollLeft = scroller.scrollLeft;
+      if (header.scrollLeft !== scroller.scrollLeft) header.scrollLeft = scroller.scrollLeft;
     };
 
     // Place the visual header outside the horizontal scroller so the browser can pin it vertically.
     const measure = () => {
-      const overflowing = table.getBoundingClientRect().width - scroller.clientWidth > 0.5;
-      if (overflowing) {
-        const widths = Array.from(cells, (cell) => `${cell.getBoundingClientRect().width}px`);
-        header.style.setProperty('--table-header-columns', widths.join(' '));
+      if (!active || !fontMetricsReady) return;
+
+      const tableWidth = table.getBoundingClientRect().width;
+
+      // Collapsing the real header can make the table narrower. Keep the width measured before
+      // that change so ResizeObserver doesn't alternate between the fit and overflow layouts.
+      if (previousLayout !== 'overflow' || tableWidth > naturalTableWidth) {
+        naturalTableWidth = tableWidth;
+      }
+
+      const layout = naturalTableWidth - scroller.clientWidth > 0.5 ? 'overflow' : 'fit';
+      if (layout === 'overflow' && previousLayout !== 'overflow') {
+        const widths = Array.from(cells, (cell) => cell.getBoundingClientRect().width);
+        if (widths.length) {
+          const difference = tableWidth - widths.reduce((total, width) => total + width, 0);
+          widths[widths.length - 1] = Math.max(1, widths[widths.length - 1] + difference);
+        }
+        table.style.setProperty('table-layout', 'fixed');
+        table.style.setProperty('width', `${tableWidth}px`);
+        widths.forEach((width, index) => columns[index]?.style.setProperty('width', `${width}px`));
+        header.style.setProperty('--table-header-columns', widths.map((width) => `${width}px`).join(' '));
         scroller.tabIndex = 0;
-      } else {
+      } else if (layout === 'fit' && previousLayout !== 'fit') {
+        for (const column of columns) column.style.removeProperty('width');
+        table.style.removeProperty('table-layout');
+        table.style.removeProperty('width');
+        header.style.removeProperty('--table-header-columns');
         scroller.removeAttribute('tabindex');
       }
-      wrapper.dataset.scrollLayout = overflowing ? 'overflow' : 'fit';
+      wrapper.dataset.scrollLayout = layout;
+      previousLayout = layout;
       scrollHeader();
     };
 
@@ -122,13 +148,21 @@
     for (const cell of cells) observer.observe(cell);
     scroller.addEventListener('scroll', scrollHeader, { passive: true });
     measure();
+    void (document.fonts?.ready ?? Promise.resolve()).then(() => {
+      fontMetricsReady = true;
+      measure();
+    });
 
     return () => {
+      active = false;
       observer.disconnect();
       scroller.removeEventListener('scroll', scrollHeader);
       scroller.removeAttribute('tabindex');
       delete wrapper.dataset.scrollLayout;
       header.style.removeProperty('--table-header-columns');
+      for (const column of columns) column.style.removeProperty('width');
+      table.style.removeProperty('table-layout');
+      table.style.removeProperty('width');
     };
   }
 
@@ -254,12 +288,12 @@
     <svelte:element
       this={visual ? 'div' : 'th'}
       scope={visual ? undefined : 'col'}
-      title={description}
       aria-description={visual ? undefined : description}
       class={[
-        'border-cork-300/75 px-3 align-top font-semibold sm:px-4',
+        'border-cork-300/75 px-3 align-middle font-semibold sm:px-4',
         compact ? 'py-1' : 'py-2.5',
         icon ? 'text-center whitespace-normal' : 'whitespace-nowrap',
+        visual && 'flex items-center',
         index > 0 && 'border-s',
         !visual && index === mergeColumn && 'w-[30%]',
         !visual && label === 'Saved in' && 'min-w-56',
@@ -269,37 +303,53 @@
         icon && 'min-w-28'
       ]}
     >
-      {#if icon}
-        <span class="flex min-w-28 flex-col items-center gap-1">
-          <img src={icon} alt="" class="h-5 w-28 object-contain" />
-          <span class="leading-tight">{label}</span>
-        </span>
+      {#if description}
+        <Tooltip.Root>
+          <Tooltip.Trigger tabindex={visual ? -1 : 0}>
+            {#snippet child({ props })}
+              <span
+                {...props}
+                class={[
+                  'flex h-full cursor-help items-center justify-center text-left decoration-dotted underline-offset-4 hover:underline focus-visible:underline focus-visible:outline-2 focus-visible:outline-offset-2',
+                  visual ? 'w-full' : 'w-max'
+                ]}
+              >
+                {@render columnLabelContent(label, icon)}
+              </span>
+            {/snippet}
+          </Tooltip.Trigger>
+          <TooltipContent
+            side="bottom"
+            sideOffset={8}
+            class="z-[60] max-w-64 text-left text-xs leading-snug font-normal whitespace-normal"
+          >
+            {description}
+          </TooltipContent>
+        </Tooltip.Root>
       {:else}
-        {label}
+        {@render columnLabelContent(label, icon)}
       {/if}
     </svelte:element>
   {/each}
 {/snippet}
 
-{#snippet cellText(
-  label: string,
-  requirement: string | undefined,
-  market: string | undefined,
-  isDocument: boolean
-)}
+{#snippet columnLabelContent(label: string, icon: string | undefined)}
+  {#if icon}
+    <span class="flex min-w-28 flex-col items-center gap-1">
+      <img src={icon} alt="" class="h-5 w-28 object-contain" />
+      <span class="leading-tight">{label}</span>
+    </span>
+  {:else}
+    <span>{label}</span>
+  {/if}
+{/snippet}
+
+{#snippet cellText(label: string, requirement: string | undefined, market: string | undefined)}
   {@const flag = market ? marketFlags[market] : undefined}
   <span class={['whitespace-pre-wrap', requirement && 'text-red-700']}>
     {label}
-    {#if isDocument || market}
-      <span
-        class={[
-          'inline-flex items-center gap-0.5 align-middle whitespace-nowrap',
-          isDocument ? 'ms-1' : 'ms-1.5'
-        ]}
-      >
-        {#if isDocument}
-          <FileText class="size-3.5 shrink-0 text-cork-500" role="img" aria-label="Document" />
-        {/if}
+    {#if market}
+      <span class="ms-1.5 inline-flex items-center gap-0.5 align-middle whitespace-nowrap">
         {#if flag}
           <img
             src={'data:image/svg+xml,' + encodeURIComponent(flag.svg)}
@@ -358,7 +408,6 @@
         {@const requirement =
           index === 0 && row.requiredFor ? `Required for ${row.requiredFor}` : undefined}
         {@const market = index === 0 ? row.market : undefined}
-        {@const isDocument = index === 0 && row.kind === 'document'}
         <svelte:element
           this={index === 0 ? 'th' : 'td'}
           scope={index === 0 ? 'row' : undefined}
@@ -387,7 +436,7 @@
                 aria-expanded={!collapsedOptions.has(optionKey)}
                 onclick={() => toggleOptions(optionKey)}
               >
-                {@render cellText(cell, requirement, market, isDocument)}
+                {@render cellText(cell, requirement, market)}
                 <ChevronDown
                   class={[
                     'size-3.5 shrink-0 text-cork-600',
@@ -405,7 +454,7 @@
                 {/each}
               </ul>
             {:else}
-              {@render cellText(cell, requirement, market, isDocument)}
+              {@render cellText(cell, requirement, market)}
             {/if}
           {:else if cell.type === 'link'}
             {#if cell.additionalLinks?.length}
@@ -549,6 +598,11 @@
                   ]}
                   aria-labelledby={block.title ? block.id : undefined}
                 >
+                  <colgroup>
+                    {#each block.columns as _, columnIndex (columnIndex)}
+                      <col />
+                    {/each}
+                  </colgroup>
                   <thead class="z-10 bg-cork-200 text-cork-900">
                     <tr>
                       {@render columnLabels(block.columns, block.compact, block.mergeColumn)}
@@ -661,7 +715,7 @@
   {/if}
 
   {#if document?.blocks.length}
-    <Tooltip.Provider delayDuration={250}>
+    <Tooltip.Provider delayDuration={0}>
       {@render contentBlocks(document.blocks, 'mt-6 sm:mt-8')}
     </Tooltip.Provider>
   {:else}
@@ -722,10 +776,24 @@
   .brief-table:global([data-scroll-layout='overflow']) thead {
     position: static;
     opacity: 0;
+    pointer-events: none;
+  }
+
+  .brief-table:global([data-scroll-layout='overflow']) thead tr {
+    height: 0;
   }
 
   .brief-table:global([data-scroll-layout='overflow']) thead :global(th) {
+    height: 0;
     padding-block: 0;
+    border-block-width: 0;
+    line-height: 0;
+  }
+
+  .brief-table:global([data-scroll-layout='overflow']) thead :global(th > *) {
+    height: 0;
+    min-height: 0;
+    overflow: hidden;
     line-height: 0;
   }
 

@@ -95,13 +95,11 @@
             {/key}
           {:else}
             {#if hasConnextra}
-              <div class="rounded-sm bg-black/5 px-3.5 py-2.5 text-sm text-cork-700">
-                <strong>As a</strong>
-                {story.asA},
-                <strong>I want to</strong>
-                {story.wantTo}
+              <div class="grid gap-1 rounded-sm bg-black/5 px-3.5 py-2.5 text-sm text-cork-700">
+                <p><strong>As a</strong> {story.asA},</p>
+                <p><strong>I want to</strong> {story.wantTo}</p>
                 {#if story.soThat}
-                  <strong>so that</strong> {story.soThat}
+                  <p><strong>So that</strong> {story.soThat}</p>
                 {/if}
               </div>
             {/if}

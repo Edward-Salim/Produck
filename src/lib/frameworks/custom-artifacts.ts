@@ -225,14 +225,19 @@ function isBlock(value: unknown): value is UnparsedBlock {
       )
         return false;
 
-      const dataColumns = [value.mergeColumn, value.bulletedColumn];
       const isDataColumn = (column: unknown) =>
         typeof column === 'number' &&
         Number.isInteger(column) &&
         column >= 1 &&
         column < columns.length;
+      const isMergeColumn = (column: unknown) =>
+        typeof column === 'number' &&
+        Number.isInteger(column) &&
+        column >= 0 &&
+        column < columns.length;
       if (
-        dataColumns.some((column) => column !== undefined && !isDataColumn(column)) ||
+        (value.mergeColumn !== undefined && !isMergeColumn(value.mergeColumn)) ||
+        (value.bulletedColumn !== undefined && !isDataColumn(value.bulletedColumn)) ||
         (bulletedColumns !== undefined &&
           (!Array.isArray(bulletedColumns) || !bulletedColumns.every(isDataColumn)))
       )
@@ -296,12 +301,14 @@ export function artifactColumnSpans(rows: ArtifactCell[][], column: number): num
   let start = 0;
   for (let index = 1; index < rows.length; index++) {
     const value = rows[index][column];
-    if (
-      typeof value === 'string' &&
-      value.trim() &&
-      value !== '?' &&
-      value === rows[start][column]
-    ) {
+    const startValue = rows[start][column];
+    const matchesStart =
+      (typeof value === 'string' &&
+        typeof startValue === 'string' &&
+        !!value.trim() &&
+        value !== '?' &&
+        value === startValue);
+    if (matchesStart) {
       spans[start]++;
       spans[index] = 0;
     } else {
