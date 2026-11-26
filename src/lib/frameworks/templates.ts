@@ -50,7 +50,6 @@ export type FrameworkTemplate = {
   icon: Component<{ class?: string }>;
   fields: FrameworkField[];
   instructions: string;
-  instructionBullets?: string[];
   terminology: { term: string; definition: string }[];
   coverGradient: string;
   coverImage?: string;
@@ -415,15 +414,6 @@ export const FRAMEWORK_TEMPLATES: FrameworkTemplate[] = [
     icon: MapPinned,
     fields: [],
     instructions: '',
-    instructionBullets: [
-      'Map the current end-to-end journey from source material',
-      'Order activities left to right; keep tasks lean and stories atomic',
-      'Write stories as "As a..., I want..., so that..."',
-      "Show only actors used by each activity's stories",
-      'Use Must-Have, Performance, and Delighter rows',
-      'Put current, source-backed pain points on affected stories',
-      'Define unfamiliar terms used in this map'
-    ],
     terminology: [],
     coverGradient: 'linear-gradient(135deg, #fdf1d8 0%, #efd8b8 50%, #ddc6a8 100%)',
     coverImage: storyMapCover

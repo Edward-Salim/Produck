@@ -765,8 +765,10 @@
       <button
         type="button"
         class={showHelp ? activeArtifactControlClass : neutralArtifactControlClass}
-        title="Instructions & terminology"
-        aria-label="Open instructions and terminology"
+        title={selectedTemplate.id === 'story-map' ? 'Glossary' : 'Instructions & terminology'}
+        aria-label={selectedTemplate.id === 'story-map'
+          ? 'Open glossary'
+          : 'Open instructions and terminology'}
         onclick={() => (showHelp = true)}><BookOpen class="size-3.5" aria-hidden="true" /></button
       >
       <button
@@ -1186,22 +1188,11 @@
   >
     <Dialog.Header class="shrink-0">
       <Dialog.Title class="text-cork-800">
-        {selectedTemplate?.name ?? 'Draft'} Guide
+        {#if selectedTemplate?.id === 'story-map'}Glossary{:else}{selectedTemplate?.name ?? 'Draft'} Guide{/if}
       </Dialog.Title>
     </Dialog.Header>
     <div class="help-modal-scroll min-h-0 space-y-4 overflow-y-auto overscroll-contain text-sm">
-      {#if selectedTemplate?.instructionBullets?.length}
-        <div>
-          <h4 class="mb-1.5 text-xs font-semibold tracking-wide text-cork-500 uppercase">
-            How to Use
-          </h4>
-          <ul class="ml-4 list-disc space-y-1 text-cork-700">
-            {#each selectedTemplate.instructionBullets as instruction (instruction)}
-              <li>{instruction}</li>
-            {/each}
-          </ul>
-        </div>
-      {:else if selectedTemplate?.instructions}
+      {#if selectedTemplate?.instructions}
         <div>
           <h4 class="mb-1.5 text-xs font-semibold tracking-wide text-cork-500 uppercase">
             How to Use
@@ -1211,9 +1202,11 @@
       {/if}
       {#if guideTerminology.length > 0}
         <div>
-          <h4 class="mb-1.5 text-xs font-semibold tracking-wide text-cork-500 uppercase">
-            Terminology
-          </h4>
+          {#if selectedTemplate?.id !== 'story-map'}
+            <h4 class="mb-1.5 text-xs font-semibold tracking-wide text-cork-500 uppercase">
+              Terminology
+            </h4>
+          {/if}
           <ul class="ml-4 list-disc space-y-1">
             {#each guideTerminology as item (item.term)}
               <li class="text-cork-600">
