@@ -16,3 +16,4 @@ description: Create or refine source-grounded user story maps in Produck using a
 7. Capture only current, source-backed workflow friction as a pain point; keep requested features and solutions separate. Add `Pain point: ...` to the affected story's Details and mark that story as a pain point. Keep each point atomic and concise, with no terminal period. Do not create a separate pain-point task or card.
 8. Check for duplicates. Merge cards with the same actor, action, and outcome; keep similar cards separate only when their actor, trigger, or outcome differs.
 9. Use a plain process title; avoid “Team Flow” and bracketed labels such as `[MVP]`. Review coverage and open questions, then save a new map in the correct project while preserving existing maps unless asked to remove them.
+10. Add concise, map-specific terms in the map's Terminology field. Define unfamiliar acronyms in plain language; omit generic map vocabulary and unsupported expansions.

@@ -50,6 +50,7 @@ export type FrameworkTemplate = {
   icon: Component<{ class?: string }>;
   fields: FrameworkField[];
   instructions: string;
+  instructionBullets?: string[];
   terminology: { term: string; definition: string }[];
   coverGradient: string;
   coverImage?: string;
@@ -413,19 +414,17 @@ export const FRAMEWORK_TEMPLATES: FrameworkTemplate[] = [
       'Map user workflows with actors, activities, tasks, and stories organized by priority.',
     icon: MapPinned,
     fields: [],
-    instructions:
-      'Start by naming your product and listing the Actors, the people or roles who use it. Then map out Activities as the big goals they\'re trying to accomplish, arranged left-to-right in the order a user would actually experience them. Under each activity, break things down into Tasks (the steps that make up that workflow), and below those, write atomic Stories: small, sprint-sized features that follow the "As a… I want to… So that…" format. Each story lands in one of three Kano rows: Must-Have for essentials, Performance for nice-to-haves, or Delighter for surprises. Keep stories in plain language. Describe the user outcome, not the implementation. The map reads top-down for detail and left-to-right as a narrative, like walking through your product from first touch to lasting engagement. This map documents what already exists in the product today, not a wishlist of future ideas.',
-    terminology: [
-      { term: 'Actor', definition: 'persona or user role (e.g. Student, Viewer, Team).' },
-      { term: 'Activity', definition: 'high-level user goal, ordered left-to-right as a journey.' },
-      { term: 'Task', definition: 'step or workflow within an activity.' },
-      {
-        term: 'Story',
-        definition: 'atomic, sprint-sized feature. Write as a user outcome, not a technical spec.'
-      },
-      { term: 'Kano', definition: 'Must-Have, Performance, or Delighter priority class.' },
-      { term: 'PIC', definition: 'Person In Charge. Assign an owner to each story.' }
+    instructions: '',
+    instructionBullets: [
+      'Map the current end-to-end journey from source material',
+      'Order activities left to right; keep tasks lean and stories atomic',
+      'Write stories as "As a..., I want..., so that..."',
+      "Show only actors used by each activity's stories",
+      'Use Must-Have, Performance, and Delighter rows',
+      'Put current, source-backed pain points on affected stories',
+      'Define unfamiliar terms used in this map'
     ],
+    terminology: [],
     coverGradient: 'linear-gradient(135deg, #fdf1d8 0%, #efd8b8 50%, #ddc6a8 100%)',
     coverImage: storyMapCover
   },

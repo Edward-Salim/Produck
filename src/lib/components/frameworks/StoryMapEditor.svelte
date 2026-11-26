@@ -28,6 +28,7 @@
     actors: [],
     levels: 2,
     activities: [],
+    terminology: [],
     stories: { 'must-have': [], performance: [], delighter: [] }
   });
 
@@ -39,6 +40,7 @@
         actors: parsed.actors ?? [],
         levels: parsed.levels ?? 2,
         activities: parsed.activities ?? [],
+        terminology: parsed.terminology ?? [],
         stories: parsed.stories ?? { 'must-have': [], performance: [], delighter: [] }
       };
     } catch {

@@ -3,6 +3,11 @@ export interface Actor {
   label: string;
 }
 
+export interface StoryMapTerm {
+  term: string;
+  definition: string;
+}
+
 export interface Task {
   id: string;
   title: string;
@@ -89,6 +94,7 @@ export interface StoryMapData {
   actors: Actor[];
   levels?: number;
   activities: Activity[];
+  terminology?: StoryMapTerm[];
   stories: {
     'must-have': Story[];
     performance: Story[];

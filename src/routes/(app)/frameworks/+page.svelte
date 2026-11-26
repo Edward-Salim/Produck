@@ -7,6 +7,7 @@
   import { getFullscreen, toggleFullscreen } from '$lib/stores/fullscreen.svelte.js';
   import { FRAMEWORK_TEMPLATES, type FrameworkTemplate } from '$lib/frameworks/templates.js';
   import type { RoadmapView } from '$lib/frameworks/roadmap.js';
+  import type { StoryMapData } from '$lib/types/story-map.js';
   import {
     dedupeFrameworkInstances,
     findFrameworkInstance,
@@ -27,7 +28,7 @@
   import Compass from '@lucide/svelte/icons/compass';
   import FlaskConical from '@lucide/svelte/icons/flask-conical';
   import Frown from '@lucide/svelte/icons/frown';
-  import Info from '@lucide/svelte/icons/info';
+  import BookOpen from '@lucide/svelte/icons/book-open';
   import Hash from '@lucide/svelte/icons/hash';
   import Layers3 from '@lucide/svelte/icons/layers';
   import Link2 from '@lucide/svelte/icons/link-2';
@@ -214,6 +215,20 @@
 
   let selectedTemplate = $derived(
     selectedInstance ? (templates.find((t) => t.id === selectedInstance.templateId) ?? null) : null
+  );
+  let storyMapTerminology = $derived.by(() => {
+    if (selectedTemplate?.id !== 'story-map' || !selectedInstance?.values.storyMap) return [];
+    try {
+      const storyMap = JSON.parse(selectedInstance.values.storyMap) as StoryMapData;
+      return Array.isArray(storyMap.terminology) ? storyMap.terminology : [];
+    } catch {
+      return [];
+    }
+  });
+  let guideTerminology = $derived(
+    selectedTemplate?.id === 'story-map'
+      ? storyMapTerminology
+      : (selectedTemplate?.terminology ?? [])
   );
   let isStandaloneArtifact = $derived(
     selectedTemplate?.id === PROJECT_BRIEF_TEMPLATE_ID ||
@@ -751,8 +766,8 @@
         type="button"
         class={showHelp ? activeArtifactControlClass : neutralArtifactControlClass}
         title="Instructions & terminology"
-        aria-label="Help"
-        onclick={() => (showHelp = true)}><Info class="size-3.5" /></button
+        aria-label="Open instructions and terminology"
+        onclick={() => (showHelp = true)}><BookOpen class="size-3.5" aria-hidden="true" /></button
       >
       <button
         type="button"
@@ -1175,7 +1190,18 @@
       </Dialog.Title>
     </Dialog.Header>
     <div class="help-modal-scroll min-h-0 space-y-4 overflow-y-auto overscroll-contain text-sm">
-      {#if selectedTemplate?.instructions}
+      {#if selectedTemplate?.instructionBullets?.length}
+        <div>
+          <h4 class="mb-1.5 text-xs font-semibold tracking-wide text-cork-500 uppercase">
+            How to Use
+          </h4>
+          <ul class="ml-4 list-disc space-y-1 text-cork-700">
+            {#each selectedTemplate.instructionBullets as instruction (instruction)}
+              <li>{instruction}</li>
+            {/each}
+          </ul>
+        </div>
+      {:else if selectedTemplate?.instructions}
         <div>
           <h4 class="mb-1.5 text-xs font-semibold tracking-wide text-cork-500 uppercase">
             How to Use
@@ -1183,13 +1209,13 @@
           <p class="leading-relaxed text-cork-700">{selectedTemplate.instructions}</p>
         </div>
       {/if}
-      {#if selectedTemplate?.terminology}
+      {#if guideTerminology.length > 0}
         <div>
           <h4 class="mb-1.5 text-xs font-semibold tracking-wide text-cork-500 uppercase">
             Terminology
           </h4>
           <ul class="ml-4 list-disc space-y-1">
-            {#each selectedTemplate.terminology as item (item.term)}
+            {#each guideTerminology as item (item.term)}
               <li class="text-cork-600">
                 <span class="font-medium text-cork-700">{item.term}:</span>
                 <span class="ml-1">{item.definition}</span>
