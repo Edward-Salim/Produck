@@ -12,6 +12,7 @@
 
   let fullscreen = $derived(getFullscreen());
   import Layers3 from '@lucide/svelte/icons/layers';
+  import PenLine from '@lucide/svelte/icons/pen-line';
   import Wrench from '@lucide/svelte/icons/wrench';
   import LibraryBig from '@lucide/svelte/icons/library-big';
   import WalletCards from '@lucide/svelte/icons/wallet-cards';
@@ -29,7 +30,184 @@
   let { children, data } = $props();
   let sidebarOpen = $state(false);
   let topbarHeight = $state(0);
+  let temporaryPenActive = $state(false);
+  let temporaryPenStrokes = $state<{ id: number; path: string; fading: boolean }[]>([]);
+  let activePenPointerId: number | null = null;
+  let activePenStrokeId: number | null = null;
+  let pendingPenStart: { x: number; y: number } | null = null;
+  let pendingPenClickTarget: HTMLElement | null = null;
+  let nextPenStrokeId = 0;
   let dockedFrameworkSidebar = $derived(page.url.pathname === '/frameworks' && !fullscreen);
+
+  function schedulePenStrokeFade(strokeId: number) {
+    window.setTimeout(() => {
+      const stroke = temporaryPenStrokes.find((item) => item.id === strokeId);
+      if (!stroke) return;
+      stroke.fading = true;
+      window.setTimeout(() => {
+        temporaryPenStrokes = temporaryPenStrokes.filter((item) => item.id !== strokeId);
+      }, 400);
+    }, 1400);
+  }
+
+  function toggleTemporaryPen() {
+    temporaryPenActive = !temporaryPenActive;
+    if (!temporaryPenActive) {
+      if (activePenStrokeId !== null) schedulePenStrokeFade(activePenStrokeId);
+      activePenStrokeId = null;
+      activePenPointerId = null;
+      pendingPenStart = null;
+      pendingPenClickTarget = null;
+    }
+  }
+
+  function findUnderlyingClickTarget(
+    overlay: SVGSVGElement,
+    clientX: number,
+    clientY: number
+  ): HTMLElement | null {
+    const target = document
+      .elementsFromPoint(clientX, clientY)
+      .find((element) => !overlay.contains(element));
+    if (!target) return null;
+
+    const control = target.closest(
+      'button, a[href], input, select, textarea, label, summary, [role="button"], [role="link"], [tabindex]:not([tabindex="-1"])'
+    );
+    if (control instanceof HTMLElement) return control;
+    if (target instanceof HTMLElement) return target;
+
+    for (let parent = target.parentElement; parent; parent = parent.parentElement) {
+      if (parent instanceof HTMLElement) return parent;
+    }
+    return null;
+  }
+
+  function replayPenClick(target: HTMLElement) {
+    if (!target.isConnected) return;
+    if (
+      target.matches(
+        'button, a[href], input, select, textarea, summary, [tabindex]:not([tabindex="-1"])'
+      )
+    ) {
+      target.focus({ preventScroll: true });
+    }
+    target.click();
+  }
+
+  function startPenStroke(event: PointerEvent) {
+    if (!temporaryPenActive || event.button !== 0 || event.isPrimary === false) return;
+    if (event.pointerType !== 'touch') event.preventDefault();
+    if (!(event.currentTarget instanceof SVGSVGElement)) return;
+    activePenPointerId = event.pointerId;
+    activePenStrokeId = null;
+    pendingPenStart = { x: event.clientX, y: event.clientY };
+    pendingPenClickTarget = findUnderlyingClickTarget(
+      event.currentTarget,
+      event.clientX,
+      event.clientY
+    );
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }
+
+  function continuePenStroke(event: PointerEvent) {
+    if (!temporaryPenActive || event.pointerId !== activePenPointerId || !pendingPenStart) {
+      return;
+    }
+    if (event.pointerType !== 'touch') event.preventDefault();
+
+    if (activePenStrokeId === null) {
+      const distance = Math.hypot(
+        event.clientX - pendingPenStart.x,
+        event.clientY - pendingPenStart.y
+      );
+      if (distance < 6) return;
+
+      activePenStrokeId = ++nextPenStrokeId;
+      pendingPenClickTarget = null;
+      temporaryPenStrokes.push({
+        id: activePenStrokeId,
+        path: `M ${pendingPenStart.x} ${pendingPenStart.y} L ${event.clientX} ${event.clientY}`,
+        fading: false
+      });
+      return;
+    }
+
+    const stroke = temporaryPenStrokes.find((item) => item.id === activePenStrokeId);
+    if (stroke) stroke.path += ` L ${event.clientX} ${event.clientY}`;
+  }
+
+  function finishPenStroke(event: PointerEvent) {
+    if (event.pointerId !== activePenPointerId || !pendingPenStart) return;
+    const cancelled = event.type === 'pointercancel';
+    if (activePenStrokeId !== null) {
+      if (cancelled && event.pointerType === 'touch') {
+        temporaryPenStrokes = temporaryPenStrokes.filter((item) => item.id !== activePenStrokeId);
+      } else {
+        schedulePenStrokeFade(activePenStrokeId);
+      }
+    } else if (!cancelled && pendingPenClickTarget) {
+      replayPenClick(pendingPenClickTarget);
+    }
+    activePenPointerId = null;
+    activePenStrokeId = null;
+    pendingPenStart = null;
+    pendingPenClickTarget = null;
+  }
+
+  function forwardPenWheel(event: WheelEvent) {
+    if (!temporaryPenActive || !(event.currentTarget instanceof SVGSVGElement)) return;
+
+    const overlay = event.currentTarget;
+    const target = document
+      .elementsFromPoint(event.clientX, event.clientY)
+      .find((element) => !overlay.contains(element));
+    let deltaX = event.deltaX;
+    let deltaY = event.deltaY;
+
+    if (event.shiftKey && deltaX === 0) {
+      deltaX = deltaY;
+      deltaY = 0;
+    }
+
+    const multiplier =
+      event.deltaMode === WheelEvent.DOM_DELTA_LINE
+        ? 16
+        : event.deltaMode === WheelEvent.DOM_DELTA_PAGE
+          ? window.innerHeight
+          : 1;
+    deltaX *= multiplier;
+    deltaY *= multiplier;
+
+    for (let element: Element | null = target ?? null; element; element = element.parentElement) {
+      if (!(element instanceof HTMLElement)) continue;
+      const styles = window.getComputedStyle(element);
+      const maxScrollX = element.scrollWidth - element.clientWidth;
+      const maxScrollY = element.scrollHeight - element.clientHeight;
+      const canScrollX =
+        deltaX !== 0 &&
+        ['auto', 'scroll', 'overlay'].includes(styles.overflowX) &&
+        (deltaX > 0 ? element.scrollLeft < maxScrollX : element.scrollLeft > 0);
+      const canScrollY =
+        deltaY !== 0 &&
+        ['auto', 'scroll', 'overlay'].includes(styles.overflowY) &&
+        (deltaY > 0 ? element.scrollTop < maxScrollY : element.scrollTop > 0);
+
+      if (canScrollX || canScrollY) {
+        event.preventDefault();
+        if (canScrollX) element.scrollLeft += deltaX;
+        if (canScrollY) element.scrollTop += deltaY;
+        return;
+      }
+    }
+
+    const appScroller = document.querySelector<HTMLElement>('[data-slot="sidebar-inset"]');
+    if (appScroller) {
+      event.preventDefault();
+      appScroller.scrollLeft += deltaX;
+      appScroller.scrollTop += deltaY;
+    }
+  }
 
   // ── Access management (admin only) ──
   let accessDialogOpen = $state(false);
@@ -465,6 +643,20 @@
           <Sidebar.Trigger class="cursor-pointer text-cork-500 hover:text-cork-800" />
           <button
             type="button"
+            class="flex size-7 cursor-pointer items-center justify-center rounded transition-colors {temporaryPenActive
+              ? 'bg-cork-700 text-cork-50 hover:bg-cork-800'
+              : 'text-cork-400 hover:bg-cork-200/70 hover:text-cork-700'}"
+            onclick={toggleTemporaryPen}
+            aria-label={
+              temporaryPenActive ? 'Turn temporary red pen off' : 'Turn temporary red pen on'
+            }
+            aria-pressed={temporaryPenActive}
+            title={temporaryPenActive ? 'Turn temporary red pen off' : 'Draw temporarily over the screen'}
+          >
+            <PenLine class="size-4" />
+          </button>
+          <button
+            type="button"
             class="flex size-6 cursor-pointer items-center justify-center rounded transition-colors {okrPanelOpen
               ? 'bg-cork-700 text-cork-50'
               : 'text-cork-400 hover:text-cork-600'}"
@@ -584,6 +776,26 @@
         {/if}
         {@render children()}
       </div>
+    {/if}
+    {#if temporaryPenActive || temporaryPenStrokes.length > 0}
+      <svg
+        class={['temporary-pen-overlay', { active: temporaryPenActive }]}
+        aria-hidden="true"
+        focusable="false"
+        onpointerdown={startPenStroke}
+        onpointermove={continuePenStroke}
+        onpointerup={finishPenStroke}
+        onpointercancel={finishPenStroke}
+        onwheel={forwardPenWheel}
+      >
+        {#each temporaryPenStrokes as stroke (stroke.id)}
+          <path
+            d={stroke.path}
+            class={['temporary-pen-stroke', { fading: stroke.fading }]}
+            fill="none"
+          />
+        {/each}
+      </svg>
     {/if}
   </Sidebar.Inset>
 </Sidebar.Provider>
@@ -735,6 +947,41 @@
 {/if}
 
 <style>
+  .temporary-pen-overlay {
+    position: fixed;
+    z-index: 40;
+    inset: 0;
+    width: 100vw;
+    height: 100dvh;
+    overflow: hidden;
+    pointer-events: none;
+    touch-action: pan-x pan-y;
+  }
+
+  .temporary-pen-overlay.active {
+    cursor: crosshair;
+    pointer-events: auto;
+  }
+
+  .temporary-pen-stroke {
+    stroke: #ff0000;
+    stroke-width: 3.5px;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    opacity: 1;
+    transition: opacity 400ms ease-out;
+  }
+
+  .temporary-pen-stroke.fading {
+    opacity: 0;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .temporary-pen-stroke {
+      transition: none;
+    }
+  }
+
   @media (max-width: 767px) {
     .reader-topbar {
       transition: transform 180ms ease;
