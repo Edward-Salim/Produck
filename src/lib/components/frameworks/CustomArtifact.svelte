@@ -835,63 +835,58 @@
   }
 
   .onboarding-flows table {
-    width: 50rem;
-    min-width: 50rem;
+    width: 78rem;
+    min-width: 78rem;
     table-layout: fixed;
   }
 
-  .onboarding-flows col:nth-child(1) {
-    width: 14%;
-  }
-
-  .onboarding-flows col:nth-child(2) {
-    width: 24%;
-  }
-
-  .onboarding-flows col:nth-child(3) {
-    width: 16%;
-  }
-
-  .onboarding-flows col:nth-child(4) {
-    width: 10%;
-  }
-
-  .onboarding-flows col:nth-child(5) {
-    width: 21%;
-  }
-
-  .onboarding-flows col:nth-child(6) {
-    width: 15%;
-  }
-
+  .onboarding-flows col:nth-child(1),
   .onboarding-flows table thead th:nth-child(1) {
+    width: 11%;
+  }
+
+  .onboarding-flows col:nth-child(2),
+  .onboarding-flows table thead th:nth-child(2) {
     width: 14%;
   }
 
-  .onboarding-flows table thead th:nth-child(2) {
-    width: 24%;
+  .onboarding-flows col:nth-child(3),
+  .onboarding-flows table thead th:nth-child(3) {
+    width: 19%;
   }
 
-  .onboarding-flows table thead th:nth-child(3) {
+  .onboarding-flows col:nth-child(4),
+  .onboarding-flows table thead th:nth-child(4) {
+    width: 11%;
+  }
+
+  .onboarding-flows col:nth-child(5),
+  .onboarding-flows table thead th:nth-child(5) {
+    width: 8%;
+  }
+
+  .onboarding-flows col:nth-child(6),
+  .onboarding-flows table thead th:nth-child(6) {
     width: 16%;
   }
 
-  .onboarding-flows table thead th:nth-child(4) {
-    width: 10%;
+  .onboarding-flows col:nth-child(7),
+  .onboarding-flows table thead th:nth-child(7) {
+    width: 13%;
   }
 
-  .onboarding-flows table thead th:nth-child(5) {
-    width: 21%;
-  }
-
-  .onboarding-flows table thead th:nth-child(6) {
-    width: 15%;
-    white-space: nowrap;
+  .onboarding-flows col:nth-child(8),
+  .onboarding-flows table thead th:nth-child(8) {
+    width: 8%;
   }
 
   .onboarding-flows table thead th {
     white-space: normal;
-    overflow-wrap: anywhere;
+    overflow-wrap: normal;
+  }
+
+  .onboarding-flows table thead th:nth-child(8) {
+    white-space: nowrap;
   }
 
   .onboarding-flows table :global(.min-w-32),
@@ -902,6 +897,6 @@
   .onboarding-flows .brief-table-labels > :global(*) {
     min-width: 0;
     white-space: normal;
-    overflow-wrap: anywhere;
+    overflow-wrap: normal;
   }
 </style>
