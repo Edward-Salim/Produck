@@ -170,10 +170,12 @@
 <!-- Board container -->
 <div
   data-story-map=""
+  data-story-map-product={data.product}
   class="rounded-xl p-4 shadow-[inset_0_1px_4px_rgba(255,255,255,.15),inset_0_-2px_6px_rgba(0,0,0,.06),0_6px_24px_rgba(0,0,0,.12)] md:p-8"
   style="background: radial-gradient(ellipse at 30% 20%, rgba(255,255,255,.18) 0%, transparent 60%), #cdc3ae;"
 >
   <div
+    data-story-map-scroll=""
     class="overflow-x-auto overflow-y-hidden [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
   >
     <!-- CSS Grid -->

@@ -80,6 +80,17 @@ function isTone(value: unknown): value is Tone {
   return value === 'neutral' || value === 'success' || value === 'warning';
 }
 
+function mergeCellValue(cell: ArtifactCell | undefined): string | undefined {
+  if (typeof cell === 'string') {
+    return cell.trim() && cell !== '?' ? `text:${cell}` : undefined;
+  }
+  if (!cell) return undefined;
+  if (cell.type === 'status' && cell.label.trim()) {
+    return `status:${cell.tone}:${cell.label}`;
+  }
+  return undefined;
+}
+
 function isArtifactFieldType(value: unknown): value is ArtifactFieldType {
   return (
     value === 'address' ||
@@ -313,14 +324,9 @@ export function artifactColumnSpans(
   for (const [mergeIndex, column] of mergeColumns.entries()) {
     let start = 0;
     for (let index = 1; index < rows.length; index++) {
-      const value = rows[index][column];
-      const startValue = rows[start][column];
-      const matchesStart =
-        typeof value === 'string' &&
-        typeof startValue === 'string' &&
-        !!value.trim() &&
-        value !== '?' &&
-        value === startValue;
+      const value = mergeCellValue(rows[index][column]);
+      const startValue = mergeCellValue(rows[start][column]);
+      const matchesStart = value !== undefined && value === startValue;
       if (matchesStart) {
         spans[start][mergeIndex]++;
         spans[index][mergeIndex] = 0;

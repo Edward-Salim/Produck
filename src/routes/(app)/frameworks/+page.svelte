@@ -26,6 +26,7 @@
   import Circle from '@lucide/svelte/icons/circle';
   import Clock from '@lucide/svelte/icons/clock';
   import Compass from '@lucide/svelte/icons/compass';
+  import Download from '@lucide/svelte/icons/download';
   import FlaskConical from '@lucide/svelte/icons/flask-conical';
   import Frown from '@lucide/svelte/icons/frown';
   import BookOpen from '@lucide/svelte/icons/book-open';
@@ -134,6 +135,8 @@
   let showStoryMapIds = $derived(data.showStoryMapIds);
   let showStoryMapKanoLines = $derived(data.showStoryMapKanoLines);
   let showStoryMapPainPoints = $derived(data.showStoryMapPainPoints);
+  let exportingStoryMap = $state(false);
+  let storyMapExportError = $state('');
   let marketSizingCurrency = $state<MarketSizingCurrency>('USD');
   let syncUpdating = $state(false);
   let syncConfirmationOpen = $state(false);
@@ -298,6 +301,90 @@
   function setStoryMapPainPoints(visible: boolean) {
     showStoryMapPainPoints = visible;
     document.cookie = `story_map_show_pain_points=${showStoryMapPainPoints}; path=/frameworks; max-age=31536000; samesite=lax`;
+  }
+
+  async function downloadStoryMapPng() {
+    if (exportingStoryMap) return;
+
+    const board = document.querySelector<HTMLDivElement>('[data-story-map]');
+    if (!board) {
+      storyMapExportError = 'Story map is not ready to download.';
+      return;
+    }
+
+    exportingStoryMap = true;
+    storyMapExportError = '';
+    const clone = board.cloneNode(true) as HTMLDivElement;
+    const staging = document.createElement('div');
+
+    try {
+      const sourceScroller = board.querySelector<HTMLElement>('[data-story-map-scroll]');
+      const cloneScroller = clone.querySelector<HTMLElement>('[data-story-map-scroll]');
+      if (!sourceScroller || !cloneScroller) throw new Error('Story map content is unavailable.');
+
+      const fullWidth = sourceScroller.scrollWidth;
+      const padding = getComputedStyle(board);
+      const horizontalPadding =
+        Number.parseFloat(padding.paddingLeft) + Number.parseFloat(padding.paddingRight);
+
+      Object.assign(staging.style, {
+        position: 'fixed',
+        top: '0',
+        left: '0',
+        zIndex: '-1',
+        width: '0',
+        height: '0',
+        overflow: 'hidden',
+        pointerEvents: 'none'
+      });
+      Object.assign(clone.style, {
+        position: 'static',
+        width: `${fullWidth + horizontalPadding}px`,
+        maxWidth: 'none',
+        margin: '0',
+        boxSizing: 'border-box',
+        overflow: 'visible'
+      });
+      Object.assign(cloneScroller.style, {
+        width: `${fullWidth}px`,
+        maxWidth: 'none',
+        overflow: 'visible'
+      });
+      staging.append(clone);
+      document.body.append(staging);
+
+      await document.fonts.ready;
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+
+      const { toPng } = await import('html-to-image');
+      const bounds = clone.getBoundingClientRect();
+      const width = Math.ceil(bounds.width);
+      const height = Math.ceil(bounds.height);
+      const pixelRatio = Math.max(1, Math.min(2, Math.sqrt(16_000_000 / (width * height))));
+      const image = await toPng(clone, {
+        width,
+        height,
+        pixelRatio,
+        backgroundColor: '#cdc3ae',
+        cacheBust: true
+      });
+
+      const productName = board.dataset.storyMapProduct?.trim() ?? '';
+      const safeName = productName
+        .replace(/[<>:"/\\|?*\u0000-\u001f]/g, ' ')
+        .replace(/\s+/g, '-')
+        .replace(/^-|-$/g, '');
+      const link = document.createElement('a');
+      link.href = image;
+      link.download = `${safeName || 'story-map'}.png`;
+      link.click();
+    } catch (error) {
+      console.error('Story map PNG export failed:', error);
+      storyMapExportError = 'Could not download the PNG. Please try again.';
+    } finally {
+      staging.remove();
+      exportingStoryMap = false;
+    }
   }
 
   // ── Custom editor map ──
@@ -694,6 +781,22 @@
             </DropdownMenu.Content>
           </DropdownMenu.Portal>
         </DropdownMenu.Root>
+        <button
+          type="button"
+          class={neutralArtifactControlClass}
+          title={storyMapExportError ||
+            (exportingStoryMap ? 'Preparing story map PNG' : 'Download story map as PNG')}
+          aria-label={storyMapExportError ||
+            (exportingStoryMap ? 'Preparing story map PNG' : 'Download story map as PNG')}
+          aria-busy={exportingStoryMap}
+          disabled={exportingStoryMap || isFrameworkLoading}
+          onclick={downloadStoryMapPng}
+        >
+          <Download class="size-3.5" aria-hidden="true" />
+        </button>
+        {#if storyMapExportError}
+          <span class="sr-only" role="status">{storyMapExportError}</span>
+        {/if}
       {/if}
       {#if selectedTemplate.id === ROADMAP_TEMPLATE_ID}
         <button

@@ -485,7 +485,7 @@
             </span>
           {:else}
             <span
-              class="inline-flex rounded-sm px-2 py-0.5 text-xs font-medium {badgeClass[cell.tone]}"
+              class="inline-flex rounded-sm px-2 py-0.5 text-xs font-medium whitespace-nowrap {badgeClass[cell.tone]}"
               >{cell.label}</span
             >
           {/if}
@@ -583,6 +583,7 @@
               class={[
                 'brief-table border border-cork-300/75',
                 paperSurfaceClass,
+                block.id === 'flows' && block.title === 'Onboarding flows' && 'onboarding-flows',
                 block.columns.length === 2 && 'two-columns',
                 block.columns.length === 3 && 'three-columns',
                 block.columns.length === 4 && 'wide-table',
@@ -826,5 +827,81 @@
 
   .extra-wide-table table {
     min-width: 60rem;
+  }
+
+  .onboarding-flows {
+    width: fit-content;
+    max-width: 100%;
+  }
+
+  .onboarding-flows table {
+    width: 50rem;
+    min-width: 50rem;
+    table-layout: fixed;
+  }
+
+  .onboarding-flows col:nth-child(1) {
+    width: 14%;
+  }
+
+  .onboarding-flows col:nth-child(2) {
+    width: 24%;
+  }
+
+  .onboarding-flows col:nth-child(3) {
+    width: 16%;
+  }
+
+  .onboarding-flows col:nth-child(4) {
+    width: 10%;
+  }
+
+  .onboarding-flows col:nth-child(5) {
+    width: 21%;
+  }
+
+  .onboarding-flows col:nth-child(6) {
+    width: 15%;
+  }
+
+  .onboarding-flows table thead th:nth-child(1) {
+    width: 14%;
+  }
+
+  .onboarding-flows table thead th:nth-child(2) {
+    width: 24%;
+  }
+
+  .onboarding-flows table thead th:nth-child(3) {
+    width: 16%;
+  }
+
+  .onboarding-flows table thead th:nth-child(4) {
+    width: 10%;
+  }
+
+  .onboarding-flows table thead th:nth-child(5) {
+    width: 21%;
+  }
+
+  .onboarding-flows table thead th:nth-child(6) {
+    width: 15%;
+    white-space: nowrap;
+  }
+
+  .onboarding-flows table thead th {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .onboarding-flows table :global(.min-w-32),
+  .onboarding-flows table :global(.min-w-48) {
+    min-width: 0;
+  }
+
+  .onboarding-flows .brief-table-labels > :global(*) {
+    min-width: 0;
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
 </style>

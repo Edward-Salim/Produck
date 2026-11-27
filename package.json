@@ -75,6 +75,7 @@
     "@huggingface/transformers": "^4.0.1",
     "cheerio": "^1.2.0",
     "country-flag-icons": "^1.6.17",
+    "html-to-image": "^1.11.13",
     "marked": "^17.0.6",
     "pdf-lib": "^1.17.1",
     "rss-parser": "^3.13.0"
